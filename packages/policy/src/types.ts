@@ -35,7 +35,8 @@ export type Role =
   | 'SafetyReviewer'
   | 'PrivacyReviewer'
   | 'OrganisationAdministrator'
-  | 'SystemAdministrator';
+  | 'SystemAdministrator'
+  | 'Moderator';
 
 export interface RoleAssignmentInput {
   role: Role;

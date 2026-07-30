@@ -19,6 +19,13 @@ export interface ParticipantIdentityPort {
   findParticipantIdByAccount(userAccountId: string): Promise<string | undefined>;
 }
 
+/** Structural port: active Blocks involving any of the given identities (M18). */
+export interface BlockQueryPort {
+  findActiveBlocksInvolving(ids: readonly string[]): Promise<
+    { blockerActorId: string; blockedActorId: string; state: 'Active' | 'Revoked' }[]
+  >;
+}
+
 export interface PermissionServiceDeps {
   pool: Pool;
   clock: Clock;
@@ -26,6 +33,8 @@ export interface PermissionServiceDeps {
   roleAssignments: RoleAssignmentQueryPort;
   /** Optional until M02 is composed in; absent = accounts act only as themselves. */
   participantIdentity?: ParticipantIdentityPort;
+  /** Optional until M18 is composed in; absent = no blocks known. */
+  blocks?: BlockQueryPort;
 }
 
 /**
@@ -84,7 +93,14 @@ export function createPermissionService(deps: PermissionServiceDeps): Permission
           ...(ctx.organisationId !== undefined ? { organisationId: ctx.organisationId } : {}),
           ...(ctx.researchProjectId !== undefined ? { researchProjectId: ctx.researchProjectId } : {}),
         },
-        blocks: [], // M18 BlockRecord integration lands in P5.
+        blocks:
+          deps.blocks === undefined
+            ? []
+            : await deps.blocks.findActiveBlocksInvolving(
+                [actorId, actorParticipantId, request.resource.ownerParticipantId].filter(
+                  (x): x is string => x !== undefined,
+                ),
+              ),
         explicitDenies: [],
         now,
       };

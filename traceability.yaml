@@ -180,3 +180,23 @@
   code: [packages/modules/m17-life-story/src, packages/database/migrations/1753800000009_m17-life-story.sql]
   tests: [packages/modules/m17-life-story/test/m17.integration.test.ts]
   status: implemented
+
+- implementation_id: IMP-M18-SAFETY-001
+  module: M18
+  summary: Block (fail-closed, synchronous, no auto-restore), Report available after Block, ModerationCase with human immutable ModerationDecision
+  trace_ids: [ATR-016, ATR-008]
+  adr_ids: [ADR-037, ADR-038, ADR-025]
+  docs: ["Doc 8 §2.5", "Doc 18 §174 build order"]
+  code: [packages/modules/m18-community-social/src, packages/database/migrations/1753800000010_m18-community-safety.sql]
+  tests: [packages/modules/m18-community-social/test/m18.integration.test.ts]
+  status: implemented
+
+- implementation_id: IMP-M18-COMMUNITY-001
+  module: M18
+  summary: Governed CommunitySpace with versioned rules, consent-gated membership recording exact rule version, membership-gated SocialPost with confirmed publication
+  trace_ids: [ATR-008, ATR-002]
+  adr_ids: [ADR-025, ADR-018]
+  docs: ["Doc 8 §2.5", "Doc 20 community flows"]
+  code: [packages/modules/m18-community-social/src]
+  tests: [packages/modules/m18-community-social/test/m18.integration.test.ts]
+  status: implemented

@@ -59,11 +59,14 @@ export function evaluatePermission(
     return deny('unknown-action');
   }
   if (requirement.interaction && input.resource.ownerParticipantId !== undefined) {
+    // Both parties may appear under account or participant identity.
+    const actorIds = [input.actor.id, input.actor.participantId].filter((x): x is string => x !== undefined);
+    const ownerIds = [input.resource.ownerParticipantId];
     const blocked = input.blocks.some(
       (b) =>
         b.state === 'Active' &&
-        ((b.blockerActorId === input.resource.ownerParticipantId && b.blockedActorId === input.actor.id) ||
-          (b.blockerActorId === input.actor.id && b.blockedActorId === input.resource.ownerParticipantId)),
+        ((ownerIds.includes(b.blockerActorId) && actorIds.includes(b.blockedActorId)) ||
+          (actorIds.includes(b.blockerActorId) && ownerIds.includes(b.blockedActorId))),
     );
     if (blocked) {
       t('10-block', 'active Block between actor and resource owner');

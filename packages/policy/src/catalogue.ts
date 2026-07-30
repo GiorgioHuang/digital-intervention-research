@@ -26,6 +26,7 @@ export const POLICY_V1: PolicyConfiguration = {
       'role.assign',
       'role.revoke',
       'audit.view',
+      'community.create',
     ],
     ResearchCoordinator: [
       'user.view',
@@ -79,8 +80,15 @@ export const POLICY_V1: PolicyConfiguration = {
       'life-story.review-contribution',
       'life-story.withdraw',
       'life-story.export',
+      'block.create',
+      'block.revoke',
+      'report.submit',
+      'community.join',
+      'post.draft',
+      'post.publish',
     ],
-    Supporter: ['participant.view-shared', 'life-story.contribute'],
+    Supporter: ['participant.view-shared', 'life-story.contribute', 'report.submit'],
+    Moderator: ['moderation.triage', 'moderation.decide'],
   },
   actionRequirements: {
     'organisation.create': {},
@@ -134,6 +142,7 @@ export const POLICY_V1: PolicyConfiguration = {
     'participant.view-shared': {
       requiresRelationship: true,
       consentScopes: ['supporter-involvement'],
+      interaction: true,
     },
     'participant.export': { ownerPermitted: true, ownerOnly: true, confirmationRequired: true },
 
@@ -150,7 +159,17 @@ export const POLICY_V1: PolicyConfiguration = {
     'life-story.review-contribution': { ownerPermitted: true, ownerOnly: true },
     'life-story.withdraw': { ownerPermitted: true, ownerOnly: true, confirmationRequired: true },
     'life-story.export': { ownerPermitted: true, ownerOnly: true, confirmationRequired: true },
-    'life-story.contribute': { requiresRelationship: true, consentScopes: ['supporter-contribution'] },
+    'life-story.contribute': { requiresRelationship: true, consentScopes: ['supporter-contribution'], interaction: true },
+
+    'block.create': { confirmationRequired: true },
+    'block.revoke': { confirmationRequired: true },
+    'report.submit': {},
+    'moderation.triage': {},
+    'moderation.decide': { confirmationRequired: true },
+    'community.create': {},
+    'community.join': { ownerPermitted: true, ownerOnly: true, consentScopes: ['community-participation'] },
+    'post.draft': { ownerPermitted: true, ownerOnly: true },
+    'post.publish': { ownerPermitted: true, ownerOnly: true, confirmationRequired: true },
 
     'safety-signal.record': {},
     'safety-event.create': { minimumAuthStrength: 'mfa', confirmationRequired: true },
