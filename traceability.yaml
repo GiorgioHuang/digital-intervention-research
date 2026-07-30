@@ -310,3 +310,13 @@
   code: [apps/api/src, openapi/openapi.yaml]
   tests: [apps/api/test/api.e2e.test.ts]
   status: implemented
+
+- implementation_id: IMP-WEB-PARTICIPANT-001
+  module: ops
+  summary: Participant web workspace (React/Vite, HTTP-only boundary) - task-oriented Home (never a feed), granular consent with no preselection and confirmed withdrawal, messaging with separate draft/review, send confirmation bound to exact recipient + message version, truthful delivery-state wording (Queued != Delivered, Provider Accepted != received)
+  trace_ids: [ATR-010, ATR-016]
+  adr_ids: [ADR-101, ADR-104]
+  docs: ["Doc 20 §16", "Doc 20 §158-161", "Doc 20 consent UX rules"]
+  code: [apps/web/src]
+  tests: [apps/web/test/consent-panel.test.tsx, apps/web/test/message-panel.test.tsx]
+  status: implemented

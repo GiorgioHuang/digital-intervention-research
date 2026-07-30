@@ -1,0 +1,76 @@
+/* Accessibility baseline (Doc 20 / WCAG 2.2 AA): rem sizing so 200% zoom
+   reflows, visible focus, large touch targets, reduced-motion respect. */
+:root {
+  font-family: system-ui, -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  font-size: 112.5%; /* 18px base for readability */
+  line-height: 1.6;
+  color-scheme: light dark;
+}
+
+body {
+  margin: 0 auto;
+  max-width: 44rem;
+  padding: 1rem;
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+  min-height: 2.75rem; /* ≥44px touch target */
+  padding: 0.5rem 1rem;
+}
+
+textarea,
+input {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+:focus-visible {
+  outline: 0.2rem solid currentColor;
+  outline-offset: 0.15rem;
+}
+
+.skip-link {
+  position: absolute;
+  left: -999rem;
+}
+
+.skip-link:focus {
+  position: static;
+  display: inline-block;
+  padding: 0.5rem;
+}
+
+nav ul {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+main ul {
+  padding-inline-start: 1.25rem;
+}
+
+blockquote {
+  border-inline-start: 0.25rem solid currentColor;
+  margin-inline: 0;
+  padding-inline-start: 1rem;
+}
+
+[role='alertdialog'] {
+  border: 0.15rem solid currentColor;
+  padding: 1rem;
+  margin-block: 0.75rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}

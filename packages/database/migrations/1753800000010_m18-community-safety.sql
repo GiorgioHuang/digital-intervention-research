@@ -125,6 +125,9 @@ DROP TABLE community_social.user_reports;
 DROP TABLE community_social.block_records;
 DROP SCHEMA community_social;
 ALTER TABLE identity_org.role_assignments DROP CONSTRAINT role_assignments_role_check;
+-- Rolling back the Moderator role removes its assignments; otherwise the
+-- restored (narrower) CHECK fails on any populated database.
+DELETE FROM identity_org.role_assignments WHERE role = 'Moderator';
 ALTER TABLE identity_org.role_assignments ADD CONSTRAINT role_assignments_role_check CHECK (role IN (
   'Participant', 'Supporter', 'InformalCaregiver', 'ProfessionalCaregiver',
   'ResearchCoordinator', 'Researcher', 'DataAnalyst', 'ResearchApprover',

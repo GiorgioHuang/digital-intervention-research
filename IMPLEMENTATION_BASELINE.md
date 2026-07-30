@@ -32,8 +32,8 @@
 | `m07-delivery` + `m08-assessment`（暴露状态/类型化缺失） | Implemented（合成试点覆盖） |
 | `packages/synthetic-pilot`（端到端合成试点） | Implemented（5 场景组） |
 | `m14`（报告/导出） | Not Started |
-| `apps/web` | Not Started |
-| OpenAPI / 事件 schema 目录 | Not Started |
+| `apps/web`（参与者工作区：任务式首页/细粒度同意/消息确认，HTTP-only 边界） | Implemented（7 组件测试） |
+| OpenAPI / 事件 schema 目录 | Scaffolded（openapi/openapi.yaml 覆盖现有端点） |
 
 ## 4. 数据库与迁移
 
