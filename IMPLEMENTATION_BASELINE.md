@@ -21,7 +21,8 @@
 | `packages/kernel`（RequestContext、结构化错误、时钟、ID、日志脱敏） | Implemented（50 单测通过） |
 | `packages/database`（连接、迁移、outbox/inbox/audit/idempotency 基表） | Implemented（集成测试含迁移 up→down→up 演练） |
 | `apps/api` / `apps/worker` / `apps/scheduler` | Scaffolded（健康检查/outbox 循环/cron 骨架，冒烟通过） |
-| `packages/modules/m01…m18` | Not Started |
+| `packages/policy` 权限引擎 + `m01-identity-org` + `m03-consent-permission` | Implemented（27 引擎单测 + 13 集成测试） |
+| 其余 `packages/modules/m02,m04…m18` | Not Started |
 | `apps/web` | Not Started |
 | OpenAPI / 事件 schema 目录 | Not Started |
 
@@ -33,13 +34,13 @@
 ## 5. API / 事件 / 认证授权 / 测试 / CI / 基础设施现状
 
 - API：无（P1 起：`/health`、`/ready`）。事件：仅 outbox 基表；canonical 事件目录随 P2+ 落地。
-- 认证：无；开发期 Keycloak OIDC，M01 保持 UserAccount 权威（Pending ADR-104）。授权：Effective Permission 引擎 Not Started（P2）。
+- 认证：无；开发期 Keycloak OIDC，M01 保持 UserAccount 权威（Pending ADR-104）。授权：Effective Permission 引擎 Implemented（packages/policy，M03 PermissionService 落 PolicyDecision）。
 - 测试：vitest 单元 + 集成（testcontainers 式，用本地 docker PG）；CI：GitHub Actions（build/typecheck/lint/depcruise/迁移演练/测试）。
 - 部署假设：容器化、单区域、托管平台待批（ADR-103/119/121 Pending External Approval）。
 
 ## 6. M01–M18 能力状态
 
-全部 **Not Started**（P2 起按 IMPLEMENTATION_PLAN §8 顺序推进：M01/M02/M03/M15 → M04/M05/M06/M10 → M17 → M18(社区) → M18(匹配) → M18/M16(消息) → M11/M09 → M12/M13/M14）。
+M01 Implemented（账号/组织/成员/角色分配）；M03 Implemented（Consent 全模型 + Relationship + PolicyDecision + 权限服务）；M15 部分（append-only 审计）。其余 Not Started，按 IMPLEMENTATION_PLAN §8 顺序推进：M02 → M04/M05/M06/M10 → M17 → M18(社区) → M18(匹配) → M18/M16(消息) → M11/M09 → M12/M13/M14。
 
 ## 7. 与 Handbook 的冲突
 

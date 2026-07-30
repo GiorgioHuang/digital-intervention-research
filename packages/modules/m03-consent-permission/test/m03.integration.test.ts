@@ -1,0 +1,360 @@
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import pg from 'pg';
+import { FixedClock, createRequestContext, PlatformError } from '@platform/kernel';
+import { createPool, migrate, withTransaction } from '@platform/database';
+import { POLICY_V1 } from '@platform/policy';
+import {
+  assignRole,
+  createOrganisation,
+  createRoleAssignmentQuery,
+  createUserAccount,
+  seedBootstrapAdministrator,
+  type M01Deps,
+} from '@platform/m01-identity-org';
+import { createPermissionService } from '../src/application/permission-service.js';
+import {
+  approveRelationship,
+  proposeRelationship,
+  recordConsentDecision,
+  withdrawConsent,
+  type M03Deps,
+} from '../src/application/consent-commands.js';
+
+const DATABASE_URL =
+  process.env['DATABASE_URL'] ?? 'postgres://platform:platform_dev_only@localhost:5432/research_platform';
+
+async function probe(): Promise<boolean> {
+  const c = new pg.Client({ connectionString: DATABASE_URL, connectionTimeoutMillis: 2000 });
+  try {
+    await c.connect();
+    await c.end();
+    return true;
+  } catch {
+    return false;
+  }
+}
+const dbAvailable = await probe();
+
+describe.skipIf(!dbAvailable)('M01+M03 identity, consent and permission (integration)', () => {
+  let pool: pg.Pool;
+  const clock = new FixedClock('2026-07-30T12:00:00Z');
+  let m01: M01Deps;
+  let m03: M03Deps;
+  let adminId: string;
+  let orgId: string;
+  let participantId: string;
+  let researcherId: string;
+  let supporterId: string;
+
+  const ctxFor = (actorId: string, extras: Record<string, string> = {}) =>
+    createRequestContext({
+      actor: { type: 'user', id: actorId },
+      ...extras,
+    });
+
+  beforeAll(async () => {
+    await migrate({ databaseUrl: DATABASE_URL, direction: 'up' });
+    pool = createPool({ connectionString: DATABASE_URL, applicationName: 'm03-tests' });
+
+    const permissions = createPermissionService({
+      pool,
+      clock,
+      policy: POLICY_V1,
+      roleAssignments: createRoleAssignmentQuery(pool),
+    });
+    m03 = { pool, clock, permissions };
+    m01 = { pool, clock, checkPermission: (ctx, req) => permissions.evaluate(ctx, req) };
+
+    ({ userAccountId: adminId } = await seedBootstrapAdministrator(pool, clock, {
+      displayName: 'Bootstrap Admin',
+    }));
+    ({ organisationId: orgId } = await createOrganisation(m01, ctxFor(adminId), { name: 'Test Org' }));
+
+    // Admin invites accounts, then assigns roles (confirmed: high-impact).
+    const adminCtx = ctxFor(adminId, { organisationId: orgId });
+    ({ userAccountId: participantId } = await createUserAccount(m01, adminCtx, {
+      displayName: 'Pat Participant',
+      organisationId: orgId,
+    }));
+    ({ userAccountId: researcherId } = await createUserAccount(m01, adminCtx, {
+      displayName: 'Ria Researcher',
+      organisationId: orgId,
+    }));
+    ({ userAccountId: supporterId } = await createUserAccount(m01, adminCtx, {
+      displayName: 'Sam Supporter',
+      organisationId: orgId,
+    }));
+    // OrganisationAdministrator for org, then role assignments in scope.
+    await assignRole(m01, adminCtx, { userAccountId: adminId, role: 'OrganisationAdministrator', organisationId: orgId, confirmed: true });
+    await assignRole(m01, adminCtx, { userAccountId: participantId, role: 'Participant', confirmed: true });
+    await assignRole(m01, adminCtx, {
+      userAccountId: researcherId,
+      role: 'Researcher',
+      organisationId: orgId,
+      researchProjectId: 'rp_1',
+      confirmed: true,
+    });
+    await assignRole(m01, adminCtx, { userAccountId: supporterId, role: 'Supporter', confirmed: true });
+    // Coordinator role (unscoped for the test) so the admin actor may propose relationships.
+    await assignRole(m01, adminCtx, { userAccountId: adminId, role: 'ResearchCoordinator', confirmed: true });
+  }, 30_000);
+
+  afterAll(async () => {
+    await pool?.end();
+  });
+
+  const researcherView = () =>
+    m03.permissions.evaluate(
+      createRequestContext({
+        actor: { type: 'user', id: researcherId },
+        organisationId: orgId,
+        researchProjectId: 'rp_1',
+        purposeCode: 'research-operations',
+      }),
+      {
+        action: 'participant.view-assigned',
+        resource: {
+          type: 'ParticipantRecord',
+          id: participantId,
+          state: 'Active',
+          protectedExistence: true,
+          ownerParticipantId: participantId,
+          organisationId: orgId,
+          researchProjectId: 'rp_1',
+        },
+      },
+    );
+
+  it('NEGATIVE role-only bypass: researcher with valid role but NO consent is denied, existence hidden', async () => {
+    const decision = await researcherView();
+    expect(decision.outcome).toBe('DenyAndHideExistence');
+    expect(decision.reason).toBe('consent-missing');
+  });
+
+  it('participant records study-participation consent (owner-only), then researcher is allowed', async () => {
+    await recordConsentDecision(m03, ctxFor(participantId), {
+      participantId,
+      scope: 'study-participation',
+      decision: 'Granted',
+      templateVersion: 'ct_v1',
+    });
+    const decision = await researcherView();
+    expect(decision.outcome).toBe('Allow');
+  });
+
+  it('NEGATIVE cross-participant: another actor cannot record consent for the participant', async () => {
+    await expect(
+      recordConsentDecision(m03, ctxFor(researcherId), {
+        participantId,
+        scope: 'study-participation',
+        decision: 'Granted',
+        templateVersion: 'ct_v1',
+      }),
+    ).rejects.toMatchObject({ code: 'AUTHORISATION_DENIED' });
+  });
+
+  it('withdrawal requires explicit confirmation (AllowWithConfirmation)', async () => {
+    await expect(
+      withdrawConsent(m03, ctxFor(participantId), {
+        participantId,
+        scope: 'study-participation',
+        templateVersion: 'ct_v1',
+        confirmed: false,
+      }),
+    ).rejects.toMatchObject({ code: 'CONFIRMATION_REQUIRED' });
+  });
+
+  it('NEGATIVE withdrawn consent: withdrawal atomically emits ConsentWithdrawn and access is denied afterwards', async () => {
+    await withdrawConsent(m03, ctxFor(participantId), {
+      participantId,
+      scope: 'study-participation',
+      templateVersion: 'ct_v1',
+      confirmed: true,
+    });
+
+    // Outbox atomic pair: state change + ConsentWithdrawn committed together.
+    const outbox = await pool.query(
+      `SELECT count(*)::int AS n FROM platform_kernel.outbox_messages
+        WHERE event_type = 'ConsentWithdrawn' AND payload->>'participantId' = $1`,
+      [participantId],
+    );
+    expect(outbox.rows[0].n).toBeGreaterThanOrEqual(1);
+
+    const decision = await researcherView();
+    expect(decision.outcome).toBe('DenyAndHideExistence');
+    expect(decision.reason).toBe('consent-withdrawn');
+
+    // Consent decision history is append-only (DB trigger).
+    await expect(
+      pool.query(`UPDATE consent_permission.consent_decisions SET decision = 'Granted'`),
+    ).rejects.toThrow(/append-only/);
+  });
+
+  it('every evaluation is recorded as a PolicyDecision with policy version', async () => {
+    const res = await pool.query(
+      `SELECT outcome, policy_version FROM consent_permission.policy_decisions
+        WHERE actor_id = $1 AND action = 'participant.view-assigned'
+        ORDER BY evaluated_at`,
+      [researcherId],
+    );
+    expect(res.rows.length).toBeGreaterThanOrEqual(3);
+    expect(res.rows.every((r) => r.policy_version === POLICY_V1.policyVersion)).toBe(true);
+  });
+
+  it('supporter path: relationship + consent both required; revocation of either denies', async () => {
+    const supporterCtx = ctxFor(supporterId);
+    const view = () =>
+      m03.permissions.evaluate(supporterCtx, {
+        action: 'participant.view-shared',
+        resource: {
+          type: 'ParticipantRecord',
+          id: participantId,
+          state: 'Active',
+          protectedExistence: true,
+          ownerParticipantId: participantId,
+        },
+      });
+
+    // No relationship at all -> hidden.
+    expect((await view()).outcome).toBe('DenyAndHideExistence');
+
+    // Propose (coordinator-free path: admin proposes) + participant approves.
+    const { relationshipId } = await proposeRelationship(m03, ctxFor(adminId), {
+      participantId,
+      relatedActorId: supporterId,
+      relationshipType: 'FamilyMember',
+      permittedActions: ['participant.view-shared'],
+    });
+    // Pending verification -> still not allowed.
+    expect((await view()).outcome).not.toBe('Allow');
+
+    await approveRelationship(m03, ctxFor(participantId), {
+      relationshipId,
+      expectedVersion: 1,
+      confirmed: true,
+    });
+    // Relationship active but supporter-involvement consent missing -> denied.
+    expect((await view()).reason).toBe('consent-missing');
+
+    await recordConsentDecision(m03, ctxFor(participantId), {
+      participantId,
+      scope: 'supporter-involvement',
+      decision: 'Granted',
+      templateVersion: 'ct_v1',
+    });
+    expect((await view()).outcome).toBe('Allow');
+
+    // Withdraw the consent -> denied again (prompt effect on next evaluation).
+    await withdrawConsent(m03, ctxFor(participantId), {
+      participantId,
+      scope: 'supporter-involvement',
+      templateVersion: 'ct_v1',
+      confirmed: true,
+    });
+    expect((await view()).outcome).toBe('DenyAndHideExistence');
+  });
+
+  it('optimistic concurrency: stale expectedVersion on relationship approval conflicts', async () => {
+    const { relationshipId } = await proposeRelationship(m03, ctxFor(adminId), {
+      participantId,
+      relatedActorId: supporterId,
+      relationshipType: 'Friend',
+      permittedActions: ['participant.view-shared'],
+    });
+    await expect(
+      approveRelationship(m03, ctxFor(participantId), {
+        relationshipId,
+        expectedVersion: 99,
+        confirmed: true,
+      }),
+    ).rejects.toMatchObject({ code: 'VERSION_CONFLICT' });
+  });
+
+  it('duplicate active role assignment in the same scope is rejected by the database', async () => {
+    const adminCtx = ctxFor(adminId, { organisationId: orgId });
+    await expect(
+      assignRole(m01, adminCtx, { userAccountId: participantId, role: 'Participant', confirmed: true }),
+    ).rejects.toThrow(/duplicate key/i);
+  });
+
+  it('unknown actor gets deny (no roles), and unauthenticated context denies', async () => {
+    const decision = await m03.permissions.evaluate(ctxFor('actor_ghost'), {
+      action: 'participant.view-assigned',
+      resource: {
+        type: 'ParticipantRecord',
+        id: participantId,
+        state: 'Active',
+        protectedExistence: true,
+        ownerParticipantId: participantId,
+      },
+    });
+    expect(decision.outcome).toBe('DenyAndHideExistence');
+
+    const anonymous = await m03.permissions.evaluate(createRequestContext(), {
+      action: 'participant.view-assigned',
+      resource: { type: 'ParticipantRecord', id: participantId, state: 'Active', protectedExistence: true },
+    });
+    expect(anonymous.outcome).toBe('DenyAndHideExistence');
+  });
+
+  it('PlatformError surfaces stable error codes end to end', async () => {
+    try {
+      await withdrawConsent(m03, ctxFor(researcherId), {
+        participantId,
+        scope: 'study-participation',
+        templateVersion: 'ct_v1',
+        confirmed: true,
+      });
+      expect.unreachable('should have thrown');
+    } catch (err) {
+      expect(err).toBeInstanceOf(PlatformError);
+      expect((err as PlatformError).code).toBe('AUTHORISATION_DENIED');
+    }
+  });
+
+  it('audit trail exists for consent actions and is append-only', async () => {
+    const res = await pool.query(
+      `SELECT count(*)::int AS n FROM governance_audit.audit_events
+        WHERE participant_id = $1 AND action IN ('consent.record', 'consent.withdraw')`,
+      [participantId],
+    );
+    expect(res.rows[0].n).toBeGreaterThanOrEqual(3);
+  });
+
+  it('transactionality: failed command leaves no partial consent state', async () => {
+    // Force a failure inside the transaction by violating the append-only
+    // trigger via a poisoned decision id (duplicate primary key).
+    const { consentDecisionId } = await recordConsentDecision(m03, ctxFor(participantId), {
+      participantId,
+      scope: 'ai-assistance',
+      decision: 'Granted',
+      templateVersion: 'ct_v1',
+    });
+    const before = await pool.query(
+      `SELECT count(*)::int AS n FROM consent_permission.consent_decisions WHERE participant_id = $1`,
+      [participantId],
+    );
+    await expect(
+      withTransaction(pool, async (client) => {
+        await client.query(
+          `INSERT INTO consent_permission.consent_decisions
+             (id, participant_id, consent_scope, consent_template_version, decision,
+              decided_by_actor_id, effective_from)
+           VALUES ($1, $2, 'x', 'v', 'Granted', 'a', now())`,
+          [consentDecisionId, participantId],
+        );
+      }),
+    ).rejects.toThrow(/duplicate key/i);
+    const after = await pool.query(
+      `SELECT count(*)::int AS n FROM consent_permission.consent_decisions WHERE participant_id = $1`,
+      [participantId],
+    );
+    expect(after.rows[0].n).toBe(before.rows[0].n);
+  });
+});
+
+describe.skipIf(dbAvailable)('M01+M03 integration (skipped)', () => {
+  it('skipped because no PostgreSQL is reachable', () => {
+    expect(dbAvailable).toBe(false);
+  });
+});

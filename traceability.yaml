@@ -80,3 +80,43 @@
   code: [.github/workflows/ci.yml, .dependency-cruiser.cjs]
   tests: []
   status: scaffolded
+
+- implementation_id: IMP-POLICY-ENGINE-001
+  module: M03
+  summary: Deterministic Effective Permission engine (7-element formula, 12-step sequence, deny-by-default, protected existence)
+  trace_ids: [ATR-003, ATR-002, ATR-016]
+  adr_ids: [ADR-017, ADR-050, ADR-016]
+  docs: ["Doc 4 permission evaluation", "Doc 14 §16", "Doc 13 §12.9"]
+  code: [packages/policy/src/engine.ts, packages/policy/src/types.ts, packages/policy/src/catalogue.ts]
+  tests: [packages/policy/test/engine.test.ts]
+  status: implemented
+
+- implementation_id: IMP-M01-IDENTITY-001
+  module: M01
+  summary: UserAccount, Organisation, membership, scoped RoleAssignment with optimistic concurrency and domain events
+  trace_ids: [ATR-003, ATR-022]
+  adr_ids: [ADR-008, ADR-015]
+  docs: ["Doc 8 §2.1", "Doc 16 identity_org"]
+  code: [packages/modules/m01-identity-org/src, packages/database/migrations/1753800000002_m01-identity-org.sql]
+  tests: [packages/modules/m03-consent-permission/test/m03.integration.test.ts]
+  status: implemented
+
+- implementation_id: IMP-M03-CONSENT-001
+  module: M03
+  summary: Granular versioned withdrawable Consent (append-only history, atomic ConsentWithdrawn outbox pair) and Relationship lifecycle
+  trace_ids: [ATR-002, ATR-024]
+  adr_ids: [ADR-018, ADR-015, ADR-054]
+  docs: ["Doc 4 consent model", "Doc 8 §2.3", "Doc 16 consent_permission"]
+  code: [packages/modules/m03-consent-permission/src, packages/database/migrations/1753800000003_m03-consent-permission.sql]
+  tests: [packages/modules/m03-consent-permission/test/m03.integration.test.ts]
+  status: implemented
+
+- implementation_id: IMP-M03-POLICYDECISION-001
+  module: M03
+  summary: PermissionService records every evaluation as PolicyDecision with policy version (step 12, explainable)
+  trace_ids: [ATR-022, ATR-003]
+  adr_ids: [ADR-017, ADR-016]
+  docs: ["Doc 4 step 12", "Doc 8 PolicyDecision"]
+  code: [packages/modules/m03-consent-permission/src/application/permission-service.ts]
+  tests: [packages/modules/m03-consent-permission/test/m03.integration.test.ts]
+  status: implemented
