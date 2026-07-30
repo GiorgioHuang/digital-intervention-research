@@ -120,3 +120,33 @@
   code: [packages/modules/m03-consent-permission/src/application/permission-service.ts]
   tests: [packages/modules/m03-consent-permission/test/m03.integration.test.ts]
   status: implemented
+
+- implementation_id: IMP-M02-PARTICIPANT-001
+  module: M02
+  summary: Participant registration, account->participant identity mapping, accessibility preferences with source provenance
+  trace_ids: [ATR-002, ATR-006]
+  adr_ids: [ADR-008, ADR-021]
+  docs: ["Doc 8 §2.2", "Doc 5 adaptation priority"]
+  code: [packages/modules/m02-participant/src, packages/database/migrations/1753800000004_m02-participant.sql]
+  tests: [packages/modules/m05-enrolment/test/m05.integration.test.ts]
+  status: implemented
+
+- implementation_id: IMP-M04-PROTOCOL-001
+  module: M04
+  summary: ResearchProject + immutable ProtocolVersion lifecycle (submit/approve/activate, DB-level content immutability, self-approval blocked, single active version)
+  trace_ids: [ATR-004, ATR-022]
+  adr_ids: [ADR-051, ADR-015]
+  docs: ["Doc 8 §2.6", "Doc 16 research_design"]
+  code: [packages/modules/m04-research-design/src, packages/database/migrations/1753800000005_m04-research-design.sql]
+  tests: [packages/modules/m05-enrolment/test/m05.integration.test.ts]
+  status: implemented
+
+- implementation_id: IMP-M05-ENROLMENT-001
+  module: M05
+  summary: Recruitment/screening/human EligibilityDecision/consent-gated Enrolment/withdrawal bound to exact ProtocolVersion
+  trace_ids: [ATR-002, ATR-004, ATR-024]
+  adr_ids: [ADR-018, ADR-054, ADR-060]
+  docs: ["Doc 8 §2.7", "Doc 19 participant journey", "Doc 16 enrolment"]
+  code: [packages/modules/m05-enrolment/src, packages/database/migrations/1753800000006_m05-enrolment.sql]
+  tests: [packages/modules/m05-enrolment/test/m05.integration.test.ts]
+  status: implemented

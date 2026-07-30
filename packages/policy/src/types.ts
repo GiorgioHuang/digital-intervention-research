@@ -104,6 +104,8 @@ export interface ActorInput {
   type: 'user' | 'service-account' | 'system';
   authenticated: boolean;
   authStrength?: AuthStrength;
+  /** Participant identity this account acts as, where one exists (M02 mapping). */
+  participantId?: string;
 }
 
 /** Per-action requirements — versioned policy data, not code. */

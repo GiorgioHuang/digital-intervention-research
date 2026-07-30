@@ -5,10 +5,9 @@ import {
   withTransaction,
   type Pool,
 } from '@platform/database';
-import type { PolicyDecisionResult } from '@platform/policy';
+import { assertAllowed, type PolicyDecisionResult } from '@platform/policy';
 import { M01_EVENTS, type Role } from '../contracts/index.js';
 import {
-  findRoleAssignments,
   insertMembership,
   insertOrganisation,
   insertRoleAssignment,
@@ -38,23 +37,6 @@ export interface M01Deps {
 function requireActor(ctx: RequestContext): string {
   if (ctx.actor === undefined) throw new PlatformError('AUTHENTICATION_REQUIRED', 'No authenticated actor');
   return ctx.actor.id;
-}
-
-function assertAllowed(decision: PolicyDecisionResult, confirmed: boolean): void {
-  switch (decision.outcome) {
-    case 'Allow':
-    case 'AllowWithFieldRestrictions':
-      return;
-    case 'AllowWithConfirmation':
-      if (confirmed) return;
-      throw new PlatformError('CONFIRMATION_REQUIRED', 'This action requires explicit confirmation');
-    case 'StepUpAuthenticationRequired':
-      throw new PlatformError('STEP_UP_AUTHENTICATION_REQUIRED', 'Stronger authentication required');
-    case 'DenyAndHideExistence':
-      throw new PlatformError('RESOURCE_NOT_FOUND', 'Resource not found');
-    default:
-      throw new PlatformError('AUTHORISATION_DENIED', `Not permitted (${decision.reason})`);
-  }
 }
 
 export async function createOrganisation(

@@ -14,11 +14,18 @@ import {
   insertPolicyDecision,
 } from '../infrastructure/repository.js';
 
+/** Structural port: resolves the Participant identity an account acts as (M02). */
+export interface ParticipantIdentityPort {
+  findParticipantIdByAccount(userAccountId: string): Promise<string | undefined>;
+}
+
 export interface PermissionServiceDeps {
   pool: Pool;
   clock: Clock;
   policy: PolicyConfiguration;
   roleAssignments: RoleAssignmentQueryPort;
+  /** Optional until M02 is composed in; absent = accounts act only as themselves. */
+  participantIdentity?: ParticipantIdentityPort;
 }
 
 /**
@@ -33,6 +40,10 @@ export function createPermissionService(deps: PermissionServiceDeps): Permission
     async evaluate(ctx: RequestContext, request: PermissionRequest): Promise<PolicyDecisionResult> {
       const actorId = ctx.actor?.id;
       const now = deps.clock.now();
+      const actorParticipantId =
+        actorId !== undefined && deps.participantIdentity !== undefined
+          ? await deps.participantIdentity.findParticipantIdByAccount(actorId)
+          : undefined;
 
       const input: EvaluationInput = {
         actor: {
@@ -40,6 +51,7 @@ export function createPermissionService(deps: PermissionServiceDeps): Permission
           type: ctx.actor?.type ?? 'user',
           authenticated: ctx.actor !== undefined,
           ...(ctx.authStrength !== undefined ? { authStrength: ctx.authStrength } : {}),
+          ...(actorParticipantId !== undefined ? { participantId: actorParticipantId } : {}),
         },
         action: request.action,
         resource: {

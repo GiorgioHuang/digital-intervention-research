@@ -185,6 +185,34 @@ importers:
         specifier: ^3.2.4
         version: 3.2.7(@types/node@22.20.1)(yaml@2.9.0)
 
+  packages/modules/m02-participant:
+    dependencies:
+      '@platform/database':
+        specifier: workspace:*
+        version: link:../../database
+      '@platform/kernel':
+        specifier: workspace:*
+        version: link:../../kernel
+      '@platform/policy':
+        specifier: workspace:*
+        version: link:../../policy
+    devDependencies:
+      '@types/node':
+        specifier: ^22.20.1
+        version: 22.20.1
+      '@types/pg':
+        specifier: ^8.16.0
+        version: 8.20.0
+      pg:
+        specifier: ^8.16.4
+        version: 8.22.0
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+      vitest:
+        specifier: ^3.2.4
+        version: 3.2.7(@types/node@22.20.1)(yaml@2.9.0)
+
   packages/modules/m03-consent-permission:
     dependencies:
       '@platform/database':
@@ -216,7 +244,79 @@ importers:
         specifier: ^3.2.4
         version: 3.2.7(@types/node@22.20.1)(yaml@2.9.0)
 
+  packages/modules/m04-research-design:
+    dependencies:
+      '@platform/database':
+        specifier: workspace:*
+        version: link:../../database
+      '@platform/kernel':
+        specifier: workspace:*
+        version: link:../../kernel
+      '@platform/policy':
+        specifier: workspace:*
+        version: link:../../policy
+    devDependencies:
+      '@types/node':
+        specifier: ^22.20.1
+        version: 22.20.1
+      '@types/pg':
+        specifier: ^8.16.0
+        version: 8.20.0
+      pg:
+        specifier: ^8.16.4
+        version: 8.22.0
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+      vitest:
+        specifier: ^3.2.4
+        version: 3.2.7(@types/node@22.20.1)(yaml@2.9.0)
+
+  packages/modules/m05-enrolment:
+    dependencies:
+      '@platform/database':
+        specifier: workspace:*
+        version: link:../../database
+      '@platform/kernel':
+        specifier: workspace:*
+        version: link:../../kernel
+      '@platform/m02-participant':
+        specifier: workspace:*
+        version: link:../m02-participant
+      '@platform/m03-consent-permission':
+        specifier: workspace:*
+        version: link:../m03-consent-permission
+      '@platform/m04-research-design':
+        specifier: workspace:*
+        version: link:../m04-research-design
+      '@platform/policy':
+        specifier: workspace:*
+        version: link:../../policy
+    devDependencies:
+      '@platform/m01-identity-org':
+        specifier: workspace:*
+        version: link:../m01-identity-org
+      '@types/node':
+        specifier: ^22.20.1
+        version: 22.20.1
+      '@types/pg':
+        specifier: ^8.16.0
+        version: 8.20.0
+      pg:
+        specifier: ^8.16.4
+        version: 8.22.0
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+      vitest:
+        specifier: ^3.2.4
+        version: 3.2.7(@types/node@22.20.1)(yaml@2.9.0)
+
   packages/policy:
+    dependencies:
+      '@platform/kernel':
+        specifier: workspace:*
+        version: link:../kernel
     devDependencies:
       '@types/node':
         specifier: ^22.20.1

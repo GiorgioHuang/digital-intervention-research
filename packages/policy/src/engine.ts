@@ -74,7 +74,8 @@ export function evaluatePermission(
   // Steps 2–3 — resolve active roles and scope; owner access path.
   const actorIsResourceOwner =
     input.resource.ownerParticipantId !== undefined &&
-    input.resource.ownerParticipantId === input.actor.id;
+    (input.resource.ownerParticipantId === input.actor.id ||
+      input.resource.ownerParticipantId === input.actor.participantId);
   if (requirement.ownerOnly === true && !actorIsResourceOwner) {
     t('2-role', 'owner-only action attempted by a non-owner');
     return deny('not-resource-owner');
