@@ -250,3 +250,23 @@
   code: [packages/modules/m11-ai/src]
   tests: [packages/modules/m11-ai/test/m09-m11.integration.test.ts]
   status: implemented
+
+- implementation_id: IMP-M12-DATASET-001
+  module: M12
+  summary: DatasetDefinition (message-body excluded) -> generated DatasetVersion with lineage manifest -> quality review -> human MFA DatasetLock, locked version immutable
+  trace_ids: [ATR-019]
+  adr_ids: [ADR-045, ADR-034]
+  docs: ["Doc 8 §2.14", "Doc 16 §35"]
+  code: [packages/modules/m12-dataset/src, packages/database/migrations/1753800000014_m12-m13-dataset-analysis.sql]
+  tests: [packages/modules/m13-analysis/test/m12-m13.integration.test.ts]
+  status: implemented
+
+- implementation_id: IMP-M13-ANALYSIS-001
+  module: M13
+  summary: AnalysisPlan approval -> AnalysisRun bound to exact locked DatasetVersion with environment capture -> Output != Interpretation != Finding, human approvals with separation of duties
+  trace_ids: [ATR-019, ATR-020]
+  adr_ids: [ADR-046, ADR-051]
+  docs: ["Doc 8 §2.15", "Doc 11 research chain"]
+  code: [packages/modules/m13-analysis/src]
+  tests: [packages/modules/m13-analysis/test/m12-m13.integration.test.ts]
+  status: implemented
