@@ -1,0 +1,82 @@
+# Machine-readable implementation traceability matrix.
+# Statuses: not_started | scaffolded | implemented | verified | blocked | deferred | pending_external_approval
+
+- implementation_id: IMP-KERNEL-CONTEXT-001
+  module: kernel
+  summary: RequestContext with correlation/causation/trace IDs, actor, purpose
+  trace_ids: [ATR-022, ATR-003]
+  adr_ids: [ADR-101, ADR-122]
+  docs: ["Doc 13 §12.8", "Doc 15 §22"]
+  code: [packages/kernel/src/context.ts]
+  tests: [packages/kernel/test/context.test.ts]
+  status: not_started
+
+- implementation_id: IMP-KERNEL-ERRORS-001
+  module: kernel
+  summary: Structured error model with stable error-code catalogue from Doc 15 §31
+  trace_ids: [ATR-023]
+  adr_ids: [ADR-101]
+  docs: ["Doc 15 §31"]
+  code: [packages/kernel/src/errors.ts, packages/kernel/src/error-codes.ts]
+  tests: [packages/kernel/test/errors.test.ts]
+  status: not_started
+
+- implementation_id: IMP-KERNEL-IDS-001
+  module: kernel
+  summary: Prefixed opaque UUIDv7 identifiers (pv_/pt_/msg_/... style)
+  trace_ids: [ATR-022]
+  adr_ids: [ADR-005, ADR-101]
+  docs: ["Doc 15 §21", "Doc 16 §12"]
+  code: [packages/kernel/src/ids.ts]
+  tests: [packages/kernel/test/ids.test.ts]
+  status: not_started
+
+- implementation_id: IMP-KERNEL-CLOCK-001
+  module: kernel
+  summary: Deterministic clock abstraction (system + fixed test clock)
+  trace_ids: [ATR-019]
+  adr_ids: [ADR-101]
+  docs: ["Doc 13 §36 deterministic test clock"]
+  code: [packages/kernel/src/clock.ts]
+  tests: [packages/kernel/test/clock.test.ts]
+  status: not_started
+
+- implementation_id: IMP-KERNEL-REDACTION-001
+  module: kernel
+  summary: Sensitive-field logging redaction (message body, life story text, reporter identity, tokens, prompts)
+  trace_ids: [ATR-015, ATR-021, ATR-022]
+  adr_ids: [ADR-034, ADR-122]
+  docs: ["Doc 14 §61 logging prohibitions"]
+  code: [packages/kernel/src/logging.ts]
+  tests: [packages/kernel/test/logging.test.ts]
+  status: not_started
+
+- implementation_id: IMP-OPS-OUTBOX-001
+  module: M16
+  summary: Transactional outbox / inbox / idempotency base tables and helpers
+  trace_ids: [ATR-023, ATR-022]
+  adr_ids: [ADR-015]
+  docs: ["Doc 16 §54", "Doc 13 §19.7"]
+  code: [packages/database/migrations, packages/database/src/outbox.ts]
+  tests: [packages/database/test/outbox.test.ts]
+  status: not_started
+
+- implementation_id: IMP-M15-AUDIT-001
+  module: M15
+  summary: Append-only audit_events table and audit writer
+  trace_ids: [ATR-022]
+  adr_ids: [ADR-051, ADR-122]
+  docs: ["Doc 14 §61", "Doc 16 governance_audit"]
+  code: [packages/database/migrations, packages/database/src/audit.ts]
+  tests: [packages/database/test/audit.test.ts]
+  status: not_started
+
+- implementation_id: IMP-OPS-CI-001
+  module: ops
+  summary: CI pipeline (build, typecheck, lint, dependency-cruiser module boundaries, migration drill, tests)
+  trace_ids: [ATR-021, ATR-022]
+  adr_ids: [ADR-008, ADR-101]
+  docs: ["Doc 13 §5.2 architecture tests in CI"]
+  code: [.github/workflows/ci.yml, .dependency-cruiser.cjs]
+  tests: []
+  status: not_started
