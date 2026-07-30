@@ -270,3 +270,33 @@
   code: [packages/modules/m13-analysis/src]
   tests: [packages/modules/m13-analysis/test/m12-m13.integration.test.ts]
   status: implemented
+
+- implementation_id: IMP-M07-DELIVERY-001
+  module: M07
+  summary: InterventionSession with actual exposure state (canonical 9-value enum)
+  trace_ids: [ATR-006]
+  adr_ids: [ADR-008]
+  docs: ["Doc 8 §2.9", "Doc 2 exposure states"]
+  code: [packages/modules/m07-delivery/src, packages/database/migrations/1753800000015_m07-m08-delivery-assessment.sql]
+  tests: [packages/synthetic-pilot/test/synthetic-pilot.test.ts]
+  status: implemented
+
+- implementation_id: IMP-M08-ASSESSMENT-001
+  module: M08
+  summary: AssessmentRecord bound to exact instrument version with typed missingness (DB CHECK)
+  trace_ids: [ATR-006, ATR-019]
+  adr_ids: [ADR-008]
+  docs: ["Doc 8 §2.10", "Doc 19 missingness codes"]
+  code: [packages/modules/m08-assessment/src]
+  tests: [packages/synthetic-pilot/test/synthetic-pilot.test.ts]
+  status: implemented
+
+- implementation_id: IMP-PILOT-SYNTHETIC-001
+  module: ops
+  summary: Synthetic Pilot end-to-end (evidence -> protocol -> enrolment -> life story -> matching -> connection -> delivered message -> assessment -> locked dataset -> approved finding -> withdrawal propagation), deterministic and CI-repeatable
+  trace_ids: [ATR-019, ATR-023, ATR-024]
+  adr_ids: [ADR-048]
+  docs: ["Doc 18 §210", "Doc 19 §203"]
+  code: [packages/synthetic-pilot/test/synthetic-pilot.test.ts]
+  tests: [packages/synthetic-pilot/test/synthetic-pilot.test.ts]
+  status: implemented

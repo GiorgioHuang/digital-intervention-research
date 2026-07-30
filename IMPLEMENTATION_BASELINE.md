@@ -28,7 +28,9 @@
 | `m18-community-social`（社区/匹配/连接/消息全链） + `m16-integration`（供应商模拟器+回调认证） | Implemented（24 集成测试） |
 | `m09-safety` + `m11-ai`（信号/人工事件；Model+Tool Gateway，Level-5 全禁） | Implemented（8 集成测试） |
 | `m12-dataset` + `m13-analysis`（DatasetLock/分析链/Finding 血缘） | Implemented（5 集成测试） |
-| 其余 `packages/modules/m07,m08,m14` | Not Started |
+| `m07-delivery` + `m08-assessment`（暴露状态/类型化缺失） | Implemented（合成试点覆盖） |
+| `packages/synthetic-pilot`（端到端合成试点） | Implemented（5 场景组） |
+| `m14`（报告/导出） | Not Started |
 | `apps/web` | Not Started |
 | OpenAPI / 事件 schema 目录 | Not Started |
 
@@ -46,7 +48,7 @@
 
 ## 6. M01–M18 能力状态
 
-M01/M02/M03/M04/M05 Implemented（身份、参与者档案、同意/权限、协议版本、入组全链）；M15 部分（append-only 审计）。M06/M10/M17 Implemented（干预版本 + 证据链 + Life Story）。M18 社区+匹配 Implemented（Block/Report/ModerationCase/社区/MatchDecision/MutualAcceptance/Connection；ConnectionRequest 功能禁用）。M18/M16 消息管线 Implemented（CommunicationBasis/双状态机/SendConfirmation/回调认证/重放防护）。M09/M11 Implemented（安全人工权威 + AI 治理网关）。M12/M13 Implemented（人工 DatasetLock + Output≠Interpretation≠Finding 全链血缘）。剩余：M07/M08(交付+评估,最小) + M14(报告) → 合成试点串联。
+M01/M02/M03/M04/M05 Implemented（身份、参与者档案、同意/权限、协议版本、入组全链）；M15 部分（append-only 审计）。M06/M10/M17 Implemented（干预版本 + 证据链 + Life Story）。M18 社区+匹配 Implemented（Block/Report/ModerationCase/社区/MatchDecision/MutualAcceptance/Connection；ConnectionRequest 功能禁用）。M18/M16 消息管线 Implemented（CommunicationBasis/双状态机/SendConfirmation/回调认证/重放防护）。M09/M11 Implemented（安全人工权威 + AI 治理网关）。M12/M13 Implemented（人工 DatasetLock + Output≠Interpretation≠Finding 全链血缘）。M07/M08 + 合成试点 Implemented。剩余缺口见 PILOT_READINESS_REPORT.md（API 层/前端/M14/后台作业/正式批准）。
 
 ## 7. 与 Handbook 的冲突
 

@@ -40,6 +40,8 @@ export const POLICY_V1: PolicyConfiguration = {
       'enrolment.activate',
       'enrolment.withdraw',
       'matching.generate',
+      'session.record',
+      'assessment.record',
     ],
     Researcher: [
       'project.view',
@@ -195,6 +197,9 @@ export const POLICY_V1: PolicyConfiguration = {
     'community.join': { ownerPermitted: true, ownerOnly: true, consentScopes: ['community-participation'] },
     'post.draft': { ownerPermitted: true, ownerOnly: true },
     'post.publish': { ownerPermitted: true, ownerOnly: true, confirmationRequired: true },
+
+    'session.record': {},
+    'assessment.record': {},
 
     'dataset.define': {},
     'dataset.approve-definition': { confirmationRequired: true },

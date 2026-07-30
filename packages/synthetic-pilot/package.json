@@ -1,0 +1,36 @@
+{
+  "name": "@platform/synthetic-pilot",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "echo skip",
+    "typecheck": "echo skip",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@platform/database": "workspace:*",
+    "@platform/kernel": "workspace:*",
+    "@platform/policy": "workspace:*",
+    "@platform/m01-identity-org": "workspace:*",
+    "@platform/m02-participant": "workspace:*",
+    "@platform/m03-consent-permission": "workspace:*",
+    "@platform/m04-research-design": "workspace:*",
+    "@platform/m05-enrolment": "workspace:*",
+    "@platform/m06-intervention-portfolio": "workspace:*",
+    "@platform/m07-delivery": "workspace:*",
+    "@platform/m08-assessment": "workspace:*",
+    "@platform/m09-safety": "workspace:*",
+    "@platform/m10-evidence": "workspace:*",
+    "@platform/m12-dataset": "workspace:*",
+    "@platform/m13-analysis": "workspace:*",
+    "@platform/m16-integration": "workspace:*",
+    "@platform/m17-life-story": "workspace:*",
+    "@platform/m18-community-social": "workspace:*",
+    "@types/node": "^22.20.1",
+    "@types/pg": "^8.16.0",
+    "pg": "^8.16.4",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
+  }
+}

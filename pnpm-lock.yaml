@@ -340,6 +340,62 @@ importers:
         specifier: ^3.2.4
         version: 3.2.7(@types/node@22.20.1)(yaml@2.9.0)
 
+  packages/modules/m07-delivery:
+    dependencies:
+      '@platform/database':
+        specifier: workspace:*
+        version: link:../../database
+      '@platform/kernel':
+        specifier: workspace:*
+        version: link:../../kernel
+      '@platform/policy':
+        specifier: workspace:*
+        version: link:../../policy
+    devDependencies:
+      '@types/node':
+        specifier: ^22.20.1
+        version: 22.20.1
+      '@types/pg':
+        specifier: ^8.16.0
+        version: 8.20.0
+      pg:
+        specifier: ^8.16.4
+        version: 8.22.0
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+      vitest:
+        specifier: ^3.2.4
+        version: 3.2.7(@types/node@22.20.1)(yaml@2.9.0)
+
+  packages/modules/m08-assessment:
+    dependencies:
+      '@platform/database':
+        specifier: workspace:*
+        version: link:../../database
+      '@platform/kernel':
+        specifier: workspace:*
+        version: link:../../kernel
+      '@platform/policy':
+        specifier: workspace:*
+        version: link:../../policy
+    devDependencies:
+      '@types/node':
+        specifier: ^22.20.1
+        version: 22.20.1
+      '@types/pg':
+        specifier: ^8.16.0
+        version: 8.20.0
+      pg:
+        specifier: ^8.16.4
+        version: 8.22.0
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+      vitest:
+        specifier: ^3.2.4
+        version: 3.2.7(@types/node@22.20.1)(yaml@2.9.0)
+
   packages/modules/m09-safety:
     dependencies:
       '@platform/database':
@@ -618,6 +674,78 @@ importers:
       '@types/node':
         specifier: ^22.20.1
         version: 22.20.1
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+      vitest:
+        specifier: ^3.2.4
+        version: 3.2.7(@types/node@22.20.1)(yaml@2.9.0)
+
+  packages/synthetic-pilot:
+    devDependencies:
+      '@platform/database':
+        specifier: workspace:*
+        version: link:../database
+      '@platform/kernel':
+        specifier: workspace:*
+        version: link:../kernel
+      '@platform/m01-identity-org':
+        specifier: workspace:*
+        version: link:../modules/m01-identity-org
+      '@platform/m02-participant':
+        specifier: workspace:*
+        version: link:../modules/m02-participant
+      '@platform/m03-consent-permission':
+        specifier: workspace:*
+        version: link:../modules/m03-consent-permission
+      '@platform/m04-research-design':
+        specifier: workspace:*
+        version: link:../modules/m04-research-design
+      '@platform/m05-enrolment':
+        specifier: workspace:*
+        version: link:../modules/m05-enrolment
+      '@platform/m06-intervention-portfolio':
+        specifier: workspace:*
+        version: link:../modules/m06-intervention-portfolio
+      '@platform/m07-delivery':
+        specifier: workspace:*
+        version: link:../modules/m07-delivery
+      '@platform/m08-assessment':
+        specifier: workspace:*
+        version: link:../modules/m08-assessment
+      '@platform/m09-safety':
+        specifier: workspace:*
+        version: link:../modules/m09-safety
+      '@platform/m10-evidence':
+        specifier: workspace:*
+        version: link:../modules/m10-evidence
+      '@platform/m12-dataset':
+        specifier: workspace:*
+        version: link:../modules/m12-dataset
+      '@platform/m13-analysis':
+        specifier: workspace:*
+        version: link:../modules/m13-analysis
+      '@platform/m16-integration':
+        specifier: workspace:*
+        version: link:../modules/m16-integration
+      '@platform/m17-life-story':
+        specifier: workspace:*
+        version: link:../modules/m17-life-story
+      '@platform/m18-community-social':
+        specifier: workspace:*
+        version: link:../modules/m18-community-social
+      '@platform/policy':
+        specifier: workspace:*
+        version: link:../policy
+      '@types/node':
+        specifier: ^22.20.1
+        version: 22.20.1
+      '@types/pg':
+        specifier: ^8.16.0
+        version: 8.20.0
+      pg:
+        specifier: ^8.16.4
+        version: 8.22.0
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
