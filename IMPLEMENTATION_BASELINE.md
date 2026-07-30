@@ -26,7 +26,8 @@
 | `m06-intervention-portfolio` + `m10-evidence`（含 KP 模拟器） | Implemented（9 集成测试） |
 | `m17-life-story` | Implemented（11 集成测试：作者权三态/版本不可变/可见性/贡献流/撤回） |
 | `m18-community-social`（社区/匹配/连接/消息全链） + `m16-integration`（供应商模拟器+回调认证） | Implemented（24 集成测试） |
-| 其余 `packages/modules/m07,m08,m09,m11…m16` + M18 匹配/消息 | Not Started |
+| `m09-safety` + `m11-ai`（信号/人工事件；Model+Tool Gateway，Level-5 全禁） | Implemented（8 集成测试） |
+| 其余 `packages/modules/m07,m08,m12,m13,m14` | Not Started |
 | `apps/web` | Not Started |
 | OpenAPI / 事件 schema 目录 | Not Started |
 
@@ -44,7 +45,7 @@
 
 ## 6. M01–M18 能力状态
 
-M01/M02/M03/M04/M05 Implemented（身份、参与者档案、同意/权限、协议版本、入组全链）；M15 部分（append-only 审计）。M06/M10/M17 Implemented（干预版本 + 证据链 + Life Story）。M18 社区+匹配 Implemented（Block/Report/ModerationCase/社区/MatchDecision/MutualAcceptance/Connection；ConnectionRequest 功能禁用）。M18/M16 消息管线 Implemented（CommunicationBasis/双状态机/SendConfirmation/回调认证/重放防护）。其余按序：M11/M09(AI+安全) → M12/M13(数据+分析) → 合成试点。
+M01/M02/M03/M04/M05 Implemented（身份、参与者档案、同意/权限、协议版本、入组全链）；M15 部分（append-only 审计）。M06/M10/M17 Implemented（干预版本 + 证据链 + Life Story）。M18 社区+匹配 Implemented（Block/Report/ModerationCase/社区/MatchDecision/MutualAcceptance/Connection；ConnectionRequest 功能禁用）。M18/M16 消息管线 Implemented（CommunicationBasis/双状态机/SendConfirmation/回调认证/重放防护）。M09/M11 Implemented（安全人工权威 + AI 治理网关）。剩余：M07/M08(交付+评估,最小) → M12/M13(数据+分析) → 合成试点。
 
 ## 7. 与 Handbook 的冲突
 

@@ -63,7 +63,7 @@ export const POLICY_V1: PolicyConfiguration = {
       'intervention.approve', 'intervention.activate',
     ],
     EvidenceReviewer: ['evidence-review.approve', 'evidence-decision.draft', 'evidence-decision.approve'],
-    SafetyReviewer: ['safety-signal.record', 'safety-event.create', 'safety-event.review'],
+    SafetyReviewer: ['safety-signal.record', 'safety-signal.triage', 'safety-event.create', 'safety-event.review'],
     Participant: [
       // Participant self-service actions are owner-permitted on own resources.
       'participant.view-own',
@@ -188,6 +188,7 @@ export const POLICY_V1: PolicyConfiguration = {
     'post.publish': { ownerPermitted: true, ownerOnly: true, confirmationRequired: true },
 
     'safety-signal.record': {},
+    'safety-signal.triage': { confirmationRequired: true },
     'safety-event.create': { minimumAuthStrength: 'mfa', confirmationRequired: true },
     'safety-event.review': {},
   },

@@ -230,3 +230,23 @@
   code: [packages/modules/m16-integration/src]
   tests: [packages/modules/m18-community-social/test/messaging.integration.test.ts]
   status: implemented
+
+- implementation_id: IMP-M09-SAFETY-001
+  module: M09
+  summary: SafetySignal (any source incl. AI) vs human-confirmed SafetyEvent with MFA + reasoned triage dispositions
+  trace_ids: [ATR-017]
+  adr_ids: [ADR-039]
+  docs: ["Doc 8 §2.11", "Doc 19 safety workflow"]
+  code: [packages/modules/m09-safety/src, packages/database/migrations/1753800000013_m09-m11-safety-ai.sql]
+  tests: [packages/modules/m11-ai/test/m09-m11.integration.test.ts]
+  status: implemented
+
+- implementation_id: IMP-M11-AI-001
+  module: M11
+  summary: Model Gateway (alias allowlist, no silent substitution, simulator provider), Tool Gateway (allowlist, Action Levels 0-4, Level-5 refusals by name, all invocations recorded)
+  trace_ids: [ATR-018]
+  adr_ids: [ADR-040, ADR-041, ADR-060]
+  docs: ["Doc 17 §18-58", "Doc 10 §16"]
+  code: [packages/modules/m11-ai/src]
+  tests: [packages/modules/m11-ai/test/m09-m11.integration.test.ts]
+  status: implemented
