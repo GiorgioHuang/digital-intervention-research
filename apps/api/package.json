@@ -7,7 +7,7 @@
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "start": "node dist/main.js",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run"
   },
   "dependencies": {
     "@nestjs/common": "^11.1.6",
@@ -18,11 +18,19 @@
     "pino": "^9.13.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
-    "zod": "^3.25.76"
+    "zod": "^3.25.76",
+    "@platform/policy": "workspace:*",
+    "@platform/m01-identity-org": "workspace:*",
+    "@platform/m02-participant": "workspace:*",
+    "@platform/m03-consent-permission": "workspace:*",
+    "@platform/m18-community-social": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^22.20.1",
     "typescript": "^5.9.3",
-    "vitest": "^3.2.4"
+    "vitest": "^3.2.4",
+    "@types/express": "^5.0.0",
+    "pg": "^8.16.4",
+    "@types/pg": "^8.16.0"
   }
 }

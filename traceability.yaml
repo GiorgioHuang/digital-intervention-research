@@ -300,3 +300,13 @@
   code: [packages/synthetic-pilot/test/synthetic-pilot.test.ts]
   tests: [packages/synthetic-pilot/test/synthetic-pilot.test.ts]
   status: implemented
+
+- implementation_id: IMP-API-HTTP-001
+  module: ops
+  summary: HTTP command surface (consent record/withdraw, thread/message/confirm-send) with Doc 15 error envelope, request-context headers, dev-header auth stub (OIDC pending ADR-104), OpenAPI document
+  trace_ids: [ATR-003, ATR-023]
+  adr_ids: [ADR-101, ADR-104]
+  docs: ["Doc 15 §21-31"]
+  code: [apps/api/src, openapi/openapi.yaml]
+  tests: [apps/api/test/api.e2e.test.ts]
+  status: implemented

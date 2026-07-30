@@ -9,6 +9,9 @@ const envSchema = z.object({
   DATABASE_URL: z.string().url(),
   API_PORT: z.coerce.number().int().min(1).max(65535).default(3000),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
+  // 'oidc' is the production target (pending ADR-104); 'dev-header' is an
+  // explicit development/synthetic-pilot stub and the only mode implemented.
+  AUTH_MODE: z.enum(['dev-header', 'oidc']).default('dev-header'),
 });
 
 export type ApiConfig = z.infer<typeof envSchema>;

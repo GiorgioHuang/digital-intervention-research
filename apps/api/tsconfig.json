@@ -7,6 +7,30 @@
     "emitDecoratorMetadata": true,
     "verbatimModuleSyntax": false
   },
-  "include": ["src"],
-  "references": [{ "path": "../../packages/kernel" }, { "path": "../../packages/database" }]
+  "include": [
+    "src"
+  ],
+  "references": [
+    {
+      "path": "../../packages/kernel"
+    },
+    {
+      "path": "../../packages/database"
+    },
+    {
+      "path": "../../packages/policy"
+    },
+    {
+      "path": "../../packages/modules/m01-identity-org"
+    },
+    {
+      "path": "../../packages/modules/m02-participant"
+    },
+    {
+      "path": "../../packages/modules/m03-consent-permission"
+    },
+    {
+      "path": "../../packages/modules/m18-community-social"
+    }
+  ]
 }

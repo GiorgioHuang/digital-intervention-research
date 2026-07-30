@@ -20,7 +20,8 @@
 |---|---|
 | `packages/kernel`（RequestContext、结构化错误、时钟、ID、日志脱敏） | Implemented（50 单测通过） |
 | `packages/database`（连接、迁移、outbox/inbox/audit/idempotency 基表） | Implemented（集成测试含迁移 up→down→up 演练） |
-| `apps/api` / `apps/worker` / `apps/scheduler` | Scaffolded（健康检查/outbox 循环/cron 骨架，冒烟通过） |
+| `apps/api`（Doc 15 错误信封/上下文头/dev-header 认证桩 + consent/messaging 命令端点 + OpenAPI） | Implemented（5 e2e） |
+| `apps/worker` / `apps/scheduler` | Scaffolded（outbox 循环/cron 骨架） |
 | `packages/policy` 权限引擎 + `m01-identity-org` + `m03-consent-permission` | Implemented（27 引擎单测 + 13 集成测试） |
 | `m02-participant` + `m04-research-design` + `m05-enrolment` | Implemented（P3 链路 12 集成测试） |
 | `m06-intervention-portfolio` + `m10-evidence`（含 KP 模拟器） | Implemented（9 集成测试） |
@@ -41,7 +42,7 @@
 
 ## 5. API / 事件 / 认证授权 / 测试 / CI / 基础设施现状
 
-- API：无（P1 起：`/health`、`/ready`）。事件：仅 outbox 基表；canonical 事件目录随 P2+ 落地。
+- API：`/health`、`/ready` + v1 命令端点（consent 记录/撤回、thread/message/confirm-send），Doc 15 错误信封与稳定错误码，OpenAPI 于 `openapi/openapi.yaml`；认证为显式 dev-header 桩（生产 OIDC Pending ADR-104）。其余模块命令按同一模式增量暴露。
 - 认证：无；开发期 Keycloak OIDC，M01 保持 UserAccount 权威（Pending ADR-104）。授权：Effective Permission 引擎 Implemented（packages/policy，M03 PermissionService 落 PolicyDecision）。
 - 测试：vitest 单元 + 集成（testcontainers 式，用本地 docker PG）；CI：GitHub Actions（build/typecheck/lint/depcruise/迁移演练/测试）。
 - 部署假设：容器化、单区域、托管平台待批（ADR-103/119/121 Pending External Approval）。

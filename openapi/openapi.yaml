@@ -1,0 +1,113 @@
+# OpenAPI for the implemented HTTP surface (kept in lockstep with
+# apps/api/src/controllers.ts; the e2e suite exercises every path).
+# Conventions per Doc 15: explicit command endpoints, stable error codes,
+# error envelope {error:{code,message,details,requestId,traceId,retryable}}.
+openapi: 3.1.0
+info:
+  title: Healthy Aging Digital Intervention Research Platform API
+  version: 0.1.0
+  description: >
+    Pilot MVP surface. Authentication: dev-header stub only (X-Actor-Id,
+    X-Auth-Strength) — production OIDC pending ADR-104. Context headers:
+    X-Organisation-Id, X-Research-Project-Id, X-Purpose-Code, X-Request-Id.
+paths:
+  /health:
+    get: { summary: Liveness, responses: { '200': { description: ok } } }
+  /ready:
+    get: { summary: Readiness (DB reachable), responses: { '200': { description: ready }, '503': { description: not ready } } }
+  /v1/participants/{participantId}/consents:
+    post:
+      summary: Record a granular consent decision (owner-only; M03, ADR-018)
+      parameters: [{ name: participantId, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [scope, decision, templateVersion]
+              properties:
+                scope: { type: string }
+                decision: { type: string, enum: [Granted, Declined, Restricted, Deferred] }
+                templateVersion: { type: string }
+      responses:
+        '201': { description: ConsentDecision recorded }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+  /v1/participants/{participantId}/consents/withdraw:
+    post:
+      summary: Withdraw consent for one scope (confirmed; emits ConsentWithdrawn atomically)
+      parameters: [{ name: participantId, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [scope, templateVersion, confirmed]
+              properties:
+                scope: { type: string }
+                templateVersion: { type: string }
+                confirmed: { type: boolean }
+      responses:
+        '201': { description: Withdrawal recorded }
+        '409': { description: CONFIRMATION_REQUIRED / INVALID_STATE_TRANSITION }
+  /v1/conversation-threads:
+    post:
+      summary: Create a ConversationThread (requires a current approved CommunicationBasis, ADR-031)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [connectionId, creatorParticipantId]
+              properties:
+                connectionId: { type: string }
+                creatorParticipantId: { type: string }
+      responses:
+        '201': { description: Thread created }
+        '403': { description: COMMUNICATION_BASIS_REQUIRED / BLOCKED_INTERACTION }
+  /v1/conversation-threads/{threadId}/messages:
+    post:
+      summary: Create a Message Draft (never sends; delivery stays Not Submitted)
+      parameters: [{ name: threadId, in: path, required: true, schema: { type: string } }]
+      responses:
+        '201': { description: Draft created }
+        '409': { description: CONVERSATION_THREAD_NOT_USABLE / THREAD_PARTICIPANT_MISMATCH }
+  /v1/messages/{messageId}/confirm-send:
+    post:
+      summary: Exact SendConfirmation (actor + message version + recipient set; produces Queued, never Delivered)
+      parameters: [{ name: messageId, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [senderParticipantId, expectedMessageVersion, recipientIds, confirmed]
+              properties:
+                senderParticipantId: { type: string }
+                expectedMessageVersion: { type: integer }
+                recipientIds: { type: array, items: { type: string } }
+                confirmed: { type: boolean }
+      responses:
+        '201': { description: Confirmed and queued (lifecycleState Queued) }
+        '409': { description: SEND_CONFIRMATION_MISMATCH / MESSAGE_ALREADY_QUEUED }
+components:
+  responses:
+    Error:
+      description: Doc 15 error envelope
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: object
+                properties:
+                  code: { type: string }
+                  message: { type: string }
+                  requestId: { type: string }
+                  traceId: { type: string }
+                  retryable: { type: boolean }
