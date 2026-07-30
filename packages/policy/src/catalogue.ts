@@ -90,6 +90,9 @@ export const POLICY_V1: PolicyConfiguration = {
       'matching.activate',
       'match.decide',
       'connection.activate',
+      'thread.create',
+      'message.draft',
+      'message.confirm-send',
     ],
     Supporter: ['participant.view-shared', 'life-story.contribute', 'report.submit'],
     Moderator: ['moderation.triage', 'moderation.decide'],
@@ -169,6 +172,10 @@ export const POLICY_V1: PolicyConfiguration = {
     'matching.generate': {},
     'match.decide': { ownerPermitted: true, ownerOnly: true, confirmationRequired: true },
     'connection.activate': { ownerPermitted: true, confirmationRequired: true },
+
+    'thread.create': { ownerPermitted: true, ownerOnly: true, interaction: true },
+    'message.draft': { ownerPermitted: true, ownerOnly: true },
+    'message.confirm-send': { ownerPermitted: true, ownerOnly: true, confirmationRequired: true, interaction: true, consentScopes: ['participant-messaging'] },
 
     'block.create': { confirmationRequired: true },
     'block.revoke': { confirmationRequired: true },

@@ -210,3 +210,23 @@
   code: [packages/modules/m18-community-social/src/application/matching-commands.ts, packages/database/migrations/1753800000011_m18-matching.sql]
   tests: [packages/modules/m18-community-social/test/matching.integration.test.ts]
   status: implemented
+
+- implementation_id: IMP-M18-MESSAGING-001
+  module: M18
+  summary: CommunicationBasis-gated ConversationThread, Message dual state machines, SendConfirmation bound to exact version+recipients, M18-owned delivery-state transitions
+  trace_ids: [ATR-013, ATR-014, ATR-015]
+  adr_ids: [ADR-031, ADR-032, ADR-034]
+  docs: ["Doc 8 §2.5", "Doc 18 §118", "Doc 20 §160"]
+  code: [packages/modules/m18-community-social/src/application/messaging-commands.ts, packages/database/migrations/1753800000012_m18-m16-messaging.sql]
+  tests: [packages/modules/m18-community-social/test/messaging.integration.test.ts]
+  status: implemented
+
+- implementation_id: IMP-M16-PROVIDER-001
+  module: M16
+  summary: Deterministic provider simulator, HMAC callback authentication, nonce replay protection, provider-reference mapping, delivery-state translation via M18 command port only
+  trace_ids: [ATR-014, ATR-023]
+  adr_ids: [ADR-033, ADR-052]
+  docs: ["Doc 15 provider adapters", "Doc 13 §18.6"]
+  code: [packages/modules/m16-integration/src]
+  tests: [packages/modules/m18-community-social/test/messaging.integration.test.ts]
+  status: implemented

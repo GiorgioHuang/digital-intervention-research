@@ -377,6 +377,31 @@ importers:
         specifier: ^3.2.4
         version: 3.2.7(@types/node@22.20.1)(yaml@2.9.0)
 
+  packages/modules/m16-integration:
+    dependencies:
+      '@platform/database':
+        specifier: workspace:*
+        version: link:../../database
+      '@platform/kernel':
+        specifier: workspace:*
+        version: link:../../kernel
+    devDependencies:
+      '@types/node':
+        specifier: ^22.20.1
+        version: 22.20.1
+      '@types/pg':
+        specifier: ^8.16.0
+        version: 8.20.0
+      pg:
+        specifier: ^8.16.4
+        version: 8.22.0
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+      vitest:
+        specifier: ^3.2.4
+        version: 3.2.7(@types/node@22.20.1)(yaml@2.9.0)
+
   packages/modules/m17-life-story:
     dependencies:
       '@platform/database':
@@ -435,6 +460,9 @@ importers:
       '@platform/m03-consent-permission':
         specifier: workspace:*
         version: link:../m03-consent-permission
+      '@platform/m16-integration':
+        specifier: workspace:*
+        version: link:../m16-integration
       '@types/node':
         specifier: ^22.20.1
         version: 22.20.1

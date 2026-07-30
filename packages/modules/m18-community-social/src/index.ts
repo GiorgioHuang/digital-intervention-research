@@ -20,3 +20,10 @@ export {
   DEFAULT_MATCHING_CONFIG,
   type MatchingConfig,
 } from './application/matching-commands.js';
+export {
+  createThread,
+  createMessageDraft,
+  reviseMessageDraft,
+  confirmSend,
+  recordDeliveryState,
+} from './application/messaging-commands.js';
