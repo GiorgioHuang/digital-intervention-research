@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: platform
+          POSTGRES_PASSWORD: platform_dev_only
+          POSTGRES_DB: research_platform
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U platform -d research_platform"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgres://platform:platform_dev_only@localhost:5432/research_platform
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm build
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Architecture boundaries (dependency-cruiser)
+        run: pnpm depcruise
+
+      - name: Traceability matrix check
+        run: pnpm traceability:check
+
+      - name: Migration drill (up → down-all → up)
+        run: |
+          pnpm migrate
+          pnpm migrate:reset
+          pnpm migrate
+
+      - name: Tests (unit + integration)
+        run: pnpm test

@@ -1,0 +1,34 @@
+{
+  "name": "@platform/database",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "migrate:up": "node-pg-migrate up -m migrations --migrations-table applied_migrations --migrations-schema migration_admin --create-migrations-schema --schema migration_admin --create-schema",
+    "migrate:down": "node-pg-migrate down -m migrations --migrations-table applied_migrations --migrations-schema migration_admin --schema migration_admin",
+    "migrate:reset": "node-pg-migrate down 9999 -m migrations --migrations-table applied_migrations --migrations-schema migration_admin --schema migration_admin",
+    "test": "vitest run",
+    "test:integration": "vitest run"
+  },
+  "dependencies": {
+    "@platform/kernel": "workspace:*",
+    "node-pg-migrate": "^8.0.4",
+    "pg": "^8.16.4"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.1",
+    "@types/pg": "^8.16.0",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
+  }
+}

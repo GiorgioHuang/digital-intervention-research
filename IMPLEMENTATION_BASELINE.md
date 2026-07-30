@@ -18,9 +18,9 @@
 
 | 组件 | 状态 |
 |---|---|
-| `packages/kernel`（RequestContext、结构化错误、时钟、ID、日志脱敏） | Scaffolded → 见 traceability |
-| `packages/database`（连接、迁移、outbox/inbox/audit/idempotency 基表） | Scaffolded |
-| `apps/api` / `apps/worker` / `apps/scheduler` | Scaffolded（健康检查级） |
+| `packages/kernel`（RequestContext、结构化错误、时钟、ID、日志脱敏） | Implemented（50 单测通过） |
+| `packages/database`（连接、迁移、outbox/inbox/audit/idempotency 基表） | Implemented（集成测试含迁移 up→down→up 演练） |
+| `apps/api` / `apps/worker` / `apps/scheduler` | Scaffolded（健康检查/outbox 循环/cron 骨架，冒烟通过） |
 | `packages/modules/m01…m18` | Not Started |
 | `apps/web` | Not Started |
 | OpenAPI / 事件 schema 目录 | Not Started |

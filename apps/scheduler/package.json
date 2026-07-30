@@ -1,0 +1,23 @@
+{
+  "name": "@platform/scheduler",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "start": "node dist/main.js",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@platform/kernel": "workspace:*",
+    "pg-boss": "^10.3.3",
+    "pino": "^9.13.1",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.1",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
+  }
+}

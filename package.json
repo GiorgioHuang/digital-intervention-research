@@ -1,0 +1,33 @@
+{
+  "name": "healthy-aging-research-platform",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Healthy Aging Digital Intervention Research Platform — modular monolith MVP (see IMPLEMENTATION_PLAN.md)",
+  "engines": {
+    "node": ">=22"
+  },
+  "packageManager": "pnpm@10.33.0",
+  "scripts": {
+    "build": "pnpm -r --filter './packages/**' --filter './apps/**' run build",
+    "typecheck": "pnpm -r run typecheck",
+    "lint": "eslint .",
+    "depcruise": "depcruise --config .dependency-cruiser.cjs packages apps",
+    "test": "pnpm -r run test",
+    "test:unit": "pnpm -r run test:unit",
+    "test:integration": "pnpm -r run test:integration",
+    "migrate": "pnpm --filter @platform/database run migrate:up",
+    "migrate:down": "pnpm --filter @platform/database run migrate:down",
+    "migrate:reset": "pnpm --filter @platform/database run migrate:reset",
+    "traceability:check": "node tools/check-traceability.mjs",
+    "dev:deps": "docker compose up -d postgres minio",
+    "dev:deps:down": "docker compose down"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.2",
+    "dependency-cruiser": "^17.3.7",
+    "eslint": "^9.39.2",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.46.4",
+    "yaml": "^2.8.2"
+  }
+}
