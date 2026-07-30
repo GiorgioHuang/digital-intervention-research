@@ -12,7 +12,7 @@
     "typecheck": "pnpm -r run typecheck",
     "lint": "eslint .",
     "depcruise": "depcruise --config .dependency-cruiser.cjs packages apps",
-    "test": "pnpm -r run test",
+    "test": "pnpm -r --workspace-concurrency=1 run test",
     "test:unit": "pnpm -r run test:unit",
     "test:integration": "pnpm -r run test:integration",
     "migrate": "pnpm --filter @platform/database run migrate:up",
