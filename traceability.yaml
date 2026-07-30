@@ -150,3 +150,23 @@
   code: [packages/modules/m05-enrolment/src, packages/database/migrations/1753800000006_m05-enrolment.sql]
   tests: [packages/modules/m05-enrolment/test/m05.integration.test.ts]
   status: implemented
+
+- implementation_id: IMP-M06-INTERVENTION-001
+  module: M06
+  summary: Stable Intervention identity, immutable InterventionVersion lifecycle, configuration bound to exact versions
+  trace_ids: [ATR-004, ATR-005]
+  adr_ids: [ADR-051, ADR-015]
+  docs: ["Doc 8 §2.8", "Doc 3 intervention records"]
+  code: [packages/modules/m06-intervention-portfolio/src, packages/database/migrations/1753800000007_m06-intervention-portfolio.sql]
+  tests: [packages/modules/m10-evidence/test/m06-m10.integration.test.ts]
+  status: implemented
+
+- implementation_id: IMP-M10-EVIDENCE-001
+  module: M10
+  summary: Evidence chain (KnowledgeReference with provenance -> EvidenceReview -> human EvidenceDecision with canonical outcomes -> immutable EvidenceSnapshot) with deterministic KP simulator behind the ACL port
+  trace_ids: [ATR-005, ATR-004]
+  adr_ids: [ADR-043, ADR-044, ADR-052]
+  docs: ["Doc 9", "Doc 8 §2.12"]
+  code: [packages/modules/m10-evidence/src, packages/database/migrations/1753800000008_m10-evidence.sql]
+  tests: [packages/modules/m10-evidence/test/m06-m10.integration.test.ts]
+  status: implemented
