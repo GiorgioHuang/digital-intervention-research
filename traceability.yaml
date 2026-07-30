@@ -200,3 +200,13 @@
   code: [packages/modules/m18-community-social/src]
   tests: [packages/modules/m18-community-social/test/m18.integration.test.ts]
   status: implemented
+
+- implementation_id: IMP-M18-MATCHING-001
+  module: M18
+  summary: Opt-in MatchPreference, block-checked candidate generation with MatchExplanation, actor-owned independent MatchDecision (exact version), server-created MutualAcceptance (two sources, TTL), atomic single-use Connection activation, ConnectionRequest feature-disabled
+  trace_ids: [ATR-009, ATR-010, ATR-011, ATR-012]
+  adr_ids: [ADR-026, ADR-027, ADR-028, ADR-029, ADR-030]
+  docs: ["Doc 8 §2.5", "Doc 18 §118", "Doc 15 matching endpoints"]
+  code: [packages/modules/m18-community-social/src/application/matching-commands.ts, packages/database/migrations/1753800000011_m18-matching.sql]
+  tests: [packages/modules/m18-community-social/test/matching.integration.test.ts]
+  status: implemented

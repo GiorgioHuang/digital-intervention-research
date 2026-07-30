@@ -39,6 +39,7 @@ export const POLICY_V1: PolicyConfiguration = {
       'enrolment.enrol',
       'enrolment.activate',
       'enrolment.withdraw',
+      'matching.generate',
     ],
     Researcher: [
       'project.view',
@@ -86,6 +87,9 @@ export const POLICY_V1: PolicyConfiguration = {
       'community.join',
       'post.draft',
       'post.publish',
+      'matching.activate',
+      'match.decide',
+      'connection.activate',
     ],
     Supporter: ['participant.view-shared', 'life-story.contribute', 'report.submit'],
     Moderator: ['moderation.triage', 'moderation.decide'],
@@ -160,6 +164,11 @@ export const POLICY_V1: PolicyConfiguration = {
     'life-story.withdraw': { ownerPermitted: true, ownerOnly: true, confirmationRequired: true },
     'life-story.export': { ownerPermitted: true, ownerOnly: true, confirmationRequired: true },
     'life-story.contribute': { requiresRelationship: true, consentScopes: ['supporter-contribution'], interaction: true },
+
+    'matching.activate': { ownerPermitted: true, ownerOnly: true, consentScopes: ['open-matching'], confirmationRequired: true },
+    'matching.generate': {},
+    'match.decide': { ownerPermitted: true, ownerOnly: true, confirmationRequired: true },
+    'connection.activate': { ownerPermitted: true, confirmationRequired: true },
 
     'block.create': { confirmationRequired: true },
     'block.revoke': { confirmationRequired: true },

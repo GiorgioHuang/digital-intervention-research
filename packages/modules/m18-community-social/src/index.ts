@@ -11,3 +11,12 @@ export {
   type M18Deps,
 } from './application/commands.js';
 export { createBlockQuery } from './infrastructure/block-query.js';
+export {
+  activateMatchPreference,
+  generateMatchCandidate,
+  recordMatchDecision,
+  activateConnection,
+  createConnectionRequest,
+  DEFAULT_MATCHING_CONFIG,
+  type MatchingConfig,
+} from './application/matching-commands.js';
