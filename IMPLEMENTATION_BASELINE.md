@@ -24,7 +24,8 @@
 | `packages/policy` 权限引擎 + `m01-identity-org` + `m03-consent-permission` | Implemented（27 引擎单测 + 13 集成测试） |
 | `m02-participant` + `m04-research-design` + `m05-enrolment` | Implemented（P3 链路 12 集成测试） |
 | `m06-intervention-portfolio` + `m10-evidence`（含 KP 模拟器） | Implemented（9 集成测试） |
-| 其余 `packages/modules/m07,m08,m09,m11…m18` | Not Started |
+| `m17-life-story` | Implemented（11 集成测试：作者权三态/版本不可变/可见性/贡献流/撤回） |
+| 其余 `packages/modules/m07,m08,m09,m11…m16,m18` | Not Started |
 | `apps/web` | Not Started |
 | OpenAPI / 事件 schema 目录 | Not Started |
 
@@ -42,7 +43,7 @@
 
 ## 6. M01–M18 能力状态
 
-M01/M02/M03/M04/M05 Implemented（身份、参与者档案、同意/权限、协议版本、入组全链）；M15 部分（append-only 审计）。M06/M10 Implemented（干预版本 + 证据链）。其余 Not Started，按 IMPLEMENTATION_PLAN §8 顺序推进：M17 → M18(社区) → M18(匹配) → M18/M16(消息) → M11/M09 → M12/M13/M14。
+M01/M02/M03/M04/M05 Implemented（身份、参与者档案、同意/权限、协议版本、入组全链）；M15 部分（append-only 审计）。M06/M10/M17 Implemented（干预版本 + 证据链 + Life Story）。其余 Not Started，按 IMPLEMENTATION_PLAN §8 顺序推进：M18(社区，Block/Report 先行) → M18(匹配) → M18/M16(消息) → M11/M09 → M12/M13/M14。
 
 ## 7. 与 Handbook 的冲突
 

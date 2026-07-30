@@ -170,3 +170,13 @@
   code: [packages/modules/m10-evidence/src, packages/database/migrations/1753800000008_m10-evidence.sql]
   tests: [packages/modules/m10-evidence/test/m06-m10.integration.test.ts]
   status: implemented
+
+- implementation_id: IMP-M17-LIFESTORY-001
+  module: M17
+  summary: Participant-controlled Life Story (private by default, immutable versions, AI Draft / Supporter Contribution / Participant Testimony separation, six-scope visibility with Internet Public disabled, contribution review, withdrawal with grant revocation)
+  trace_ids: [ATR-002, ATR-007]
+  adr_ids: [ADR-023, ADR-024, ADR-020]
+  docs: ["Doc 8 §2.4", "Doc 3 INT-004", "Doc 20 life story flows"]
+  code: [packages/modules/m17-life-story/src, packages/database/migrations/1753800000009_m17-life-story.sql]
+  tests: [packages/modules/m17-life-story/test/m17.integration.test.ts]
+  status: implemented
