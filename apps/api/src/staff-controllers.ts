@@ -27,6 +27,7 @@ import {
   submitInterventionVersion,
 } from '@platform/m06-intervention-portfolio';
 import { listSignalsAwaitingTriage, triageSafetySignal } from '@platform/m09-safety';
+import { listOpenModerationCases, recordModerationDecision } from '@platform/m18-community-social';
 import {
   approveReportVersion,
   createReport,
@@ -132,6 +133,44 @@ export class StaffCommandController {
       researchProjectId === undefined ? {} : { researchProjectId },
     );
     return { data: items.map((i) => ({ type: 'Enrolment', id: i.enrolmentId, attributes: i })) };
+  }
+
+  // --- M18 moderation ---------------------------------------------------
+
+  @Get('moderation-cases/open')
+  async openModerationCases(@Req() req: Request) {
+    const ctx = requireActor(req);
+    // Reporter identity is deliberately absent from the queue (Doc 15 §61).
+    const items = await listOpenModerationCases(this.deps.m18, ctx);
+    return { data: items.map((i) => ({ type: 'ModerationCase', id: i.moderationCaseId, attributes: i })) };
+  }
+
+  @Post('moderation-cases/:caseId/decision')
+  async recordModerationDecision(
+    @Req() req: Request,
+    @Param('caseId') moderationCaseId: string,
+    @Body() body: {
+      decision: 'Dismiss' | 'Warn' | 'Restrict' | 'Hide' | 'Remove' | 'Suspend' | 'Disconnect' | 'Ban' | 'Restore' | 'Escalate';
+      reason: string;
+      confirmed: boolean;
+    },
+  ) {
+    const ctx = requireActor(req);
+    // Human, confirmed, immutable: the decision row cannot be altered
+    // afterwards (DB trigger) and automation is refused outright.
+    const result = await recordModerationDecision(this.deps.m18, ctx, {
+      moderationCaseId,
+      decision: body.decision,
+      reason: body.reason,
+      confirmed: body.confirmed === true,
+    });
+    return {
+      data: {
+        type: 'ModerationDecision',
+        id: result.moderationDecisionId,
+        meta: { moderationCaseId, decision: body.decision },
+      },
+    };
   }
 
   // --- M04 research design -------------------------------------------

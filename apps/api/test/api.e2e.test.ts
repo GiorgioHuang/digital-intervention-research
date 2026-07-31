@@ -26,7 +26,7 @@ describe.skipIf(!dbAvailable)('HTTP API (e2e)', () => {
   let pool: pg.Pool;
   let patAcc: string, patId: string, strangerAcc: string;
   let researcherAcc: string, approverAcc: string, safetyAcc: string, supporterAcc: string, adminAcc: string;
-  let privacyAcc: string;
+  let privacyAcc: string, moderatorAcc: string;
 
   const call = (path: string, actor: string | undefined, body?: object, headers?: Record<string, string>) =>
     fetch(`${baseUrl}${path}`, {
@@ -75,6 +75,8 @@ describe.skipIf(!dbAvailable)('HTTP API (e2e)', () => {
     await assignRole(m01, orgCtx, { userAccountId: supporterAcc, role: 'Supporter', confirmed: true });
     ({ userAccountId: privacyAcc } = await createUserAccount(m01, orgCtx, { displayName: 'Pri' }));
     await assignRole(m01, orgCtx, { userAccountId: privacyAcc, role: 'PrivacyReviewer', confirmed: true });
+    ({ userAccountId: moderatorAcc } = await createUserAccount(m01, orgCtx, { displayName: 'Mod' }));
+    await assignRole(m01, orgCtx, { userAccountId: moderatorAcc, role: 'Moderator', confirmed: true });
     // Supporter relationship (approved by the participant) seeds the
     // life-story contribution path; relationship endpoints are not yet
     // HTTP-exposed so this uses the module commands directly.
@@ -349,6 +351,71 @@ describe.skipIf(!dbAvailable)('HTTP API (e2e)', () => {
     });
     expect(locked.status).toBe(201);
     expect(((await locked.json()) as { data: { id: string } }).data.id).toMatch(/^dl_/);
+  });
+
+  it('moderation over HTTP: queue hides reporter identity; decisions are human, confirmed, immutable', async () => {
+    const rep = await call('/v1/reports', patAcc, {
+      reporterId: patId, reportedActorId: strangerAcc, category: 'harassment', description: '重复的骚扰消息',
+    });
+    const caseId = ((await rep.json()) as { data: { meta: { moderationCaseId: string } } }).data.meta.moderationCaseId;
+
+    // Only moderators see the queue.
+    expect((await call('/v1/moderation-cases/open', patAcc)).status).toBe(403);
+    expect((await call('/v1/moderation-cases/open', approverAcc)).status).toBe(403);
+
+    const queue = await call('/v1/moderation-cases/open', moderatorAcc);
+    expect(queue.status).toBe(200);
+    const raw = await queue.text();
+    const body = JSON.parse(raw) as { data: { id: string; attributes: { reportCategory: string | null } }[] };
+    const seeded = body.data.find((c) => c.id === caseId);
+    expect(seeded?.attributes.reportCategory).toBe('harassment');
+    // The reporter's identity never reaches the moderator queue (Doc 15 §61).
+    expect(raw).not.toContain(patAcc);
+    expect(raw).not.toContain(patId);
+
+    // Unconfirmed decisions are refused; confirmed decisions stick.
+    const unconfirmed = await call(`/v1/moderation-cases/${caseId}/decision`, moderatorAcc, {
+      decision: 'Warn', reason: '首次违规，警告', confirmed: false,
+    });
+    expect(unconfirmed.status).toBe(409);
+    const decided = await call(`/v1/moderation-cases/${caseId}/decision`, moderatorAcc, {
+      decision: 'Warn', reason: '首次违规，警告', confirmed: true,
+    });
+    expect(decided.status).toBe(201);
+    const decisionId = ((await decided.json()) as { data: { id: string } }).data.id;
+
+    // Decisions are immutable at the database layer.
+    await expect(
+      pool.query(`UPDATE community_social.moderation_decisions SET decision = 'Dismiss' WHERE id = $1`, [decisionId]),
+    ).rejects.toThrow(/immutable/);
+    // A decided case leaves the queue and cannot be re-decided.
+    const after = (await (await call('/v1/moderation-cases/open', moderatorAcc)).json()) as { data: { id: string }[] };
+    expect(after.data.some((c) => c.id === caseId)).toBe(false);
+    expect((await call(`/v1/moderation-cases/${caseId}/decision`, moderatorAcc, {
+      decision: 'Dismiss', reason: 'flip', confirmed: true,
+    })).status).toBe(409);
+  });
+
+  it('supporter lists own contributions with honest states; others hold no such list', async () => {
+    // Self-sufficient seed: an archive owned by Pat with one proposal
+    // from the supporter (order-independent of the life-story tests).
+    const archId = `arc_sup_${Date.now()}`;
+    const contribId = `ctr_sup_${Date.now()}`;
+    // Archive owner is a synthetic participant so the one-archive-per-participant
+    // rule stays free for the life-story HTTP test.
+    await pool.query(`INSERT INTO life_story.archives (id, participant_id) VALUES ($1, $2)`, [archId, `pt_sup_owner_${Date.now()}`]);
+    await pool.query(
+      `INSERT INTO life_story.contributions (id, archive_id, contributor_actor_id, content_text)
+       VALUES ($1, $2, $3, '我记得那年的花园')`,
+      [contribId, archId, supporterAcc],
+    );
+    const mine = await call('/v1/life-story/contributions/mine', supporterAcc);
+    expect(mine.status).toBe(200);
+    const body = (await mine.json()) as { data: { id: string; attributes: { contributionState: string } }[] };
+    const seeded = body.data.find((c) => c.id === contribId);
+    expect(seeded?.attributes.contributionState).toBe('Proposed');
+    // Participants do not hold the supporter contribution list permission.
+    expect((await call('/v1/life-story/contributions/mine', strangerAcc)).status).toBe(403);
   });
 
   it('object upload over HTTP stays quarantined until scan + assignment; strangers see nothing', async () => {

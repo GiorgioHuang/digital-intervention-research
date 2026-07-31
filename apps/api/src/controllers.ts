@@ -32,6 +32,7 @@ import {
   confirmTestimony,
   createArchive,
   createItem,
+  listMyContributions,
   proposeContribution,
   reviewContribution,
   reviseItem,
@@ -489,6 +490,14 @@ export class CommandController {
     if (body.itemId !== undefined) input.itemId = body.itemId;
     const result = await proposeContribution(this.deps.m17, ctx, input);
     return { data: { type: 'LifeStoryContribution', id: result.contributionId, meta: { state: 'Proposed' } } };
+  }
+
+  @Get('life-story/contributions/mine')
+  async listMyContributions(@Req() req: Request) {
+    const ctx = requireActor(req);
+    // Strictly the requesting actor's own proposals with honest states.
+    const items = await listMyContributions(this.deps.m17, ctx);
+    return { data: items.map((c) => ({ type: 'LifeStoryContribution', id: c.contributionId, attributes: c })) };
   }
 
   @Post('life-story/contributions/:contributionId/review')

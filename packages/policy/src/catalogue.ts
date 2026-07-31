@@ -119,8 +119,8 @@ export const POLICY_V1: PolicyConfiguration = {
       'object.upload',
       'object.assign',
     ],
-    Supporter: ['participant.view-shared', 'life-story.contribute', 'report.submit'],
-    Moderator: ['moderation.triage', 'moderation.decide'],
+    Supporter: ['participant.view-shared', 'life-story.contribute', 'report.submit', 'contribution.view-own'],
+    Moderator: ['moderation.triage', 'moderation.decide', 'moderation-queue.view'],
     // Governance reviewers (M15): holds and break-glass retrospective
     // review. Deliberately disjoint from break-glass execution so the
     // reviewer can never be the executor by role alone.
@@ -165,6 +165,8 @@ export const POLICY_V1: PolicyConfiguration = {
     // on the participant's own objects.
     'object.upload': { ownerPermitted: true, ownerOnly: true },
     'object.assign': { ownerPermitted: true, ownerOnly: true },
+    'moderation-queue.view': {},
+    'contribution.view-own': {},
 
     'project.view': {},
     'project.create': {},

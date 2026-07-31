@@ -3,14 +3,16 @@ import type { StaffSession } from './staff-api.js';
 import { StaffApproverPanel } from './components/StaffApproverPanel.js';
 import { StaffCoordinatorPanel } from './components/StaffCoordinatorPanel.js';
 import { StaffResearcherPanel } from './components/StaffResearcherPanel.js';
+import { StaffModeratorPanel } from './components/StaffModeratorPanel.js';
 import { StaffSafetyTriagePanel } from './components/StaffSafetyTriagePanel.js';
 
-type StaffScreen = 'coordinator' | 'researcher' | 'approver' | 'safety';
+type StaffScreen = 'coordinator' | 'researcher' | 'approver' | 'safety' | 'moderation';
 const SCREENS: { key: StaffScreen; label: string }[] = [
   { key: 'coordinator', label: '入组协调' },
   { key: 'researcher', label: '研究者' },
   { key: 'approver', label: '批准' },
   { key: 'safety', label: '安全 triage' },
+  { key: 'moderation', label: '内容审核' },
 ];
 
 /**
@@ -84,6 +86,7 @@ export function StaffApp({ onExit }: { onExit: () => void }) {
         {screen === 'researcher' && <StaffResearcherPanel session={session} />}
         {screen === 'approver' && <StaffApproverPanel session={session} />}
         {screen === 'safety' && <StaffSafetyTriagePanel session={session} />}
+        {screen === 'moderation' && <StaffModeratorPanel session={session} />}
       </main>
     </div>
   );

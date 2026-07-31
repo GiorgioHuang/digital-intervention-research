@@ -42,3 +42,4 @@ export {
   expireMutualAcceptances,
   reconcileDeliveryUnknown,
 } from './application/sweeps.js';
+export { listOpenModerationCases, type OpenModerationCase } from './application/queries.js';

@@ -132,6 +132,46 @@ export async function listThreadMessages(
   }));
 }
 
+export interface OpenModerationCase {
+  moderationCaseId: string;
+  subjectActorId: string;
+  caseState: string;
+  reportCategory: string | null;
+  reportDescription: string | null;
+  createdAt: string;
+}
+
+/**
+ * Moderator work queue: open cases with the report's category and
+ * description. The REPORTER'S IDENTITY IS DELIBERATELY EXCLUDED
+ * (Doc 15 §61) — moderation judges content and behaviour, not reporters.
+ */
+export async function listOpenModerationCases(
+  deps: M18Deps,
+  ctx: RequestContext,
+): Promise<OpenModerationCase[]> {
+  const decision = await deps.checkPermission(ctx, {
+    action: 'moderation-queue.view',
+    resource: { type: 'ModerationQueue', id: 'all', state: 'Active', protectedExistence: false },
+  });
+  assertAllowed(decision, false);
+  const res = await deps.pool.query(
+    `SELECT c.id, c.subject_actor_id, c.case_state, r.category, r.description, c.created_at
+       FROM community_social.moderation_cases c
+       LEFT JOIN community_social.user_reports r ON r.id = c.user_report_id
+      WHERE c.case_state IN ('Reported', 'Awaiting Triage', 'In Review', 'Action Required', 'Reopened')
+      ORDER BY c.created_at ASC`,
+  );
+  return res.rows.map((r) => ({
+    moderationCaseId: r.id as string,
+    subjectActorId: r.subject_actor_id as string,
+    caseState: r.case_state as string,
+    reportCategory: (r.category as string | null) ?? null,
+    reportDescription: (r.description as string | null) ?? null,
+    createdAt: (r.created_at as Date).toISOString(),
+  }));
+}
+
 export interface MatchCandidateSummary {
   candidateId: string;
   candidateVersion: number;

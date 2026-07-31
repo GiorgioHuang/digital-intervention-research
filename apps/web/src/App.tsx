@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { StaffApp } from './StaffApp.js';
+import { SupporterApp } from './SupporterApp.js';
 import { ConsentPanel } from './components/ConsentPanel.js';
 import { MatchingPanel } from './components/MatchingPanel.js';
 import { MessagesScreen } from './components/MessagesScreen.js';
@@ -20,10 +21,13 @@ export function App() {
   const [session, setSession] = useState<Session | null>(null);
   const [screen, setScreen] = useState<Screen>('home');
   const [form, setForm] = useState({ actorId: '', participantId: '' });
-  const [staffMode, setStaffMode] = useState(false);
+  const [mode, setMode] = useState<'participant' | 'staff' | 'supporter'>('participant');
 
-  if (staffMode) {
-    return <StaffApp onExit={() => setStaffMode(false)} />;
+  if (mode === 'staff') {
+    return <StaffApp onExit={() => setMode('participant')} />;
+  }
+  if (mode === 'supporter') {
+    return <SupporterApp onExit={() => setMode('participant')} />;
   }
 
   if (session === null) {
@@ -52,7 +56,10 @@ export function App() {
             />
           </p>
           <button type="submit">进入</button>{' '}
-          <button type="button" onClick={() => setStaffMode(true)}>
+          <button type="button" onClick={() => setMode('supporter')}>
+            支持者入口
+          </button>{' '}
+          <button type="button" onClick={() => setMode('staff')}>
             员工入口
           </button>
         </form>

@@ -75,6 +75,13 @@ export interface PendingExportItem {
   deIdentification: string;
   requestedByActorId: string;
 }
+export interface ModerationCaseItem {
+  moderationCaseId: string;
+  subjectActorId: string;
+  caseState: string;
+  reportCategory: string | null;
+  reportDescription: string | null;
+}
 export interface EnrolmentItem {
   enrolmentId: string;
   participantId: string;
@@ -139,6 +146,11 @@ export const staffApi = {
         ? '/v1/enrolments'
         : `/v1/enrolments?researchProjectId=${encodeURIComponent(researchProjectId)}`,
     ),
+
+  // Moderation (queue omits reporter identity by design)
+  listOpenModerationCases: (s: StaffSession) => get<List<ModerationCaseItem>>(s, '/v1/moderation-cases/open'),
+  recordModerationDecision: (s: StaffSession, caseId: string, decision: string, reason: string) =>
+    post<Id>(s, `/v1/moderation-cases/${caseId}/decision`, { decision, reason, confirmed: true }),
 
   // M14 export request (researcher side; identifiable exports impossible)
   requestExport: (

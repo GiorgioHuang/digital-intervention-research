@@ -446,6 +446,17 @@ paths:
       responses:
         '201': { description: Locked }
         '401': { description: STEP_UP_AUTHENTICATION_REQUIRED without MFA }
+  /v1/moderation-cases/open:
+    get: { summary: 'Moderator queue: open cases with report category/description — the REPORTER''S IDENTITY IS NEVER INCLUDED (Doc 15 §61)', responses: { '200': { description: case list }, '403': { $ref: '#/components/responses/Error' } } }
+  /v1/moderation-cases/{caseId}/decision:
+    post:
+      summary: Record a ModerationDecision — human, confirmed, written reason, attributed; immutable once recorded (DB trigger); decided cases leave the queue and cannot be re-decided
+      parameters: [{ name: caseId, in: path, required: true, schema: { type: string } }]
+      responses:
+        '201': { description: decision recorded }
+        '409': { description: CONFIRMATION_REQUIRED / INVALID_STATE_TRANSITION }
+  /v1/life-story/contributions/mine:
+    get: { summary: 'Supporter list: strictly the requesting actor''s own contribution proposals with honest states', responses: { '200': { description: contribution list }, '403': { $ref: '#/components/responses/Error' } } }
   /v1/safety-signals/pending-triage:
     get: { summary: 'Safety reviewer work queue: signals still open for triage (role-gated read; seeing a queue is not deciding it)', responses: { '200': { description: signal list }, '403': { $ref: '#/components/responses/Error' } } }
   /v1/protocol-versions/in-review:

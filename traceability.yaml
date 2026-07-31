@@ -490,3 +490,13 @@
   code: [packages/modules/m16-integration/src/application/storage-pipeline.ts, packages/database/migrations/1753800000018_storage-quarantine.sql, apps/api/src/controllers.ts, apps/worker/src/main.ts]
   tests: [packages/modules/m16-integration/test/storage-pipeline.integration.test.ts, apps/api/test/api.e2e.test.ts]
   status: implemented
+
+- implementation_id: IMP-WEB-SUPPORTER-MODERATOR-001
+  module: ops
+  summary: Supporter and Moderator workspaces - moderator queue endpoint deliberately excluding reporter identity, human+confirmed+immutable moderation decisions over HTTP with re-decision refused, supporter own-contribution list with honest states (accepted = supporter contribution never testimony), supporter workspace with contribution proposal explaining relationship+consent prerequisites on denial, report form; moderator panel in the staff shell with queue-driven prefill and immutability wording in the confirmation
+  trace_ids: [ATR-014, ATR-016, ATR-023]
+  adr_ids: [ADR-038, ADR-042, ADR-050]
+  docs: ["Doc 20 supporter/moderator workspaces", "Doc 15 §61", "Doc 12 moderation"]
+  code: [packages/modules/m18-community-social/src/application/queries.ts, packages/modules/m17-life-story/src/application/queries.ts, apps/api/src/staff-controllers.ts, apps/web/src/SupporterApp.tsx, apps/web/src/components/StaffModeratorPanel.tsx]
+  tests: [apps/api/test/api.e2e.test.ts, apps/web/test/moderator-supporter.test.tsx]
+  status: implemented
