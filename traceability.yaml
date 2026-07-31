@@ -400,3 +400,23 @@
   code: [apps/api/src/controllers.ts, openapi/openapi.yaml]
   tests: [apps/api/test/api.e2e.test.ts]
   status: implemented
+
+- implementation_id: IMP-M15-GOVERNANCE-001
+  module: M15
+  summary: Governance domain - ApprovalRecord bound to one exact artefact version with human+confirmed+MFA decision, separation of duties in code and DB CHECK, append-only state history (trigger), GovernanceHold lifecycle, break-glass records with mandatory reason/scope/expiry and retrospective review never by the executor (role-disjoint by design)
+  trace_ids: [ATR-018, ATR-023]
+  adr_ids: [ADR-051]
+  docs: ["Doc 16 §38", "Doc 14 MFA list"]
+  code: [packages/modules/m15-governance/src, packages/database/migrations/1753800000016_m15-governance.sql]
+  tests: [packages/modules/m15-governance/test/m15.integration.test.ts]
+  status: implemented
+
+- implementation_id: IMP-API-HTTP-009
+  module: M15
+  summary: Governance REST slice - approval request/decide, governance hold place/lift, break-glass execute/review with all authority gates surfaced over HTTP
+  trace_ids: [ATR-018, ATR-023]
+  adr_ids: [ADR-051]
+  docs: ["Doc 16 §38", "Doc 15 §21-31"]
+  code: [apps/api/src/staff-controllers.ts, openapi/openapi.yaml]
+  tests: [apps/api/test/api.e2e.test.ts]
+  status: implemented

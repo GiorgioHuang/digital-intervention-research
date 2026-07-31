@@ -19,6 +19,9 @@ export const POLICY_V1: PolicyConfiguration = {
       'role.revoke',
       'system.configure',
       'audit.view',
+      // Operational emergency access only — always MFA + confirmed, always
+      // recorded, always retrospectively reviewed by a DIFFERENT role.
+      'break-glass.execute',
     ],
     OrganisationAdministrator: [
       'user.view',
@@ -65,6 +68,7 @@ export const POLICY_V1: PolicyConfiguration = {
       'analysis.run',
       'interpretation.draft',
       'finding.draft',
+      'approval.request',
     ],
     ResearchApprover: [
       'protocol.review', 'protocol.approve', 'protocol.activate',
@@ -72,6 +76,7 @@ export const POLICY_V1: PolicyConfiguration = {
       'intervention.approve', 'intervention.activate',
       'dataset.approve-definition', 'dataset.lock',
       'analysis-plan.approve', 'interpretation.approve', 'finding.approve',
+      'approval.decide',
     ],
     EvidenceReviewer: ['evidence-review.approve', 'evidence-decision.draft', 'evidence-decision.approve'],
     SafetyReviewer: ['safety-signal.record', 'safety-signal.triage', 'safety-event.create', 'safety-event.review'],
@@ -107,6 +112,10 @@ export const POLICY_V1: PolicyConfiguration = {
     ],
     Supporter: ['participant.view-shared', 'life-story.contribute', 'report.submit'],
     Moderator: ['moderation.triage', 'moderation.decide'],
+    // Governance reviewers (M15): holds and break-glass retrospective
+    // review. Deliberately disjoint from break-glass execution so the
+    // reviewer can never be the executor by role alone.
+    PrivacyReviewer: ['governance-hold.place', 'governance-hold.lift', 'break-glass.review', 'audit.view'],
   },
   actionRequirements: {
     'organisation.create': {},
@@ -116,6 +125,16 @@ export const POLICY_V1: PolicyConfiguration = {
     'role.revoke': { confirmationRequired: true },
     'audit.view': {},
     'system.configure': { minimumAuthStrength: 'mfa' },
+
+    // M15 governance (Doc 16 §38): approval decisions and break-glass
+    // execution are the strongest authorities (human + confirmed + MFA);
+    // separation of duties is additionally enforced in code and by DB CHECK.
+    'approval.request': {},
+    'approval.decide': { confirmationRequired: true, minimumAuthStrength: 'mfa' },
+    'governance-hold.place': { confirmationRequired: true },
+    'governance-hold.lift': { confirmationRequired: true },
+    'break-glass.execute': { confirmationRequired: true, minimumAuthStrength: 'mfa' },
+    'break-glass.review': { confirmationRequired: true },
 
     'project.view': {},
     'project.create': {},

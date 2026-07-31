@@ -17,6 +17,7 @@ import type { M06Deps } from '@platform/m06-intervention-portfolio';
 import { recordSafetySignal, type M09Deps } from '@platform/m09-safety';
 import type { M12Deps } from '@platform/m12-dataset';
 import type { M13Deps } from '@platform/m13-analysis';
+import type { M15Deps } from '@platform/m15-governance';
 import {
   changeVisibility,
   confirmTestimony,
@@ -60,6 +61,7 @@ export interface ApiDeps {
   m09: M09Deps;
   m12: M12Deps;
   m13: M13Deps;
+  m15: M15Deps;
   m17: M17Deps;
   m18: M18Deps;
 }

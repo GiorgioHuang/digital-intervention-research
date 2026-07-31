@@ -20,7 +20,7 @@
 |---|---|
 | `packages/kernel`（RequestContext、结构化错误、时钟、ID、日志脱敏） | Implemented（50 单测通过） |
 | `packages/database`（连接、迁移、outbox/inbox/audit/idempotency 基表） | Implemented（集成测试含迁移 up→down→up 演练） |
-| `apps/api`（Doc 15 错误信封/上下文头/dev-header 认证桩 + 参与者侧命令端点（含 M03 relationship 管理与 M17 Life Story 全链）+ 员工侧命令端点（M04 协议链/M05 入组链/M06 干预组合/M09 安全 triage/M12 数据集血缘/M13 分析链）+ M18 属主只读查询 + OpenAPI） | Implemented（18 e2e） |
+| `apps/api`（Doc 15 错误信封/上下文头/dev-header 认证桩 + 参与者侧命令端点（含 M03 relationship 管理与 M17 Life Story 全链）+ 员工侧命令端点（M04 协议链/M05 入组链/M06 干预组合/M09 安全 triage/M12 数据集血缘/M13 分析链/M15 审批·治理保留·break-glass）+ M18 属主只读查询 + OpenAPI） | Implemented（20 e2e） |
 | `apps/worker` / `apps/scheduler` | Scaffolded（outbox 循环/cron 骨架） |
 | `packages/policy` 权限引擎 + `m01-identity-org` + `m03-consent-permission` | Implemented（27 引擎单测 + 13 集成测试） |
 | `m02-participant` + `m04-research-design` + `m05-enrolment` | Implemented（P3 链路 12 集成测试） |
@@ -30,6 +30,7 @@
 | `m09-safety` + `m11-ai`（信号/人工事件；Model+Tool Gateway，Level-5 全禁） | Implemented（8 集成测试） |
 | `m12-dataset` + `m13-analysis`（DatasetLock/分析链/Finding 血缘） | Implemented（5 集成测试） |
 | `m07-delivery` + `m08-assessment`（暴露状态/类型化缺失） | Implemented（合成试点覆盖） |
+| `m15-governance`（ApprovalRecord 精确工件版本+职责分离 CHECK、append-only 状态历史、GovernanceHold、break-glass 强制追溯审查） | Implemented（5 集成测试） |
 | `packages/synthetic-pilot`（端到端合成试点） | Implemented（5 场景组） |
 | `m14`（报告/导出） | Not Started |
 | `apps/web`（参与者工作区：任务式首页/细粒度同意/消息确认/屏蔽与报告/安全担忧/可选匹配；会话/联系/推荐均来自 API 查询，无手动输入标识，HTTP-only 边界） | Implemented（15 组件测试） |
@@ -49,7 +50,7 @@
 
 ## 6. M01–M18 能力状态
 
-M01/M02/M03/M04/M05 Implemented（身份、参与者档案、同意/权限、协议版本、入组全链）；M15 部分（append-only 审计）。M06/M10/M17 Implemented（干预版本 + 证据链 + Life Story）。M18 社区+匹配 Implemented（Block/Report/ModerationCase/社区/MatchDecision/MutualAcceptance/Connection；ConnectionRequest 功能禁用）。M18/M16 消息管线 Implemented（CommunicationBasis/双状态机/SendConfirmation/回调认证/重放防护）。M09/M11 Implemented（安全人工权威 + AI 治理网关）。M12/M13 Implemented（人工 DatasetLock + Output≠Interpretation≠Finding 全链血缘）。M07/M08 + 合成试点 Implemented。剩余缺口见 PILOT_READINESS_REPORT.md（API 层/前端/M14/后台作业/正式批准）。
+M01/M02/M03/M04/M05 Implemented（身份、参与者档案、同意/权限、协议版本、入组全链）；M15 Implemented（审批记录+职责分离 CHECK/治理保留/break-glass 追溯审查 + append-only 审计）。M06/M10/M17 Implemented（干预版本 + 证据链 + Life Story）。M18 社区+匹配 Implemented（Block/Report/ModerationCase/社区/MatchDecision/MutualAcceptance/Connection；ConnectionRequest 功能禁用）。M18/M16 消息管线 Implemented（CommunicationBasis/双状态机/SendConfirmation/回调认证/重放防护）。M09/M11 Implemented（安全人工权威 + AI 治理网关）。M12/M13 Implemented（人工 DatasetLock + Output≠Interpretation≠Finding 全链血缘）。M07/M08 + 合成试点 Implemented。剩余缺口见 PILOT_READINESS_REPORT.md（API 层/前端/M14/后台作业/正式批准）。
 
 ## 7. 与 Handbook 的冲突
 

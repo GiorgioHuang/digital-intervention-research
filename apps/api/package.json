@@ -29,6 +29,7 @@
     "@platform/m09-safety": "workspace:*",
     "@platform/m12-dataset": "workspace:*",
     "@platform/m13-analysis": "workspace:*",
+    "@platform/m15-governance": "workspace:*",
     "@platform/m17-life-story": "workspace:*",
     "@platform/m18-community-social": "workspace:*"
   },

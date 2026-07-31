@@ -26,6 +26,14 @@ import {
 } from '@platform/m06-intervention-portfolio';
 import { triageSafetySignal } from '@platform/m09-safety';
 import {
+  decideApproval,
+  executeBreakGlass,
+  liftGovernanceHold,
+  placeGovernanceHold,
+  requestApproval,
+  reviewBreakGlass,
+} from '@platform/m15-governance';
+import {
   approveDatasetDefinition,
   completeQualityReview,
   createDatasetDefinition,
@@ -341,6 +349,99 @@ export class StaffCommandController {
     // X-Auth-Strength and is enforced by the policy engine.
     const result = await lockDatasetVersion(this.deps.m12, ctx, { datasetVersionId, confirmed: body.confirmed === true });
     return { data: { type: 'DatasetLock', id: result.datasetLockId, meta: { datasetVersionId } } };
+  }
+
+  // --- M15 governance ---------------------------------------------------
+
+  @Post('approvals')
+  async requestApproval(
+    @Req() req: Request,
+    @Body() body: { artefactType: string; artefactId: string; artefactVersion: number },
+  ) {
+    const ctx = requireActor(req);
+    const result = await requestApproval(this.deps.m15, ctx, body);
+    return { data: { type: 'ApprovalRecord', id: result.approvalRecordId, meta: { state: 'Requested' } } };
+  }
+
+  @Post('approvals/:approvalRecordId/decide')
+  async decideApproval(
+    @Req() req: Request,
+    @Param('approvalRecordId') approvalRecordId: string,
+    @Body() body: { decision: 'Approved' | 'Rejected'; reason: string; confirmed: boolean },
+  ) {
+    const ctx = requireActor(req);
+    // Human + confirmed + MFA; the requester can never decide (ADR-051,
+    // enforced in code AND by the DB CHECK).
+    await decideApproval(this.deps.m15, ctx, {
+      approvalRecordId,
+      decision: body.decision,
+      reason: body.reason,
+      confirmed: body.confirmed === true,
+    });
+    return { data: { type: 'ApprovalRecord', id: approvalRecordId, meta: { state: body.decision } } };
+  }
+
+  @Post('governance-holds')
+  async placeGovernanceHold(
+    @Req() req: Request,
+    @Body() body: { artefactType: string; artefactId: string; reason: string; confirmed: boolean },
+  ) {
+    const ctx = requireActor(req);
+    const result = await placeGovernanceHold(this.deps.m15, ctx, {
+      artefactType: body.artefactType,
+      artefactId: body.artefactId,
+      reason: body.reason,
+      confirmed: body.confirmed === true,
+    });
+    return { data: { type: 'GovernanceHold', id: result.governanceHoldId, meta: { state: 'Active' } } };
+  }
+
+  @Post('governance-holds/:governanceHoldId/lift')
+  async liftGovernanceHold(
+    @Req() req: Request,
+    @Param('governanceHoldId') governanceHoldId: string,
+    @Body() body: { liftReason: string; confirmed: boolean },
+  ) {
+    const ctx = requireActor(req);
+    await liftGovernanceHold(this.deps.m15, ctx, {
+      governanceHoldId,
+      liftReason: body.liftReason,
+      confirmed: body.confirmed === true,
+    });
+    return { data: { type: 'GovernanceHold', id: governanceHoldId, meta: { state: 'Lifted' } } };
+  }
+
+  @Post('break-glass')
+  async executeBreakGlass(
+    @Req() req: Request,
+    @Body() body: { reason: string; scope: string; expiresAt: string; confirmed: boolean },
+  ) {
+    const ctx = requireActor(req);
+    // Emergency access is never silent: MFA + confirmed, explicit
+    // reason/scope/expiry, and a mandatory retrospective review by
+    // someone else (Doc 16 §38.5).
+    const result = await executeBreakGlass(this.deps.m15, ctx, {
+      reason: body.reason,
+      scope: body.scope,
+      expiresAt: new Date(body.expiresAt),
+      confirmed: body.confirmed === true,
+    });
+    return { data: { type: 'BreakGlassRecord', id: result.breakGlassId, meta: { reviewState: 'Pending Review' } } };
+  }
+
+  @Post('break-glass/:breakGlassId/review')
+  async reviewBreakGlass(
+    @Req() req: Request,
+    @Param('breakGlassId') breakGlassId: string,
+    @Body() body: { outcome: 'Justified' | 'Not Justified' | 'Needs Follow-Up'; confirmed: boolean },
+  ) {
+    const ctx = requireActor(req);
+    await reviewBreakGlass(this.deps.m15, ctx, {
+      breakGlassId,
+      outcome: body.outcome,
+      confirmed: body.confirmed === true,
+    });
+    return { data: { type: 'BreakGlassRecord', id: breakGlassId, meta: { reviewState: 'Reviewed', outcome: body.outcome } } };
   }
 
   // --- M13 analysis chain ---------------------------------------------

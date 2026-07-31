@@ -25,6 +25,7 @@ describe.skipIf(!dbAvailable)('HTTP API (e2e)', () => {
   let pool: pg.Pool;
   let patAcc: string, patId: string, strangerAcc: string;
   let researcherAcc: string, approverAcc: string, safetyAcc: string, supporterAcc: string, adminAcc: string;
+  let privacyAcc: string;
 
   const call = (path: string, actor: string | undefined, body?: object, headers?: Record<string, string>) =>
     fetch(`${baseUrl}${path}`, {
@@ -71,6 +72,8 @@ describe.skipIf(!dbAvailable)('HTTP API (e2e)', () => {
     await assignRole(m01, orgCtx, { userAccountId: safetyAcc, role: 'SafetyReviewer', confirmed: true });
     ({ userAccountId: supporterAcc } = await createUserAccount(m01, orgCtx, { displayName: 'Sam' }));
     await assignRole(m01, orgCtx, { userAccountId: supporterAcc, role: 'Supporter', confirmed: true });
+    ({ userAccountId: privacyAcc } = await createUserAccount(m01, orgCtx, { displayName: 'Pri' }));
+    await assignRole(m01, orgCtx, { userAccountId: privacyAcc, role: 'PrivacyReviewer', confirmed: true });
     // Supporter relationship (approved by the participant) seeds the
     // life-story contribution path; relationship endpoints are not yet
     // HTTP-exposed so this uses the module commands directly.
@@ -345,6 +348,59 @@ describe.skipIf(!dbAvailable)('HTTP API (e2e)', () => {
     });
     expect(locked.status).toBe(201);
     expect(((await locked.json()) as { data: { id: string } }).data.id).toMatch(/^dl_/);
+  });
+
+  it('M15 approval over HTTP: exact artefact version, MFA decision, requester can never decide', async () => {
+    const reqRes = await call('/v1/approvals', researcherAcc, {
+      artefactType: 'ProtocolVersion', artefactId: 'pv_e2e_gov', artefactVersion: 2,
+    });
+    expect(reqRes.status).toBe(201);
+    const approvalId = ((await reqRes.json()) as { data: { id: string } }).data.id;
+
+    const weak = await call(`/v1/approvals/${approvalId}/decide`, approverAcc, {
+      decision: 'Approved', reason: 'Meets criteria', confirmed: true,
+    });
+    expect(weak.status).toBe(401);
+    expect(((await weak.json()) as { error: { code: string } }).error.code).toBe('STEP_UP_AUTHENTICATION_REQUIRED');
+
+    const decided = await call(`/v1/approvals/${approvalId}/decide`, approverAcc, {
+      decision: 'Approved', reason: 'Meets criteria', confirmed: true,
+    }, { 'x-auth-strength': 'mfa' });
+    expect(decided.status).toBe(201);
+
+    // Decided approvals are terminal.
+    const again = await call(`/v1/approvals/${approvalId}/decide`, approverAcc, {
+      decision: 'Rejected', reason: 'flip', confirmed: true,
+    }, { 'x-auth-strength': 'mfa' });
+    expect(again.status).toBe(409);
+  });
+
+  it('M15 break-glass over HTTP: MFA execution, mandatory review by someone else; governance hold lifecycle', async () => {
+    const bg = await call('/v1/break-glass', adminAcc, {
+      reason: 'Incident 7', scope: 'read audit trail pt_x', expiresAt: '2027-01-01T00:00:00Z', confirmed: true,
+    }, { 'x-auth-strength': 'mfa' });
+    expect(bg.status).toBe(201);
+    const bgId = ((await bg.json()) as { data: { id: string } }).data.id;
+
+    // The executor cannot review their own break-glass — and the admin
+    // also lacks the review permission by role (disjoint by design).
+    const selfReview = await call(`/v1/break-glass/${bgId}/review`, adminAcc, {
+      outcome: 'Justified', confirmed: true,
+    });
+    expect(selfReview.status).toBe(403);
+
+    expect((await call(`/v1/break-glass/${bgId}/review`, privacyAcc, {
+      outcome: 'Justified', confirmed: true,
+    })).status).toBe(201);
+
+    const hold = await call('/v1/governance-holds', privacyAcc, {
+      artefactType: 'DatasetVersion', artefactId: 'dv_e2e_hold', reason: 'Pending privacy review', confirmed: true,
+    });
+    expect(hold.status).toBe(201);
+    const holdId = ((await hold.json()) as { data: { id: string } }).data.id;
+    expect((await call(`/v1/governance-holds/${holdId}/lift`, privacyAcc, {
+      liftReason: 'Review complete', confirmed: true,
+    })).status).toBe(201);
   });
 
   it('relationship over HTTP: proposal grants nothing until the owner approves it, version-bound', async () => {

@@ -410,6 +410,47 @@ paths:
       responses:
         '201': { description: Locked }
         '401': { description: STEP_UP_AUTHENTICATION_REQUIRED without MFA }
+  /v1/approvals:
+    post:
+      summary: Request an ApprovalRecord for one EXACT artefact type/id/version (M15, Doc 16 §38.1)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [artefactType, artefactId, artefactVersion]
+              properties:
+                artefactType: { type: string }
+                artefactId: { type: string }
+                artefactVersion: { type: integer }
+      responses: { '201': { description: Requested } }
+  /v1/approvals/{approvalRecordId}/decide:
+    post:
+      summary: Decide an approval — human + confirmed + MFA; the requester can never decide (ADR-051, code + DB CHECK); stores decision auth strength as reviewer-authority evidence
+      parameters: [{ name: approvalRecordId, in: path, required: true, schema: { type: string } }]
+      responses:
+        '201': { description: Approved / Rejected (terminal) }
+        '401': { description: STEP_UP_AUTHENTICATION_REQUIRED without MFA }
+        '403': { description: Self-approval refused }
+        '409': { description: INVALID_STATE_TRANSITION — already decided }
+  /v1/governance-holds:
+    post: { summary: Place a GovernanceHold on an artefact (reviewer, confirmed), responses: { '201': { description: Active } } }
+  /v1/governance-holds/{governanceHoldId}/lift:
+    post: { summary: Lift a hold (reviewer, confirmed; lifted holds are terminal), parameters: [{ name: governanceHoldId, in: path, required: true, schema: { type: string } }], responses: { '201': { description: Lifted }, '409': { description: INVALID_STATE_TRANSITION } } }
+  /v1/break-glass:
+    post:
+      summary: Record break-glass emergency access — MFA + confirmed with explicit reason/scope/expiry; born Pending Review (Doc 16 §38.5)
+      responses:
+        '201': { description: Recorded, awaiting mandatory retrospective review }
+        '401': { description: STEP_UP_AUTHENTICATION_REQUIRED without MFA }
+  /v1/break-glass/{breakGlassId}/review:
+    post:
+      summary: Mandatory retrospective review — never by the executor (code + DB CHECK); reviewer role is disjoint from execution by design
+      parameters: [{ name: breakGlassId, in: path, required: true, schema: { type: string } }]
+      responses:
+        '201': { description: Reviewed with outcome }
+        '403': { description: Executor self-review refused }
   /v1/analysis-plans:
     post: { summary: Draft an AnalysisPlan (M13), responses: { '201': { description: Draft } } }
   /v1/analysis-plans/{planId}/approve:
