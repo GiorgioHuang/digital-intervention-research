@@ -18,6 +18,14 @@ import { recordSafetySignal, type M09Deps } from '@platform/m09-safety';
 import type { M12Deps } from '@platform/m12-dataset';
 import type { M13Deps } from '@platform/m13-analysis';
 import { requestParticipantExport, type M14Deps } from '@platform/m14-reporting';
+import {
+  completeUpload,
+  DEFAULT_STORAGE_CONFIG,
+  getObjectStatus,
+  initiateUpload,
+  releaseObject,
+  type StorageDeps,
+} from '@platform/m16-integration';
 import type { M15Deps } from '@platform/m15-governance';
 import {
   changeVisibility,
@@ -65,6 +73,7 @@ export interface ApiDeps {
   m13: M13Deps;
   m14: M14Deps;
   m15: M15Deps;
+  m16storage: StorageDeps;
   m17: M17Deps;
   m18: M18Deps;
 }
@@ -265,6 +274,61 @@ export class CommandController {
         meta: result.mutualAcceptanceId === undefined ? {} : { mutualAcceptanceId: result.mutualAcceptanceId },
       },
     };
+  }
+
+  // --- M16 object storage (quarantine pipeline, Doc 14 §59) ------------
+
+  @Post('objects')
+  async initiateUpload(
+    @Req() req: Request,
+    @Body() body: { ownerParticipantId: string; declaredContentType: string; declaredSizeBytes: number },
+  ) {
+    const ctx = requireActor(req);
+    const result = await initiateUpload(this.deps.m16storage, ctx, DEFAULT_STORAGE_CONFIG, body);
+    return { data: { type: 'StoredObject', id: result.objectId, meta: { state: 'Pending Upload' } } };
+  }
+
+  @Post('objects/:objectId/content')
+  async completeUpload(
+    @Req() req: Request,
+    @Param('objectId') objectId: string,
+    @Body() body: { contentBase64: string },
+  ) {
+    const ctx = requireActor(req);
+    // Uploads land in QUARANTINE — never directly available (Doc 14 §59).
+    const result = await completeUpload(this.deps.m16storage, ctx, {
+      objectId,
+      content: Buffer.from(body.contentBase64, 'base64'),
+    });
+    return { data: { type: 'StoredObject', id: objectId, meta: { state: 'Quarantined', checksum: result.checksum } } };
+  }
+
+  @Post('objects/:objectId/release')
+  async releaseObject(
+    @Req() req: Request,
+    @Param('objectId') objectId: string,
+    @Body() body: { owningResourceType: string; owningResourceId: string },
+  ) {
+    const ctx = requireActor(req);
+    const result = await releaseObject(this.deps.m16storage, ctx, DEFAULT_STORAGE_CONFIG, {
+      objectId,
+      owningResourceType: body.owningResourceType,
+      owningResourceId: body.owningResourceId,
+    });
+    return {
+      data: {
+        type: 'StoredObject',
+        id: objectId,
+        meta: { state: 'Available', dataClassification: result.dataClassification },
+      },
+    };
+  }
+
+  @Get('objects/:objectId')
+  async objectStatus(@Req() req: Request, @Param('objectId') objectId: string) {
+    const ctx = requireActor(req);
+    const status = await getObjectStatus(this.deps.m16storage, ctx, objectId);
+    return { data: { type: 'StoredObject', id: objectId, attributes: status } };
   }
 
   @Post('participants/:participantId/export-requests')

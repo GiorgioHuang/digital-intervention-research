@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { createPool, recoverStalePublishing, withTransaction } from '@platform/database';
 import { PlatformError, SystemClock, createRequestContext, redact } from '@platform/kernel';
 import { expireRelationships } from '@platform/m03-consent-permission';
+import { scanPendingObjects } from '@platform/m16-integration';
 import {
   expireMatchCandidates,
   expireMutualAcceptances,
@@ -26,6 +27,7 @@ export const SWEEP_QUEUES = [
   'relationship-expiry',
   'delivery-unknown-reconciliation',
   'outbox-stale-recovery',
+  'object-scan',
 ] as const;
 
 async function main(): Promise<void> {
@@ -83,6 +85,10 @@ async function main(): Promise<void> {
       staleAfterMs: env.DELIVERY_UNKNOWN_AFTER_MINUTES * 60_000,
     });
     if (reconciled > 0) logger.warn({ reconciled }, 'messages moved to Delivery Unknown (never assumed delivered)');
+  });
+  await boss.work('object-scan', async () => {
+    const { scanned } = await scanPendingObjects(sweepDeps, sweepCtx());
+    if (scanned > 0) logger.info({ scanned }, 'quarantined objects scanned');
   });
   await boss.work('outbox-stale-recovery', async () => {
     const recovered = await withTransaction(pool, (client) => recoverStalePublishing(client, clock.now()));

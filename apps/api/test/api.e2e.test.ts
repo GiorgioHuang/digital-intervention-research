@@ -8,6 +8,7 @@ import { POLICY_V1 } from '@platform/policy';
 import { assignRole, createOrganisation, createRoleAssignmentQuery, createUserAccount, seedBootstrapAdministrator } from '@platform/m01-identity-org';
 import { createParticipantQuery, registerParticipant } from '@platform/m02-participant';
 import { approveRelationship, createPermissionService, proposeRelationship } from '@platform/m03-consent-permission';
+import { scanPendingObjects } from '@platform/m16-integration';
 import { buildAppModule } from '../src/app.module.js';
 
 const DATABASE_URL =
@@ -350,6 +351,53 @@ describe.skipIf(!dbAvailable)('HTTP API (e2e)', () => {
     expect(((await locked.json()) as { data: { id: string } }).data.id).toMatch(/^dl_/);
   });
 
+  it('object upload over HTTP stays quarantined until scan + assignment; strangers see nothing', async () => {
+    const content = Buffer.from('a family photo');
+    const init = await call('/v1/objects', patAcc, {
+      ownerParticipantId: patId, declaredContentType: 'image/png', declaredSizeBytes: content.byteLength,
+    });
+    expect(init.status).toBe(201);
+    const objectId = ((await init.json()) as { data: { id: string } }).data.id;
+
+    const uploaded = await call(`/v1/objects/${objectId}/content`, patAcc, { contentBase64: content.toString('base64') });
+    expect(uploaded.status).toBe(201);
+    expect(((await uploaded.json()) as { data: { meta: { state: string } } }).data.meta.state).toBe('Quarantined');
+
+    // Release before scan is refused — nothing skips quarantine.
+    const early = await call(`/v1/objects/${objectId}/release`, patAcc, {
+      owningResourceType: 'LifeStoryItem', owningResourceId: 'lsi_e2e',
+    });
+    expect(early.status).toBe(409);
+    expect(((await early.json()) as { error: { code: string } }).error.code).toBe('ATTACHMENT_NOT_READY');
+
+    // The scan is the worker's job; trigger the same sweep directly.
+    const clock = new FixedClock('2026-07-31T12:00:00Z');
+    await scanPendingObjects(
+      { pool, clock, checkPermission: () => { throw new Error('sweeps hold no authority'); } },
+      createRequestContext({ actor: { type: 'service-account', id: 'sa_scheduler' }, purposeCode: 'platform-maintenance' }),
+    );
+
+    const released = await call(`/v1/objects/${objectId}/release`, patAcc, {
+      owningResourceType: 'LifeStoryItem', owningResourceId: 'lsi_e2e',
+    });
+    expect(released.status).toBe(201);
+    // Classification inherits the owning resource's sensitivity.
+    expect(((await released.json()) as { data: { meta: { dataClassification: string } } }).data.meta.dataClassification)
+      .toBe('Sensitive-Personal');
+
+    const status = await call(`/v1/objects/${objectId}`, patAcc);
+    expect(((await status.json()) as { data: { attributes: { objectState: string } } }).data.attributes.objectState)
+      .toBe('Available');
+
+    // A stranger probing the object learns nothing.
+    expect((await call(`/v1/objects/${objectId}`, strangerAcc)).status).toBe(404);
+    // Disallowed types are refused at the gate.
+    const badType = await call('/v1/objects', patAcc, {
+      ownerParticipantId: patId, declaredContentType: 'application/x-msdownload', declaredSizeBytes: 10,
+    });
+    expect(badType.status).toBe(400);
+  });
+
   it('message history: thread parties only, drafts private to their author, truthful delivery states', async () => {
     const otherId = 'pt_hist_other';
     const threadId = `th_hist_${Date.now()}`;
@@ -358,12 +406,15 @@ describe.skipIf(!dbAvailable)('HTTP API (e2e)', () => {
        VALUES ($1, 'ActiveConnection', 'conn_hist', $2, $3)`,
       [threadId, patId, otherId],
     );
+    const mSent = `msg_hist_sent_${Date.now()}`;
+    const mDraftOther = `msg_hist_do_${Date.now()}`;
+    const mDraftOwn = `msg_hist_dn_${Date.now()}`;
     await pool.query(
       `INSERT INTO community_social.messages (id, thread_id, sender_participant_id, content_text, lifecycle_state, delivery_state)
-       VALUES ('msg_hist_sent', $1, $2, '你好', 'Sent', 'Provider Accepted'),
-              ('msg_hist_draft_other', $1, $3, '对方的私密草稿', 'Draft', 'Not Submitted'),
-              ('msg_hist_draft_own', $1, $2, '我自己的草稿', 'Draft', 'Not Submitted')`,
-      [threadId, patId, otherId],
+       VALUES ($4, $1, $2, '你好', 'Sent', 'Provider Accepted'),
+              ($5, $1, $3, '对方的私密草稿', 'Draft', 'Not Submitted'),
+              ($6, $1, $2, '我自己的草稿', 'Draft', 'Not Submitted')`,
+      [threadId, patId, otherId, mSent, mDraftOther, mDraftOwn],
     );
 
     const res = await call(`/v1/conversation-threads/${threadId}/messages?participantId=${patId}`, patAcc);
@@ -371,11 +422,11 @@ describe.skipIf(!dbAvailable)('HTTP API (e2e)', () => {
     const body = (await res.json()) as { data: { id: string; attributes: { deliveryState: string } }[] };
     const ids = body.data.map((m) => m.id);
     // Own sent + own draft visible; the OTHER party's draft never appears.
-    expect(ids).toContain('msg_hist_sent');
-    expect(ids).toContain('msg_hist_draft_own');
-    expect(ids).not.toContain('msg_hist_draft_other');
+    expect(ids).toContain(mSent);
+    expect(ids).toContain(mDraftOwn);
+    expect(ids).not.toContain(mDraftOther);
     // Delivery state arrives untranslated for truthful rendering.
-    expect(body.data.find((m) => m.id === 'msg_hist_sent')?.attributes.deliveryState).toBe('Provider Accepted');
+    expect(body.data.find((m) => m.id === mSent)?.attributes.deliveryState).toBe('Provider Accepted');
 
     // A non-party learns nothing — not even that the thread exists.
     const outsider = await call(`/v1/conversation-threads/${threadId}/messages?participantId=pt_hist_other`, strangerAcc);

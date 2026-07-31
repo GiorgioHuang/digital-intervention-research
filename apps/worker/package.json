@@ -17,7 +17,8 @@
     "zod": "^3.25.76",
     "@platform/m03-consent-permission": "workspace:*",
     "@platform/m18-community-social": "workspace:*",
-    "@platform/policy": "workspace:*"
+    "@platform/policy": "workspace:*",
+    "@platform/m16-integration": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^22.20.1",

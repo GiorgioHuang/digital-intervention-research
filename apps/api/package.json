@@ -32,7 +32,8 @@
     "@platform/m14-reporting": "workspace:*",
     "@platform/m15-governance": "workspace:*",
     "@platform/m17-life-story": "workspace:*",
-    "@platform/m18-community-social": "workspace:*"
+    "@platform/m18-community-social": "workspace:*",
+    "@platform/m16-integration": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^22.20.1",

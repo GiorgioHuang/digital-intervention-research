@@ -116,6 +116,8 @@ export const POLICY_V1: PolicyConfiguration = {
       'thread.create',
       'message.draft',
       'message.confirm-send',
+      'object.upload',
+      'object.assign',
     ],
     Supporter: ['participant.view-shared', 'life-story.contribute', 'report.submit'],
     Moderator: ['moderation.triage', 'moderation.decide'],
@@ -158,6 +160,11 @@ export const POLICY_V1: PolicyConfiguration = {
     'approval-queue.view': {},
     'governance-queue.view': {},
     'enrolment.view': {},
+
+    // Object storage (Doc 14 §59): uploads and assignment are owner-only
+    // on the participant's own objects.
+    'object.upload': { ownerPermitted: true, ownerOnly: true },
+    'object.assign': { ownerPermitted: true, ownerOnly: true },
 
     'project.view': {},
     'project.create': {},

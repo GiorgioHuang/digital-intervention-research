@@ -304,6 +304,33 @@ paths:
       responses: { '201': { description: reviewed; versionId in meta on acceptance }, '404': { description: only the owner reviews } }
   /v1/life-story/items/{itemId}/withdraw:
     post: { summary: Withdraw an item (owner, confirmed), parameters: [{ name: itemId, in: path, required: true, schema: { type: string } }], responses: { '201': { description: Withdrawn } } }
+  /v1/objects:
+    post:
+      summary: Initiate an upload (owner-only). Fail closed — content type must be on the allowlist and size within the limit (Doc 14 §59); policy values are configuration
+      responses:
+        '201': { description: Pending Upload with an opaque object id }
+        '400': { description: UNSUPPORTED_CAPABILITY (type) / VALIDATION_ERROR (size) }
+  /v1/objects/{objectId}/content:
+    post:
+      summary: Complete the upload — checksum computed server-side, size must match the declaration; the object lands in QUARANTINE, never directly Available
+      parameters: [{ name: objectId, in: path, required: true, schema: { type: string } }]
+      responses:
+        '201': { description: Quarantined with sha256 checksum }
+        '400': { description: size mismatch rejects the object }
+  /v1/objects/{objectId}/release:
+    post:
+      summary: Assign the owning resource and release from quarantine. Requires a Clean scan; classification derives from the owning resource type and inherits its sensitivity; unmapped types fail closed. DB CHECK backstops every gate
+      parameters: [{ name: objectId, in: path, required: true, schema: { type: string } }]
+      responses:
+        '201': { description: Available with derived dataClassification }
+        '409': { description: ATTACHMENT_NOT_READY until quarantine is fully cleared }
+  /v1/objects/{objectId}:
+    get:
+      summary: Owner-only object status (protected existence for everyone else); truthful states — Scan Failed never reads as safe
+      parameters: [{ name: objectId, in: path, required: true, schema: { type: string } }]
+      responses:
+        '200': { description: object state, scan outcome, classification }
+        '404': { $ref: '#/components/responses/Error' }
   /v1/conversation-threads/{threadId}/messages:
     get:
       summary: Message history — thread parties only (non-parties get protected-existence 404); drafts are private to their author and never shown to the other party; delivery states arrive untranslated for truthful rendering

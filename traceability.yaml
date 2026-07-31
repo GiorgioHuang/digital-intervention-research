@@ -480,3 +480,13 @@
   code: [packages/modules/m18-community-social/src/application/queries.ts, apps/api/src/controllers.ts, apps/web/src/components/MessagePanel.tsx]
   tests: [apps/api/test/api.e2e.test.ts, apps/web/test/message-panel.test.tsx]
   status: implemented
+
+- implementation_id: IMP-M16-STORAGE-001
+  module: M16
+  summary: Object-storage upload quarantine pipeline - fail-closed type allowlist and size limit, server-side sha256 checksum with declaration match, mandatory quarantine (never directly Available), deterministic scanner simulator (EICAR marker rejects and purges the blob, scan failure keeps quarantine - processing failure never means safe), release gated on clean scan + owning-resource assignment with classification derived from resource type (inheriting sensitivity, unmapped types refused), Available impossible without every gate (DB CHECK backstop), opaque owner-only identifiers with hidden existence, ATTACHMENT_NOT_READY sendability gate, worker object-scan sweep on the reconciliation schedule; real storage/scanner vendor Pending External Approval
+  trace_ids: [ATR-016, ATR-023]
+  adr_ids: [ADR-050]
+  docs: ["Doc 14 §59", "Doc 15 §58.4", "Doc 16 storage_ops"]
+  code: [packages/modules/m16-integration/src/application/storage-pipeline.ts, packages/database/migrations/1753800000018_storage-quarantine.sql, apps/api/src/controllers.ts, apps/worker/src/main.ts]
+  tests: [packages/modules/m16-integration/test/storage-pipeline.integration.test.ts, apps/api/test/api.e2e.test.ts]
+  status: implemented

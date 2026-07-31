@@ -38,7 +38,7 @@ async function main(): Promise<void> {
   // states truthful (Delivery Unknown is never success, ADR-124) and
   // returns crashed outbox claims to Pending (at-least-once, ADR-015).
   const expirySweeps = ['match-candidate-expiry', 'mutual-acceptance-expiry', 'relationship-expiry'];
-  const reconciliationSweeps = ['delivery-unknown-reconciliation', 'outbox-stale-recovery'];
+  const reconciliationSweeps = ['delivery-unknown-reconciliation', 'outbox-stale-recovery', 'object-scan'];
   for (const queue of expirySweeps) {
     await boss.createQueue(queue);
     await boss.schedule(queue, env.SWEEP_CRON_EXPIRY);

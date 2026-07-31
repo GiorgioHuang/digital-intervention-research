@@ -20,13 +20,13 @@
 |---|---|
 | `packages/kernel`（RequestContext、结构化错误、时钟、ID、日志脱敏） | Implemented（50 单测通过） |
 | `packages/database`（连接、迁移、outbox/inbox/audit/idempotency 基表） | Implemented（集成测试含迁移 up→down→up 演练） |
-| `apps/api`（Doc 15 错误信封/上下文头/dev-header 认证桩 + 参与者侧命令端点（含 M03 relationship 管理与 M17 Life Story 全链）+ 员工侧命令端点（M04 协议链/M05 入组链/M06 干预组合/M09 安全 triage/M12 数据集血缘/M13 分析链/M14 报告·受控导出/M15 审批·治理保留·break-glass）+ M18 属主只读查询 + OpenAPI） | Implemented（24 e2e） |
-| `apps/worker` / `apps/scheduler`（outbox 发布循环 + 过期清扫（候选/互相接受/关系）+ 投递未知对账 + outbox 卡死恢复 + 幂等清理；cron 与阈值配置驱动） | Implemented（6 项 sweep 集成测试） |
+| `apps/api`（Doc 15 错误信封/上下文头/dev-header 认证桩 + 参与者侧命令端点（含 M03 relationship 管理与 M17 Life Story 全链）+ 员工侧命令端点（M04 协议链/M05 入组链/M06 干预组合/M09 安全 triage/M12 数据集血缘/M13 分析链/M14 报告·受控导出/M15 审批·治理保留·break-glass）+ M18 属主只读查询 + OpenAPI） | Implemented（25 e2e） |
+| `apps/worker` / `apps/scheduler`（outbox 发布循环 + 过期清扫（候选/互相接受/关系）+ 投递未知对账 + outbox 卡死恢复 + 对象扫描 + 幂等清理；cron 与阈值配置驱动） | Implemented（6 项 sweep 集成测试） |
 | `packages/policy` 权限引擎 + `m01-identity-org` + `m03-consent-permission` | Implemented（27 引擎单测 + 13 集成测试） |
 | `m02-participant` + `m04-research-design` + `m05-enrolment` | Implemented（P3 链路 12 集成测试） |
 | `m06-intervention-portfolio` + `m10-evidence`（含 KP 模拟器） | Implemented（9 集成测试） |
 | `m17-life-story` | Implemented（11 集成测试：作者权三态/版本不可变/可见性/贡献流/撤回） |
-| `m18-community-social`（社区/匹配/连接/消息全链） + `m16-integration`（供应商模拟器+回调认证） | Implemented（24 集成测试） |
+| `m18-community-social`（社区/匹配/连接/消息全链） + `m16-integration`（供应商模拟器+回调认证+对象存储隔离/扫描管线） | Implemented（24 集成测试） |
 | `m09-safety` + `m11-ai`（信号/人工事件；Model+Tool Gateway，Level-5 全禁） | Implemented（8 集成测试） |
 | `m12-dataset` + `m13-analysis`（DatasetLock/分析链/Finding 血缘） | Implemented（5 集成测试） |
 | `m07-delivery` + `m08-assessment`（暴露状态/类型化缺失） | Implemented（合成试点覆盖） |

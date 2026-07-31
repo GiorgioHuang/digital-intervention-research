@@ -77,6 +77,9 @@ importers:
       '@platform/m15-governance':
         specifier: workspace:*
         version: link:../../packages/modules/m15-governance
+      '@platform/m16-integration':
+        specifier: workspace:*
+        version: link:../../packages/modules/m16-integration
       '@platform/m17-life-story':
         specifier: workspace:*
         version: link:../../packages/modules/m17-life-story
@@ -188,6 +191,9 @@ importers:
       '@platform/m03-consent-permission':
         specifier: workspace:*
         version: link:../../packages/modules/m03-consent-permission
+      '@platform/m16-integration':
+        specifier: workspace:*
+        version: link:../../packages/modules/m16-integration
       '@platform/m18-community-social':
         specifier: workspace:*
         version: link:../../packages/modules/m18-community-social
@@ -736,7 +742,19 @@ importers:
       '@platform/kernel':
         specifier: workspace:*
         version: link:../../kernel
+      '@platform/policy':
+        specifier: workspace:*
+        version: link:../../policy
     devDependencies:
+      '@platform/m01-identity-org':
+        specifier: workspace:*
+        version: link:../m01-identity-org
+      '@platform/m02-participant':
+        specifier: workspace:*
+        version: link:../m02-participant
+      '@platform/m03-consent-permission':
+        specifier: workspace:*
+        version: link:../m03-consent-permission
       '@types/node':
         specifier: ^22.20.1
         version: 22.20.1

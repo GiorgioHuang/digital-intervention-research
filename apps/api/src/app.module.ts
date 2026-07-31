@@ -47,6 +47,7 @@ export function buildAppModule(config: ApiConfig) {
     m13: moduleDeps,
     m14: moduleDeps,
     m15: moduleDeps,
+    m16storage: moduleDeps,
     m17: moduleDeps,
     m18: moduleDeps,
   };
