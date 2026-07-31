@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { StaffApp } from './StaffApp.js';
 import { ConsentPanel } from './components/ConsentPanel.js';
 import { MatchingPanel } from './components/MatchingPanel.js';
 import { MessagesScreen } from './components/MessagesScreen.js';
@@ -19,6 +20,11 @@ export function App() {
   const [session, setSession] = useState<Session | null>(null);
   const [screen, setScreen] = useState<Screen>('home');
   const [form, setForm] = useState({ actorId: '', participantId: '' });
+  const [staffMode, setStaffMode] = useState(false);
+
+  if (staffMode) {
+    return <StaffApp onExit={() => setStaffMode(false)} />;
+  }
 
   if (session === null) {
     return (
@@ -45,7 +51,10 @@ export function App() {
               onChange={(e) => setForm({ ...form, participantId: e.target.value })}
             />
           </p>
-          <button type="submit">进入</button>
+          <button type="submit">进入</button>{' '}
+          <button type="button" onClick={() => setStaffMode(true)}>
+            员工入口
+          </button>
         </form>
       </main>
     );

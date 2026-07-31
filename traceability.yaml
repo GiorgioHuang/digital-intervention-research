@@ -440,3 +440,13 @@
   code: [apps/api/src/staff-controllers.ts, apps/api/src/controllers.ts, openapi/openapi.yaml]
   tests: [apps/api/test/api.e2e.test.ts]
   status: implemented
+
+- implementation_id: IMP-WEB-STAFF-001
+  module: ops
+  summary: Staff web workspaces over the HTTP boundary - coordinator (enrolment chain with human eligibility decision requiring written reason, confirmed withdrawal with honest consequences), researcher (project/protocol drafting with separation-of-duties notice, export requests with no identifiable option), approver (confirmed artefact-named decisions with audit-attribution wording and up-front MFA labelling), safety triage (mandatory reason, confirmed dispositions, pre-submission MFA warning for conversion); workspace navigation grants nothing - every command is judged server-side
+  trace_ids: [ATR-017, ATR-018, ATR-023]
+  adr_ids: [ADR-039, ADR-051, ADR-104]
+  docs: ["Doc 20 staff workspaces", "Doc 14 MFA list"]
+  code: [apps/web/src/StaffApp.tsx, apps/web/src/staff-api.ts, apps/web/src/components/StaffApproverPanel.tsx, apps/web/src/components/StaffCoordinatorPanel.tsx, apps/web/src/components/StaffResearcherPanel.tsx, apps/web/src/components/StaffSafetyTriagePanel.tsx]
+  tests: [apps/web/test/staff-panels.test.tsx]
+  status: implemented

@@ -33,7 +33,7 @@
 | `m15-governance`（ApprovalRecord 精确工件版本+职责分离 CHECK、append-only 状态历史、GovernanceHold、break-glass 强制追溯审查） | Implemented（5 集成测试） |
 | `packages/synthetic-pilot`（端到端合成试点） | Implemented（5 场景组） |
 | `m14-reporting`（报告不可变批准版本/受控导出全链/参与者可携带性导出；外部提交显式延后） | Implemented（4 集成测试） |
-| `apps/web`（参与者工作区：任务式首页/细粒度同意/消息确认/屏蔽与报告/安全担忧/可选匹配；会话/联系/推荐均来自 API 查询，无手动输入标识，HTTP-only 边界） | Implemented（15 组件测试） |
+| `apps/web`（参与者工作区：任务式首页/细粒度同意/消息确认/屏蔽与报告/安全担忧/可选匹配，会话/联系/推荐均来自 API 查询；员工工作区：入组协调/研究者/批准/安全 triage，MFA 分级如实标注、决定署名确认；HTTP-only 边界） | Implemented（21 组件测试） |
 | OpenAPI / 事件 schema 目录 | Scaffolded（openapi/openapi.yaml 覆盖现有端点） |
 
 ## 4. 数据库与迁移
