@@ -17,6 +17,7 @@ import type { M06Deps } from '@platform/m06-intervention-portfolio';
 import { recordSafetySignal, type M09Deps } from '@platform/m09-safety';
 import type { M12Deps } from '@platform/m12-dataset';
 import type { M13Deps } from '@platform/m13-analysis';
+import { requestParticipantExport, type M14Deps } from '@platform/m14-reporting';
 import type { M15Deps } from '@platform/m15-governance';
 import {
   changeVisibility,
@@ -61,6 +62,7 @@ export interface ApiDeps {
   m09: M09Deps;
   m12: M12Deps;
   m13: M13Deps;
+  m14: M14Deps;
   m15: M15Deps;
   m17: M17Deps;
   m18: M18Deps;
@@ -262,6 +264,23 @@ export class CommandController {
         meta: result.mutualAcceptanceId === undefined ? {} : { mutualAcceptanceId: result.mutualAcceptanceId },
       },
     };
+  }
+
+  @Post('participants/:participantId/export-requests')
+  async requestParticipantExport(
+    @Req() req: Request,
+    @Param('participantId') participantId: string,
+    @Body() body: { purpose: string; confirmed: boolean },
+  ) {
+    const ctx = requireActor(req);
+    // Portability (Doc 16 §37.5): owner-only + confirmed; only permitted
+    // records, third-party restrictions preserved.
+    const result = await requestParticipantExport(this.deps.m14, ctx, {
+      participantId,
+      purpose: body.purpose,
+      confirmed: body.confirmed === true,
+    });
+    return { data: { type: 'ExportRequest', id: result.exportRequestId, meta: { state: 'Requested' } } };
   }
 
   // --- M03 relationships -----------------------------------------------

@@ -350,6 +350,65 @@ describe.skipIf(!dbAvailable)('HTTP API (e2e)', () => {
     expect(((await locked.json()) as { data: { id: string } }).data.id).toMatch(/^dl_/);
   });
 
+  it('M14 report and export over HTTP: immutable approved versions; export needs MFA approval before generation; three-state delivery', async () => {
+    const rpt = await call('/v1/research-reports', researcherAcc, {
+      researchProjectId: 'rp_e2e_m14', title: 'Pilot outcomes', reportType: 'ResearchReport',
+    });
+    expect(rpt.status).toBe(201);
+    const reportId = ((await rpt.json()) as { data: { id: string } }).data.id;
+    const ver = await call(`/v1/research-reports/${reportId}/versions`, researcherAcc, { content: { sections: ['results'] } });
+    expect(ver.status).toBe(201);
+    const verId = ((await ver.json()) as { data: { id: string } }).data.id;
+    // The author cannot approve their own version.
+    expect((await call(`/v1/report-versions/${verId}/approve`, researcherAcc, { confirmed: true })).status).toBe(403);
+    expect((await call(`/v1/report-versions/${verId}/approve`, approverAcc, { confirmed: true })).status).toBe(201);
+
+    const exr = await call('/v1/export-requests', researcherAcc, {
+      purpose: 'External statistician review', recipient: 'stats-partner',
+      sources: ['dv_locked_e2e'], deIdentification: 'Pseudonymised',
+    });
+    expect(exr.status).toBe(201);
+    const exportId = ((await exr.json()) as { data: { id: string } }).data.id;
+
+    // No generation before approval.
+    const early = await call(`/v1/export-requests/${exportId}/generate`, researcherAcc, {});
+    expect(early.status).toBe(409);
+    expect(((await early.json()) as { error: { code: string } }).error.code).toBe('APPROVAL_REQUIRED');
+
+    // Export approval is MFA-tier.
+    const weak = await call(`/v1/export-requests/${exportId}/decide`, approverAcc, { decision: 'Approved', confirmed: true });
+    expect(weak.status).toBe(401);
+    expect((await call(`/v1/export-requests/${exportId}/decide`, approverAcc, {
+      decision: 'Approved', confirmed: true,
+    }, { 'x-auth-strength': 'mfa' })).status).toBe(201);
+
+    const gen = await call(`/v1/export-requests/${exportId}/generate`, researcherAcc, {});
+    expect(gen.status).toBe(201);
+    expect(((await gen.json()) as { data: { meta: { manifestHash: string } } }).data.meta.manifestHash).toMatch(/^[0-9a-f]{64}$/);
+
+    // Generated ≠ Delivered ≠ Received: skipping a state is refused.
+    const skip = await call(`/v1/export-requests/${exportId}/delivery`, researcherAcc, { state: 'Received' });
+    expect(skip.status).toBe(409);
+    expect((await call(`/v1/export-requests/${exportId}/delivery`, researcherAcc, { state: 'Delivered' })).status).toBe(201);
+    expect((await call(`/v1/export-requests/${exportId}/delivery`, researcherAcc, { state: 'Received' })).status).toBe(201);
+  });
+
+  it('participant portability export over HTTP is owner-only and confirmed', async () => {
+    const outsider = await call(`/v1/participants/${patId}/export-requests`, strangerAcc, {
+      purpose: 'my records', confirmed: true,
+    });
+    expect(outsider.status).toBe(404);
+    const unconfirmed = await call(`/v1/participants/${patId}/export-requests`, patAcc, {
+      purpose: 'my records', confirmed: false,
+    });
+    expect(unconfirmed.status).toBe(409);
+    const ok = await call(`/v1/participants/${patId}/export-requests`, patAcc, {
+      purpose: 'my records', confirmed: true,
+    });
+    expect(ok.status).toBe(201);
+    expect(((await ok.json()) as { data: { id: string } }).data.id).toMatch(/^exr_/);
+  });
+
   it('M15 approval over HTTP: exact artefact version, MFA decision, requester can never decide', async () => {
     const reqRes = await call('/v1/approvals', researcherAcc, {
       artefactType: 'ProtocolVersion', artefactId: 'pv_e2e_gov', artefactVersion: 2,

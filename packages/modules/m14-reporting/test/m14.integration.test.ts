@@ -1,0 +1,179 @@
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import pg from 'pg';
+import { FixedClock, createRequestContext } from '@platform/kernel';
+import { createPool, migrate } from '@platform/database';
+import { POLICY_V1 } from '@platform/policy';
+import {
+  assignRole,
+  createOrganisation,
+  createRoleAssignmentQuery,
+  createUserAccount,
+  seedBootstrapAdministrator,
+  type M01Deps,
+} from '@platform/m01-identity-org';
+import { createParticipantQuery, registerParticipant } from '@platform/m02-participant';
+import { createPermissionService } from '@platform/m03-consent-permission';
+import {
+  approveReportVersion,
+  createReport,
+  decideExport,
+  draftReportVersion,
+  generateExportPackage,
+  recordExportDelivery,
+  requestParticipantExport,
+  requestResearchExport,
+  type M14Deps,
+} from '../src/index.js';
+
+const DATABASE_URL =
+  process.env['DATABASE_URL'] ?? 'postgres://platform:platform_dev_only@localhost:5432/research_platform';
+
+async function probe(): Promise<boolean> {
+  const c = new pg.Client({ connectionString: DATABASE_URL, connectionTimeoutMillis: 2000 });
+  try {
+    await c.connect();
+    await c.end();
+    return true;
+  } catch {
+    return false;
+  }
+}
+const dbAvailable = await probe();
+
+describe.skipIf(!dbAvailable)('M14 reporting and export (integration)', () => {
+  let pool: pg.Pool;
+  const clock = new FixedClock('2026-07-30T12:00:00Z');
+  let m01: M01Deps, m14: M14Deps;
+  let researcherId: string, approverId: string;
+  let patAcc: string, patId: string, otherAcc: string;
+  const ctx = (id: string, strength?: 'password' | 'mfa') =>
+    createRequestContext({ actor: { type: 'user', id }, ...(strength === undefined ? {} : { authStrength: strength }) });
+
+  beforeAll(async () => {
+    await migrate({ databaseUrl: DATABASE_URL, direction: 'up' });
+    pool = createPool({ connectionString: DATABASE_URL, applicationName: 'm14-tests' });
+    const permissions = createPermissionService({
+      pool,
+      clock,
+      policy: POLICY_V1,
+      roleAssignments: createRoleAssignmentQuery(pool),
+      participantIdentity: createParticipantQuery(pool),
+    });
+    const checkPermission = permissions.evaluate.bind(permissions);
+    m01 = { pool, clock, checkPermission };
+    m14 = { pool, clock, checkPermission };
+
+    const { userAccountId: adminId } = await seedBootstrapAdministrator(pool, clock, { displayName: 'Admin' });
+    const { organisationId } = await createOrganisation(m01, ctx(adminId), { name: 'Report Org' });
+    const adminCtx = createRequestContext({ actor: { type: 'user', id: adminId }, organisationId });
+    ({ userAccountId: researcherId } = await createUserAccount(m01, adminCtx, { displayName: 'R' }));
+    ({ userAccountId: approverId } = await createUserAccount(m01, adminCtx, { displayName: 'A' }));
+    ({ userAccountId: patAcc } = await createUserAccount(m01, adminCtx, { displayName: 'P' }));
+    ({ userAccountId: otherAcc } = await createUserAccount(m01, adminCtx, { displayName: 'O' }));
+    await assignRole(m01, adminCtx, { userAccountId: researcherId, role: 'Researcher', confirmed: true });
+    await assignRole(m01, adminCtx, { userAccountId: approverId, role: 'ResearchApprover', confirmed: true });
+    for (const acc of [patAcc, otherAcc]) {
+      await assignRole(m01, adminCtx, { userAccountId: acc, role: 'Participant', confirmed: true });
+    }
+    await assignRole(m01, adminCtx, { userAccountId: adminId, role: 'ResearchCoordinator', confirmed: true });
+    ({ participantId: patId } = await registerParticipant({ pool, clock, checkPermission }, adminCtx, {
+      displayName: 'P', userAccountId: patAcc,
+    }));
+  }, 30_000);
+
+  afterAll(async () => {
+    await pool?.end();
+  });
+
+  it('report version chain: draft, no self-approval, approved content immutable (trigger)', async () => {
+    const { reportId } = await createReport(m14, ctx(researcherId), {
+      researchProjectId: 'rp_m14', title: 'Pilot outcomes', reportType: 'ResearchReport',
+    });
+    const { reportVersionId, versionNumber } = await draftReportVersion(m14, ctx(researcherId), {
+      reportId, content: { sections: ['methods', 'results'] },
+    });
+    expect(versionNumber).toBe(1);
+
+    await expect(
+      approveReportVersion(m14, ctx(researcherId), { reportVersionId, confirmed: true }),
+    ).rejects.toMatchObject({ code: 'AUTHORISATION_DENIED' });
+
+    await approveReportVersion(m14, ctx(approverId), { reportVersionId, confirmed: true });
+
+    // Approved content is immutable at the database layer.
+    await expect(
+      pool.query(`UPDATE reporting_submission.report_versions SET content = '{}' WHERE id = $1`, [reportVersionId]),
+    ).rejects.toThrow(/immutable/);
+    // Re-approval of a non-draft is refused.
+    await expect(
+      approveReportVersion(m14, ctx(approverId), { reportVersionId, confirmed: true }),
+    ).rejects.toMatchObject({ code: 'INVALID_STATE_TRANSITION' });
+  });
+
+  it('research export: approval-gated generation, MFA decision, truthful three-state delivery', async () => {
+    const { exportRequestId } = await requestResearchExport(m14, ctx(researcherId), {
+      purpose: 'External statistician review',
+      recipient: 'stats-partner',
+      sources: ['dv_locked_1'],
+      deIdentification: 'Pseudonymised',
+    });
+
+    await expect(
+      generateExportPackage(m14, ctx(researcherId), { exportRequestId }),
+    ).rejects.toMatchObject({ code: 'APPROVAL_REQUIRED' });
+
+    await expect(
+      decideExport(m14, ctx(approverId, 'password'), { exportRequestId, decision: 'Approved', confirmed: true }),
+    ).rejects.toMatchObject({ code: 'STEP_UP_AUTHENTICATION_REQUIRED' });
+
+    await decideExport(m14, ctx(approverId, 'mfa'), { exportRequestId, decision: 'Approved', confirmed: true });
+
+    const { manifestHash } = await generateExportPackage(m14, ctx(researcherId), { exportRequestId });
+    expect(manifestHash).toMatch(/^[0-9a-f]{64}$/);
+
+    // Generated is not Delivered; Delivered is not Received.
+    await expect(
+      recordExportDelivery(m14, ctx(researcherId), { exportRequestId, state: 'Received' }),
+    ).rejects.toMatchObject({ code: 'INVALID_STATE_TRANSITION' });
+    await recordExportDelivery(m14, ctx(researcherId), { exportRequestId, state: 'Delivered' });
+    await recordExportDelivery(m14, ctx(researcherId), { exportRequestId, state: 'Received' });
+  });
+
+  it('NEGATIVE identifiable research export is impossible: command types forbid it and the DB CHECK backstops', async () => {
+    await expect(
+      pool.query(
+        `INSERT INTO reporting_submission.export_requests
+           (id, export_type, purpose, recipient, sources, de_identification, requested_by_actor_id)
+         VALUES ('exr_bad', 'ResearchExport', 'x', 'y', '[]', 'None', 'actor_x')`,
+      ),
+    ).rejects.toThrow(/export_requests/);
+  });
+
+  it('participant portability export is owner-only and confirmed', async () => {
+    await expect(
+      requestParticipantExport(m14, ctx(otherAcc), { participantId: patId, purpose: 'my records', confirmed: true }),
+    ).rejects.toMatchObject({ code: 'RESOURCE_NOT_FOUND' });
+
+    await expect(
+      requestParticipantExport(m14, ctx(patAcc), { participantId: patId, purpose: 'my records', confirmed: false }),
+    ).rejects.toMatchObject({ code: 'CONFIRMATION_REQUIRED' });
+
+    const { exportRequestId } = await requestParticipantExport(m14, ctx(patAcc), {
+      participantId: patId, purpose: 'my records', confirmed: true,
+    });
+    const row = await pool.query(
+      `SELECT export_type, participant_id, restrictions FROM reporting_submission.export_requests WHERE id = $1`,
+      [exportRequestId],
+    );
+    expect(row.rows[0].export_type).toBe('ParticipantPortability');
+    expect(row.rows[0].participant_id).toBe(patId);
+    // Third-party restrictions are preserved, not silently dropped.
+    expect(row.rows[0].restrictions).toContain('third-party');
+  });
+});
+
+describe.skipIf(dbAvailable)('M14 reporting (skipped)', () => {
+  it('skipped because no PostgreSQL is reachable', () => {
+    expect(dbAvailable).toBe(false);
+  });
+});

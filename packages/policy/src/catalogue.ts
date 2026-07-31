@@ -69,6 +69,10 @@ export const POLICY_V1: PolicyConfiguration = {
       'interpretation.draft',
       'finding.draft',
       'approval.request',
+      'report.create',
+      'export.request',
+      'export.generate',
+      'export.record-delivery',
     ],
     ResearchApprover: [
       'protocol.review', 'protocol.approve', 'protocol.activate',
@@ -77,6 +81,7 @@ export const POLICY_V1: PolicyConfiguration = {
       'dataset.approve-definition', 'dataset.lock',
       'analysis-plan.approve', 'interpretation.approve', 'finding.approve',
       'approval.decide',
+      'report.approve', 'export.approve',
     ],
     EvidenceReviewer: ['evidence-review.approve', 'evidence-decision.draft', 'evidence-decision.approve'],
     SafetyReviewer: ['safety-signal.record', 'safety-signal.triage', 'safety-event.create', 'safety-event.review'],
@@ -135,6 +140,15 @@ export const POLICY_V1: PolicyConfiguration = {
     'governance-hold.lift': { confirmationRequired: true },
     'break-glass.execute': { confirmationRequired: true, minimumAuthStrength: 'mfa' },
     'break-glass.review': { confirmationRequired: true },
+
+    // M14 reporting/export (Doc 16 §37): exports cross the platform
+    // boundary, so approval is the strongest authority tier.
+    'report.create': {},
+    'report.approve': { confirmationRequired: true },
+    'export.request': {},
+    'export.approve': { confirmationRequired: true, minimumAuthStrength: 'mfa' },
+    'export.generate': {},
+    'export.record-delivery': {},
 
     'project.view': {},
     'project.create': {},

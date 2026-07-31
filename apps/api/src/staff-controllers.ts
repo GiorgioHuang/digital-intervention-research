@@ -26,6 +26,15 @@ import {
 } from '@platform/m06-intervention-portfolio';
 import { triageSafetySignal } from '@platform/m09-safety';
 import {
+  approveReportVersion,
+  createReport,
+  decideExport,
+  draftReportVersion,
+  generateExportPackage,
+  recordExportDelivery,
+  requestResearchExport,
+} from '@platform/m14-reporting';
+import {
   decideApproval,
   executeBreakGlass,
   liftGovernanceHold,
@@ -349,6 +358,101 @@ export class StaffCommandController {
     // X-Auth-Strength and is enforced by the policy engine.
     const result = await lockDatasetVersion(this.deps.m12, ctx, { datasetVersionId, confirmed: body.confirmed === true });
     return { data: { type: 'DatasetLock', id: result.datasetLockId, meta: { datasetVersionId } } };
+  }
+
+  // --- M14 reporting and export ----------------------------------------
+
+  // 'research-reports' avoids colliding with /v1/reports (M18 user reports).
+  @Post('research-reports')
+  async createReport(
+    @Req() req: Request,
+    @Body() body: { researchProjectId: string; title: string; reportType: 'ParticipantSummary' | 'ResearchReport' | 'FindingPackage' },
+  ) {
+    const ctx = requireActor(req);
+    const result = await createReport(this.deps.m14, ctx, body);
+    return { data: { type: 'Report', id: result.reportId } };
+  }
+
+  @Post('research-reports/:reportId/versions')
+  async draftReportVersion(@Req() req: Request, @Param('reportId') reportId: string, @Body() body: { content: object }) {
+    const ctx = requireActor(req);
+    const result = await draftReportVersion(this.deps.m14, ctx, { reportId, content: body.content });
+    return {
+      data: { type: 'ReportVersion', id: result.reportVersionId, meta: { versionNumber: result.versionNumber } },
+    };
+  }
+
+  @Post('report-versions/:versionId/approve')
+  async approveReportVersion(@Req() req: Request, @Param('versionId') versionId: string, @Body() body: { confirmed: boolean }) {
+    const ctx = requireActor(req);
+    // Approver ≠ author (code + DB CHECK); approved content becomes
+    // immutable at the database layer.
+    await approveReportVersion(this.deps.m14, ctx, { reportVersionId: versionId, confirmed: body.confirmed === true });
+    return { data: { type: 'ReportVersion', id: versionId, meta: { state: 'Approved' } } };
+  }
+
+  @Post('export-requests')
+  async requestResearchExport(
+    @Req() req: Request,
+    @Body() body: {
+      purpose: string;
+      recipient: string;
+      sources: string[];
+      restrictions?: string;
+      deIdentification: 'Pseudonymised' | 'Anonymised';
+    },
+  ) {
+    const ctx = requireActor(req);
+    // Research exports never leave identifiable (command type + DB CHECK).
+    const input: Parameters<typeof requestResearchExport>[2] = {
+      purpose: body.purpose,
+      recipient: body.recipient,
+      sources: body.sources,
+      deIdentification: body.deIdentification,
+    };
+    if (body.restrictions !== undefined) input.restrictions = body.restrictions;
+    const result = await requestResearchExport(this.deps.m14, ctx, input);
+    return { data: { type: 'ExportRequest', id: result.exportRequestId, meta: { state: 'Requested' } } };
+  }
+
+  @Post('export-requests/:exportRequestId/decide')
+  async decideExport(
+    @Req() req: Request,
+    @Param('exportRequestId') exportRequestId: string,
+    @Body() body: { decision: 'Approved' | 'Rejected'; confirmed: boolean },
+  ) {
+    const ctx = requireActor(req);
+    await decideExport(this.deps.m14, ctx, {
+      exportRequestId,
+      decision: body.decision,
+      confirmed: body.confirmed === true,
+    });
+    return { data: { type: 'ExportRequest', id: exportRequestId, meta: { state: body.decision } } };
+  }
+
+  @Post('export-requests/:exportRequestId/generate')
+  async generateExportPackage(@Req() req: Request, @Param('exportRequestId') exportRequestId: string) {
+    const ctx = requireActor(req);
+    const result = await generateExportPackage(this.deps.m14, ctx, { exportRequestId });
+    return {
+      data: {
+        type: 'ExportPackage',
+        id: result.exportPackageId,
+        meta: { manifestHash: result.manifestHash, state: 'Generated' },
+      },
+    };
+  }
+
+  @Post('export-requests/:exportRequestId/delivery')
+  async recordExportDelivery(
+    @Req() req: Request,
+    @Param('exportRequestId') exportRequestId: string,
+    @Body() body: { state: 'Delivered' | 'Received' },
+  ) {
+    const ctx = requireActor(req);
+    // Generated ≠ Delivered ≠ Received: forward transitions only.
+    await recordExportDelivery(this.deps.m14, ctx, { exportRequestId, state: body.state });
+    return { data: { type: 'ExportRequest', id: exportRequestId, meta: { state: body.state } } };
   }
 
   // --- M15 governance ---------------------------------------------------

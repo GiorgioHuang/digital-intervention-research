@@ -420,3 +420,23 @@
   code: [apps/api/src/staff-controllers.ts, openapi/openapi.yaml]
   tests: [apps/api/test/api.e2e.test.ts]
   status: implemented
+
+- implementation_id: IMP-M14-REPORTING-001
+  module: M14
+  summary: Reporting and export domain (MVP-limited) - reports with immutable approved versions (DB trigger + separation-of-duties CHECK), export requests carrying purpose/recipient/exact sources/restrictions/de-identification with identifiable research exports impossible (type + DB CHECK), MFA export approval by a different human, approval-gated package generation with sha256 manifest hash, distinct Generated/Delivered/Received forward-only delivery states, participant portability export owner-only+confirmed preserving third-party restrictions; external submissions deliberately deferred
+  trace_ids: [ATR-020, ATR-023]
+  adr_ids: [ADR-051]
+  docs: ["Doc 16 §37", "Doc 15 §21-31"]
+  code: [packages/modules/m14-reporting/src, packages/database/migrations/1753800000017_m14-reporting.sql]
+  tests: [packages/modules/m14-reporting/test/m14.integration.test.ts]
+  status: implemented
+
+- implementation_id: IMP-API-HTTP-010
+  module: M14
+  summary: Reporting/export REST slice - research-reports + versions + approve, export request/decide/generate/delivery, participant portability export endpoint
+  trace_ids: [ATR-020, ATR-023]
+  adr_ids: [ADR-051]
+  docs: ["Doc 16 §37", "Doc 15 §21-31"]
+  code: [apps/api/src/staff-controllers.ts, apps/api/src/controllers.ts, openapi/openapi.yaml]
+  tests: [apps/api/test/api.e2e.test.ts]
+  status: implemented

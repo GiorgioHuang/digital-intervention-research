@@ -71,6 +71,9 @@ importers:
       '@platform/m13-analysis':
         specifier: workspace:*
         version: link:../../packages/modules/m13-analysis
+      '@platform/m14-reporting':
+        specifier: workspace:*
+        version: link:../../packages/modules/m14-reporting
       '@platform/m15-governance':
         specifier: workspace:*
         version: link:../../packages/modules/m15-governance
@@ -629,6 +632,43 @@ importers:
       '@platform/m12-dataset':
         specifier: workspace:*
         version: link:../m12-dataset
+      '@types/node':
+        specifier: ^22.20.1
+        version: 22.20.1
+      '@types/pg':
+        specifier: ^8.16.0
+        version: 8.20.0
+      pg:
+        specifier: ^8.16.4
+        version: 8.22.0
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+      vitest:
+        specifier: ^3.2.4
+        version: 3.2.7(@types/node@22.20.1)(jsdom@25.0.1)(yaml@2.9.0)
+
+  packages/modules/m14-reporting:
+    dependencies:
+      '@platform/database':
+        specifier: workspace:*
+        version: link:../../database
+      '@platform/kernel':
+        specifier: workspace:*
+        version: link:../../kernel
+      '@platform/policy':
+        specifier: workspace:*
+        version: link:../../policy
+    devDependencies:
+      '@platform/m01-identity-org':
+        specifier: workspace:*
+        version: link:../m01-identity-org
+      '@platform/m02-participant':
+        specifier: workspace:*
+        version: link:../m02-participant
+      '@platform/m03-consent-permission':
+        specifier: workspace:*
+        version: link:../m03-consent-permission
       '@types/node':
         specifier: ^22.20.1
         version: 22.20.1

@@ -410,6 +410,54 @@ paths:
       responses:
         '201': { description: Locked }
         '401': { description: STEP_UP_AUTHENTICATION_REQUIRED without MFA }
+  /v1/research-reports:
+    post: { summary: Create a Report (M14; 'research-reports' avoids colliding with /v1/reports user reports), responses: { '201': { description: created } } }
+  /v1/research-reports/{reportId}/versions:
+    post: { summary: Draft a ReportVersion, parameters: [{ name: reportId, in: path, required: true, schema: { type: string } }], responses: { '201': { description: draft with versionNumber } } }
+  /v1/report-versions/{versionId}/approve:
+    post:
+      summary: Approve a report version (confirmed; approver ≠ author, code + DB CHECK); approved content becomes immutable (DB trigger)
+      parameters: [{ name: versionId, in: path, required: true, schema: { type: string } }]
+      responses: { '201': { description: Approved }, '403': { description: self-approval refused }, '409': { description: not a draft } }
+  /v1/export-requests:
+    post:
+      summary: Request a research export — purpose, recipient, EXACT sources, restrictions, de-identification; identifiable research exports are impossible (type + DB CHECK, Doc 16 §37.2)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [purpose, recipient, sources, deIdentification]
+              properties:
+                purpose: { type: string }
+                recipient: { type: string }
+                sources: { type: array, items: { type: string } }
+                restrictions: { type: string }
+                deIdentification: { type: string, enum: [Pseudonymised, Anonymised] }
+      responses: { '201': { description: Requested } }
+  /v1/export-requests/{exportRequestId}/decide:
+    post:
+      summary: Export decision — human + confirmed + MFA, decider ≠ requester
+      parameters: [{ name: exportRequestId, in: path, required: true, schema: { type: string } }]
+      responses:
+        '201': { description: Approved / Rejected }
+        '401': { description: STEP_UP_AUTHENTICATION_REQUIRED without MFA }
+  /v1/export-requests/{exportRequestId}/generate:
+    post:
+      summary: Generate the package (manifest + sha256 hash) for an APPROVED export only
+      parameters: [{ name: exportRequestId, in: path, required: true, schema: { type: string } }]
+      responses: { '201': { description: Generated with manifestHash }, '409': { description: APPROVAL_REQUIRED } }
+  /v1/export-requests/{exportRequestId}/delivery:
+    post:
+      summary: Record delivery state — Generated ≠ Delivered ≠ Received, forward transitions only (Doc 16 §37.3)
+      parameters: [{ name: exportRequestId, in: path, required: true, schema: { type: string } }]
+      responses: { '201': { description: state recorded }, '409': { description: INVALID_STATE_TRANSITION on skipped states } }
+  /v1/participants/{participantId}/export-requests:
+    post:
+      summary: Participant portability export (owner-only, confirmed; own permitted records only, third-party restrictions preserved, Doc 16 §37.5)
+      parameters: [{ name: participantId, in: path, required: true, schema: { type: string } }]
+      responses: { '201': { description: Requested }, '404': { description: protected existence }, '409': { description: CONFIRMATION_REQUIRED } }
   /v1/approvals:
     post:
       summary: Request an ApprovalRecord for one EXACT artefact type/id/version (M15, Doc 16 §38.1)

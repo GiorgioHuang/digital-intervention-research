@@ -45,6 +45,7 @@ export function buildAppModule(config: ApiConfig) {
     m09: moduleDeps,
     m12: moduleDeps,
     m13: moduleDeps,
+    m14: moduleDeps,
     m15: moduleDeps,
     m17: moduleDeps,
     m18: moduleDeps,
