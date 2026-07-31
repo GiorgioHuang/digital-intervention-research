@@ -1,9 +1,13 @@
-import { Body, Controller, Inject, Param, Post, Req } from '@nestjs/common';
+import { Body, Controller, Get, Inject, Param, Post, Req } from '@nestjs/common';
 import type { Request } from 'express';
 import type { Clock } from '@platform/kernel';
 import type { Pool } from '@platform/database';
 import { recordConsentDecision, withdrawConsent, type PermissionServicePort } from '@platform/m03-consent-permission';
+import type { M04Deps } from '@platform/m04-research-design';
+import type { M05Deps } from '@platform/m05-enrolment';
 import { recordSafetySignal, type M09Deps } from '@platform/m09-safety';
+import type { M12Deps } from '@platform/m12-dataset';
+import type { M13Deps } from '@platform/m13-analysis';
 import {
   activateConnection,
   activateMatchPreference,
@@ -11,6 +15,9 @@ import {
   createBlock,
   createMessageDraft,
   createThread,
+  listConnections,
+  listMatchCandidates,
+  listThreads,
   recordMatchDecision,
   revokeBlock,
   submitUserReport,
@@ -24,7 +31,11 @@ export interface ApiDeps {
   pool: Pool;
   clock: Clock;
   permissions: PermissionServicePort;
+  m04: M04Deps;
+  m05: M05Deps;
   m09: M09Deps;
+  m12: M12Deps;
+  m13: M13Deps;
   m18: M18Deps;
 }
 
@@ -224,6 +235,27 @@ export class CommandController {
         meta: result.mutualAcceptanceId === undefined ? {} : { mutualAcceptanceId: result.mutualAcceptanceId },
       },
     };
+  }
+
+  @Get('participants/:participantId/connections')
+  async listConnections(@Req() req: Request, @Param('participantId') participantId: string) {
+    const ctx = requireActor(req);
+    const items = await listConnections(this.deps.m18, ctx, participantId);
+    return { data: items.map((c) => ({ type: 'Connection', id: c.connectionId, attributes: c })) };
+  }
+
+  @Get('participants/:participantId/conversation-threads')
+  async listThreads(@Req() req: Request, @Param('participantId') participantId: string) {
+    const ctx = requireActor(req);
+    const items = await listThreads(this.deps.m18, ctx, participantId);
+    return { data: items.map((t) => ({ type: 'ConversationThread', id: t.threadId, attributes: t })) };
+  }
+
+  @Get('participants/:participantId/match-candidates')
+  async listMatchCandidates(@Req() req: Request, @Param('participantId') participantId: string) {
+    const ctx = requireActor(req);
+    const items = await listMatchCandidates(this.deps.m18, ctx, participantId);
+    return { data: items.map((c) => ({ type: 'MatchCandidate', id: c.candidateId, attributes: c })) };
   }
 
   @Post('mutual-acceptances/:mutualAcceptanceId/activate-connection')

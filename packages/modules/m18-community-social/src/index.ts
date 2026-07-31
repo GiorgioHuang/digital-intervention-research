@@ -27,3 +27,11 @@ export {
   confirmSend,
   recordDeliveryState,
 } from './application/messaging-commands.js';
+export {
+  listConnections,
+  listThreads,
+  listMatchCandidates,
+  type ConnectionSummary,
+  type ThreadSummary,
+  type MatchCandidateSummary,
+} from './application/queries.js';

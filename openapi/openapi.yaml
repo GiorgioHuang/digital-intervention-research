@@ -218,6 +218,112 @@ paths:
       responses:
         '201': { description: Connection active }
         '409': { description: MUTUAL_ACCEPTANCE_CONSUMED / CONFIRMATION_REQUIRED }
+  /v1/participants/{participantId}/connections:
+    get:
+      summary: List own connections (owner-only view; strangers get protected-existence 404, ADR-050)
+      parameters: [{ name: participantId, in: path, required: true, schema: { type: string } }]
+      responses:
+        '200': { description: Connection summaries (id, otherParticipantId, state) }
+        '404': { $ref: '#/components/responses/Error' }
+  /v1/participants/{participantId}/conversation-threads:
+    get:
+      summary: List own conversation threads (owner-only view)
+      parameters: [{ name: participantId, in: path, required: true, schema: { type: string } }]
+      responses:
+        '200': { description: Thread summaries (id, otherParticipantId, basisType, state) }
+        '404': { $ref: '#/components/responses/Error' }
+  /v1/participants/{participantId}/match-candidates:
+    get:
+      summary: List own current match candidates — explanation and version only, never the other participant's identity before mutual acceptance
+      parameters: [{ name: participantId, in: path, required: true, schema: { type: string } }]
+      responses:
+        '200': { description: Candidate summaries (id, candidateVersion, explanation, expiresAt) }
+        '404': { $ref: '#/components/responses/Error' }
+  /v1/research-projects:
+    post:
+      summary: Create a ResearchProject (M04)
+      responses: { '201': { description: created }, '403': { $ref: '#/components/responses/Error' } }
+  /v1/research-projects/{projectId}/protocol-versions:
+    post:
+      summary: Draft a ProtocolVersion bound to the project
+      parameters: [{ name: projectId, in: path, required: true, schema: { type: string } }]
+      responses: { '201': { description: draft created } }
+  /v1/protocol-versions/{versionId}/submit:
+    post:
+      summary: Submit a ProtocolVersion for review (records submitter for separation of duties)
+      parameters: [{ name: versionId, in: path, required: true, schema: { type: string } }]
+      responses: { '201': { description: In Review } }
+  /v1/protocol-versions/{versionId}/approve:
+    post:
+      summary: Approve a ProtocolVersion (human, confirmed, MFA; approver ≠ submitter, ADR-051)
+      parameters: [{ name: versionId, in: path, required: true, schema: { type: string } }]
+      responses:
+        '201': { description: Approved }
+        '401': { description: STEP_UP_AUTHENTICATION_REQUIRED without MFA }
+        '403': { description: SEPARATION_OF_DUTIES / AUTHORISATION_DENIED }
+  /v1/protocol-versions/{versionId}/activate:
+    post:
+      summary: Activate an approved ProtocolVersion (supersedes any previously active version)
+      parameters: [{ name: versionId, in: path, required: true, schema: { type: string } }]
+      responses: { '201': { description: Active } }
+  /v1/enrolments/invite:
+    post:
+      summary: Invite a participant against an Approved/Active ProtocolVersion only (ATR-004)
+      responses: { '201': { description: Invited }, '409': { description: PROTOCOL_VERSION_NOT_ACTIVE } }
+  /v1/enrolments/{enrolmentId}/start-screening:
+    post: { summary: Screening begins, parameters: [{ name: enrolmentId, in: path, required: true, schema: { type: string } }], responses: { '201': { description: Screening } } }
+  /v1/enrolments/{enrolmentId}/eligibility-decision:
+    post:
+      summary: Record an EligibilityDecision (human authority only; service accounts refused)
+      parameters: [{ name: enrolmentId, in: path, required: true, schema: { type: string } }]
+      responses: { '201': { description: recorded }, '409': { description: CONFIRMATION_REQUIRED } }
+  /v1/enrolments/{enrolmentId}/start-consent:
+    post: { summary: Consent process begins, parameters: [{ name: enrolmentId, in: path, required: true, schema: { type: string } }], responses: { '201': { description: Consenting } } }
+  /v1/enrolments/{enrolmentId}/enrol:
+    post: { summary: Enrol after granted study consent, parameters: [{ name: enrolmentId, in: path, required: true, schema: { type: string } }], responses: { '201': { description: Enrolled } } }
+  /v1/enrolments/{enrolmentId}/activate:
+    post: { summary: Activate enrolment, parameters: [{ name: enrolmentId, in: path, required: true, schema: { type: string } }], responses: { '201': { description: Active } } }
+  /v1/enrolments/{enrolmentId}/withdraw:
+    post:
+      summary: Withdraw from the study (confirmed; propagation per Doc 19 — locked datasets are not rewritten)
+      parameters: [{ name: enrolmentId, in: path, required: true, schema: { type: string } }]
+      responses: { '201': { description: Withdrawn }, '409': { description: CONFIRMATION_REQUIRED } }
+  /v1/dataset-definitions:
+    post: { summary: Create a DatasetDefinition (M12), responses: { '201': { description: created } } }
+  /v1/dataset-definitions/{definitionId}/approve:
+    post: { summary: Approve a DatasetDefinition (confirmed), parameters: [{ name: definitionId, in: path, required: true, schema: { type: string } }], responses: { '201': { description: Approved } } }
+  /v1/dataset-definitions/{definitionId}/versions:
+    post: { summary: Generate a DatasetVersion (manifest + hash), parameters: [{ name: definitionId, in: path, required: true, schema: { type: string } }], responses: { '201': { description: Generated } } }
+  /v1/dataset-versions/{versionId}/complete-quality-review:
+    post: { summary: Complete quality review, parameters: [{ name: versionId, in: path, required: true, schema: { type: string } }], responses: { '201': { description: Quality Reviewed } } }
+  /v1/dataset-versions/{versionId}/lock:
+    post:
+      summary: DatasetLock — human + MFA + confirmed; locked versions become immutable (ATR-013)
+      parameters: [{ name: versionId, in: path, required: true, schema: { type: string } }]
+      responses:
+        '201': { description: Locked }
+        '401': { description: STEP_UP_AUTHENTICATION_REQUIRED without MFA }
+  /v1/analysis-plans:
+    post: { summary: Draft an AnalysisPlan (M13), responses: { '201': { description: Draft } } }
+  /v1/analysis-plans/{planId}/approve:
+    post: { summary: Approve an AnalysisPlan (confirmed), parameters: [{ name: planId, in: path, required: true, schema: { type: string } }], responses: { '201': { description: Approved } } }
+  /v1/analysis-runs:
+    post:
+      summary: Run an analysis — locked DatasetVersion + approved plan only (ATR-013)
+      responses: { '201': { description: Run recorded }, '409': { description: DATASET_NOT_LOCKED / PLAN_NOT_APPROVED } }
+  /v1/analysis-runs/{runId}/interpretations:
+    post: { summary: 'Draft an InterpretationRecord (Output ≠ Interpretation)', parameters: [{ name: runId, in: path, required: true, schema: { type: string } }], responses: { '201': { description: Draft } } }
+  /v1/interpretations/{interpretationId}/approve:
+    post: { summary: Approve an interpretation (confirmed), parameters: [{ name: interpretationId, in: path, required: true, schema: { type: string } }], responses: { '201': { description: Approved } } }
+  /v1/interpretations/{interpretationId}/findings:
+    post: { summary: 'Draft a ResearchFinding (Interpretation ≠ Finding)', parameters: [{ name: interpretationId, in: path, required: true, schema: { type: string } }], responses: { '201': { description: Draft } } }
+  /v1/findings/{findingId}/approve:
+    post:
+      summary: Approve a ResearchFinding (human, confirmed, MFA)
+      parameters: [{ name: findingId, in: path, required: true, schema: { type: string } }]
+      responses:
+        '201': { description: Approved }
+        '401': { description: STEP_UP_AUTHENTICATION_REQUIRED without MFA }
 components:
   responses:
     Error:

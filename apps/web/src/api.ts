@@ -33,6 +33,35 @@ async function post<T>(session: Session, path: string, body: object): Promise<T>
   return json;
 }
 
+async function get<T>(session: Session, path: string): Promise<T> {
+  const res = await fetch(path, { headers: { 'x-actor-id': session.actorId } });
+  const json = (await res.json()) as T & { error?: ApiError };
+  if (!res.ok) throw new PlatformApiError(json.error as ApiError, res.status);
+  return json;
+}
+
+export interface ConnectionSummary {
+  connectionId: string;
+  otherParticipantId: string;
+  connectionState: string;
+  createdAt: string;
+}
+
+export interface ThreadSummary {
+  threadId: string;
+  otherParticipantId: string;
+  basisType: string;
+  threadState: string;
+  createdAt: string;
+}
+
+export interface MatchCandidateSummary {
+  candidateId: string;
+  candidateVersion: number;
+  explanation: string;
+  expiresAt: string;
+}
+
 export const api = {
   recordConsent: (s: Session, scope: string, decision: 'Granted' | 'Declined') =>
     post(s, `/v1/participants/${s.participantId}/consents`, { scope, decision, templateVersion: 'ct_v1' }),
@@ -87,6 +116,26 @@ export const api = {
     post<{ data: { id: string } }>(s, `/v1/mutual-acceptances/${mutualAcceptanceId}/activate-connection`, {
       participantId: s.participantId,
       confirmed,
+    }),
+  listConnections: (s: Session) =>
+    get<{ data: { id: string; attributes: ConnectionSummary }[] }>(
+      s,
+      `/v1/participants/${s.participantId}/connections`,
+    ),
+  listThreads: (s: Session) =>
+    get<{ data: { id: string; attributes: ThreadSummary }[] }>(
+      s,
+      `/v1/participants/${s.participantId}/conversation-threads`,
+    ),
+  listMatchCandidates: (s: Session) =>
+    get<{ data: { id: string; attributes: MatchCandidateSummary }[] }>(
+      s,
+      `/v1/participants/${s.participantId}/match-candidates`,
+    ),
+  createThread: (s: Session, connectionId: string) =>
+    post<{ data: { id: string } }>(s, '/v1/conversation-threads', {
+      connectionId,
+      creatorParticipantId: s.participantId,
     }),
 };
 

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { api, PlatformApiError, type Session } from '../api.js';
+import { api, PlatformApiError, type MatchCandidateSummary, type Session } from '../api.js';
 
 type Decision = 'Interested' | 'Not Now' | 'Dismissed';
 const DECISION_LABELS: Record<Decision, string> = {
@@ -14,11 +14,13 @@ const DECISION_LABELS: Record<Decision, string> = {
  * private — choosing "Interested" alone notifies nobody; only when both
  * people independently choose it does a connection opportunity appear,
  * and the connection itself still needs an explicit confirmed step.
+ * Candidates come from the API and show only the match explanation —
+ * never the other person's identity before mutual acceptance.
  */
 export function MatchingPanel({ session }: { session: Session }) {
   const [interests, setInterests] = useState('');
-  const [candidate, setCandidate] = useState({ id: '', version: '1' });
-  const [pendingDecision, setPendingDecision] = useState<Decision | null>(null);
+  const [candidates, setCandidates] = useState<MatchCandidateSummary[] | null>(null);
+  const [pending, setPending] = useState<{ candidate: MatchCandidateSummary; decision: Decision } | null>(null);
   const [mutualAcceptanceId, setMutualAcceptanceId] = useState<string | null>(null);
   const [confirmingConnection, setConfirmingConnection] = useState(false);
   const [announcement, setAnnouncement] = useState('');
@@ -32,10 +34,23 @@ export function MatchingPanel({ session }: { session: Session }) {
     }
   };
 
-  const decide = async (decision: Decision) => {
-    setPendingDecision(null);
+  const loadCandidates = async () => {
     try {
-      const res = await api.matchDecision(session, candidate.id, Number(candidate.version), decision, true);
+      const res = await api.listMatchCandidates(session);
+      setCandidates(res.data.map((c) => c.attributes));
+      setAnnouncement(res.data.length === 0 ? '目前没有新的推荐。没有推荐也完全没关系。' : '推荐已更新。');
+    } catch (err) {
+      setAnnouncement(err instanceof PlatformApiError ? `未能获取推荐：${err.error.code}` : '网络错误');
+    }
+  };
+
+  const decide = async () => {
+    if (pending === null) return;
+    const { candidate, decision } = pending;
+    setPending(null);
+    try {
+      const res = await api.matchDecision(session, candidate.candidateId, candidate.candidateVersion, decision, true);
+      setCandidates((cs) => (cs === null ? cs : cs.filter((c) => c.candidateId !== candidate.candidateId)));
       const ma = res.data.meta.mutualAcceptanceId;
       if (ma !== undefined) {
         setMutualAcceptanceId(ma);
@@ -83,41 +98,37 @@ export function MatchingPanel({ session }: { session: Session }) {
       </section>
 
       <section aria-labelledby="candidate-heading">
-        <h3 id="candidate-heading">对推荐做决定</h3>
+        <h3 id="candidate-heading">当前推荐</h3>
         <p>每个选择都同样正当，「暂时不」不会影响之后的推荐。你的选择不会被告知对方。</p>
         <p>
-          <label htmlFor="candidate-id">推荐标识</label>{' '}
-          <input
-            id="candidate-id"
-            value={candidate.id}
-            onChange={(e) => setCandidate({ ...candidate, id: e.target.value })}
-          />
+          <button onClick={() => void loadCandidates()}>查看当前推荐</button>
         </p>
-        <p>
-          <label htmlFor="candidate-version">推荐版本</label>{' '}
-          <input
-            id="candidate-version"
-            value={candidate.version}
-            onChange={(e) => setCandidate({ ...candidate, version: e.target.value })}
-          />
-        </p>
-        <p>
-          {(Object.keys(DECISION_LABELS) as Decision[]).map((d) => (
-            <span key={d}>
-              <button disabled={candidate.id === ''} onClick={() => setPendingDecision(d)}>
-                {DECISION_LABELS[d]}
-              </button>{' '}
-            </span>
-          ))}
-        </p>
-        {pendingDecision !== null && (
+        {candidates !== null && (
+          <ul style={{ listStyle: 'none', padding: 0 }}>
+            {candidates.map((c) => (
+              <li key={c.candidateId} style={{ border: '1px solid currentColor', padding: '1rem', marginBlock: '0.75rem' }}>
+                {/* Explanation only — identity is never shown before mutual acceptance. */}
+                <p>{c.explanation}</p>
+                <p>
+                  {(Object.keys(DECISION_LABELS) as Decision[]).map((d) => (
+                    <span key={d}>
+                      <button onClick={() => setPending({ candidate: c, decision: d })}>{DECISION_LABELS[d]}</button>{' '}
+                    </span>
+                  ))}
+                </p>
+              </li>
+            ))}
+          </ul>
+        )}
+        {pending !== null && (
           <div role="alertdialog" aria-labelledby="decision-confirm-heading">
             <p id="decision-confirm-heading">
-              确认对推荐 {candidate.id}（版本 {candidate.version}）选择「{DECISION_LABELS[pendingDecision]}」？
+              确认对这条推荐（版本 {pending.candidate.candidateVersion}）选择「{DECISION_LABELS[pending.decision]}」？
               对方不会收到通知。
             </p>
-            <button onClick={() => void decide(pendingDecision)}>确认</button>{' '}
-            <button onClick={() => setPendingDecision(null)}>返回</button>
+            <blockquote>{pending.candidate.explanation}</blockquote>
+            <button onClick={() => void decide()}>确认</button>{' '}
+            <button onClick={() => setPending(null)}>返回</button>
           </div>
         )}
       </section>

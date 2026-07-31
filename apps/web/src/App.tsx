@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { ConsentPanel } from './components/ConsentPanel.js';
 import { MatchingPanel } from './components/MatchingPanel.js';
-import { MessagePanel } from './components/MessagePanel.js';
+import { MessagesScreen } from './components/MessagesScreen.js';
 import { SafetyPanel } from './components/SafetyPanel.js';
 import type { Session } from './api.js';
 
@@ -18,7 +18,7 @@ type Screen = 'home' | 'consent' | 'message' | 'matching' | 'help';
 export function App() {
   const [session, setSession] = useState<Session | null>(null);
   const [screen, setScreen] = useState<Screen>('home');
-  const [form, setForm] = useState({ actorId: '', participantId: '', threadId: '', recipientId: '', recipientName: '' });
+  const [form, setForm] = useState({ actorId: '', participantId: '' });
 
   if (session === null) {
     return (
@@ -107,39 +107,7 @@ export function App() {
           </section>
         )}
         {screen === 'consent' && <ConsentPanel session={session} />}
-        {screen === 'message' && (
-          <section>
-            <h1>消息</h1>
-            <p>输入会话与收件人标识（开发环境；正式版本从连接列表进入）。</p>
-            <p>
-              <label htmlFor="thread-id">会话标识</label>{' '}
-              <input id="thread-id" value={form.threadId} onChange={(e) => setForm({ ...form, threadId: e.target.value })} />
-            </p>
-            <p>
-              <label htmlFor="recipient-id">收件人参与者标识</label>{' '}
-              <input
-                id="recipient-id"
-                value={form.recipientId}
-                onChange={(e) => setForm({ ...form, recipientId: e.target.value })}
-              />
-            </p>
-            <p>
-              <label htmlFor="recipient-name">收件人称呼</label>{' '}
-              <input
-                id="recipient-name"
-                value={form.recipientName}
-                onChange={(e) => setForm({ ...form, recipientName: e.target.value })}
-              />
-            </p>
-            {form.threadId && form.recipientId && (
-              <MessagePanel
-                session={session}
-                threadId={form.threadId}
-                recipient={{ participantId: form.recipientId, displayName: form.recipientName || form.recipientId }}
-              />
-            )}
-          </section>
-        )}
+        {screen === 'message' && <MessagesScreen session={session} />}
         {screen === 'matching' && <MatchingPanel session={session} />}
         {screen === 'help' && (
           <section aria-labelledby="help-heading">

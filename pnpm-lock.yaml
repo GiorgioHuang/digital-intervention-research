@@ -53,9 +53,21 @@ importers:
       '@platform/m03-consent-permission':
         specifier: workspace:*
         version: link:../../packages/modules/m03-consent-permission
+      '@platform/m04-research-design':
+        specifier: workspace:*
+        version: link:../../packages/modules/m04-research-design
+      '@platform/m05-enrolment':
+        specifier: workspace:*
+        version: link:../../packages/modules/m05-enrolment
       '@platform/m09-safety':
         specifier: workspace:*
         version: link:../../packages/modules/m09-safety
+      '@platform/m12-dataset':
+        specifier: workspace:*
+        version: link:../../packages/modules/m12-dataset
+      '@platform/m13-analysis':
+        specifier: workspace:*
+        version: link:../../packages/modules/m13-analysis
       '@platform/m18-community-social':
         specifier: workspace:*
         version: link:../../packages/modules/m18-community-social

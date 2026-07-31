@@ -340,3 +340,23 @@
   code: [apps/web/src/components/SafetyPanel.tsx, apps/web/src/components/MatchingPanel.tsx]
   tests: [apps/web/test/safety-panel.test.tsx, apps/web/test/matching-panel.test.tsx]
   status: implemented
+
+- implementation_id: IMP-API-HTTP-003
+  module: ops
+  summary: Staff-side REST command surface - M04 protocol chain (draft/submit/approve/activate with separation of duties and MFA approval), M05 enrolment chain (invite through withdraw, human eligibility), M12 dataset lineage (define/approve/generate/review/lock with human+MFA lock), M13 analysis chain (plan/run/interpretation/finding with locked-version-only runs)
+  trace_ids: [ATR-004, ATR-013, ATR-023]
+  adr_ids: [ADR-051, ADR-048]
+  docs: ["Doc 15 §21-31", "Doc 14 MFA list", "Doc 19 lineage"]
+  code: [apps/api/src/staff-controllers.ts, openapi/openapi.yaml]
+  tests: [apps/api/test/api.e2e.test.ts]
+  status: implemented
+
+- implementation_id: IMP-API-HTTP-004
+  module: M18
+  summary: Owner-scoped social read side over HTTP - list own connections, conversation threads, and current match candidates (explanation and version only, identity withheld before mutual acceptance); strangers receive protected-existence 404
+  trace_ids: [ATR-010, ATR-016]
+  adr_ids: [ADR-036, ADR-050]
+  docs: ["Doc 11 matching rules", "Doc 15 §21-31"]
+  code: [packages/modules/m18-community-social/src/application/queries.ts, apps/api/src/controllers.ts]
+  tests: [apps/api/test/api.e2e.test.ts, apps/web/test/messages-screen.test.tsx]
+  status: implemented

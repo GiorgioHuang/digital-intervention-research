@@ -24,13 +24,15 @@ describe.skipIf(!dbAvailable)('HTTP API (e2e)', () => {
   let baseUrl: string;
   let pool: pg.Pool;
   let patAcc: string, patId: string, strangerAcc: string;
+  let researcherAcc: string, approverAcc: string;
 
-  const call = (path: string, actor: string | undefined, body?: object) =>
+  const call = (path: string, actor: string | undefined, body?: object, headers?: Record<string, string>) =>
     fetch(`${baseUrl}${path}`, {
       method: body === undefined ? 'GET' : 'POST',
       headers: {
         'content-type': 'application/json',
         ...(actor === undefined ? {} : { 'x-actor-id': actor }),
+        ...headers,
       },
       ...(body === undefined ? {} : { body: JSON.stringify(body) }),
     });
@@ -60,6 +62,10 @@ describe.skipIf(!dbAvailable)('HTTP API (e2e)', () => {
     ({ participantId: patId } = await registerParticipant({ pool, clock, checkPermission }, coordCtx, {
       displayName: 'Pat', userAccountId: patAcc,
     }));
+    ({ userAccountId: researcherAcc } = await createUserAccount(m01, orgCtx, { displayName: 'Res' }));
+    await assignRole(m01, orgCtx, { userAccountId: researcherAcc, role: 'Researcher', confirmed: true });
+    ({ userAccountId: approverAcc } = await createUserAccount(m01, orgCtx, { displayName: 'App' }));
+    await assignRole(m01, orgCtx, { userAccountId: approverAcc, role: 'ResearchApprover', confirmed: true });
 
     app = await NestFactory.create(
       buildAppModule({ DATABASE_URL, API_PORT: 0, LOG_LEVEL: 'error', AUTH_MODE: 'dev-header' }),
@@ -184,6 +190,113 @@ describe.skipIf(!dbAvailable)('HTTP API (e2e)', () => {
     });
     expect(res.status).toBe(404);
     expect(((await res.json()) as { error: { code: string } }).error.code).toBe('RESOURCE_NOT_FOUND');
+  });
+
+  it('staff protocol chain over HTTP with separation of duties: submitter cannot approve', async () => {
+    const proj = await call('/v1/research-projects', researcherAcc, { organisationId: 'org_api', title: 'HTTP Study' });
+    expect(proj.status).toBe(201);
+    const projectId = ((await proj.json()) as { data: { id: string } }).data.id;
+
+    const draft = await call(`/v1/research-projects/${projectId}/protocol-versions`, researcherAcc, {
+      title: 'Protocol v1', content: { design: 'pre-post' },
+    });
+    expect(draft.status).toBe(201);
+    const versionId = ((await draft.json()) as { data: { id: string } }).data.id;
+
+    expect((await call(`/v1/protocol-versions/${versionId}/submit`, researcherAcc, {})).status).toBe(201);
+
+    // The researcher lacks protocol.approve entirely (and could never
+    // self-approve, ADR-051).
+    const selfApprove = await call(`/v1/protocol-versions/${versionId}/approve`, researcherAcc, { confirmed: true });
+    expect(selfApprove.status).toBe(403);
+
+    // Protocol approval is on the MFA list (Doc 14): password-strength
+    // auth is stepped up (401), MFA succeeds.
+    const weak = await call(`/v1/protocol-versions/${versionId}/approve`, approverAcc, { confirmed: true });
+    expect(weak.status).toBe(401);
+    expect(((await weak.json()) as { error: { code: string } }).error.code).toBe('STEP_UP_AUTHENTICATION_REQUIRED');
+    const mfa = { 'x-auth-strength': 'mfa' };
+    expect((await call(`/v1/protocol-versions/${versionId}/approve`, approverAcc, { confirmed: true }, mfa)).status).toBe(201);
+    expect((await call(`/v1/protocol-versions/${versionId}/activate`, approverAcc, { confirmed: true })).status).toBe(201);
+  });
+
+  it('dataset lock over HTTP is human+MFA: password-strength auth is refused, MFA succeeds', async () => {
+    const def = await call('/v1/dataset-definitions', researcherAcc, {
+      researchProjectId: 'rp_http_ds', name: 'primary-outcomes', variables: { v1: 'mood' },
+    });
+    expect(def.status).toBe(201);
+    const defId = ((await def.json()) as { data: { id: string } }).data.id;
+    expect((await call(`/v1/dataset-definitions/${defId}/approve`, approverAcc, { confirmed: true })).status).toBe(201);
+
+    const ver = await call(`/v1/dataset-definitions/${defId}/versions`, researcherAcc, {
+      sourceDescription: 'synthetic extract', rowCount: 10,
+    });
+    expect(ver.status).toBe(201);
+    const verId = ((await ver.json()) as { data: { id: string } }).data.id;
+    expect((await call(`/v1/dataset-versions/${verId}/complete-quality-review`, researcherAcc, {})).status).toBe(201);
+
+    const weak = await call(`/v1/dataset-versions/${verId}/lock`, approverAcc, { confirmed: true });
+    expect(weak.status).toBe(401);
+    expect(((await weak.json()) as { error: { code: string } }).error.code).toBe('STEP_UP_AUTHENTICATION_REQUIRED');
+
+    const locked = await call(`/v1/dataset-versions/${verId}/lock`, approverAcc, { confirmed: true }, {
+      'x-auth-strength': 'mfa',
+    });
+    expect(locked.status).toBe(201);
+    expect(((await locked.json()) as { data: { id: string } }).data.id).toMatch(/^dl_/);
+  });
+
+  it('owner can list own connections, threads and candidates; a stranger gets protected-existence 404', async () => {
+    const otherId = 'pt_e2e_other';
+    const candId = `cand_e2e_${Date.now()}`;
+    const maId = `ma_e2e_${Date.now()}`;
+    const connId = `conn_e2e_${Date.now()}`;
+    const threadId = `th_e2e_${Date.now()}`;
+    await pool.query(
+      `INSERT INTO community_social.match_candidates (id, participant_a_id, participant_b_id, match_explanation, expires_at)
+       VALUES ($1, $2, $3, '你们都选择了园艺作为兴趣', now() + interval '7 days')`,
+      [candId, patId, otherId],
+    );
+    await pool.query(
+      `INSERT INTO community_social.mutual_acceptances (id, match_candidate_id, participant_a_id, participant_b_id, acceptance_state, policy_version, effective_until, connection_id)
+       VALUES ($1, $2, $3, $4, 'Consumed', 'policy_v0.2.0', now() + interval '7 days', $5)`,
+      [maId, candId, patId, otherId, connId],
+    );
+    await pool.query(
+      `INSERT INTO community_social.connections (id, mutual_acceptance_id, participant_a_id, participant_b_id)
+       VALUES ($1, $2, $3, $4)`,
+      [connId, maId, patId, otherId],
+    );
+    await pool.query(
+      `INSERT INTO community_social.conversation_threads (id, basis_type, basis_reference, participant_a_id, participant_b_id)
+       VALUES ($1, 'ActiveConnection', $2, $3, $4)`,
+      [threadId, connId, patId, otherId],
+    );
+
+    const conns = await call(`/v1/participants/${patId}/connections`, patAcc);
+    expect(conns.status).toBe(200);
+    const connBody = (await conns.json()) as { data: { id: string; attributes: { otherParticipantId: string } }[] };
+    expect(connBody.data.some((c) => c.id === connId && c.attributes.otherParticipantId === otherId)).toBe(true);
+
+    const threads = await call(`/v1/participants/${patId}/conversation-threads`, patAcc);
+    expect(threads.status).toBe(200);
+    expect(((await threads.json()) as { data: { id: string }[] }).data.some((t) => t.id === threadId)).toBe(true);
+
+    // Candidate listing shows the explanation but never the other
+    // participant's identity (identity only after mutual acceptance).
+    const cands = await call(`/v1/participants/${patId}/match-candidates`, patAcc);
+    expect(cands.status).toBe(200);
+    const candBody = (await cands.json()) as { data: { id: string; attributes: Record<string, unknown> }[] };
+    const cand = candBody.data.find((c) => c.id === candId);
+    expect(cand?.attributes['explanation']).toContain('园艺');
+    expect(JSON.stringify(candBody)).not.toContain(otherId.replace('pt_', 'pt_') + '"');
+    expect(Object.keys(cand?.attributes ?? {})).not.toContain('otherParticipantId');
+
+    // A stranger probing someone else's lists learns nothing, not even
+    // that the participant exists (ADR-050).
+    const denied = await call(`/v1/participants/${patId}/connections`, strangerAcc);
+    expect(denied.status).toBe(404);
+    expect(((await denied.json()) as { error: { code: string } }).error.code).toBe('RESOURCE_NOT_FOUND');
   });
 });
 
