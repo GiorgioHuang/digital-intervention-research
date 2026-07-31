@@ -20,12 +20,14 @@
     "migrate:reset": "pnpm --filter @platform/database run migrate:reset",
     "traceability:check": "node tools/check-traceability.mjs",
     "dev:deps": "docker compose up -d postgres minio",
-    "dev:deps:down": "docker compose down"
+    "dev:deps:down": "docker compose down",
+    "drill:backup": "node tools/backup-restore-drill.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.2",
     "dependency-cruiser": "^17.3.7",
     "eslint": "^9.39.2",
+    "pg": "^8.22.0",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.46.4",
     "yaml": "^2.8.2"

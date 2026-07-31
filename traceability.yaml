@@ -500,3 +500,13 @@
   code: [packages/modules/m18-community-social/src/application/queries.ts, packages/modules/m17-life-story/src/application/queries.ts, apps/api/src/staff-controllers.ts, apps/web/src/SupporterApp.tsx, apps/web/src/components/StaffModeratorPanel.tsx]
   tests: [apps/api/test/api.e2e.test.ts, apps/web/test/moderator-supporter.test.tsx]
   status: implemented
+
+- implementation_id: IMP-OPS-BACKUP-DRILL-001
+  module: ops
+  summary: Automated backup/restore drill - pg_dump to a fresh drill database with verification of per-table row counts across all application schemas, structural equality (constraint/trigger counts), and a behavioural probe proving the audit append-only guarantee survives restore (a backup that loses guarantees is a failed backup); every drill appends an immutable record (append-only trigger, failure always carries detail via CHECK) with honest environment-scoped timings (production RPO/RTO remain Pending External Approval, ADR-121); runs in CI on every push after the test suite against the populated database
+  trace_ids: [ATR-021, ATR-023]
+  adr_ids: [ADR-121]
+  docs: ["Doc 14 backup and recovery", "Doc 18 §193"]
+  code: [tools/backup-restore-drill.mjs, packages/database/migrations/1753800000019_backup-drills.sql, .github/workflows/ci.yml]
+  tests: [packages/database/test/database.integration.test.ts]
+  status: implemented

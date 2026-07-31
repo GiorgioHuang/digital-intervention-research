@@ -170,6 +170,34 @@ describe.skipIf(!dbAvailable)('database integration (requires PostgreSQL)', () =
     ).rejects.toThrow(/append-only/);
   });
 
+  it('backup drill records are append-only and a failure always carries detail (CHECK)', async () => {
+    const id = `bdr_test_${Date.now()}`;
+    await pool.query(
+      `INSERT INTO governance_audit.backup_restore_drills
+         (id, started_at, finished_at, dump_bytes, tables_compared, rows_source, rows_restored,
+          invariant_checks, dump_ms, restore_ms, verify_ms, outcome)
+       VALUES ($1, now(), now(), 1, 1, 1, 1, '[]', 1, 1, 1, 'Succeeded')`,
+      [id],
+    );
+    // Drill history cannot be rewritten.
+    await expect(
+      pool.query(`UPDATE governance_audit.backup_restore_drills SET outcome = 'Failed' WHERE id = $1`, [id]),
+    ).rejects.toThrow(/append-only/);
+    await expect(
+      pool.query(`DELETE FROM governance_audit.backup_restore_drills WHERE id = $1`, [id]),
+    ).rejects.toThrow(/append-only/);
+    // A failure without detail is unrecordable — no silent failures.
+    await expect(
+      pool.query(
+        `INSERT INTO governance_audit.backup_restore_drills
+           (id, started_at, finished_at, dump_bytes, tables_compared, rows_source, rows_restored,
+            invariant_checks, dump_ms, restore_ms, verify_ms, outcome)
+         VALUES ($1, now(), now(), 1, 1, 1, 1, '[]', 1, 1, 1, 'Failed')`,
+        [`${id}_f`],
+      ),
+    ).rejects.toThrow(/backup_restore_drills/);
+  });
+
   it('stale Publishing claims return to Pending after the visibility timeout (crash recovery)', async () => {
     const aggregateId = `agg_stale_${Date.now()}`;
     await withTransaction(pool, (client) =>

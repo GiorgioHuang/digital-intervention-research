@@ -45,7 +45,7 @@
 
 - API：`/health`、`/ready` + v1 命令端点（consent 记录/撤回、thread/message/confirm-send），Doc 15 错误信封与稳定错误码，OpenAPI 于 `openapi/openapi.yaml`；认证为显式 dev-header 桩（生产 OIDC Pending ADR-104）。其余模块命令按同一模式增量暴露。
 - 认证：无；开发期 Keycloak OIDC，M01 保持 UserAccount 权威（Pending ADR-104）。授权：Effective Permission 引擎 Implemented（packages/policy，M03 PermissionService 落 PolicyDecision）。
-- 测试：vitest 单元 + 集成（testcontainers 式，用本地 docker PG）；CI：GitHub Actions（build/typecheck/lint/depcruise/迁移演练/测试）。
+- 测试：vitest 单元 + 集成（testcontainers 式，用本地 docker PG）；CI：GitHub Actions（build/typecheck/lint/depcruise/迁移演练/测试/备份恢复演练）。
 - 部署假设：容器化、单区域、托管平台待批（ADR-103/119/121 Pending External Approval）。
 
 ## 6. M01–M18 能力状态

@@ -59,3 +59,9 @@ jobs:
 
       - name: Tests (unit + integration)
         run: pnpm test
+
+      # Runs against the populated post-test database: dump -> restore
+      # into a fresh drill database -> verify row counts, structure, and
+      # that the audit append-only guarantee survives restore.
+      - name: Backup/restore drill
+        run: pnpm drill:backup
