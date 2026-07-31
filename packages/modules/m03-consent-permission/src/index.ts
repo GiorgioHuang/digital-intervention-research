@@ -8,3 +8,4 @@ export {
   revokeRelationship,
   type M03Deps,
 } from './application/consent-commands.js';
+export { expireRelationships } from './application/sweeps.js';

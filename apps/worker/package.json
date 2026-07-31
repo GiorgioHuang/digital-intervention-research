@@ -14,7 +14,10 @@
     "@platform/kernel": "workspace:*",
     "pg-boss": "^10.3.3",
     "pino": "^9.13.1",
-    "zod": "^3.25.76"
+    "zod": "^3.25.76",
+    "@platform/m03-consent-permission": "workspace:*",
+    "@platform/m18-community-social": "workspace:*",
+    "@platform/policy": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^22.20.1",

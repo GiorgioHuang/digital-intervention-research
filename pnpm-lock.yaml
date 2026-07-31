@@ -185,6 +185,15 @@ importers:
       '@platform/kernel':
         specifier: workspace:*
         version: link:../../packages/kernel
+      '@platform/m03-consent-permission':
+        specifier: workspace:*
+        version: link:../../packages/modules/m03-consent-permission
+      '@platform/m18-community-social':
+        specifier: workspace:*
+        version: link:../../packages/modules/m18-community-social
+      '@platform/policy':
+        specifier: workspace:*
+        version: link:../../packages/policy
       pg-boss:
         specifier: ^10.3.3
         version: 10.4.2

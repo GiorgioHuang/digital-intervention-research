@@ -7,6 +7,7 @@ import {
   appendToOutbox,
   claimPendingOutbox,
   markOutboxPublished,
+  recoverStalePublishing,
   registerInboxMessage,
 } from '../src/outbox.js';
 import { createPool, withTransaction } from '../src/pool.js';
@@ -167,6 +168,42 @@ describe.skipIf(!dbAvailable)('database integration (requires PostgreSQL)', () =
     await expect(
       pool.query(`DELETE FROM governance_audit.audit_events WHERE id = $1`, [auditId]),
     ).rejects.toThrow(/append-only/);
+  });
+
+  it('stale Publishing claims return to Pending after the visibility timeout (crash recovery)', async () => {
+    const aggregateId = `agg_stale_${Date.now()}`;
+    await withTransaction(pool, (client) =>
+      appendToOutbox(client, ctx, {
+        eventCategory: 'Operational',
+        eventType: 'StaleRecoveryProbe',
+        sourceModule: 'kernel',
+        aggregateType: 'Test',
+        aggregateId,
+        occurredAt: new Date(),
+      }),
+    );
+    const now = new Date();
+    // Claim it (simulating a publisher that dies before marking).
+    const claimed = await withTransaction(pool, (client) => claimPendingOutbox(client, 100, now));
+    expect(claimed.some((m) => m.aggregateId === aggregateId)).toBe(true);
+
+    // Before the visibility timeout nothing is recovered...
+    await withTransaction(pool, (client) => recoverStalePublishing(client, now));
+    let row = await pool.query(
+      `SELECT publication_state FROM platform_kernel.outbox_messages WHERE aggregate_id = $1`,
+      [aggregateId],
+    );
+    expect(row.rows[0].publication_state).toBe('Publishing');
+
+    // ...after it, the row returns to Pending so the event is not lost.
+    const later = new Date(now.getTime() + 6 * 60 * 1000);
+    const recovered = await withTransaction(pool, (client) => recoverStalePublishing(client, later));
+    expect(recovered).toBeGreaterThanOrEqual(1);
+    row = await pool.query(
+      `SELECT publication_state FROM platform_kernel.outbox_messages WHERE aggregate_id = $1`,
+      [aggregateId],
+    );
+    expect(row.rows[0].publication_state).toBe('Pending');
   });
 });
 

@@ -84,7 +84,10 @@ export async function claimPendingOutbox(
 ): Promise<ClaimedOutboxMessage[]> {
   const res = await client.query(
     `UPDATE platform_kernel.outbox_messages m
-        SET publication_state = 'Publishing', attempt_count = m.attempt_count + 1
+        SET publication_state = 'Publishing', attempt_count = m.attempt_count + 1,
+            -- Visibility timeout: if the publisher dies before marking the
+            -- row, the reconciliation sweep returns it to Pending.
+            next_attempt_at = $2::timestamptz + interval '5 minutes'
       WHERE m.id IN (
         SELECT id FROM platform_kernel.outbox_messages
          WHERE publication_state IN ('Pending', 'Failed')
@@ -131,6 +134,21 @@ export async function markOutboxFailed(
       WHERE id = $1 AND publication_state = 'Publishing'`,
     [id, nextAttemptAt],
   );
+}
+
+/**
+ * Reconciliation sweep: rows stuck in 'Publishing' past their visibility
+ * timeout (publisher crashed between claim and mark) return to 'Pending'
+ * so no event is silently lost (ADR-015 at-least-once).
+ */
+export async function recoverStalePublishing(client: PoolClient, now: Date): Promise<number> {
+  const res = await client.query(
+    `UPDATE platform_kernel.outbox_messages
+        SET publication_state = 'Pending'
+      WHERE publication_state = 'Publishing' AND next_attempt_at IS NOT NULL AND next_attempt_at <= $1`,
+    [now],
+  );
+  return res.rowCount ?? 0;
 }
 
 /**

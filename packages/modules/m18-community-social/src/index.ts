@@ -35,3 +35,8 @@ export {
   type ThreadSummary,
   type MatchCandidateSummary,
 } from './application/queries.js';
+export {
+  expireMatchCandidates,
+  expireMutualAcceptances,
+  reconcileDeliveryUnknown,
+} from './application/sweeps.js';

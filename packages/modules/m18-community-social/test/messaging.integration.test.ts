@@ -44,6 +44,10 @@ async function probe(): Promise<boolean> {
 }
 const dbAvailable = await probe();
 
+// Replay keys are globally unique in the callbacks table; per-run nonces
+// keep the suite rerunnable on a populated development database.
+const runSuffix = Date.now() % 1_000_000;
+
 describe.skipIf(!dbAvailable)('M18/M16 messaging pipeline (integration)', () => {
   let pool: pg.Pool;
   const clock = new FixedClock('2026-07-30T12:00:00Z');
@@ -166,12 +170,12 @@ describe.skipIf(!dbAvailable)('M18/M16 messaging pipeline (integration)', () => 
     const simulator = createProviderSimulator(delivery);
     ({ providerReference } = await simulator.submit(messageId));
 
-    const accepted = { provider: 'provider-simulator', providerReference, status: 'accepted' as const, timestamp: clock.now().toISOString(), nonce: 'n1' };
+    const accepted = { provider: 'provider-simulator', providerReference, status: 'accepted' as const, timestamp: clock.now().toISOString(), nonce: `n1_${runSuffix}` };
     await handleProviderCallback(pool, delivery, SECRET, { ...accepted, signature: signCallback(SECRET, accepted) });
     let row = await pool.query(`SELECT delivery_state FROM community_social.messages WHERE id = $1`, [messageId]);
     expect(row.rows[0].delivery_state).toBe('Provider Accepted');
 
-    const delivered = { ...accepted, status: 'delivered' as const, nonce: 'n2' };
+    const delivered = { ...accepted, status: 'delivered' as const, nonce: `n2_${runSuffix}` };
     await handleProviderCallback(pool, delivery, SECRET, { ...delivered, signature: signCallback(SECRET, delivered) });
     row = await pool.query(`SELECT delivery_state FROM community_social.messages WHERE id = $1`, [messageId]);
     expect(row.rows[0].delivery_state).toBe('Delivered');
@@ -182,17 +186,17 @@ describe.skipIf(!dbAvailable)('M18/M16 messaging pipeline (integration)', () => 
       recordDeliveryState: (input: Parameters<typeof recordDeliveryState>[2]) =>
         recordDeliveryState(m18, svcCtx(), input),
     };
-    const base = { provider: 'provider-simulator', providerReference, status: 'failed' as const, timestamp: clock.now().toISOString(), nonce: 'n3' };
+    const base = { provider: 'provider-simulator', providerReference, status: 'failed' as const, timestamp: clock.now().toISOString(), nonce: `n3_${runSuffix}` };
     await expect(
       handleProviderCallback(pool, delivery, SECRET, { ...base, signature: signCallback('wrong_secret', base) }),
     ).rejects.toMatchObject({ code: 'PROVIDER_CALLBACK_INVALID' });
 
     // Replay of an already-processed nonce is an idempotent duplicate.
-    const replay = { provider: 'provider-simulator', providerReference, status: 'delivered' as const, timestamp: clock.now().toISOString(), nonce: 'n2' };
+    const replay = { provider: 'provider-simulator', providerReference, status: 'delivered' as const, timestamp: clock.now().toISOString(), nonce: `n2_${runSuffix}` };
     const result = await handleProviderCallback(pool, delivery, SECRET, { ...replay, signature: signCallback(SECRET, replay) });
     expect(result.outcome).toBe('Duplicate');
 
-    const unknown = { provider: 'provider-simulator', providerReference: 'sim-nonexistent', status: 'delivered' as const, timestamp: clock.now().toISOString(), nonce: 'n4' };
+    const unknown = { provider: 'provider-simulator', providerReference: 'sim-nonexistent', status: 'delivered' as const, timestamp: clock.now().toISOString(), nonce: `n4_${runSuffix}` };
     await expect(
       handleProviderCallback(pool, delivery, SECRET, { ...unknown, signature: signCallback(SECRET, unknown) }),
     ).rejects.toMatchObject({ code: 'PROVIDER_REFERENCE_UNKNOWN' });

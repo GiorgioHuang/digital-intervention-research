@@ -11,6 +11,7 @@ export {
   claimPendingOutbox,
   markOutboxPublished,
   markOutboxFailed,
+  recoverStalePublishing,
   registerInboxMessage,
   type OutboxEntry,
   type EventCategory,

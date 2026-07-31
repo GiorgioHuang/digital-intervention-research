@@ -460,3 +460,13 @@
   code: [packages/modules/m09-safety/src/application/queries.ts, packages/modules/m04-research-design/src/application/queries.ts, packages/modules/m05-enrolment/src/application/queries.ts, packages/modules/m12-dataset/src/application/queries.ts, packages/modules/m14-reporting/src/application/queries.ts, packages/modules/m15-governance/src/application/queries.ts, apps/api/src/staff-controllers.ts]
   tests: [apps/api/test/api.e2e.test.ts, apps/web/test/staff-queues.test.tsx]
   status: implemented
+
+- implementation_id: IMP-JOBS-SWEEPS-001
+  module: ops
+  summary: Background reconciliation and expiry jobs wired into scheduler/worker - match-candidate and mutual-acceptance expiry (consumed acceptances never touched), relationship expiry (open-ended untouched; consent expiry deliberately has no sweep - use-time evaluation), delivery-unknown reconciliation via the M18-owned recordDeliveryState command (stale in-flight messages become Delivery Unknown, never Delivered), outbox stale-Publishing recovery via claim visibility timeout (at-least-once, no lost events); sweeps run as a service account holding no authority (fail-closed permission stub), cron and thresholds are configuration
+  trace_ids: [ATR-016, ATR-023]
+  adr_ids: [ADR-015, ADR-124, ADR-125]
+  docs: ["Doc 13 §18", "Doc 16 §54", "Doc 18 §118"]
+  code: [packages/modules/m18-community-social/src/application/sweeps.ts, packages/modules/m03-consent-permission/src/application/sweeps.ts, packages/database/src/outbox.ts, apps/worker/src/main.ts, apps/scheduler/src/main.ts]
+  tests: [packages/modules/m18-community-social/test/sweeps.integration.test.ts, packages/modules/m03-consent-permission/test/sweeps.integration.test.ts, packages/database/test/database.integration.test.ts]
+  status: implemented
