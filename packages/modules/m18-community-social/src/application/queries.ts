@@ -1,4 +1,4 @@
-import type { RequestContext } from '@platform/kernel';
+import { PlatformError, type RequestContext } from '@platform/kernel';
 import { assertAllowed } from '@platform/policy';
 import type { M18Deps } from './commands.js';
 
@@ -76,6 +76,59 @@ export async function listThreads(
     basisType: r.basis_type as string,
     threadState: r.thread_state as string,
     createdAt: (r.created_at as Date).toISOString(),
+  }));
+}
+
+export interface ThreadMessage {
+  messageId: string;
+  senderParticipantId: string;
+  contentText: string;
+  messageVersion: number;
+  lifecycleState: string;
+  deliveryState: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * Message history for one thread. Only a thread party may read it, and
+ * DRAFTS ARE PRIVATE TO THEIR AUTHOR: an unconfirmed message is never
+ * visible to the other party (Doc 20 §158 — nothing is sent, so nothing
+ * is shown). Delivery states come through untranslated so the UI can
+ * render them truthfully.
+ */
+export async function listThreadMessages(
+  deps: M18Deps,
+  ctx: RequestContext,
+  input: { threadId: string; participantId: string },
+): Promise<ThreadMessage[]> {
+  await assertOwnView(deps, ctx, input.participantId);
+  const thread = await deps.pool.query(
+    `SELECT participant_a_id, participant_b_id FROM community_social.conversation_threads WHERE id = $1`,
+    [input.threadId],
+  );
+  const t = thread.rows[0];
+  // Non-parties learn nothing — not even that the thread exists.
+  if (t === undefined || (input.participantId !== t.participant_a_id && input.participantId !== t.participant_b_id)) {
+    throw new PlatformError('RESOURCE_NOT_FOUND', 'Thread not found');
+  }
+  const res = await deps.pool.query(
+    `SELECT id, sender_participant_id, content_text, message_version, lifecycle_state, delivery_state, created_at, updated_at
+       FROM community_social.messages
+      WHERE thread_id = $1
+        AND (lifecycle_state <> 'Draft' OR sender_participant_id = $2)
+      ORDER BY created_at ASC`,
+    [input.threadId, input.participantId],
+  );
+  return res.rows.map((r) => ({
+    messageId: r.id as string,
+    senderParticipantId: r.sender_participant_id as string,
+    contentText: r.content_text as string,
+    messageVersion: r.message_version as number,
+    lifecycleState: r.lifecycle_state as string,
+    deliveryState: r.delivery_state as string,
+    createdAt: (r.created_at as Date).toISOString(),
+    updatedAt: (r.updated_at as Date).toISOString(),
   }));
 }
 

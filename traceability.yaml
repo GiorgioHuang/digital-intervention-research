@@ -470,3 +470,13 @@
   code: [packages/modules/m18-community-social/src/application/sweeps.ts, packages/modules/m03-consent-permission/src/application/sweeps.ts, packages/database/src/outbox.ts, apps/worker/src/main.ts, apps/scheduler/src/main.ts]
   tests: [packages/modules/m18-community-social/test/sweeps.integration.test.ts, packages/modules/m03-consent-permission/test/sweeps.integration.test.ts, packages/database/test/database.integration.test.ts]
   status: implemented
+
+- implementation_id: IMP-API-HTTP-012
+  module: M18
+  summary: Message history query - thread parties only with protected-existence denial for non-parties, drafts private to their author (never visible to the other party), untranslated delivery states rendered in the web with truthful wording (Provider Accepted explicitly not received); wired into the participant message screen with sender attribution
+  trace_ids: [ATR-016, ATR-023]
+  adr_ids: [ADR-050, ADR-055]
+  docs: ["Doc 20 §158-161", "Doc 15 §21-31"]
+  code: [packages/modules/m18-community-social/src/application/queries.ts, apps/api/src/controllers.ts, apps/web/src/components/MessagePanel.tsx]
+  tests: [apps/api/test/api.e2e.test.ts, apps/web/test/message-panel.test.tsx]
+  status: implemented

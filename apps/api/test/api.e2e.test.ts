@@ -350,6 +350,40 @@ describe.skipIf(!dbAvailable)('HTTP API (e2e)', () => {
     expect(((await locked.json()) as { data: { id: string } }).data.id).toMatch(/^dl_/);
   });
 
+  it('message history: thread parties only, drafts private to their author, truthful delivery states', async () => {
+    const otherId = 'pt_hist_other';
+    const threadId = `th_hist_${Date.now()}`;
+    await pool.query(
+      `INSERT INTO community_social.conversation_threads (id, basis_type, basis_reference, participant_a_id, participant_b_id)
+       VALUES ($1, 'ActiveConnection', 'conn_hist', $2, $3)`,
+      [threadId, patId, otherId],
+    );
+    await pool.query(
+      `INSERT INTO community_social.messages (id, thread_id, sender_participant_id, content_text, lifecycle_state, delivery_state)
+       VALUES ('msg_hist_sent', $1, $2, '你好', 'Sent', 'Provider Accepted'),
+              ('msg_hist_draft_other', $1, $3, '对方的私密草稿', 'Draft', 'Not Submitted'),
+              ('msg_hist_draft_own', $1, $2, '我自己的草稿', 'Draft', 'Not Submitted')`,
+      [threadId, patId, otherId],
+    );
+
+    const res = await call(`/v1/conversation-threads/${threadId}/messages?participantId=${patId}`, patAcc);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { data: { id: string; attributes: { deliveryState: string } }[] };
+    const ids = body.data.map((m) => m.id);
+    // Own sent + own draft visible; the OTHER party's draft never appears.
+    expect(ids).toContain('msg_hist_sent');
+    expect(ids).toContain('msg_hist_draft_own');
+    expect(ids).not.toContain('msg_hist_draft_other');
+    // Delivery state arrives untranslated for truthful rendering.
+    expect(body.data.find((m) => m.id === 'msg_hist_sent')?.attributes.deliveryState).toBe('Provider Accepted');
+
+    // A non-party learns nothing — not even that the thread exists.
+    const outsider = await call(`/v1/conversation-threads/${threadId}/messages?participantId=pt_hist_other`, strangerAcc);
+    expect(outsider.status).toBe(404);
+    const wrongOwner = await call(`/v1/conversation-threads/${threadId}/messages?participantId=${patId}`, strangerAcc);
+    expect(wrongOwner.status).toBe(404);
+  });
+
   it('staff work queues are role-gated and reflect real pending work', async () => {
     // Seed one item per queue over HTTP.
     const sig = await call('/v1/safety-signals', patAcc, {

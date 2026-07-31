@@ -31,9 +31,11 @@ export {
   listConnections,
   listThreads,
   listMatchCandidates,
+  listThreadMessages,
   type ConnectionSummary,
   type ThreadSummary,
   type MatchCandidateSummary,
+  type ThreadMessage,
 } from './application/queries.js';
 export {
   expireMatchCandidates,

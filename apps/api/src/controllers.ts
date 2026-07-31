@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Inject, Param, Post, Req } from '@nestjs/common';
+import { Body, Controller, Get, Inject, Param, Post, Query, Req } from '@nestjs/common';
 import type { Request } from 'express';
 import type { Clock } from '@platform/kernel';
 import type { Pool } from '@platform/database';
@@ -41,6 +41,7 @@ import {
   createThread,
   listConnections,
   listMatchCandidates,
+  listThreadMessages,
   listThreads,
   recordMatchDecision,
   revokeBlock,
@@ -471,6 +472,18 @@ export class CommandController {
     const ctx = requireActor(req);
     const items = await listThreads(this.deps.m18, ctx, participantId);
     return { data: items.map((t) => ({ type: 'ConversationThread', id: t.threadId, attributes: t })) };
+  }
+
+  @Get('conversation-threads/:threadId/messages')
+  async listThreadMessages(
+    @Req() req: Request,
+    @Param('threadId') threadId: string,
+    @Query('participantId') participantId: string,
+  ) {
+    const ctx = requireActor(req);
+    // Thread parties only; drafts stay private to their author.
+    const items = await listThreadMessages(this.deps.m18, ctx, { threadId, participantId: participantId ?? '' });
+    return { data: items.map((m) => ({ type: 'Message', id: m.messageId, attributes: m })) };
   }
 
   @Get('participants/:participantId/match-candidates')

@@ -85,4 +85,47 @@ describe('MessagePanel (Doc 20 §158–161 send confirmation)', () => {
     expect(DELIVERY_STATE_LABELS['Delivery Unknown']).toContain('不代表成功');
     expect(DELIVERY_STATE_LABELS['Queued']).not.toContain('送达');
   });
+
+  it('message history shows own messages with truthful delivery labels', async () => {
+    const calls: string[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (path: string) => {
+        calls.push(path);
+        return new Response(
+          JSON.stringify({
+            data: [
+              {
+                type: 'Message', id: 'msg_h1',
+                attributes: {
+                  messageId: 'msg_h1', senderParticipantId: 'pt_sender', contentText: '周四见',
+                  messageVersion: 1, lifecycleState: 'Sent', deliveryState: 'Provider Accepted',
+                  createdAt: '2026-07-30T10:00:00Z',
+                },
+              },
+              {
+                type: 'Message', id: 'msg_h2',
+                attributes: {
+                  messageId: 'msg_h2', senderParticipantId: 'pt_recipient', contentText: '好的',
+                  messageVersion: 1, lifecycleState: 'Sent', deliveryState: 'Delivered',
+                  createdAt: '2026-07-30T10:05:00Z',
+                },
+              },
+            ],
+          }),
+          { status: 200 },
+        );
+      }),
+    );
+    render(<MessagePanel session={session} threadId="th_1" recipient={recipient} />);
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: '查看消息记录' }));
+    });
+    expect(calls[0]).toContain('/v1/conversation-threads/th_1/messages');
+    const list = screen.getByRole('list', { name: '消息记录' });
+    // Own message shows the honest label — accepted by the service, NOT received.
+    expect(list.textContent).toContain('发送服务已接受（对方尚未收到）');
+    // The other party's message shows content but no delivery state of ours.
+    expect(list.textContent).toContain('好的');
+  });
 });

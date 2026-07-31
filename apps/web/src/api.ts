@@ -62,6 +62,16 @@ export interface MatchCandidateSummary {
   expiresAt: string;
 }
 
+export interface ThreadMessage {
+  messageId: string;
+  senderParticipantId: string;
+  contentText: string;
+  messageVersion: number;
+  lifecycleState: string;
+  deliveryState: string;
+  createdAt: string;
+}
+
 export const api = {
   recordConsent: (s: Session, scope: string, decision: 'Granted' | 'Declined') =>
     post(s, `/v1/participants/${s.participantId}/consents`, { scope, decision, templateVersion: 'ct_v1' }),
@@ -131,6 +141,11 @@ export const api = {
     get<{ data: { id: string; attributes: MatchCandidateSummary }[] }>(
       s,
       `/v1/participants/${s.participantId}/match-candidates`,
+    ),
+  listThreadMessages: (s: Session, threadId: string) =>
+    get<{ data: { id: string; attributes: ThreadMessage }[] }>(
+      s,
+      `/v1/conversation-threads/${threadId}/messages?participantId=${encodeURIComponent(s.participantId)}`,
     ),
   createThread: (s: Session, connectionId: string) =>
     post<{ data: { id: string } }>(s, '/v1/conversation-threads', {

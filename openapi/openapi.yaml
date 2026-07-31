@@ -304,6 +304,15 @@ paths:
       responses: { '201': { description: reviewed; versionId in meta on acceptance }, '404': { description: only the owner reviews } }
   /v1/life-story/items/{itemId}/withdraw:
     post: { summary: Withdraw an item (owner, confirmed), parameters: [{ name: itemId, in: path, required: true, schema: { type: string } }], responses: { '201': { description: Withdrawn } } }
+  /v1/conversation-threads/{threadId}/messages:
+    get:
+      summary: Message history — thread parties only (non-parties get protected-existence 404); drafts are private to their author and never shown to the other party; delivery states arrive untranslated for truthful rendering
+      parameters:
+        - { name: threadId, in: path, required: true, schema: { type: string } }
+        - { name: participantId, in: query, required: true, schema: { type: string } }
+      responses:
+        '200': { description: messages ordered by creation time }
+        '404': { $ref: '#/components/responses/Error' }
   /v1/participants/{participantId}/connections:
     get:
       summary: List own connections (owner-only view; strangers get protected-existence 404, ADR-050)
