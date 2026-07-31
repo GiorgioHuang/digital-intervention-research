@@ -2,7 +2,15 @@ import { Body, Controller, Get, Inject, Param, Post, Req } from '@nestjs/common'
 import type { Request } from 'express';
 import type { Clock } from '@platform/kernel';
 import type { Pool } from '@platform/database';
-import { recordConsentDecision, withdrawConsent, type PermissionServicePort } from '@platform/m03-consent-permission';
+import {
+  approveRelationship,
+  proposeRelationship,
+  recordConsentDecision,
+  revokeRelationship,
+  withdrawConsent,
+  type M03Deps,
+  type PermissionServicePort,
+} from '@platform/m03-consent-permission';
 import type { M04Deps } from '@platform/m04-research-design';
 import type { M05Deps } from '@platform/m05-enrolment';
 import type { M06Deps } from '@platform/m06-intervention-portfolio';
@@ -45,6 +53,7 @@ export interface ApiDeps {
   pool: Pool;
   clock: Clock;
   permissions: PermissionServicePort;
+  m03: M03Deps;
   m04: M04Deps;
   m05: M05Deps;
   m06: M06Deps;
@@ -251,6 +260,61 @@ export class CommandController {
         meta: result.mutualAcceptanceId === undefined ? {} : { mutualAcceptanceId: result.mutualAcceptanceId },
       },
     };
+  }
+
+  // --- M03 relationships -----------------------------------------------
+
+  @Post('relationships')
+  async proposeRelationship(
+    @Req() req: Request,
+    @Body() body: {
+      participantId: string;
+      relatedActorId: string;
+      relationshipType: string;
+      permittedActions: string[];
+      expiresAt?: string;
+    },
+  ) {
+    const ctx = requireActor(req);
+    // A proposed relationship grants nothing: it becomes effective only
+    // when the participant approves it themselves (Doc 4).
+    const input: Parameters<typeof proposeRelationship>[2] = {
+      participantId: body.participantId,
+      relatedActorId: body.relatedActorId,
+      relationshipType: body.relationshipType,
+      permittedActions: body.permittedActions,
+    };
+    if (body.expiresAt !== undefined) input.expiresAt = new Date(body.expiresAt);
+    const result = await proposeRelationship(this.deps.m03, ctx, input);
+    return { data: { type: 'Relationship', id: result.relationshipId, meta: { state: 'Proposed' } } };
+  }
+
+  @Post('relationships/:relationshipId/approve')
+  async approveRelationship(
+    @Req() req: Request,
+    @Param('relationshipId') relationshipId: string,
+    @Body() body: { expectedVersion: number; confirmed: boolean },
+  ) {
+    const ctx = requireActor(req);
+    // Owner-only: nobody can accept a relationship on the participant's
+    // behalf, and approval is version-bound explicit confirmation.
+    await approveRelationship(this.deps.m03, ctx, {
+      relationshipId,
+      expectedVersion: body.expectedVersion,
+      confirmed: body.confirmed === true,
+    });
+    return { data: { type: 'Relationship', id: relationshipId, meta: { state: 'Active' } } };
+  }
+
+  @Post('relationships/:relationshipId/revoke')
+  async revokeRelationship(
+    @Req() req: Request,
+    @Param('relationshipId') relationshipId: string,
+    @Body() body: { expectedVersion: number },
+  ) {
+    const ctx = requireActor(req);
+    await revokeRelationship(this.deps.m03, ctx, { relationshipId, expectedVersion: body.expectedVersion });
+    return { data: { type: 'Relationship', id: relationshipId, meta: { state: 'Revoked' } } };
   }
 
   // --- M17 life story --------------------------------------------------

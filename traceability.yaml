@@ -390,3 +390,13 @@
   code: [apps/api/src/controllers.ts, openapi/openapi.yaml]
   tests: [apps/api/test/api.e2e.test.ts]
   status: implemented
+
+- implementation_id: IMP-API-HTTP-008
+  module: M03
+  summary: Relationship REST slice - coordinator proposal that grants nothing by itself, owner-only confirmed version-bound approval (VERSION_CONFLICT on stale version, CONFIRMATION_REQUIRED unconfirmed, denial for non-owners), owner revocation at any time
+  trace_ids: [ATR-003, ATR-023]
+  adr_ids: [ADR-018]
+  docs: ["Doc 4 relationships", "Doc 15 §21-31"]
+  code: [apps/api/src/controllers.ts, openapi/openapi.yaml]
+  tests: [apps/api/test/api.e2e.test.ts]
+  status: implemented

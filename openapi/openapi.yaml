@@ -238,6 +238,37 @@ paths:
       responses:
         '201': { description: Connection active }
         '409': { description: MUTUAL_ACCEPTANCE_CONSUMED / CONFIRMATION_REQUIRED }
+  /v1/relationships:
+    post:
+      summary: Propose a relationship (coordinator). A proposal grants NOTHING until the participant approves it themselves (Doc 4)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [participantId, relatedActorId, relationshipType, permittedActions]
+              properties:
+                participantId: { type: string }
+                relatedActorId: { type: string }
+                relationshipType: { type: string }
+                permittedActions: { type: array, items: { type: string } }
+                expiresAt: { type: string, format: date-time }
+      responses: { '201': { description: Proposed } }
+  /v1/relationships/{relationshipId}/approve:
+    post:
+      summary: Owner-only, confirmed, version-bound approval — nobody accepts a relationship on the participant's behalf
+      parameters: [{ name: relationshipId, in: path, required: true, schema: { type: string } }]
+      responses:
+        '201': { description: Active }
+        '403': { description: AUTHORISATION_DENIED for non-owners }
+        '409': { description: CONFIRMATION_REQUIRED }
+        '412': { description: VERSION_CONFLICT — not the version the participant saw }
+  /v1/relationships/{relationshipId}/revoke:
+    post:
+      summary: Owner revokes at any time (version-bound)
+      parameters: [{ name: relationshipId, in: path, required: true, schema: { type: string } }]
+      responses: { '201': { description: Revoked }, '412': { description: VERSION_CONFLICT } }
   /v1/life-story/archives:
     post: { summary: Create the participant's LifeStoryArchive (one per participant; owner-only), responses: { '201': { description: created }, '404': { description: protected existence } } }
   /v1/life-story/archives/{archiveId}/items:

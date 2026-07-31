@@ -24,7 +24,7 @@ describe.skipIf(!dbAvailable)('HTTP API (e2e)', () => {
   let baseUrl: string;
   let pool: pg.Pool;
   let patAcc: string, patId: string, strangerAcc: string;
-  let researcherAcc: string, approverAcc: string, safetyAcc: string, supporterAcc: string;
+  let researcherAcc: string, approverAcc: string, safetyAcc: string, supporterAcc: string, adminAcc: string;
 
   const call = (path: string, actor: string | undefined, body?: object, headers?: Record<string, string>) =>
     fetch(`${baseUrl}${path}`, {
@@ -49,6 +49,7 @@ describe.skipIf(!dbAvailable)('HTTP API (e2e)', () => {
     const checkPermission = permissions.evaluate.bind(permissions);
     const m01 = { pool, clock, checkPermission };
     const { userAccountId: adminId } = await seedBootstrapAdministrator(pool, clock, { displayName: 'Admin' });
+    adminAcc = adminId;
     const actx = createRequestContext({ actor: { type: 'user', id: adminId } });
     const { organisationId } = await createOrganisation(m01, actx, { name: 'API Org' });
     const orgCtx = createRequestContext({ actor: { type: 'user', id: adminId }, organisationId });
@@ -344,6 +345,41 @@ describe.skipIf(!dbAvailable)('HTTP API (e2e)', () => {
     });
     expect(locked.status).toBe(201);
     expect(((await locked.json()) as { data: { id: string } }).data.id).toMatch(/^dl_/);
+  });
+
+  it('relationship over HTTP: proposal grants nothing until the owner approves it, version-bound', async () => {
+    const prop = await call('/v1/relationships', adminAcc, {
+      participantId: patId, relatedActorId: researcherAcc, relationshipType: 'Friend',
+      permittedActions: ['participant.view-shared'],
+    });
+    expect(prop.status).toBe(201);
+    const relId = ((await prop.json()) as { data: { id: string } }).data.id;
+
+    // Nobody approves on the participant's behalf.
+    const outsider = await call(`/v1/relationships/${relId}/approve`, strangerAcc, {
+      expectedVersion: 1, confirmed: true,
+    });
+    expect(outsider.status).toBe(403);
+
+    const unconfirmed = await call(`/v1/relationships/${relId}/approve`, patAcc, {
+      expectedVersion: 1, confirmed: false,
+    });
+    expect(unconfirmed.status).toBe(409);
+    expect(((await unconfirmed.json()) as { error: { code: string } }).error.code).toBe('CONFIRMATION_REQUIRED');
+
+    // Approval binds the exact record version the participant saw.
+    const stale = await call(`/v1/relationships/${relId}/approve`, patAcc, {
+      expectedVersion: 99, confirmed: true,
+    });
+    expect(stale.status).toBe(412);
+    expect(((await stale.json()) as { error: { code: string } }).error.code).toBe('VERSION_CONFLICT');
+
+    expect((await call(`/v1/relationships/${relId}/approve`, patAcc, {
+      expectedVersion: 1, confirmed: true,
+    })).status).toBe(201);
+
+    // The owner can revoke at any time (version moved to 2 on approval).
+    expect((await call(`/v1/relationships/${relId}/revoke`, patAcc, { expectedVersion: 2 })).status).toBe(201);
   });
 
   let archiveId: string;
