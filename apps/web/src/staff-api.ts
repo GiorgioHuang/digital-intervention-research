@@ -28,7 +28,59 @@ async function post<T>(session: StaffSession, path: string, body: object): Promi
   return json;
 }
 
+async function get<T>(session: StaffSession, path: string): Promise<T> {
+  const res = await fetch(path, {
+    headers: { 'x-actor-id': session.actorId, 'x-auth-strength': session.authStrength },
+  });
+  const json = (await res.json()) as T & { error?: ApiError };
+  if (!res.ok) throw new PlatformApiError(json.error as ApiError, res.status);
+  return json;
+}
+
 type Id = { data: { id: string } };
+type List<A> = { data: { id: string; attributes: A }[] };
+
+export interface TriageQueueItem {
+  signalId: string;
+  sourceType: string;
+  category: string;
+  severity: string;
+  description: string;
+  signalState: string;
+}
+export interface ProtocolInReview {
+  protocolVersionId: string;
+  researchProjectId: string;
+  versionNumber: number;
+  submittedByActorId: string | null;
+}
+export interface PendingApprovalItem {
+  approvalRecordId: string;
+  artefactType: string;
+  artefactId: string;
+  artefactVersion: number;
+  requestedByActorId: string;
+}
+export interface LockableVersion {
+  datasetVersionId: string;
+  datasetDefinitionId: string;
+  versionNumber: number;
+  manifestHash: string;
+}
+export interface PendingExportItem {
+  exportRequestId: string;
+  exportType: string;
+  purpose: string;
+  recipient: string;
+  deIdentification: string;
+  requestedByActorId: string;
+}
+export interface EnrolmentItem {
+  enrolmentId: string;
+  participantId: string;
+  researchProjectId: string;
+  enrolmentState: string;
+}
 
 export const staffApi = {
   // M09 safety triage
@@ -73,6 +125,20 @@ export const staffApi = {
     post<Id>(s, `/v1/export-requests/${exportRequestId}/decide`, { decision, confirmed: true }),
   decideApproval: (s: StaffSession, approvalRecordId: string, decision: 'Approved' | 'Rejected', reason: string) =>
     post<Id>(s, `/v1/approvals/${approvalRecordId}/decide`, { decision, reason, confirmed: true }),
+
+  // Work queues (role-gated read side; seeing a queue is not deciding it)
+  listPendingTriage: (s: StaffSession) => get<List<TriageQueueItem>>(s, '/v1/safety-signals/pending-triage'),
+  listProtocolVersionsInReview: (s: StaffSession) => get<List<ProtocolInReview>>(s, '/v1/protocol-versions/in-review'),
+  listPendingApprovals: (s: StaffSession) => get<List<PendingApprovalItem>>(s, '/v1/approvals/pending'),
+  listLockableDatasetVersions: (s: StaffSession) => get<List<LockableVersion>>(s, '/v1/dataset-versions/lockable'),
+  listPendingExports: (s: StaffSession) => get<List<PendingExportItem>>(s, '/v1/export-requests/pending'),
+  listEnrolments: (s: StaffSession, researchProjectId?: string) =>
+    get<List<EnrolmentItem>>(
+      s,
+      researchProjectId === undefined || researchProjectId === ''
+        ? '/v1/enrolments'
+        : `/v1/enrolments?researchProjectId=${encodeURIComponent(researchProjectId)}`,
+    ),
 
   // M14 export request (researcher side; identifiable exports impossible)
   requestExport: (

@@ -450,3 +450,13 @@
   code: [apps/web/src/StaffApp.tsx, apps/web/src/staff-api.ts, apps/web/src/components/StaffApproverPanel.tsx, apps/web/src/components/StaffCoordinatorPanel.tsx, apps/web/src/components/StaffResearcherPanel.tsx, apps/web/src/components/StaffSafetyTriagePanel.tsx]
   tests: [apps/web/test/staff-panels.test.tsx]
   status: implemented
+
+- implementation_id: IMP-API-HTTP-011
+  module: ops
+  summary: Staff work-queue query endpoints - pending triage signals (SafetyReviewer), protocol versions in review naming the submitter, open M15 approvals, lockable dataset versions, pending export requests (ResearchApprover), break-glass pending review (PrivacyReviewer), enrolment list (ResearchCoordinator); read actions are role-gated with no confirmation/MFA (seeing a queue is not deciding it), and cross-role queue access is refused
+  trace_ids: [ATR-017, ATR-018, ATR-023]
+  adr_ids: [ADR-051]
+  docs: ["Doc 15 §21-31", "Doc 20 staff workspaces"]
+  code: [packages/modules/m09-safety/src/application/queries.ts, packages/modules/m04-research-design/src/application/queries.ts, packages/modules/m05-enrolment/src/application/queries.ts, packages/modules/m12-dataset/src/application/queries.ts, packages/modules/m14-reporting/src/application/queries.ts, packages/modules/m15-governance/src/application/queries.ts, apps/api/src/staff-controllers.ts]
+  tests: [apps/api/test/api.e2e.test.ts, apps/web/test/staff-queues.test.tsx]
+  status: implemented

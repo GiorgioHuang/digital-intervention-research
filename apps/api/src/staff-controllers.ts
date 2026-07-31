@@ -1,16 +1,18 @@
-import { Body, Controller, Inject, Param, Post, Req } from '@nestjs/common';
+import { Body, Controller, Get, Inject, Param, Post, Query, Req } from '@nestjs/common';
 import type { Request } from 'express';
 import {
   activateProtocolVersion,
   approveProtocolVersion,
   createProtocolVersion,
   createResearchProject,
+  listProtocolVersionsInReview,
   submitProtocolVersion,
 } from '@platform/m04-research-design';
 import {
   activateEnrolment,
   enrolParticipant,
   inviteParticipant,
+  listEnrolments,
   recordEligibilityDecision,
   startConsentProcess,
   startScreening,
@@ -24,13 +26,14 @@ import {
   createInterventionVersion,
   submitInterventionVersion,
 } from '@platform/m06-intervention-portfolio';
-import { triageSafetySignal } from '@platform/m09-safety';
+import { listSignalsAwaitingTriage, triageSafetySignal } from '@platform/m09-safety';
 import {
   approveReportVersion,
   createReport,
   decideExport,
   draftReportVersion,
   generateExportPackage,
+  listPendingExportRequests,
   recordExportDelivery,
   requestResearchExport,
 } from '@platform/m14-reporting';
@@ -38,6 +41,8 @@ import {
   decideApproval,
   executeBreakGlass,
   liftGovernanceHold,
+  listBreakGlassPendingReview,
+  listPendingApprovals,
   placeGovernanceHold,
   requestApproval,
   reviewBreakGlass,
@@ -47,6 +52,7 @@ import {
   completeQualityReview,
   createDatasetDefinition,
   generateDatasetVersion,
+  listLockableDatasetVersions,
   lockDatasetVersion,
 } from '@platform/m12-dataset';
 import {
@@ -72,6 +78,61 @@ import { requireActor } from './http-context.js';
 @Controller('v1')
 export class StaffCommandController {
   constructor(@Inject(API_DEPS) private readonly deps: ApiDeps) {}
+
+  // --- Staff work queues (role-gated read side) ------------------------
+
+  @Get('safety-signals/pending-triage')
+  async pendingTriage(@Req() req: Request) {
+    const ctx = requireActor(req);
+    const items = await listSignalsAwaitingTriage(this.deps.m09, ctx);
+    return { data: items.map((i) => ({ type: 'SafetySignal', id: i.signalId, attributes: i })) };
+  }
+
+  @Get('approvals/pending')
+  async pendingApprovals(@Req() req: Request) {
+    const ctx = requireActor(req);
+    const items = await listPendingApprovals(this.deps.m15, ctx);
+    return { data: items.map((i) => ({ type: 'ApprovalRecord', id: i.approvalRecordId, attributes: i })) };
+  }
+
+  @Get('protocol-versions/in-review')
+  async protocolVersionsInReview(@Req() req: Request) {
+    const ctx = requireActor(req);
+    const items = await listProtocolVersionsInReview(this.deps.m04, ctx);
+    return { data: items.map((i) => ({ type: 'ProtocolVersion', id: i.protocolVersionId, attributes: i })) };
+  }
+
+  @Get('dataset-versions/lockable')
+  async lockableDatasetVersions(@Req() req: Request) {
+    const ctx = requireActor(req);
+    const items = await listLockableDatasetVersions(this.deps.m12, ctx);
+    return { data: items.map((i) => ({ type: 'DatasetVersion', id: i.datasetVersionId, attributes: i })) };
+  }
+
+  @Get('export-requests/pending')
+  async pendingExports(@Req() req: Request) {
+    const ctx = requireActor(req);
+    const items = await listPendingExportRequests(this.deps.m14, ctx);
+    return { data: items.map((i) => ({ type: 'ExportRequest', id: i.exportRequestId, attributes: i })) };
+  }
+
+  @Get('break-glass/pending-review')
+  async pendingBreakGlass(@Req() req: Request) {
+    const ctx = requireActor(req);
+    const items = await listBreakGlassPendingReview(this.deps.m15, ctx);
+    return { data: items.map((i) => ({ type: 'BreakGlassRecord', id: i.breakGlassId, attributes: i })) };
+  }
+
+  @Get('enrolments')
+  async enrolments(@Req() req: Request, @Query('researchProjectId') researchProjectId?: string) {
+    const ctx = requireActor(req);
+    const items = await listEnrolments(
+      this.deps.m05,
+      ctx,
+      researchProjectId === undefined ? {} : { researchProjectId },
+    );
+    return { data: items.map((i) => ({ type: 'Enrolment', id: i.enrolmentId, attributes: i })) };
+  }
 
   // --- M04 research design -------------------------------------------
 

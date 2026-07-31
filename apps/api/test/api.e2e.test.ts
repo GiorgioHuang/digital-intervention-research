@@ -350,6 +350,78 @@ describe.skipIf(!dbAvailable)('HTTP API (e2e)', () => {
     expect(((await locked.json()) as { data: { id: string } }).data.id).toMatch(/^dl_/);
   });
 
+  it('staff work queues are role-gated and reflect real pending work', async () => {
+    // Seed one item per queue over HTTP.
+    const sig = await call('/v1/safety-signals', patAcc, {
+      sourceType: 'Participant', category: 'queue-check', severity: 'Low', description: 'queue seed',
+    });
+    const signalId = ((await sig.json()) as { data: { id: string } }).data.id;
+
+    const proj = await call('/v1/research-projects', researcherAcc, { organisationId: 'org_q', title: 'Queue Study' });
+    const projectId = ((await proj.json()) as { data: { id: string } }).data.id;
+    const draft = await call(`/v1/research-projects/${projectId}/protocol-versions`, researcherAcc, {
+      title: 'Queue protocol', content: { design: 'q' },
+    });
+    const pvId = ((await draft.json()) as { data: { id: string } }).data.id;
+    await call(`/v1/protocol-versions/${pvId}/submit`, researcherAcc, {});
+
+    const apr = await call('/v1/approvals', researcherAcc, {
+      artefactType: 'ProtocolVersion', artefactId: pvId, artefactVersion: 1,
+    });
+    const approvalId = ((await apr.json()) as { data: { id: string } }).data.id;
+
+    const exr = await call('/v1/export-requests', researcherAcc, {
+      purpose: 'queue seed', recipient: 'partner', sources: ['dv_q'], deIdentification: 'Anonymised',
+    });
+    const exportId = ((await exr.json()) as { data: { id: string } }).data.id;
+
+    // Role gating: a participant sees no staff queue.
+    expect((await call('/v1/safety-signals/pending-triage', patAcc)).status).toBe(403);
+    expect((await call('/v1/approvals/pending', patAcc)).status).toBe(403);
+    expect((await call('/v1/enrolments', patAcc)).status).toBe(403);
+    // Queue sight is role-scoped, not staff-generic: an approver holds
+    // no triage queue and a safety reviewer no approval queue.
+    expect((await call('/v1/safety-signals/pending-triage', approverAcc)).status).toBe(403);
+    expect((await call('/v1/approvals/pending', safetyAcc)).status).toBe(403);
+
+    // The right roles see their queues with the seeded items.
+    const triage = (await (await call('/v1/safety-signals/pending-triage', safetyAcc)).json()) as {
+      data: { id: string }[];
+    };
+    expect(triage.data.some((i) => i.id === signalId)).toBe(true);
+
+    const inReview = (await (await call('/v1/protocol-versions/in-review', approverAcc)).json()) as {
+      data: { id: string; attributes: { submittedByActorId: string | null } }[];
+    };
+    const seededPv = inReview.data.find((i) => i.id === pvId);
+    // The queue names the submitter so separation of duties is visible up front.
+    expect(seededPv?.attributes.submittedByActorId).toBe(researcherAcc);
+
+    const approvals = (await (await call('/v1/approvals/pending', approverAcc)).json()) as { data: { id: string }[] };
+    expect(approvals.data.some((i) => i.id === approvalId)).toBe(true);
+
+    const exports = (await (await call('/v1/export-requests/pending', approverAcc)).json()) as { data: { id: string }[] };
+    expect(exports.data.some((i) => i.id === exportId)).toBe(true);
+
+    const lockable = await call('/v1/dataset-versions/lockable', approverAcc);
+    expect(lockable.status).toBe(200);
+
+    // Coordinator (admin) can list enrolments; a decided export leaves its queue.
+    expect((await call('/v1/enrolments?researchProjectId=rp_none', adminAcc)).status).toBe(200);
+    await call(`/v1/export-requests/${exportId}/decide`, approverAcc, { decision: 'Rejected', confirmed: true }, { 'x-auth-strength': 'mfa' });
+    const exportsAfter = (await (await call('/v1/export-requests/pending', approverAcc)).json()) as { data: { id: string }[] };
+    expect(exportsAfter.data.some((i) => i.id === exportId)).toBe(false);
+
+    // Privacy reviewer sees break-glass records pending their mandatory review.
+    const bg = await call('/v1/break-glass', adminAcc, {
+      reason: 'Queue incident', scope: 'read audit', expiresAt: '2027-01-01T00:00:00Z', confirmed: true,
+    }, { 'x-auth-strength': 'mfa' });
+    const bgId = ((await bg.json()) as { data: { id: string } }).data.id;
+    const bgQueue = (await (await call('/v1/break-glass/pending-review', privacyAcc)).json()) as { data: { id: string }[] };
+    expect(bgQueue.data.some((i) => i.id === bgId)).toBe(true);
+    expect((await call('/v1/break-glass/pending-review', approverAcc)).status).toBe(403);
+  });
+
   it('M14 report and export over HTTP: immutable approved versions; export needs MFA approval before generation; three-state delivery', async () => {
     const rpt = await call('/v1/research-reports', researcherAcc, {
       researchProjectId: 'rp_e2e_m14', title: 'Pilot outcomes', reportType: 'ResearchReport',

@@ -45,6 +45,7 @@ export const POLICY_V1: PolicyConfiguration = {
       'matching.generate',
       'session.record',
       'assessment.record',
+      'enrolment.view',
     ],
     Researcher: [
       'project.view',
@@ -82,9 +83,10 @@ export const POLICY_V1: PolicyConfiguration = {
       'analysis-plan.approve', 'interpretation.approve', 'finding.approve',
       'approval.decide',
       'report.approve', 'export.approve',
+      'approval-queue.view',
     ],
     EvidenceReviewer: ['evidence-review.approve', 'evidence-decision.draft', 'evidence-decision.approve'],
-    SafetyReviewer: ['safety-signal.record', 'safety-signal.triage', 'safety-event.create', 'safety-event.review'],
+    SafetyReviewer: ['safety-signal.record', 'safety-signal.triage', 'safety-event.create', 'safety-event.review', 'triage-queue.view'],
     Participant: [
       // Participant self-service actions are owner-permitted on own resources.
       'participant.view-own',
@@ -120,7 +122,7 @@ export const POLICY_V1: PolicyConfiguration = {
     // Governance reviewers (M15): holds and break-glass retrospective
     // review. Deliberately disjoint from break-glass execution so the
     // reviewer can never be the executor by role alone.
-    PrivacyReviewer: ['governance-hold.place', 'governance-hold.lift', 'break-glass.review', 'audit.view'],
+    PrivacyReviewer: ['governance-hold.place', 'governance-hold.lift', 'break-glass.review', 'audit.view', 'governance-queue.view'],
   },
   actionRequirements: {
     'organisation.create': {},
@@ -149,6 +151,13 @@ export const POLICY_V1: PolicyConfiguration = {
     'export.approve': { confirmationRequired: true, minimumAuthStrength: 'mfa' },
     'export.generate': {},
     'export.record-delivery': {},
+
+    // Staff work-queue read actions: role-gated, no confirmation/MFA —
+    // seeing a queue is not deciding it.
+    'triage-queue.view': {},
+    'approval-queue.view': {},
+    'governance-queue.view': {},
+    'enrolment.view': {},
 
     'project.view': {},
     'project.create': {},

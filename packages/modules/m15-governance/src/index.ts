@@ -8,3 +8,9 @@ export {
   reviewBreakGlass,
   type M15Deps,
 } from './application/commands.js';
+export {
+  listPendingApprovals,
+  listBreakGlassPendingReview,
+  type PendingApproval,
+  type PendingBreakGlassReview,
+} from './application/queries.js';

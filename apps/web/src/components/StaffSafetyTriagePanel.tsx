@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { PlatformApiError } from '../api.js';
-import { staffApi, type StaffSession } from '../staff-api.js';
+import { staffApi, type StaffSession, type TriageQueueItem } from '../staff-api.js';
 
 type Disposition = 'Closed as Not a Safety Event' | 'Escalated' | 'Converted to Safety Event';
 const DISPOSITIONS: { value: Disposition; label: string }[] = [
@@ -17,7 +17,18 @@ const DISPOSITIONS: { value: Disposition; label: string }[] = [
 export function StaffSafetyTriagePanel({ session }: { session: StaffSession }) {
   const [form, setForm] = useState({ signalId: '', disposition: DISPOSITIONS[0]!.value as Disposition, reason: '' });
   const [confirming, setConfirming] = useState(false);
+  const [queue, setQueue] = useState<TriageQueueItem[] | null>(null);
   const [announcement, setAnnouncement] = useState('');
+
+  const loadQueue = async () => {
+    try {
+      const res = await staffApi.listPendingTriage(session);
+      setQueue(res.data.map((i) => i.attributes));
+      setAnnouncement(res.data.length === 0 ? '当前没有待处理信号。' : `${res.data.length} 个待处理信号。`);
+    } catch (err) {
+      setAnnouncement(err instanceof PlatformApiError ? `未能获取队列：${err.error.code}` : '网络错误');
+    }
+  };
 
   const conversionWithoutMfa = form.disposition === 'Converted to Safety Event' && session.authStrength !== 'mfa';
 
@@ -38,6 +49,21 @@ export function StaffSafetyTriagePanel({ session }: { session: StaffSession }) {
     <section aria-labelledby="triage-heading">
       <h2 id="triage-heading">安全信号 triage</h2>
       <p>处置是人工职责：自动系统只能产生信号，永远不能创建安全事件。每个处置都需要书面理由。</p>
+      <p>
+        <button onClick={() => void loadQueue()}>查看待处理信号</button>
+      </p>
+      {queue !== null && queue.length > 0 && (
+        <ul style={{ listStyle: 'none', padding: 0 }}>
+          {queue.map((i) => (
+            <li key={i.signalId} style={{ border: '1px solid currentColor', padding: '0.5rem', marginBlock: '0.5rem' }}>
+              <p>
+                [{i.severity}] {i.category} — {i.description}（来源：{i.sourceType}，状态：{i.signalState}）
+              </p>
+              <button onClick={() => setForm((f) => ({ ...f, signalId: i.signalId }))}>处理此信号</button>
+            </li>
+          ))}
+        </ul>
+      )}
       <p>
         <label htmlFor="triage-signal">信号标识</label>{' '}
         <input id="triage-signal" value={form.signalId} onChange={(e) => setForm({ ...form, signalId: e.target.value })} />

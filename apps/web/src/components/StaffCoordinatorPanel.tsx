@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { PlatformApiError } from '../api.js';
-import { staffApi, type StaffSession } from '../staff-api.js';
+import { staffApi, type EnrolmentItem, type StaffSession } from '../staff-api.js';
 
 /**
  * Enrolment coordination (M05): the chain is explicit — invite against an
@@ -13,7 +13,19 @@ export function StaffCoordinatorPanel({ session }: { session: StaffSession }) {
   const [enrolmentId, setEnrolmentId] = useState('');
   const [eligibility, setEligibility] = useState({ decision: 'Eligible' as 'Eligible' | 'Ineligible', reason: '' });
   const [confirmingWithdraw, setConfirmingWithdraw] = useState(false);
+  const [listProjectId, setListProjectId] = useState('');
+  const [enrolments, setEnrolments] = useState<EnrolmentItem[] | null>(null);
   const [announcement, setAnnouncement] = useState('');
+
+  const loadEnrolments = async () => {
+    try {
+      const res = await staffApi.listEnrolments(session, listProjectId);
+      setEnrolments(res.data.map((i) => i.attributes));
+      setAnnouncement('入组列表已更新。');
+    } catch (err) {
+      setAnnouncement(err instanceof PlatformApiError ? `未能获取列表：${err.error.code}` : '网络错误');
+    }
+  };
 
   const run = async (fn: () => Promise<unknown>, done: string) => {
     try {
@@ -56,6 +68,26 @@ export function StaffCoordinatorPanel({ session }: { session: StaffSession }) {
             创建邀请
           </button>
         </p>
+      </section>
+
+      <section aria-labelledby="list-heading">
+        <h3 id="list-heading">入组列表</h3>
+        <p>
+          <label htmlFor="list-proj">按项目筛选（可留空）</label>{' '}
+          <input id="list-proj" value={listProjectId} onChange={(e) => setListProjectId(e.target.value)} />{' '}
+          <button onClick={() => void loadEnrolments()}>查看入组列表</button>
+        </p>
+        {enrolments !== null && (
+          <ul style={{ listStyle: 'none', padding: 0 }}>
+            {enrolments.length === 0 && <li>没有匹配的入组记录。</li>}
+            {enrolments.map((e) => (
+              <li key={e.enrolmentId}>
+                {e.enrolmentId}（参与者 {e.participantId}，项目 {e.researchProjectId}，状态：{e.enrolmentState}）{' '}
+                <button onClick={() => setEnrolmentId(e.enrolmentId)}>选择</button>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
 
       <section aria-labelledby="chain-heading">

@@ -1,6 +1,13 @@
 import { useState } from 'react';
 import { PlatformApiError } from '../api.js';
-import { staffApi, type StaffSession } from '../staff-api.js';
+import {
+  staffApi,
+  type LockableVersion,
+  type PendingApprovalItem,
+  type PendingExportItem,
+  type ProtocolInReview,
+  type StaffSession,
+} from '../staff-api.js';
 
 type PendingAction =
   | { kind: 'protocol-approve'; id: string }
@@ -29,7 +36,33 @@ export function StaffApproverPanel({ session }: { session: StaffSession }) {
   const [exportRequestId, setExportRequestId] = useState('');
   const [approval, setApproval] = useState({ id: '', reason: '' });
   const [pending, setPending] = useState<PendingAction | null>(null);
+  const [queues, setQueues] = useState<{
+    protocols: ProtocolInReview[];
+    locks: LockableVersion[];
+    exports: PendingExportItem[];
+    approvals: PendingApprovalItem[];
+  } | null>(null);
   const [announcement, setAnnouncement] = useState('');
+
+  const loadQueues = async () => {
+    try {
+      const [protocols, locks, exports, approvals] = await Promise.all([
+        staffApi.listProtocolVersionsInReview(session),
+        staffApi.listLockableDatasetVersions(session),
+        staffApi.listPendingExports(session),
+        staffApi.listPendingApprovals(session),
+      ]);
+      setQueues({
+        protocols: protocols.data.map((i) => i.attributes),
+        locks: locks.data.map((i) => i.attributes),
+        exports: exports.data.map((i) => i.attributes),
+        approvals: approvals.data.map((i) => i.attributes),
+      });
+      setAnnouncement('待办已更新。');
+    } catch (err) {
+      setAnnouncement(err instanceof PlatformApiError ? `未能获取待办：${err.error.code}` : '网络错误');
+    }
+  };
 
   const execute = async () => {
     if (pending === null) return;
@@ -54,6 +87,53 @@ export function StaffApproverPanel({ session }: { session: StaffSession }) {
         每个决定都署名并绑定精确的工件。你不能批准自己提交的内容——服务端会拒绝（职责分离）。
         {session.authStrength !== 'mfa' && ' 注意：标注 MFA 的操作在当前密码级别下会被拒绝。'}
       </p>
+
+      <p>
+        <button onClick={() => void loadQueues()}>查看待办</button>
+      </p>
+      {queues !== null && (
+        <section aria-labelledby="queues-heading">
+          <h3 id="queues-heading">待办列表</h3>
+          <h4>待评审协议版本（{queues.protocols.length}）</h4>
+          <ul style={{ listStyle: 'none', padding: 0 }}>
+            {queues.protocols.map((p) => (
+              <li key={p.protocolVersionId}>
+                {p.protocolVersionId}（版本 {p.versionNumber}，项目 {p.researchProjectId}，提交人 {p.submittedByActorId ?? '未知'}
+                {p.submittedByActorId === session.actorId ? '——是你，不能自批' : ''}）{' '}
+                <button onClick={() => setProtocolVersionId(p.protocolVersionId)}>选择</button>
+              </li>
+            ))}
+          </ul>
+          <h4>可锁定数据集版本（{queues.locks.length}）</h4>
+          <ul style={{ listStyle: 'none', padding: 0 }}>
+            {queues.locks.map((v) => (
+              <li key={v.datasetVersionId}>
+                {v.datasetVersionId}（版本 {v.versionNumber}，清单哈希 {v.manifestHash.slice(0, 12)}…）{' '}
+                <button onClick={() => setDatasetVersionId(v.datasetVersionId)}>选择</button>
+              </li>
+            ))}
+          </ul>
+          <h4>待决定导出（{queues.exports.length}）</h4>
+          <ul style={{ listStyle: 'none', padding: 0 }}>
+            {queues.exports.map((e) => (
+              <li key={e.exportRequestId}>
+                {e.exportRequestId}（{e.exportType}，目的：{e.purpose}，接收方：{e.recipient}，去标识：{e.deIdentification}）{' '}
+                <button onClick={() => setExportRequestId(e.exportRequestId)}>选择</button>
+              </li>
+            ))}
+          </ul>
+          <h4>待决定审批记录（{queues.approvals.length}）</h4>
+          <ul style={{ listStyle: 'none', padding: 0 }}>
+            {queues.approvals.map((a) => (
+              <li key={a.approvalRecordId}>
+                {a.approvalRecordId}（{a.artefactType} {a.artefactId} 版本 {a.artefactVersion}，申请人 {a.requestedByActorId}
+                {a.requestedByActorId === session.actorId ? '——是你，不能自批' : ''}）{' '}
+                <button onClick={() => setApproval((f) => ({ ...f, id: a.approvalRecordId }))}>选择</button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <h3>协议版本</h3>
       <p>
