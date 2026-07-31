@@ -122,6 +122,69 @@ describe.skipIf(!dbAvailable)('HTTP API (e2e)', () => {
     expect(res.status).toBe(403);
     expect(((await res.json()) as { error: { code: string } }).error.code).toBe('COMMUNICATION_BASIS_REQUIRED');
   });
+
+  it('report submission opens a ModerationCase atomically (human review, never automation alone)', async () => {
+    const res = await call('/v1/reports', patAcc, {
+      reporterId: patId, reportedActorId: strangerAcc, category: 'harassment', description: 'Unwanted contact',
+    });
+    expect(res.status).toBe(201);
+    const body = (await res.json()) as { data: { id: string; meta: { moderationCaseId: string } } };
+    expect(body.data.id).toMatch(/^rep_/);
+    expect(body.data.meta.moderationCaseId).toMatch(/^mc_/);
+  });
+
+  it('block requires explicit confirmation (409 first, 201 when confirmed)', async () => {
+    const unconfirmed = await call('/v1/blocks', patAcc, {
+      blockerId: patId, blockedActorId: strangerAcc, confirmed: false,
+    });
+    expect(unconfirmed.status).toBe(409);
+    expect(((await unconfirmed.json()) as { error: { code: string } }).error.code).toBe('CONFIRMATION_REQUIRED');
+    const confirmed = await call('/v1/blocks', patAcc, {
+      blockerId: patId, blockedActorId: strangerAcc, confirmed: true,
+    });
+    expect(confirmed.status).toBe(201);
+    expect(((await confirmed.json()) as { data: { id: string } }).data.id).toMatch(/^blk_/);
+  });
+
+  it('safety signal is accepted from any authenticated actor; unauthenticated is refused', async () => {
+    const ok = await call('/v1/safety-signals', patAcc, {
+      sourceType: 'Participant', category: 'wellbeing-concern', severity: 'Moderate', description: 'I feel unsafe',
+    });
+    expect(ok.status).toBe(201);
+    expect(((await ok.json()) as { data: { id: string } }).data.id).toMatch(/^ss_/);
+    const anon = await call('/v1/safety-signals', undefined, {
+      sourceType: 'Participant', category: 'wellbeing-concern', severity: 'Moderate', description: 'x',
+    });
+    expect(anon.status).toBe(401);
+  });
+
+  it('NEGATIVE matching opt-in without open-matching consent is refused; granted consent enables it', async () => {
+    const denied = await call('/v1/match-preferences', patAcc, {
+      participantId: patId, declaredAttributes: { interests: ['gardening'] }, confirmed: true,
+    });
+    // Protected existence (ADR-050): the denial does not reveal resource
+    // existence, so it surfaces as 404 rather than 403.
+    expect(denied.status).toBe(404);
+    expect(((await denied.json()) as { error: { code: string } }).error.code).toBe('RESOURCE_NOT_FOUND');
+
+    const consent = await call(`/v1/participants/${patId}/consents`, patAcc, {
+      scope: 'open-matching', decision: 'Granted', templateVersion: 'ct_v1',
+    });
+    expect(consent.status).toBe(201);
+    const ok = await call('/v1/match-preferences', patAcc, {
+      participantId: patId, declaredAttributes: { interests: ['gardening'] }, confirmed: true,
+    });
+    expect(ok.status).toBe(201);
+    expect(((await ok.json()) as { data: { id: string } }).data.id).toMatch(/^mp_/);
+  });
+
+  it('NEGATIVE match decision on an unknown candidate returns 404 in the error envelope', async () => {
+    const res = await call('/v1/match-candidates/cand_missing/decision', patAcc, {
+      participantId: patId, expectedCandidateVersion: 1, decision: 'Interested', confirmed: true,
+    });
+    expect(res.status).toBe(404);
+    expect(((await res.json()) as { error: { code: string } }).error.code).toBe('RESOURCE_NOT_FOUND');
+  });
 });
 
 describe.skipIf(dbAvailable)('HTTP API (skipped)', () => {

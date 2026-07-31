@@ -320,3 +320,23 @@
   code: [apps/web/src]
   tests: [apps/web/test/consent-panel.test.tsx, apps/web/test/message-panel.test.tsx]
   status: implemented
+
+- implementation_id: IMP-API-HTTP-002
+  module: ops
+  summary: REST command slice for safety and social governance - blocks (confirmed create/revoke), user reports (atomic ModerationCase, human review), participant safety signals, matching opt-in (consent-gated), version-bound match decisions, connection activation from single-use mutual acceptance
+  trace_ids: [ATR-010, ATR-016, ATR-017]
+  adr_ids: [ADR-036, ADR-037, ADR-038, ADR-039]
+  docs: ["Doc 15 §21-31", "Doc 11 matching rules", "Doc 12 block/report"]
+  code: [apps/api/src/controllers.ts, openapi/openapi.yaml]
+  tests: [apps/api/test/api.e2e.test.ts]
+  status: implemented
+
+- implementation_id: IMP-WEB-PARTICIPANT-002
+  module: ops
+  summary: Participant workspace safety and matching screens - block behind explicit confirmation, report with human-review and report-survives-block wording, safety concern with emergency disclaimer, opt-in matching with private version-bound decisions and separately confirmed connection activation
+  trace_ids: [ATR-010, ATR-016]
+  adr_ids: [ADR-036, ADR-037, ADR-038]
+  docs: ["Doc 20 block/report UX", "Doc 20 matching UX", "Doc 11 §mutual acceptance"]
+  code: [apps/web/src/components/SafetyPanel.tsx, apps/web/src/components/MatchingPanel.tsx]
+  tests: [apps/web/test/safety-panel.test.tsx, apps/web/test/matching-panel.test.tsx]
+  status: implemented

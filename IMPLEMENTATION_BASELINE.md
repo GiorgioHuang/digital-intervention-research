@@ -20,7 +20,7 @@
 |---|---|
 | `packages/kernel`（RequestContext、结构化错误、时钟、ID、日志脱敏） | Implemented（50 单测通过） |
 | `packages/database`（连接、迁移、outbox/inbox/audit/idempotency 基表） | Implemented（集成测试含迁移 up→down→up 演练） |
-| `apps/api`（Doc 15 错误信封/上下文头/dev-header 认证桩 + consent/messaging 命令端点 + OpenAPI） | Implemented（5 e2e） |
+| `apps/api`（Doc 15 错误信封/上下文头/dev-header 认证桩 + consent/messaging/block/report/safety-signal/matching/connection 命令端点 + OpenAPI） | Implemented（10 e2e） |
 | `apps/worker` / `apps/scheduler` | Scaffolded（outbox 循环/cron 骨架） |
 | `packages/policy` 权限引擎 + `m01-identity-org` + `m03-consent-permission` | Implemented（27 引擎单测 + 13 集成测试） |
 | `m02-participant` + `m04-research-design` + `m05-enrolment` | Implemented（P3 链路 12 集成测试） |
@@ -32,7 +32,7 @@
 | `m07-delivery` + `m08-assessment`（暴露状态/类型化缺失） | Implemented（合成试点覆盖） |
 | `packages/synthetic-pilot`（端到端合成试点） | Implemented（5 场景组） |
 | `m14`（报告/导出） | Not Started |
-| `apps/web`（参与者工作区：任务式首页/细粒度同意/消息确认，HTTP-only 边界） | Implemented（7 组件测试） |
+| `apps/web`（参与者工作区：任务式首页/细粒度同意/消息确认/屏蔽与报告/安全担忧/可选匹配，HTTP-only 边界） | Implemented（13 组件测试） |
 | OpenAPI / 事件 schema 目录 | Scaffolded（openapi/openapi.yaml 覆盖现有端点） |
 
 ## 4. 数据库与迁移

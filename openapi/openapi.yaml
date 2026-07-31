@@ -94,6 +94,130 @@ paths:
       responses:
         '201': { description: Confirmed and queued (lifecycleState Queued) }
         '409': { description: SEND_CONFIRMATION_MISMATCH / MESSAGE_ALREADY_QUEUED }
+  /v1/blocks:
+    post:
+      summary: Create a BlockRecord (participant-owned decision, confirmed; ADR-037)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [blockerId, blockedActorId, confirmed]
+              properties:
+                blockerId: { type: string }
+                blockedActorId: { type: string }
+                confirmed: { type: boolean }
+      responses:
+        '201': { description: Block created }
+        '409': { description: CONFIRMATION_REQUIRED }
+  /v1/blocks/{blockId}/revoke:
+    post:
+      summary: Revoke a Block (restores nothing the block suppressed, ADR-037)
+      parameters: [{ name: blockId, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [blockerId, confirmed]
+              properties:
+                blockerId: { type: string }
+                confirmed: { type: boolean }
+      responses:
+        '201': { description: Block revoked }
+        '409': { description: CONFIRMATION_REQUIRED }
+  /v1/reports:
+    post:
+      summary: Submit a UserReport; opens a ModerationCase atomically (human review; survives blocks, ADR-038)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reporterId, reportedActorId, category, description]
+              properties:
+                reporterId: { type: string }
+                reportedActorId: { type: string }
+                reportedContentId: { type: string }
+                category: { type: string }
+                description: { type: string }
+      responses:
+        '201': { description: Report submitted with moderationCaseId in meta }
+  /v1/safety-signals:
+    post:
+      summary: Record a human-sourced SafetySignal (never blocked by role gaps; conversion to SafetyEvent stays human+MFA, ADR-039)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [sourceType, category, severity, description]
+              properties:
+                sourceType: { type: string, enum: [Participant, Supporter, Staff] }
+                category: { type: string }
+                severity: { type: string, enum: [Low, Moderate, High, Critical] }
+                description: { type: string }
+      responses:
+        '201': { description: SafetySignal recorded }
+        '401': { $ref: '#/components/responses/Error' }
+  /v1/match-preferences:
+    post:
+      summary: Opt in to matching (owner-only, requires open-matching consent + confirmation; ADR-036)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [participantId, declaredAttributes, confirmed]
+              properties:
+                participantId: { type: string }
+                declaredAttributes: { type: object }
+                confirmed: { type: boolean }
+      responses:
+        '201': { description: MatchPreference active }
+        '404': { description: RESOURCE_NOT_FOUND (protected existence — includes consent-missing denials, ADR-050) }
+  /v1/match-candidates/{candidateId}/decision:
+    post:
+      summary: Record an independent, version-bound MatchDecision; mutualAcceptanceId in meta only when both parties chose Interested
+      parameters: [{ name: candidateId, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [participantId, expectedCandidateVersion, decision, confirmed]
+              properties:
+                participantId: { type: string }
+                expectedCandidateVersion: { type: integer }
+                decision: { type: string, enum: [Interested, 'Not Now', Dismissed, Blocked, Reported] }
+                confirmed: { type: boolean }
+      responses:
+        '201': { description: Decision recorded }
+        '404': { description: RESOURCE_NOT_FOUND }
+        '409': { description: MATCH_CANDIDATE_EXPIRED / VERSION_CONFLICT / CONFIRMATION_REQUIRED }
+  /v1/mutual-acceptances/{mutualAcceptanceId}/activate-connection:
+    post:
+      summary: Activate a Connection from a single-use MutualAcceptance (confirmed; consumed exactly once)
+      parameters: [{ name: mutualAcceptanceId, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [participantId, confirmed]
+              properties:
+                participantId: { type: string }
+                confirmed: { type: boolean }
+      responses:
+        '201': { description: Connection active }
+        '409': { description: MUTUAL_ACCEPTANCE_CONSUMED / CONFIRMATION_REQUIRED }
 components:
   responses:
     Error:

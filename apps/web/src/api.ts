@@ -49,6 +49,45 @@ export const api = {
       `/v1/messages/${messageId}/confirm-send`,
       { senderParticipantId: s.participantId, expectedMessageVersion, recipientIds, confirmed: true },
     ),
+  submitReport: (s: Session, reportedActorId: string, category: string, description: string) =>
+    post<{ data: { id: string; meta: { moderationCaseId: string } } }>(s, '/v1/reports', {
+      reporterId: s.participantId,
+      reportedActorId,
+      category,
+      description,
+    }),
+  createBlock: (s: Session, blockedActorId: string, confirmed: boolean) =>
+    post<{ data: { id: string } }>(s, '/v1/blocks', { blockerId: s.participantId, blockedActorId, confirmed }),
+  recordSafetySignal: (s: Session, category: string, severity: string, description: string) =>
+    post<{ data: { id: string } }>(s, '/v1/safety-signals', {
+      sourceType: 'Participant',
+      category,
+      severity,
+      description,
+    }),
+  activateMatching: (s: Session, declaredAttributes: Record<string, unknown>, confirmed: boolean) =>
+    post<{ data: { id: string } }>(s, '/v1/match-preferences', {
+      participantId: s.participantId,
+      declaredAttributes,
+      confirmed,
+    }),
+  matchDecision: (
+    s: Session,
+    candidateId: string,
+    expectedCandidateVersion: number,
+    decision: 'Interested' | 'Not Now' | 'Dismissed',
+    confirmed: boolean,
+  ) =>
+    post<{ data: { id: string; meta: { mutualAcceptanceId?: string } } }>(
+      s,
+      `/v1/match-candidates/${candidateId}/decision`,
+      { participantId: s.participantId, expectedCandidateVersion, decision, confirmed },
+    ),
+  activateConnection: (s: Session, mutualAcceptanceId: string, confirmed: boolean) =>
+    post<{ data: { id: string } }>(s, `/v1/mutual-acceptances/${mutualAcceptanceId}/activate-connection`, {
+      participantId: s.participantId,
+      confirmed,
+    }),
 };
 
 /**

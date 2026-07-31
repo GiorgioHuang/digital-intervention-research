@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { ConsentPanel } from './components/ConsentPanel.js';
+import { MatchingPanel } from './components/MatchingPanel.js';
 import { MessagePanel } from './components/MessagePanel.js';
+import { SafetyPanel } from './components/SafetyPanel.js';
 import type { Session } from './api.js';
 
 /**
@@ -11,7 +13,7 @@ import type { Session } from './api.js';
  * Session comes from the dev-header stub for now (OIDC pending ADR-104):
  * the participant enters the identifiers issued during synthetic setup.
  */
-type Screen = 'home' | 'consent' | 'message' | 'help';
+type Screen = 'home' | 'consent' | 'message' | 'matching' | 'help';
 
 export function App() {
   const [session, setSession] = useState<Session | null>(null);
@@ -72,6 +74,11 @@ export function App() {
             </button>
           </li>
           <li>
+            <button aria-current={screen === 'matching' ? 'page' : undefined} onClick={() => setScreen('matching')}>
+              认识新朋友
+            </button>
+          </li>
+          <li>
             <button aria-current={screen === 'help' ? 'page' : undefined} onClick={() => setScreen('help')}>
               帮助与安全
             </button>
@@ -89,6 +96,9 @@ export function App() {
               </li>
               <li>
                 <button onClick={() => setScreen('message')}>给已建立联系的人写消息</button>
+              </li>
+              <li>
+                <button onClick={() => setScreen('matching')}>认识新朋友（可选）</button>
               </li>
               <li>
                 <button onClick={() => setScreen('help')}>获取帮助或报告问题</button>
@@ -130,11 +140,13 @@ export function App() {
             )}
           </section>
         )}
+        {screen === 'matching' && <MatchingPanel session={session} />}
         {screen === 'help' && (
           <section aria-labelledby="help-heading">
             <h1 id="help-heading">帮助与安全</h1>
             <p>你可以随时联系研究团队，或报告让你不适的内容。报告会由工作人员查看——不会由自动系统单独决定。</p>
             <p>如果你或他人处于紧急危险中，请直接拨打当地紧急电话。本平台不是紧急求助渠道。</p>
+            <SafetyPanel session={session} />
           </section>
         )}
       </main>

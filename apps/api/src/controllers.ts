@@ -3,7 +3,19 @@ import type { Request } from 'express';
 import type { Clock } from '@platform/kernel';
 import type { Pool } from '@platform/database';
 import { recordConsentDecision, withdrawConsent, type PermissionServicePort } from '@platform/m03-consent-permission';
-import { confirmSend, createMessageDraft, createThread, type M18Deps } from '@platform/m18-community-social';
+import { recordSafetySignal, type M09Deps } from '@platform/m09-safety';
+import {
+  activateConnection,
+  activateMatchPreference,
+  confirmSend,
+  createBlock,
+  createMessageDraft,
+  createThread,
+  recordMatchDecision,
+  revokeBlock,
+  submitUserReport,
+  type M18Deps,
+} from '@platform/m18-community-social';
 import { requireActor } from './http-context.js';
 
 export const API_DEPS = 'API_DEPS';
@@ -12,6 +24,7 @@ export interface ApiDeps {
   pool: Pool;
   clock: Clock;
   permissions: PermissionServicePort;
+  m09: M09Deps;
   m18: M18Deps;
 }
 
@@ -91,5 +104,140 @@ export class CommandController {
     });
     // Truthful state (ADR-055/Doc 20 §160): confirmation produces Queued.
     return { data: { type: 'Message', id: messageId, meta: { sendConfirmationId: result.sendConfirmationId, lifecycleState: 'Queued', deliveryState: 'Queued' } } };
+  }
+
+  @Post('blocks')
+  async createBlock(
+    @Req() req: Request,
+    @Body() body: { blockerId: string; blockedActorId: string; confirmed: boolean },
+  ) {
+    const ctx = requireActor(req);
+    const result = await createBlock(this.deps.m18, ctx, {
+      blockerId: body.blockerId,
+      blockedActorId: body.blockedActorId,
+      confirmed: body.confirmed === true,
+    });
+    return { data: { type: 'BlockRecord', id: result.blockId } };
+  }
+
+  @Post('blocks/:blockId/revoke')
+  async revokeBlock(
+    @Req() req: Request,
+    @Param('blockId') blockId: string,
+    @Body() body: { blockerId: string; confirmed: boolean },
+  ) {
+    const ctx = requireActor(req);
+    await revokeBlock(this.deps.m18, ctx, {
+      blockId,
+      blockerId: body.blockerId,
+      confirmed: body.confirmed === true,
+    });
+    return { data: { type: 'BlockRecord', id: blockId, meta: { state: 'Revoked' } } };
+  }
+
+  @Post('reports')
+  async submitReport(
+    @Req() req: Request,
+    @Body() body: {
+      reporterId: string;
+      reportedActorId: string;
+      reportedContentId?: string;
+      category: string;
+      description: string;
+    },
+  ) {
+    const ctx = requireActor(req);
+    const input: Parameters<typeof submitUserReport>[2] = {
+      reporterId: body.reporterId,
+      reportedActorId: body.reportedActorId,
+      category: body.category,
+      description: body.description,
+    };
+    if (body.reportedContentId !== undefined) input.reportedContentId = body.reportedContentId;
+    const result = await submitUserReport(this.deps.m18, ctx, input);
+    // A ModerationCase is opened in the same transaction: reports are
+    // reviewed by staff, never adjudicated by automation alone.
+    return { data: { type: 'UserReport', id: result.reportId, meta: { moderationCaseId: result.moderationCaseId } } };
+  }
+
+  @Post('safety-signals')
+  async recordSafetySignal(
+    @Req() req: Request,
+    @Body() body: {
+      sourceType: 'Participant' | 'Supporter' | 'Staff';
+      category: string;
+      severity: 'Low' | 'Moderate' | 'High' | 'Critical';
+      description: string;
+    },
+  ) {
+    const ctx = requireActor(req);
+    // HTTP callers raise human-sourced signals only; AI/Rule/Integration
+    // sources originate inside the platform (ADR-039).
+    const result = await recordSafetySignal(this.deps.m09, ctx, {
+      sourceType: body.sourceType,
+      category: body.category,
+      severity: body.severity,
+      description: body.description,
+    });
+    return { data: { type: 'SafetySignal', id: result.safetySignalId } };
+  }
+
+  @Post('match-preferences')
+  async activateMatchPreference(
+    @Req() req: Request,
+    @Body() body: { participantId: string; declaredAttributes: Record<string, unknown>; confirmed: boolean },
+  ) {
+    const ctx = requireActor(req);
+    const result = await activateMatchPreference(this.deps.m18, ctx, {
+      participantId: body.participantId,
+      declaredAttributes: body.declaredAttributes ?? {},
+      confirmed: body.confirmed === true,
+    });
+    return { data: { type: 'MatchPreference', id: result.matchPreferenceId, meta: { state: 'Active' } } };
+  }
+
+  @Post('match-candidates/:candidateId/decision')
+  async recordMatchDecision(
+    @Req() req: Request,
+    @Param('candidateId') candidateId: string,
+    @Body() body: {
+      participantId: string;
+      expectedCandidateVersion: number;
+      decision: 'Interested' | 'Not Now' | 'Dismissed' | 'Blocked' | 'Reported';
+      confirmed: boolean;
+    },
+  ) {
+    const ctx = requireActor(req);
+    const result = await recordMatchDecision(this.deps.m18, ctx, {
+      matchCandidateId: candidateId,
+      participantId: body.participantId,
+      expectedCandidateVersion: body.expectedCandidateVersion,
+      decision: body.decision,
+      confirmed: body.confirmed === true,
+    });
+    // mutualAcceptanceId appears only when BOTH parties independently
+    // chose Interested (ADR-036); one decision alone never connects.
+    return {
+      data: {
+        type: 'MatchDecision',
+        id: result.matchDecisionId,
+        meta: result.mutualAcceptanceId === undefined ? {} : { mutualAcceptanceId: result.mutualAcceptanceId },
+      },
+    };
+  }
+
+  @Post('mutual-acceptances/:mutualAcceptanceId/activate-connection')
+  async activateConnection(
+    @Req() req: Request,
+    @Param('mutualAcceptanceId') mutualAcceptanceId: string,
+    @Body() body: { participantId: string; confirmed: boolean },
+  ) {
+    const ctx = requireActor(req);
+    const result = await activateConnection(this.deps.m18, ctx, {
+      mutualAcceptanceId,
+      participantId: body.participantId,
+      confirmed: body.confirmed === true,
+    });
+    return { data: { type: 'Connection', id: result.connectionId, meta: { state: 'Active' } } };
   }
 }

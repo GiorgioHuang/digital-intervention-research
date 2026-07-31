@@ -24,11 +24,13 @@ export function buildAppModule(config: ApiConfig) {
     participantIdentity: createParticipantQuery(pool),
     blocks: createBlockQuery(pool),
   });
+  const checkPermission = permissions.evaluate.bind(permissions);
   const deps: ApiDeps = {
     pool,
     clock,
     permissions,
-    m18: { pool, clock, checkPermission: permissions.evaluate.bind(permissions) },
+    m09: { pool, clock, checkPermission },
+    m18: { pool, clock, checkPermission },
   };
 
   @Module({

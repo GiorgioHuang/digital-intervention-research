@@ -53,6 +53,9 @@ importers:
       '@platform/m03-consent-permission':
         specifier: workspace:*
         version: link:../../packages/modules/m03-consent-permission
+      '@platform/m09-safety':
+        specifier: workspace:*
+        version: link:../../packages/modules/m09-safety
       '@platform/m18-community-social':
         specifier: workspace:*
         version: link:../../packages/modules/m18-community-social
