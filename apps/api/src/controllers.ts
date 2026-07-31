@@ -5,6 +5,7 @@ import type { Pool } from '@platform/database';
 import { recordConsentDecision, withdrawConsent, type PermissionServicePort } from '@platform/m03-consent-permission';
 import type { M04Deps } from '@platform/m04-research-design';
 import type { M05Deps } from '@platform/m05-enrolment';
+import type { M06Deps } from '@platform/m06-intervention-portfolio';
 import { recordSafetySignal, type M09Deps } from '@platform/m09-safety';
 import type { M12Deps } from '@platform/m12-dataset';
 import type { M13Deps } from '@platform/m13-analysis';
@@ -33,6 +34,7 @@ export interface ApiDeps {
   permissions: PermissionServicePort;
   m04: M04Deps;
   m05: M05Deps;
+  m06: M06Deps;
   m09: M09Deps;
   m12: M12Deps;
   m13: M13Deps;

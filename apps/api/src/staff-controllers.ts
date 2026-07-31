@@ -17,6 +17,14 @@ import {
   withdrawParticipant,
 } from '@platform/m05-enrolment';
 import {
+  activateInterventionVersion,
+  approveInterventionVersion,
+  createIntervention,
+  createInterventionConfiguration,
+  createInterventionVersion,
+  submitInterventionVersion,
+} from '@platform/m06-intervention-portfolio';
+import {
   approveDatasetDefinition,
   completeQualityReview,
   createDatasetDefinition,
@@ -165,6 +173,85 @@ export class StaffCommandController {
     if (body.reasonCategory !== undefined) input.reasonCategory = body.reasonCategory;
     await withdrawParticipant(this.deps.m05, ctx, input);
     return { data: { type: 'Enrolment', id: enrolmentId, meta: { state: 'Withdrawn' } } };
+  }
+
+  // --- M06 intervention portfolio -------------------------------------
+
+  @Post('interventions')
+  async createIntervention(@Req() req: Request, @Body() body: { interventionCode: string; name: string }) {
+    const ctx = requireActor(req);
+    const result = await createIntervention(this.deps.m06, ctx, body);
+    return { data: { type: 'Intervention', id: result.interventionId } };
+  }
+
+  @Post('interventions/:interventionId/versions')
+  async draftInterventionVersion(
+    @Req() req: Request,
+    @Param('interventionId') interventionId: string,
+    @Body() body: { content: object },
+  ) {
+    const ctx = requireActor(req);
+    const result = await createInterventionVersion(this.deps.m06, ctx, { interventionId, content: body.content });
+    return {
+      data: {
+        type: 'InterventionVersion',
+        id: result.interventionVersionId,
+        meta: { versionNumber: result.versionNumber },
+      },
+    };
+  }
+
+  @Post('intervention-versions/:versionId/submit')
+  async submitInterventionVersion(@Req() req: Request, @Param('versionId') versionId: string) {
+    const ctx = requireActor(req);
+    await submitInterventionVersion(this.deps.m06, ctx, versionId);
+    return { data: { type: 'InterventionVersion', id: versionId, meta: { state: 'In Review' } } };
+  }
+
+  @Post('intervention-versions/:versionId/approve')
+  async approveInterventionVersion(
+    @Req() req: Request,
+    @Param('versionId') versionId: string,
+    @Body() body: { confirmed: boolean },
+  ) {
+    const ctx = requireActor(req);
+    await approveInterventionVersion(this.deps.m06, ctx, versionId, body.confirmed === true);
+    return { data: { type: 'InterventionVersion', id: versionId, meta: { state: 'Approved' } } };
+  }
+
+  @Post('intervention-versions/:versionId/activate')
+  async activateInterventionVersion(
+    @Req() req: Request,
+    @Param('versionId') versionId: string,
+    @Body() body: { confirmed: boolean },
+  ) {
+    const ctx = requireActor(req);
+    await activateInterventionVersion(this.deps.m06, ctx, versionId, body.confirmed === true);
+    return { data: { type: 'InterventionVersion', id: versionId, meta: { state: 'Active' } } };
+  }
+
+  @Post('intervention-configurations')
+  async createInterventionConfiguration(
+    @Req() req: Request,
+    @Body() body: {
+      researchProjectId: string;
+      protocolVersionId: string;
+      interventionVersionId: string;
+      settings?: object;
+    },
+  ) {
+    const ctx = requireActor(req);
+    // Lineage binding: the configuration references the EXACT protocol
+    // and intervention versions; only Approved/Active intervention
+    // versions are a valid basis.
+    const input: Parameters<typeof createInterventionConfiguration>[2] = {
+      researchProjectId: body.researchProjectId,
+      protocolVersionId: body.protocolVersionId,
+      interventionVersionId: body.interventionVersionId,
+    };
+    if (body.settings !== undefined) input.settings = body.settings;
+    const result = await createInterventionConfiguration(this.deps.m06, ctx, input);
+    return { data: { type: 'InterventionConfiguration', id: result.interventionConfigurationId } };
   }
 
   // --- M12 dataset lineage --------------------------------------------

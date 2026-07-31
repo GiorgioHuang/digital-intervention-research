@@ -40,6 +40,7 @@ export function buildAppModule(config: ApiConfig) {
       participants: createParticipantQuery(pool),
       protocolVersions: createProtocolVersionQuery(pool),
     },
+    m06: moduleDeps,
     m09: moduleDeps,
     m12: moduleDeps,
     m13: moduleDeps,

@@ -360,3 +360,13 @@
   code: [packages/modules/m18-community-social/src/application/queries.ts, apps/api/src/controllers.ts]
   tests: [apps/api/test/api.e2e.test.ts, apps/web/test/messages-screen.test.tsx]
   status: implemented
+
+- implementation_id: IMP-API-HTTP-005
+  module: M06
+  summary: Intervention portfolio REST slice - create intervention, draft/submit/approve/activate versions (approval human+confirmed+MFA with separation of duties), configuration binding exact protocol+intervention versions with Approved/Active-only gate
+  trace_ids: [ATR-004, ATR-023]
+  adr_ids: [ADR-051, ADR-048]
+  docs: ["Doc 5 intervention portfolio", "Doc 15 §21-31", "Doc 14 MFA list"]
+  code: [apps/api/src/staff-controllers.ts, openapi/openapi.yaml]
+  tests: [apps/api/test/api.e2e.test.ts]
+  status: implemented

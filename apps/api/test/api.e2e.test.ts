@@ -220,6 +220,42 @@ describe.skipIf(!dbAvailable)('HTTP API (e2e)', () => {
     expect((await call(`/v1/protocol-versions/${versionId}/activate`, approverAcc, { confirmed: true })).status).toBe(201);
   });
 
+  it('intervention chain over HTTP: draft, submit, MFA approve, activate; config refuses unapproved versions', async () => {
+    const int = await call('/v1/interventions', researcherAcc, {
+      interventionCode: `INT-E2E-${Date.now() % 1_000_000}`, name: 'Companionship programme',
+    });
+    expect(int.status).toBe(201);
+    const intId = ((await int.json()) as { data: { id: string } }).data.id;
+
+    const ver = await call(`/v1/interventions/${intId}/versions`, researcherAcc, {
+      content: { sessions: 8, mode: 'group' },
+    });
+    expect(ver.status).toBe(201);
+    const verId = ((await ver.json()) as { data: { id: string } }).data.id;
+
+    // Draft versions are never a valid configuration basis.
+    const early = await call('/v1/intervention-configurations', researcherAcc, {
+      researchProjectId: 'rp_e2e_int', protocolVersionId: 'pv_e2e_ref', interventionVersionId: verId,
+    });
+    expect(early.status).toBe(409);
+    expect(((await early.json()) as { error: { code: string } }).error.code).toBe('RESOURCE_STATE_BLOCKED');
+
+    expect((await call(`/v1/intervention-versions/${verId}/submit`, researcherAcc, {})).status).toBe(201);
+    // Intervention approval is on the MFA list, like protocol approval.
+    const weak = await call(`/v1/intervention-versions/${verId}/approve`, approverAcc, { confirmed: true });
+    expect(weak.status).toBe(401);
+    expect(((await weak.json()) as { error: { code: string } }).error.code).toBe('STEP_UP_AUTHENTICATION_REQUIRED');
+    const mfa = { 'x-auth-strength': 'mfa' };
+    expect((await call(`/v1/intervention-versions/${verId}/approve`, approverAcc, { confirmed: true }, mfa)).status).toBe(201);
+    expect((await call(`/v1/intervention-versions/${verId}/activate`, approverAcc, { confirmed: true })).status).toBe(201);
+
+    const cfg = await call('/v1/intervention-configurations', researcherAcc, {
+      researchProjectId: 'rp_e2e_int', protocolVersionId: 'pv_e2e_ref', interventionVersionId: verId,
+    });
+    expect(cfg.status).toBe(201);
+    expect(((await cfg.json()) as { data: { id: string } }).data.id).toMatch(/^ic_/);
+  });
+
   it('dataset lock over HTTP is human+MFA: password-strength auth is refused, MFA succeeds', async () => {
     const def = await call('/v1/dataset-definitions', researcherAcc, {
       researchProjectId: 'rp_http_ds', name: 'primary-outcomes', variables: { v1: 'mood' },

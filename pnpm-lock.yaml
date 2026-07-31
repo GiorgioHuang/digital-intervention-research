@@ -59,6 +59,9 @@ importers:
       '@platform/m05-enrolment':
         specifier: workspace:*
         version: link:../../packages/modules/m05-enrolment
+      '@platform/m06-intervention-portfolio':
+        specifier: workspace:*
+        version: link:../../packages/modules/m06-intervention-portfolio
       '@platform/m09-safety':
         specifier: workspace:*
         version: link:../../packages/modules/m09-safety

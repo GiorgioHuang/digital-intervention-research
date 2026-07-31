@@ -266,6 +266,27 @@ paths:
       summary: Activate an approved ProtocolVersion (supersedes any previously active version)
       parameters: [{ name: versionId, in: path, required: true, schema: { type: string } }]
       responses: { '201': { description: Active } }
+  /v1/interventions:
+    post: { summary: Create an Intervention (M06), responses: { '201': { description: created } } }
+  /v1/interventions/{interventionId}/versions:
+    post: { summary: Draft an InterventionVersion (immutable once approved), parameters: [{ name: interventionId, in: path, required: true, schema: { type: string } }], responses: { '201': { description: draft created } } }
+  /v1/intervention-versions/{versionId}/submit:
+    post: { summary: Submit an InterventionVersion for review (records submitter), parameters: [{ name: versionId, in: path, required: true, schema: { type: string } }], responses: { '201': { description: In Review } } }
+  /v1/intervention-versions/{versionId}/approve:
+    post:
+      summary: Approve an InterventionVersion (human, confirmed, MFA; approver ≠ submitter)
+      parameters: [{ name: versionId, in: path, required: true, schema: { type: string } }]
+      responses:
+        '201': { description: Approved }
+        '401': { description: STEP_UP_AUTHENTICATION_REQUIRED without MFA }
+  /v1/intervention-versions/{versionId}/activate:
+    post: { summary: Activate an approved InterventionVersion (supersedes previously active), parameters: [{ name: versionId, in: path, required: true, schema: { type: string } }], responses: { '201': { description: Active } } }
+  /v1/intervention-configurations:
+    post:
+      summary: Bind exact protocol + intervention versions into a configuration (Approved/Active intervention versions only)
+      responses:
+        '201': { description: created }
+        '409': { description: RESOURCE_STATE_BLOCKED for draft/in-review intervention versions }
   /v1/enrolments/invite:
     post:
       summary: Invite a participant against an Approved/Active ProtocolVersion only (ATR-004)
