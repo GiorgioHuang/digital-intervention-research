@@ -370,3 +370,13 @@
   code: [apps/api/src/staff-controllers.ts, openapi/openapi.yaml]
   tests: [apps/api/test/api.e2e.test.ts]
   status: implemented
+
+- implementation_id: IMP-API-HTTP-006
+  module: M09
+  summary: Safety triage REST endpoint - confirmed human dispositions (close/escalate), conversion to SafetyEvent as human+confirmed+MFA authority creating the event atomically, protected-existence denial for non-reviewers, terminal dispositions immutable
+  trace_ids: [ATR-017, ATR-023]
+  adr_ids: [ADR-039, ADR-050]
+  docs: ["Doc 9 safety authority", "Doc 15 §21-31", "Doc 14 MFA list"]
+  code: [apps/api/src/staff-controllers.ts, openapi/openapi.yaml]
+  tests: [apps/api/test/api.e2e.test.ts]
+  status: implemented

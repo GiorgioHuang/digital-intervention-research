@@ -24,7 +24,7 @@ describe.skipIf(!dbAvailable)('HTTP API (e2e)', () => {
   let baseUrl: string;
   let pool: pg.Pool;
   let patAcc: string, patId: string, strangerAcc: string;
-  let researcherAcc: string, approverAcc: string;
+  let researcherAcc: string, approverAcc: string, safetyAcc: string;
 
   const call = (path: string, actor: string | undefined, body?: object, headers?: Record<string, string>) =>
     fetch(`${baseUrl}${path}`, {
@@ -66,6 +66,8 @@ describe.skipIf(!dbAvailable)('HTTP API (e2e)', () => {
     await assignRole(m01, orgCtx, { userAccountId: researcherAcc, role: 'Researcher', confirmed: true });
     ({ userAccountId: approverAcc } = await createUserAccount(m01, orgCtx, { displayName: 'App' }));
     await assignRole(m01, orgCtx, { userAccountId: approverAcc, role: 'ResearchApprover', confirmed: true });
+    ({ userAccountId: safetyAcc } = await createUserAccount(m01, orgCtx, { displayName: 'Saf' }));
+    await assignRole(m01, orgCtx, { userAccountId: safetyAcc, role: 'SafetyReviewer', confirmed: true });
 
     app = await NestFactory.create(
       buildAppModule({ DATABASE_URL, API_PORT: 0, LOG_LEVEL: 'error', AUTH_MODE: 'dev-header' }),
@@ -190,6 +192,53 @@ describe.skipIf(!dbAvailable)('HTTP API (e2e)', () => {
     });
     expect(res.status).toBe(404);
     expect(((await res.json()) as { error: { code: string } }).error.code).toBe('RESOURCE_NOT_FOUND');
+  });
+
+  it('safety triage over HTTP: confirmed human dispositions; conversion to SafetyEvent needs MFA', async () => {
+    const sig = await call('/v1/safety-signals', patAcc, {
+      sourceType: 'Participant', category: 'wellbeing-concern', severity: 'High', description: 'Triage me',
+    });
+    expect(sig.status).toBe(201);
+    const signalId = ((await sig.json()) as { data: { id: string } }).data.id;
+
+    // A participant probing triage learns nothing (protected existence).
+    const outsider = await call(`/v1/safety-signals/${signalId}/triage`, patAcc, {
+      disposition: 'Escalated', reason: 'x', confirmed: true,
+    });
+    expect(outsider.status).toBe(404);
+
+    // Triage is confirmed work: unconfirmed is refused.
+    const unconfirmed = await call(`/v1/safety-signals/${signalId}/triage`, safetyAcc, {
+      disposition: 'Escalated', reason: 'Needs senior review', confirmed: false,
+    });
+    expect(unconfirmed.status).toBe(409);
+    expect(((await unconfirmed.json()) as { error: { code: string } }).error.code).toBe('CONFIRMATION_REQUIRED');
+
+    const escalated = await call(`/v1/safety-signals/${signalId}/triage`, safetyAcc, {
+      disposition: 'Escalated', reason: 'Needs senior review', confirmed: true,
+    });
+    expect(escalated.status).toBe(201);
+
+    // Conversion is the strongest authority: human + confirmed + MFA.
+    const weakConvert = await call(`/v1/safety-signals/${signalId}/triage`, safetyAcc, {
+      disposition: 'Converted to Safety Event', reason: 'Confirmed risk', confirmed: true,
+    });
+    expect(weakConvert.status).toBe(401);
+    expect(((await weakConvert.json()) as { error: { code: string } }).error.code).toBe('STEP_UP_AUTHENTICATION_REQUIRED');
+
+    const converted = await call(`/v1/safety-signals/${signalId}/triage`, safetyAcc, {
+      disposition: 'Converted to Safety Event', reason: 'Confirmed risk', confirmed: true,
+    }, { 'x-auth-strength': 'mfa' });
+    expect(converted.status).toBe(201);
+    const meta = ((await converted.json()) as { data: { meta: { safetyEventId?: string } } }).data.meta;
+    expect(meta.safetyEventId).toMatch(/^se_/);
+
+    // A terminal disposition cannot be triaged again.
+    const again = await call(`/v1/safety-signals/${signalId}/triage`, safetyAcc, {
+      disposition: 'Closed as Not a Safety Event', reason: 'no-op', confirmed: true,
+    });
+    expect(again.status).toBe(409);
+    expect(((await again.json()) as { error: { code: string } }).error.code).toBe('INVALID_STATE_TRANSITION');
   });
 
   it('staff protocol chain over HTTP with separation of duties: submitter cannot approve', async () => {

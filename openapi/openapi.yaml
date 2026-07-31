@@ -164,6 +164,26 @@ paths:
       responses:
         '201': { description: SafetySignal recorded }
         '401': { $ref: '#/components/responses/Error' }
+  /v1/safety-signals/{signalId}/triage:
+    post:
+      summary: Human triage disposition (confirmed; ADR-039). Conversion to a SafetyEvent additionally requires MFA and creates the event atomically — automation can never do this.
+      parameters: [{ name: signalId, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [disposition, reason, confirmed]
+              properties:
+                disposition: { type: string, enum: ['Closed as Not a Safety Event', Escalated, 'Converted to Safety Event'] }
+                reason: { type: string }
+                confirmed: { type: boolean }
+      responses:
+        '201': { description: Disposition recorded; safetyEventId in meta on conversion }
+        '401': { description: STEP_UP_AUTHENTICATION_REQUIRED for conversion without MFA }
+        '404': { description: Protected existence — non-reviewers learn nothing }
+        '409': { description: CONFIRMATION_REQUIRED / INVALID_STATE_TRANSITION }
   /v1/match-preferences:
     post:
       summary: Opt in to matching (owner-only, requires open-matching consent + confirmation; ADR-036)

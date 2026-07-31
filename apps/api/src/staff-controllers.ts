@@ -24,6 +24,7 @@ import {
   createInterventionVersion,
   submitInterventionVersion,
 } from '@platform/m06-intervention-portfolio';
+import { triageSafetySignal } from '@platform/m09-safety';
 import {
   approveDatasetDefinition,
   completeQualityReview,
@@ -252,6 +253,40 @@ export class StaffCommandController {
     if (body.settings !== undefined) input.settings = body.settings;
     const result = await createInterventionConfiguration(this.deps.m06, ctx, input);
     return { data: { type: 'InterventionConfiguration', id: result.interventionConfigurationId } };
+  }
+
+  // --- M09 safety triage ----------------------------------------------
+
+  @Post('safety-signals/:signalId/triage')
+  async triageSafetySignal(
+    @Req() req: Request,
+    @Param('signalId') safetySignalId: string,
+    @Body() body: {
+      disposition: 'Closed as Not a Safety Event' | 'Escalated' | 'Converted to Safety Event';
+      reason: string;
+      confirmed: boolean;
+    },
+  ) {
+    const ctx = requireActor(req);
+    // Human authority (ADR-039/ATR-017): triage is confirmed human work;
+    // conversion to a SafetyEvent additionally requires MFA. The module
+    // refuses non-human actors unconditionally.
+    const result = await triageSafetySignal(this.deps.m09, ctx, {
+      safetySignalId,
+      disposition: body.disposition,
+      reason: body.reason,
+      confirmed: body.confirmed === true,
+    });
+    return {
+      data: {
+        type: 'SafetySignal',
+        id: safetySignalId,
+        meta: {
+          disposition: body.disposition,
+          ...(result.safetyEventId === undefined ? {} : { safetyEventId: result.safetyEventId }),
+        },
+      },
+    };
   }
 
   // --- M12 dataset lineage --------------------------------------------
