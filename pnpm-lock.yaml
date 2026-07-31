@@ -71,6 +71,9 @@ importers:
       '@platform/m13-analysis':
         specifier: workspace:*
         version: link:../../packages/modules/m13-analysis
+      '@platform/m17-life-story':
+        specifier: workspace:*
+        version: link:../../packages/modules/m17-life-story
       '@platform/m18-community-social':
         specifier: workspace:*
         version: link:../../packages/modules/m18-community-social

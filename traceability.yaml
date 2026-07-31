@@ -380,3 +380,13 @@
   code: [apps/api/src/staff-controllers.ts, openapi/openapi.yaml]
   tests: [apps/api/test/api.e2e.test.ts]
   status: implemented
+
+- implementation_id: IMP-API-HTTP-007
+  module: M17
+  summary: Life Story REST slice - archive/item/version creation, exact-version testimony confirmation (VERSION_CONFLICT on mismatch), visibility change with Internet Public refused (UNSUPPORTED_CAPABILITY), supporter contribution gated on relationship+consent with owner-only review producing SupporterContribution versions that never become testimony, confirmed withdrawal
+  trace_ids: [ATR-014, ATR-023]
+  adr_ids: [ADR-020, ADR-042, ADR-050]
+  docs: ["Doc 10 life story", "Doc 15 §21-31"]
+  code: [apps/api/src/controllers.ts, openapi/openapi.yaml]
+  tests: [apps/api/test/api.e2e.test.ts]
+  status: implemented

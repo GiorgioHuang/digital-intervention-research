@@ -10,6 +10,19 @@ import { recordSafetySignal, type M09Deps } from '@platform/m09-safety';
 import type { M12Deps } from '@platform/m12-dataset';
 import type { M13Deps } from '@platform/m13-analysis';
 import {
+  changeVisibility,
+  confirmTestimony,
+  createArchive,
+  createItem,
+  proposeContribution,
+  reviewContribution,
+  reviseItem,
+  withdrawItem,
+  type LifeStorySourceType,
+  type LifeStoryVisibility,
+  type M17Deps,
+} from '@platform/m17-life-story';
+import {
   activateConnection,
   activateMatchPreference,
   confirmSend,
@@ -38,6 +51,7 @@ export interface ApiDeps {
   m09: M09Deps;
   m12: M12Deps;
   m13: M13Deps;
+  m17: M17Deps;
   m18: M18Deps;
 }
 
@@ -237,6 +251,127 @@ export class CommandController {
         meta: result.mutualAcceptanceId === undefined ? {} : { mutualAcceptanceId: result.mutualAcceptanceId },
       },
     };
+  }
+
+  // --- M17 life story --------------------------------------------------
+
+  @Post('life-story/archives')
+  async createArchive(@Req() req: Request, @Body() body: { participantId: string }) {
+    const ctx = requireActor(req);
+    const result = await createArchive(this.deps.m17, ctx, { participantId: body.participantId });
+    return { data: { type: 'LifeStoryArchive', id: result.archiveId } };
+  }
+
+  @Post('life-story/archives/:archiveId/items')
+  async createItem(
+    @Req() req: Request,
+    @Param('archiveId') archiveId: string,
+    @Body() body: { title: string; contentText: string; sourceType: LifeStorySourceType },
+  ) {
+    const ctx = requireActor(req);
+    const result = await createItem(this.deps.m17, ctx, {
+      archiveId,
+      title: body.title,
+      contentText: body.contentText,
+      sourceType: body.sourceType,
+    });
+    return { data: { type: 'LifeStoryItem', id: result.itemId, meta: { versionId: result.versionId } } };
+  }
+
+  @Post('life-story/items/:itemId/revise')
+  async reviseItem(
+    @Req() req: Request,
+    @Param('itemId') itemId: string,
+    @Body() body: { contentText: string; sourceType: LifeStorySourceType },
+  ) {
+    const ctx = requireActor(req);
+    const result = await reviseItem(this.deps.m17, ctx, {
+      itemId,
+      contentText: body.contentText,
+      sourceType: body.sourceType,
+    });
+    return { data: { type: 'LifeStoryItem', id: itemId, meta: { versionId: result.versionId } } };
+  }
+
+  @Post('life-story/items/:itemId/confirm-testimony')
+  async confirmTestimony(
+    @Req() req: Request,
+    @Param('itemId') itemId: string,
+    @Body() body: { versionId: string; confirmed: boolean },
+  ) {
+    const ctx = requireActor(req);
+    // Testimony binds to the EXACT version the participant confirmed —
+    // AI Draft and Supporter Contribution never become testimony
+    // implicitly (ADR-042).
+    await confirmTestimony(this.deps.m17, ctx, {
+      itemId,
+      versionId: body.versionId,
+      confirmed: body.confirmed === true,
+    });
+    return { data: { type: 'LifeStoryItem', id: itemId, meta: { versionId: body.versionId, testimonyState: 'ParticipantTestimony' } } };
+  }
+
+  @Post('life-story/items/:itemId/visibility')
+  async changeVisibility(
+    @Req() req: Request,
+    @Param('itemId') itemId: string,
+    @Body() body: { visibility: LifeStoryVisibility | 'Internet Public'; confirmed: boolean },
+  ) {
+    const ctx = requireActor(req);
+    // Internet Public is feature-disabled for the first Pilot — refused
+    // by the command AND the DB CHECK (defence in depth, ADR-020).
+    await changeVisibility(this.deps.m17, ctx, {
+      itemId,
+      visibility: body.visibility,
+      confirmed: body.confirmed === true,
+    });
+    return { data: { type: 'LifeStoryItem', id: itemId, meta: { visibility: body.visibility } } };
+  }
+
+  @Post('life-story/archives/:archiveId/contributions')
+  async proposeContribution(
+    @Req() req: Request,
+    @Param('archiveId') archiveId: string,
+    @Body() body: { itemId?: string; contentText: string },
+  ) {
+    const ctx = requireActor(req);
+    const input: Parameters<typeof proposeContribution>[2] = { archiveId, contentText: body.contentText };
+    if (body.itemId !== undefined) input.itemId = body.itemId;
+    const result = await proposeContribution(this.deps.m17, ctx, input);
+    return { data: { type: 'LifeStoryContribution', id: result.contributionId, meta: { state: 'Proposed' } } };
+  }
+
+  @Post('life-story/contributions/:contributionId/review')
+  async reviewContribution(
+    @Req() req: Request,
+    @Param('contributionId') contributionId: string,
+    @Body() body: { itemId: string; decision: 'Accepted' | 'Rejected' },
+  ) {
+    const ctx = requireActor(req);
+    // Only the archive owner reviews; acceptance creates a version with
+    // source SupporterContribution — it does NOT become testimony.
+    const result = await reviewContribution(this.deps.m17, ctx, {
+      contributionId,
+      itemId: body.itemId,
+      decision: body.decision,
+    });
+    return {
+      data: {
+        type: 'LifeStoryContribution',
+        id: contributionId,
+        meta: {
+          state: body.decision,
+          ...(result.versionId === undefined ? {} : { versionId: result.versionId }),
+        },
+      },
+    };
+  }
+
+  @Post('life-story/items/:itemId/withdraw')
+  async withdrawItem(@Req() req: Request, @Param('itemId') itemId: string, @Body() body: { confirmed: boolean }) {
+    const ctx = requireActor(req);
+    await withdrawItem(this.deps.m17, ctx, { itemId, confirmed: body.confirmed === true });
+    return { data: { type: 'LifeStoryItem', id: itemId, meta: { state: 'Withdrawn' } } };
   }
 
   @Get('participants/:participantId/connections')

@@ -7,7 +7,7 @@ import { createPool, migrate } from '@platform/database';
 import { POLICY_V1 } from '@platform/policy';
 import { assignRole, createOrganisation, createRoleAssignmentQuery, createUserAccount, seedBootstrapAdministrator } from '@platform/m01-identity-org';
 import { createParticipantQuery, registerParticipant } from '@platform/m02-participant';
-import { createPermissionService } from '@platform/m03-consent-permission';
+import { approveRelationship, createPermissionService, proposeRelationship } from '@platform/m03-consent-permission';
 import { buildAppModule } from '../src/app.module.js';
 
 const DATABASE_URL =
@@ -24,7 +24,7 @@ describe.skipIf(!dbAvailable)('HTTP API (e2e)', () => {
   let baseUrl: string;
   let pool: pg.Pool;
   let patAcc: string, patId: string, strangerAcc: string;
-  let researcherAcc: string, approverAcc: string, safetyAcc: string;
+  let researcherAcc: string, approverAcc: string, safetyAcc: string, supporterAcc: string;
 
   const call = (path: string, actor: string | undefined, body?: object, headers?: Record<string, string>) =>
     fetch(`${baseUrl}${path}`, {
@@ -68,6 +68,21 @@ describe.skipIf(!dbAvailable)('HTTP API (e2e)', () => {
     await assignRole(m01, orgCtx, { userAccountId: approverAcc, role: 'ResearchApprover', confirmed: true });
     ({ userAccountId: safetyAcc } = await createUserAccount(m01, orgCtx, { displayName: 'Saf' }));
     await assignRole(m01, orgCtx, { userAccountId: safetyAcc, role: 'SafetyReviewer', confirmed: true });
+    ({ userAccountId: supporterAcc } = await createUserAccount(m01, orgCtx, { displayName: 'Sam' }));
+    await assignRole(m01, orgCtx, { userAccountId: supporterAcc, role: 'Supporter', confirmed: true });
+    // Supporter relationship (approved by the participant) seeds the
+    // life-story contribution path; relationship endpoints are not yet
+    // HTTP-exposed so this uses the module commands directly.
+    const m03 = { pool, clock, permissions };
+    const { relationshipId } = await proposeRelationship(m03, orgCtx, {
+      participantId: patId,
+      relatedActorId: supporterAcc,
+      relationshipType: 'FamilyMember',
+      permittedActions: ['life-story.contribute'],
+    });
+    await approveRelationship(m03, createRequestContext({ actor: { type: 'user', id: patAcc } }), {
+      relationshipId, expectedVersion: 1, confirmed: true,
+    });
 
     app = await NestFactory.create(
       buildAppModule({ DATABASE_URL, API_PORT: 0, LOG_LEVEL: 'error', AUTH_MODE: 'dev-header' }),
@@ -329,6 +344,92 @@ describe.skipIf(!dbAvailable)('HTTP API (e2e)', () => {
     });
     expect(locked.status).toBe(201);
     expect(((await locked.json()) as { data: { id: string } }).data.id).toMatch(/^dl_/);
+  });
+
+  let archiveId: string;
+
+  it('life story over HTTP: testimony binds the exact version; Internet Public stays disabled', async () => {
+    const arch = await call('/v1/life-story/archives', patAcc, { participantId: patId });
+    expect(arch.status).toBe(201);
+    archiveId = ((await arch.json()) as { data: { id: string } }).data.id;
+
+    // A stranger probing the archive learns nothing.
+    const outsider = await call(`/v1/life-story/archives/${archiveId}/items`, strangerAcc, {
+      title: 'x', contentText: 'x', sourceType: 'ParticipantAuthored',
+    });
+    expect(outsider.status).toBe(404);
+
+    const item = await call(`/v1/life-story/archives/${archiveId}/items`, patAcc, {
+      title: '花园的夏天', contentText: '那年夏天我们种了玫瑰。', sourceType: 'ParticipantAuthored',
+    });
+    expect(item.status).toBe(201);
+    const itemBody = (await item.json()) as { data: { id: string; meta: { versionId: string } } };
+    const itemId = itemBody.data.id;
+    const versionId = itemBody.data.meta.versionId;
+
+    // Confirming a version that is not the one shown is a version conflict.
+    const wrong = await call(`/v1/life-story/items/${itemId}/confirm-testimony`, patAcc, {
+      versionId: 'lsv_other', confirmed: true,
+    });
+    expect(wrong.status).toBe(412);
+    expect(((await wrong.json()) as { error: { code: string } }).error.code).toBe('VERSION_CONFLICT');
+
+    expect((await call(`/v1/life-story/items/${itemId}/confirm-testimony`, patAcc, {
+      versionId, confirmed: true,
+    })).status).toBe(201);
+
+    // Internet Public is double-disabled for the first Pilot (ADR-020).
+    const internet = await call(`/v1/life-story/items/${itemId}/visibility`, patAcc, {
+      visibility: 'Internet Public', confirmed: true,
+    });
+    expect(internet.status).toBe(400);
+    expect(((await internet.json()) as { error: { code: string } }).error.code).toBe('UNSUPPORTED_CAPABILITY');
+
+    expect((await call(`/v1/life-story/items/${itemId}/visibility`, patAcc, {
+      visibility: 'Connections', confirmed: true,
+    })).status).toBe(201);
+  });
+
+  it('supporter contribution over HTTP needs consent; acceptance never becomes testimony', async () => {
+    // One archive per participant — reuses the archive from the previous test.
+    const item = await call(`/v1/life-story/archives/${archiveId}/items`, patAcc, {
+      title: '老照片', contentText: '第一稿。', sourceType: 'ParticipantAuthored',
+    });
+    const itemId = ((await item.json()) as { data: { id: string } }).data.id;
+
+    // Relationship exists (seeded) but the supporter-contribution consent
+    // does not — denied with hidden existence.
+    const early = await call(`/v1/life-story/archives/${archiveId}/contributions`, supporterAcc, {
+      itemId, contentText: '我记得那天的玫瑰。',
+    });
+    expect(early.status).toBe(404);
+
+    expect((await call(`/v1/participants/${patId}/consents`, patAcc, {
+      scope: 'supporter-contribution', decision: 'Granted', templateVersion: 'ct_v1',
+    })).status).toBe(201);
+
+    const prop = await call(`/v1/life-story/archives/${archiveId}/contributions`, supporterAcc, {
+      itemId, contentText: '我记得那天的玫瑰。',
+    });
+    expect(prop.status).toBe(201);
+    const contributionId = ((await prop.json()) as { data: { id: string } }).data.id;
+
+    // Only the archive owner reviews — the supporter cannot accept their own.
+    const selfReview = await call(`/v1/life-story/contributions/${contributionId}/review`, supporterAcc, {
+      itemId, decision: 'Accepted',
+    });
+    expect(selfReview.status).toBe(404);
+
+    const accepted = await call(`/v1/life-story/contributions/${contributionId}/review`, patAcc, {
+      itemId, decision: 'Accepted',
+    });
+    expect(accepted.status).toBe(201);
+    const meta = ((await accepted.json()) as { data: { meta: { versionId?: string } } }).data.meta;
+    expect(meta.versionId).toBeDefined();
+    // The accepted contribution is a SupporterContribution version, not testimony.
+    const v = await pool.query('SELECT source_type, testimony_state FROM life_story.item_versions WHERE id = $1', [meta.versionId]);
+    expect(v.rows[0].source_type).toBe('SupporterContribution');
+    expect(v.rows[0].testimony_state).toBe('NotTestimony');
   });
 
   it('owner can list own connections, threads and candidates; a stranger gets protected-existence 404', async () => {

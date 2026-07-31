@@ -238,6 +238,41 @@ paths:
       responses:
         '201': { description: Connection active }
         '409': { description: MUTUAL_ACCEPTANCE_CONSUMED / CONFIRMATION_REQUIRED }
+  /v1/life-story/archives:
+    post: { summary: Create the participant's LifeStoryArchive (one per participant; owner-only), responses: { '201': { description: created }, '404': { description: protected existence } } }
+  /v1/life-story/archives/{archiveId}/items:
+    post:
+      summary: Create a LifeStoryItem with its first version (owner-only; versions are immutable)
+      parameters: [{ name: archiveId, in: path, required: true, schema: { type: string } }]
+      responses: { '201': { description: item + versionId in meta }, '404': { description: protected existence } }
+  /v1/life-story/items/{itemId}/revise:
+    post: { summary: Add a new immutable version (ParticipantAuthored / AIDraft / Transcription), parameters: [{ name: itemId, in: path, required: true, schema: { type: string } }], responses: { '201': { description: new versionId in meta } } }
+  /v1/life-story/items/{itemId}/confirm-testimony:
+    post:
+      summary: Confirm the EXACT version as Participant Testimony (owner, confirmed; AI drafts and contributions never become testimony implicitly, ADR-042)
+      parameters: [{ name: itemId, in: path, required: true, schema: { type: string } }]
+      responses:
+        '201': { description: version is now ParticipantTestimony }
+        '412': { description: VERSION_CONFLICT — not the version shown, or already confirmed }
+  /v1/life-story/items/{itemId}/visibility:
+    post:
+      summary: Change visibility (owner, confirmed). Internet Public is feature-disabled for the first Pilot — refused by command AND DB CHECK (ADR-020)
+      parameters: [{ name: itemId, in: path, required: true, schema: { type: string } }]
+      responses:
+        '201': { description: visibility changed }
+        '400': { description: UNSUPPORTED_CAPABILITY for Internet Public }
+  /v1/life-story/archives/{archiveId}/contributions:
+    post:
+      summary: Propose a supporter contribution (requires approved relationship + supporter-contribution consent + no block)
+      parameters: [{ name: archiveId, in: path, required: true, schema: { type: string } }]
+      responses: { '201': { description: Proposed }, '404': { description: protected existence when relationship/consent missing } }
+  /v1/life-story/contributions/{contributionId}/review:
+    post:
+      summary: Archive owner accepts/rejects a contribution; acceptance creates a SupporterContribution version — never testimony
+      parameters: [{ name: contributionId, in: path, required: true, schema: { type: string } }]
+      responses: { '201': { description: reviewed; versionId in meta on acceptance }, '404': { description: only the owner reviews } }
+  /v1/life-story/items/{itemId}/withdraw:
+    post: { summary: Withdraw an item (owner, confirmed), parameters: [{ name: itemId, in: path, required: true, schema: { type: string } }], responses: { '201': { description: Withdrawn } } }
   /v1/participants/{participantId}/connections:
     get:
       summary: List own connections (owner-only view; strangers get protected-existence 404, ADR-050)
