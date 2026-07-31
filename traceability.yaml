@@ -510,3 +510,13 @@
   code: [tools/backup-restore-drill.mjs, packages/database/migrations/1753800000019_backup-drills.sql, .github/workflows/ci.yml]
   tests: [packages/database/test/database.integration.test.ts]
   status: implemented
+
+- implementation_id: IMP-DOCS-PLANS-001
+  module: ops
+  summary: Security/privacy plan, threat model (STRIDE per trust boundary with implemented-mitigation evidence and an honest residual-risk list topped by the dev auth stub), and accessibility test plan (code-baseline inventory, seven usage modes, R0-R4 rounds with real-user acceptance as an explicitly unmet readiness-gate item) - all grounded in actual code/test paths, with every unimplemented control stated as such rather than claimed
+  trace_ids: [ATR-021, ATR-023]
+  adr_ids: [ADR-104, ADR-121]
+  docs: ["Doc 14", "Doc 18 §193", "Doc 20 accessibility"]
+  code: [SECURITY_AND_PRIVACY_PLAN.md, THREAT_MODEL.md, ACCESSIBILITY_TEST_PLAN.md]
+  tests: [apps/web/test/consent-panel.test.tsx]
+  status: implemented
