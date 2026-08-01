@@ -7,20 +7,20 @@
 - **事实**：README v2.9 §3 要求 Appendix A v1.3、C v1.2、D v2.9、E v1.9、F v1.7 与 `Documents-0-20-Handbook-Consistency-Review-v1.0.md`；盘上实际为 A v1.1、C v1.0、D v2.7、E v1.7、F v1.5，Review 文件不存在。仅 Appendix B v1.1 一致。
 - **影响概念**：规范版本判定（Master Prompt「Locate canonical versions using README/Appendix D/E」在 D、E 过期时自引用矛盾）。
 - **处置**：以 README v2.9 + 文档自身 header（Supersedes 链）为现行判定依据；不臆造缺失附录内容。**备选**：请求上传缺失附录，或由维护者按 README 维护规则 2 重发布。
-- **状态**：Open — 等待缺失附录上传。
+- **状态**：**Partially Resolved（2026-08-01）** — Appendix A v1.3 / C v1.2 / D v2.9 / E v1.9 / F v1.7 已上传（旧版已删除）；`Documents-0-20-Handbook-Consistency-Review-v1.0.md` 仍不存在于仓库。
 
 ## CON-002 模式转换缺少落盘 ADR（含被引用的 ADR-061…064） `[Contradiction]`
 
 - **事实**：Master Prompt v1.2 以「Appendix C ADR-061 through ADR-064」为取代依据之一；全仓库 grep 零命中。Appendix C v1.0 定义 ADR-001…060 与 ADR-101…125，061–100 为空号段。概念研究模式转换（Docs 1/11/18/19/20 全部改版）没有任何 ADR 记录，违反 README 维护规则 4。
 - **影响概念**：架构决定可追溯性本身（Doc 19 方法 10 依赖 Appendix C）。
 - **处置**：转换事实依据取自新版文档正文（Doc 1 §3.1、Doc 18 §3.2、Doc 19 §2——一致且明示）；本登记条目充当占位，直至 Appendix C v1.2 到位。**备选**：若获维护者确认，可在 IMPLEMENTATION_DECISIONS.md 起草 Proposed ADR 文本供收编。
-- **状态**：Open。
+- **状态**：**Resolved（2026-08-01）** — Appendix C v1.2 已上传，ADR-061（概念研究为当前模式，Accepted）、ADR-062（合成数据/模拟行动者/模拟供应商，Accepted）、ADR-063（当前概念工作无外部批准门，Accepted）、ADR-064（人类受试者经验研究为独立未来项目，**Deferred**）全部落盘，内容与新版文档正文一致。ADR-063 的后果栏明示「未来经验转型不得自动继承此豁免」——与本仓库各就绪文档的口径一致。
 
 ## CON-003 Appendix E v1.7（盘上版）与概念基线直接冲突 `[Contradiction]`
 
 - **事实**：盘上 Appendix E v1.7 §15/§16 仍要求「Document 19 的伦理批准、Pilot 供应商选定、签署就绪门」为剩余依赖，并把 Doc 18/19/20 钉在 v1.2；这与 README v2.9 §13、Doc 1 v2.2 §3.1、Doc 19 v1.3 §2 的「非前提」声明不可同真。
 - **权威裁定**：README v2.9 与 Docs 18/19/20 v1.3 更新、更明示且互相一致；E v1.7 早于模式转换（2026-07-29 vs 07-31）。按后法优于前法处理，采概念基线。
-- **状态**：Open — 待 E v1.9 上传后复核。
+- **状态**：**Resolved（2026-08-01）** — E v1.9 已上传：明示「Documents 1 v2.2/11 v1.2/18-20 v1.3 确立当前概念研究模式」且「此模式取代把伦理/治理/供应商/生产/Pilot 批准当作开工前提的旧表述」。当时的裁定与新权威一致。
 
 ## CON-004 Doc 18 v1.3 残留 v1.2 生产文本 `[Contradiction]`
 
@@ -32,7 +32,7 @@
 
 - **事实**：README §9 的 `Document-N-Title-vX.Y.md` 形式文件名在仓库中零存在（实际为卷目录+数字前缀）；Doc 18/19/20 的 v1.2 与 v1.3 并存且 v1.2 未标注归档。README §10 卷标题（"Delivery, Pilot and UX"）与 §9 卷标题（"Conceptual Research & Prototype Exploration"）亦不一致。
 - **处置**：按内容 header 的版本与 Supersedes 链判定规范文件；v1.2 视作历史版本保留。
-- **状态**：Recorded。
+- **状态**：Recorded — 2026-08-01 复核：附录已更新至 README 要求版本，但 `Document-N-…` 规范文件名仍与实际布局不符（Appendix D v2.9 亦沿用该文件名样式），Doc 18/19/20 的 v1.2 文件仍未归档。属上游编辑债，不影响版本判定。
 
 ## CON-006 Doc 20 v1.3 内部张力：§331 vs §359 `[Contradiction]`
 

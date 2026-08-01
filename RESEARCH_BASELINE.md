@@ -29,9 +29,11 @@ Doc 19 v1.3 §7 主问题（5）与 §8 次问题（5），无字母数字 ID（
 
 ## 6. 代码与 Handbook 的矛盾 `[Contradiction]`（详见 CONTRADICTION_REGISTER.md）
 
-- CON-001：README v2.9 引用 Appendix A v1.3 / C v1.2 / D v2.9 / E v1.9 / F v1.7 与 `Documents-0-20-Handbook-Consistency-Review-v1.0.md`——**六者皆不在仓库**（盘上为 A1.1/C1.0/D2.7/E1.7/F1.5，Review 文件不存在）。
-- CON-002：Master Prompt v1.2 引用 **ADR-061…064** 作为模式转换依据——全仓库零命中；Appendix C v1.0 至 ADR-060 截止（061–100 为空号段）。概念模式转换**没有对应的 ADR 落盘**。
-- CON-003：Appendix E v1.7（盘上版）仍是 Pilot 时代权威图（要求伦理批准、Pilot 门），与 README v2.9/Doc 1 v2.2 的概念基线直接冲突；README 期望的 E v1.9 缺失。
+> 2026-08-01 更新：附录 A v1.3 / C v1.2 / D v2.9 / E v1.9 / F v1.7 已上传，CON-002/003 已 Resolved，CON-001 余 Consistency Review 文件缺失。ADR-061…064 现已落盘（061/062/063 Accepted，064 Deferred）。Appendix A v1.3 将 **ATR-025 重定义**为「概念研究范围边界：当前研究用合成输入、无外部批准即开始；人类受试者研究是独立未来项目」——本仓库既有文档中引用 ATR-025 处（伦理待批语境）与新定义兼容：「不得真实招募」的结论在两个定义下都成立。
+
+- CON-001：README v2.9 引用的六个治理工件中，五个附录已到位；`Documents-0-20-Handbook-Consistency-Review-v1.0.md` 仍缺（Partially Resolved）。
+- CON-002：**Resolved** — ADR-061…064 已在 Appendix C v1.2 落盘。
+- CON-003：**Resolved** — E v1.9 已上传并明示概念模式取代旧门。
 - CON-004：Doc 18 v1.3 残留 v1.2 文本（§144/157/170/171/178/205/232/234 仍述及伦理批准与招募）——由 §3.2 解释性条款控制（读作未来系统属性），但孤立引用会得出矛盾答案。
 - CON-005：README §9 的 21 个 `Document-N-…` 规范文件名与实际文件布局（卷目录+数字前缀）全部不符；被取代的 Doc 18/19/20 v1.2 未归档，与 v1.3 并存。
 
