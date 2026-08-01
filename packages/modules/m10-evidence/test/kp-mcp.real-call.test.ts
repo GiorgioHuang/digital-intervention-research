@@ -15,16 +15,27 @@ import { createKnowledgePlatformMcpClient } from '../src/infrastructure/kp-mcp-c
 const MCP_URL = process.env['KNOWLEDGE_MCP_URL'] ?? 'http://localhost:8790';
 
 async function probe(): Promise<boolean> {
-  try {
-    const res = await fetch(new URL('/health', MCP_URL), { signal: AbortSignal.timeout(4000) });
-    if (!res.ok) return false;
-    const body = (await res.json()) as { status?: string };
-    return body.status === 'ok';
-  } catch {
-    return false;
+  // Two attempts with a generous timeout: a scaled-to-zero Cloud Run
+  // instance can take several seconds to cold-start, and a skip caused by
+  // an impatient probe would silently drop the real-call coverage.
+  for (let attempt = 1; attempt <= 2; attempt += 1) {
+    try {
+      const res = await fetch(new URL('/health', MCP_URL), { signal: AbortSignal.timeout(15_000) });
+      if (!res.ok) {
+        console.warn(`KG MCP probe attempt ${attempt}: HTTP ${res.status} from ${MCP_URL}`);
+        continue;
+      }
+      const body = (await res.json()) as { status?: string };
+      if (body.status === 'ok') return true;
+      console.warn(`KG MCP probe attempt ${attempt}: unexpected health body ${JSON.stringify(body)}`);
+    } catch (err) {
+      console.warn(`KG MCP probe attempt ${attempt} failed for ${MCP_URL}: ${String(err)}`);
+    }
   }
+  return false;
 }
 const mcpAvailable = await probe();
+if (!mcpAvailable) console.warn(`KG MCP real-call suite SKIPPED: ${MCP_URL} unreachable`);
 
 describe.skipIf(!mcpAvailable)(`Knowledge Platform MCP client (real calls: ${MCP_URL})`, () => {
   const client = createKnowledgePlatformMcpClient({ baseUrl: MCP_URL });
