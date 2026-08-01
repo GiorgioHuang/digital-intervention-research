@@ -99,13 +99,22 @@ export function createKnowledgePlatformMcpClient(config: KpMcpConfig): Knowledge
   return {
     async searchEvidence(query: string): Promise<KnowledgeResource[]> {
       const rows = await callTool<SearchRow[]>('graceage_search', { q: query, k: 8 });
-      const nodeIds = [...new Set(rows.map((r) => r.nodeId ?? r.id))].slice(0, 5);
-      const resources: KnowledgeResource[] = [];
-      for (const id of nodeIds) {
-        const detail = await callTool<NodeDetail | null>('graceage_node_detail', { id });
-        if (detail !== null) resources.push(toResource(detail));
-      }
-      return resources;
+      // Search rows may be owned by nodes, claims, or evidence entries
+      // (the pgvector backend returns all three): claim/evidence rows carry
+      // the related graph node in nodeId, while their own id is a claim or
+      // source identifier (e.g. a DOI) that node_detail cannot resolve —
+      // never fall back to it.
+      const nodeIds = [
+        ...new Set(
+          rows
+            .map((r) => r.nodeId ?? (r.ownerType === 'node' ? r.id : undefined))
+            .filter((id): id is string => id !== undefined),
+        ),
+      ].slice(0, 5);
+      const details = await Promise.all(
+        nodeIds.map((id) => callTool<NodeDetail | null>('graceage_node_detail', { id })),
+      );
+      return details.filter((d): d is NodeDetail => d !== null).map(toResource);
     },
 
     async resolveReference(externalIdentifier: string): Promise<KnowledgeResource | undefined> {

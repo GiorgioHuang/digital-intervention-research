@@ -37,10 +37,14 @@ async function probe(): Promise<boolean> {
 const mcpAvailable = await probe();
 if (!mcpAvailable) console.warn(`KG MCP real-call suite SKIPPED: ${MCP_URL} unreachable`);
 
+// Real network round trips (to Cloud Run in CI) need more than the 5s
+// vitest default: a search fans out into parallel node_detail calls.
+const REAL_CALL_TIMEOUT = 30_000;
+
 describe.skipIf(!mcpAvailable)(`Knowledge Platform MCP client (real calls: ${MCP_URL})`, () => {
   const client = createKnowledgePlatformMcpClient({ baseUrl: MCP_URL });
 
-  it('searchEvidence returns graph-backed resources with retrieval identity', async () => {
+  it('searchEvidence returns graph-backed resources with retrieval identity', { timeout: REAL_CALL_TIMEOUT }, async () => {
     const resources = await client.searchEvidence('loneliness in older adults');
     expect(resources.length).toBeGreaterThan(0);
     expect(resources.length).toBeLessThanOrEqual(5);
@@ -55,13 +59,13 @@ describe.skipIf(!mcpAvailable)(`Knowledge Platform MCP client (real calls: ${MCP
     }
   });
 
-  it('search results are deduplicated node ids', async () => {
+  it('search results are deduplicated node ids', { timeout: REAL_CALL_TIMEOUT }, async () => {
     const resources = await client.searchEvidence('social connection');
     const ids = resources.map((r) => r.externalIdentifier);
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  it('resolveReference resolves a known node with stable retrieval identity', async () => {
+  it('resolveReference resolves a known node with stable retrieval identity', { timeout: REAL_CALL_TIMEOUT }, async () => {
     const first = await client.resolveReference('ga:loneliness');
     const second = await client.resolveReference('ga:loneliness');
     expect(first).toBeDefined();
@@ -71,7 +75,7 @@ describe.skipIf(!mcpAvailable)(`Knowledge Platform MCP client (real calls: ${MCP
     expect(second!.externalVersion).toBe(first!.externalVersion);
   });
 
-  it('resolveReference returns undefined for an unknown identifier', async () => {
+  it('resolveReference returns undefined for an unknown identifier', { timeout: REAL_CALL_TIMEOUT }, async () => {
     const resolved = await client.resolveReference('ga:does-not-exist-xyz');
     expect(resolved).toBeUndefined();
   });
@@ -96,5 +100,37 @@ describe('Knowledge Platform MCP client (fail-closed)', () => {
     await expect(client.resolveReference('ga:loneliness')).rejects.toMatchObject({
       code: 'DEPENDENCY_UNAVAILABLE',
     });
+  });
+});
+
+describe('Knowledge Platform MCP client (search row filtering)', () => {
+  // Regression pinned by a genuine CI failure against the deployed pgvector
+  // backend: evidence-owned search rows carry a DOI as their own id and no
+  // nodeId — the client must skip them, not resolve the DOI as a node id.
+  it('claim/evidence rows without nodeId never fall back to their own id', async () => {
+    const calls: { name: string; args: Record<string, unknown> }[] = [];
+    const rpc = (result: unknown) =>
+      new Response(
+        JSON.stringify({ jsonrpc: '2.0', id: 1, result: { content: [{ type: 'text', text: JSON.stringify(result) }] } }),
+        { status: 200, headers: { 'content-type': 'application/json' } },
+      );
+    const fetchImpl = (async (_url: URL | RequestInfo, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body)) as { params: { name: string; arguments: Record<string, unknown> } };
+      calls.push({ name: body.params.name, args: body.params.arguments });
+      if (body.params.name === 'graceage_search') {
+        return rpc([
+          { ownerType: 'evidence', id: 'doi:10.1016/b978-0-323-91659-2.00001-6', name: 'Some chapter' },
+          { ownerType: 'claim', id: 'sc-1', name: 'Some claim', nodeId: 'ga:loneliness' },
+          { ownerType: 'node', id: 'ga:social-connection', name: 'Social connection' },
+        ]);
+      }
+      return rpc({ node: { id: String(body.params.arguments['id']), name: 'X', type: 'outcome' } });
+    }) as unknown as typeof fetch;
+
+    const client = createKnowledgePlatformMcpClient({ baseUrl: 'http://example.invalid', fetchImpl });
+    const resources = await client.searchEvidence('anything');
+    const detailIds = calls.filter((c) => c.name === 'graceage_node_detail').map((c) => c.args['id']);
+    expect(detailIds).toEqual(['ga:loneliness', 'ga:social-connection']);
+    expect(resources.map((r) => r.externalIdentifier)).toEqual(['ga:loneliness', 'ga:social-connection']);
   });
 });
