@@ -206,3 +206,128 @@ export async function listMatchCandidates(
     expiresAt: (r.expires_at as Date).toISOString(),
   }));
 }
+
+export interface CommunitySpaceSummary {
+  spaceId: string;
+  name: string;
+  ruleVersionId: string;
+  ruleVersionNumber: number;
+  rulesText: string;
+  membershipState: string | null;
+}
+
+/**
+ * Active community spaces with their CURRENT rule version and the caller's
+ * own membership state. Joining always agrees to an exact rule version
+ * (versioned rules), so the join affordance carries the version shown here.
+ */
+export async function listCommunitySpaces(
+  deps: M18Deps,
+  ctx: RequestContext,
+  participantId: string,
+): Promise<CommunitySpaceSummary[]> {
+  await assertOwnView(deps, ctx, participantId);
+  const res = await deps.pool.query(
+    `SELECT DISTINCT ON (s.id)
+            s.id, s.name, rv.id AS rule_version_id, rv.version_number, rv.rules_text, m.membership_state
+       FROM community_social.community_spaces s
+       JOIN community_social.community_rule_versions rv ON rv.space_id = s.id
+       LEFT JOIN community_social.community_memberships m
+              ON m.space_id = s.id AND m.participant_id = $1 AND m.membership_state = 'Active'
+      WHERE s.space_state = 'Active'
+      ORDER BY s.id, rv.version_number DESC`,
+    [participantId],
+  );
+  return res.rows.map((r) => ({
+    spaceId: r.id as string,
+    name: r.name as string,
+    ruleVersionId: r.rule_version_id as string,
+    ruleVersionNumber: r.version_number as number,
+    rulesText: r.rules_text as string,
+    membershipState: (r.membership_state as string | null) ?? null,
+  }));
+}
+
+export interface CommunityFeedPost {
+  postId: string;
+  authorParticipantId: string;
+  contentText: string;
+  publishedAt: string;
+}
+
+/**
+ * Member-only community feed in STRICT reverse-chronological order
+ * (ADR-113: default time ordering, no attention optimisation, governed
+ * ranking pending approval). Blocks are fail-closed in BOTH directions:
+ * a post never crosses an active block, whichever side created it.
+ * Only Published posts appear — drafts are private to their author.
+ */
+export async function listCommunityFeed(
+  deps: M18Deps,
+  ctx: RequestContext,
+  input: { spaceId: string; participantId: string },
+): Promise<CommunityFeedPost[]> {
+  await assertOwnView(deps, ctx, input.participantId);
+  const membership = await deps.pool.query(
+    `SELECT 1 FROM community_social.community_memberships
+      WHERE space_id = $1 AND participant_id = $2 AND membership_state = 'Active'`,
+    [input.spaceId, input.participantId],
+  );
+  if (membership.rows[0] === undefined) {
+    throw new PlatformError('AUTHORISATION_DENIED', 'The feed requires an active community membership');
+  }
+  const res = await deps.pool.query(
+    `SELECT p.id, p.author_participant_id, p.content_text, p.published_at
+       FROM community_social.social_posts p
+      WHERE p.space_id = $1 AND p.post_state = 'Published'
+        AND NOT EXISTS (
+          SELECT 1 FROM community_social.block_records b
+           WHERE b.block_state = 'Active'
+             AND ((b.blocker_actor_id = $2 AND b.blocked_actor_id = p.author_participant_id)
+               OR (b.blocker_actor_id = p.author_participant_id AND b.blocked_actor_id = $2))
+        )
+      ORDER BY p.published_at DESC
+      LIMIT 100`,
+    [input.spaceId, input.participantId],
+  );
+  return res.rows.map((r) => ({
+    postId: r.id as string,
+    authorParticipantId: r.author_participant_id as string,
+    contentText: r.content_text as string,
+    publishedAt: (r.published_at as Date).toISOString(),
+  }));
+}
+
+export interface OwnPostSummary {
+  postId: string;
+  spaceId: string;
+  contentText: string;
+  postState: string;
+  createdAt: string;
+  publishedAt: string | null;
+}
+
+/** The caller's own posts across spaces, drafts included (owner-only view). */
+export async function listMyPosts(
+  deps: M18Deps,
+  ctx: RequestContext,
+  participantId: string,
+): Promise<OwnPostSummary[]> {
+  await assertOwnView(deps, ctx, participantId);
+  const res = await deps.pool.query(
+    `SELECT id, space_id, content_text, post_state, created_at, published_at
+       FROM community_social.social_posts
+      WHERE author_participant_id = $1
+      ORDER BY created_at DESC
+      LIMIT 100`,
+    [participantId],
+  );
+  return res.rows.map((r) => ({
+    postId: r.id as string,
+    spaceId: r.space_id as string,
+    contentText: r.content_text as string,
+    postState: r.post_state as string,
+    createdAt: (r.created_at as Date).toISOString(),
+    publishedAt: r.published_at === null ? null : (r.published_at as Date).toISOString(),
+  }));
+}

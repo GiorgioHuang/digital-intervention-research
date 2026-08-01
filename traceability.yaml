@@ -530,3 +530,13 @@
   code: [packages/modules/m10-evidence/src/infrastructure/kp-mcp-client.ts, packages/modules/m10-evidence/src/application/queries.ts, apps/api/src/config.ts, apps/api/src/app.module.ts, apps/api/src/staff-controllers.ts, .github/workflows/ci.yml]
   tests: [packages/modules/m10-evidence/test/kp-mcp.real-call.test.ts, apps/api/test/api.e2e.test.ts]
   status: implemented
+
+- implementation_id: IMP-WEB-COMMUNITY-001
+  module: m18
+  summary: Community front-end and read side - participant Community screen (optional by design, no engagement mechanics) with versioned-rules join flow (exact rule version shown in full and its id recorded on the membership, consent-gated on community-participation with a plain-language denial pointing to the consent screen), strictly chronological member-only feed (ADR-113 time ordering, block fail-closed in both directions at the query), draft-first posting mirroring message send (a draft is private to its author until an explicit confirmed publish naming the community), honest post-state labels including moderation states; M18 queries listCommunitySpaces/listCommunityFeed/listMyPosts (owner-only views under protected existence) and REST exposure of the community chain including staff space creation (OrganisationAdministrator)
+  trace_ids: [ATR-008, ATR-016, ATR-023]
+  adr_ids: [ADR-050, ADR-113]
+  docs: ["Doc 20 community screens", "Doc 11 community rules", "Doc 16 blocks"]
+  code: [packages/modules/m18-community-social/src/application/queries.ts, apps/api/src/controllers.ts, apps/api/src/staff-controllers.ts, apps/web/src/components/CommunityPanel.tsx, apps/web/src/App.tsx, apps/web/src/api.ts]
+  tests: [apps/web/test/community-panel.test.tsx, apps/api/test/api.e2e.test.ts]
+  status: implemented

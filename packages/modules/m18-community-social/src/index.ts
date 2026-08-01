@@ -43,3 +43,11 @@ export {
   reconcileDeliveryUnknown,
 } from './application/sweeps.js';
 export { listOpenModerationCases, type OpenModerationCase } from './application/queries.js';
+export {
+  listCommunitySpaces,
+  listCommunityFeed,
+  listMyPosts,
+  type CommunitySpaceSummary,
+  type CommunityFeedPost,
+  type OwnPostSummary,
+} from './application/queries.js';

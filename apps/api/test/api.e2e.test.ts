@@ -62,6 +62,7 @@ describe.skipIf(!dbAvailable)('HTTP API (e2e)', () => {
     }
     const coordCtx = orgCtx;
     await assignRole(m01, orgCtx, { userAccountId: adminId, role: 'ResearchCoordinator', confirmed: true });
+    await assignRole(m01, orgCtx, { userAccountId: adminId, role: 'OrganisationAdministrator', confirmed: true });
     ({ participantId: patId } = await registerParticipant({ pool, clock, checkPermission }, coordCtx, {
       displayName: 'Pat', userAccountId: patAcc,
     }));
@@ -914,6 +915,99 @@ describe.skipIf(!dbAvailable)('HTTP API (e2e)', () => {
     expect(approved.status).toBe(201);
     const approvedBody = (await approved.json()) as { data: { meta: { evidenceSnapshotId: string } } };
     expect(approvedBody.data.meta.evidenceSnapshotId).toMatch(/^es_/);
+  });
+
+  it('M18 community: versioned-rules join gated on consent, draft-first posts, chronological feed, block fail-closed', async () => {
+    const suffix = Date.now();
+    const otherId = `pt_comm_other_${suffix}`;
+
+    // Staff (OrganisationAdministrator) creates the space; rule version 1
+    // exists from the start so every join records an exact version.
+    const created = await call('/v1/community-spaces', adminAcc, {
+      name: `园艺角 ${suffix}`,
+      rulesText: '友善交流；不分享他人隐私。',
+    });
+    expect(created.status).toBe(201);
+    const createdBody = (await created.json()) as { data: { id: string; meta: { ruleVersionId: string } } };
+    const spaceId = createdBody.data.id;
+    const ruleVersionId = createdBody.data.meta.ruleVersionId;
+
+    const spaces = await call(`/v1/participants/${patId}/community-spaces`, patAcc);
+    expect(spaces.status).toBe(200);
+    const spacesBody = (await spaces.json()) as {
+      data: { id: string; attributes: { ruleVersionId: string; membershipState: string | null } }[];
+    };
+    const listed = spacesBody.data.find((s) => s.id === spaceId);
+    expect(listed?.attributes.membershipState).toBeNull();
+    expect(listed?.attributes.ruleVersionId).toBe(ruleVersionId);
+
+    // Joining requires the community-participation consent scope: denied
+    // before the consent is granted, allowed after.
+    const deniedJoin = await call(`/v1/community-spaces/${spaceId}/join`, patAcc, { participantId: patId, ruleVersionId });
+    expect(deniedJoin.status).toBeGreaterThanOrEqual(403);
+    expect(
+      (await call(`/v1/participants/${patId}/consents`, patAcc, {
+        scope: 'community-participation',
+        decision: 'Granted',
+        templateVersion: 'ct_v1',
+      })).status,
+    ).toBe(201);
+    expect(
+      (await call(`/v1/community-spaces/${spaceId}/join`, patAcc, { participantId: patId, ruleVersionId })).status,
+    ).toBe(201);
+
+    // Draft first: the draft appears in the owner's list, never in the feed.
+    const draft = await call('/v1/social-posts', patAcc, {
+      spaceId,
+      participantId: patId,
+      contentText: '大家好，我是新成员',
+    });
+    expect(draft.status).toBe(201);
+    const postId = ((await draft.json()) as { data: { id: string } }).data.id;
+    const feedBefore = await call(`/v1/participants/${patId}/community-spaces/${spaceId}/feed`, patAcc);
+    expect(feedBefore.status).toBe(200);
+    expect(((await feedBefore.json()) as { data: { id: string }[] }).data.length).toBe(0);
+    const mine = await call(`/v1/participants/${patId}/social-posts`, patAcc);
+    const mineBody = (await mine.json()) as { data: { id: string; attributes: { postState: string } }[] };
+    expect(mineBody.data.find((p) => p.id === postId)?.attributes.postState).toBe('Draft');
+
+    // Explicit confirmed publish makes it visible to members.
+    expect(
+      (await call(`/v1/social-posts/${postId}/publish`, patAcc, { participantId: patId, confirmed: true })).status,
+    ).toBe(201);
+
+    // Another member (seeded directly, same style as the messaging tests)
+    // publishes too; the feed shows both, newest first.
+    await pool.query(
+      `INSERT INTO community_social.community_memberships (id, space_id, participant_id, rule_version_id)
+       VALUES ($1, $2, $3, $4)`,
+      [`cm_e2e_${suffix}`, spaceId, otherId, ruleVersionId],
+    );
+    await pool.query(
+      `INSERT INTO community_social.social_posts (id, space_id, author_participant_id, content_text, post_state, published_at)
+       VALUES ($1, $2, $3, '来自其他成员的问候', 'Published', now())`,
+      [`sp_e2e_${suffix}`, spaceId, otherId],
+    );
+    const feed = await call(`/v1/participants/${patId}/community-spaces/${spaceId}/feed`, patAcc);
+    const feedBody = (await feed.json()) as { data: { id: string; attributes: { authorParticipantId: string } }[] };
+    expect(feedBody.data.some((p) => p.id === postId)).toBe(true);
+    expect(feedBody.data.some((p) => p.attributes.authorParticipantId === otherId)).toBe(true);
+
+    // Block fail-closed: after blocking the other member, their post
+    // disappears from the viewer's feed while the viewer's own remains.
+    expect(
+      (await call('/v1/blocks', patAcc, { blockerId: patId, blockedActorId: otherId, confirmed: true })).status,
+    ).toBe(201);
+    const blockedFeed = await call(`/v1/participants/${patId}/community-spaces/${spaceId}/feed`, patAcc);
+    const blockedBody = (await blockedFeed.json()) as { data: { id: string; attributes: { authorParticipantId: string } }[] };
+    expect(blockedBody.data.some((p) => p.id === postId)).toBe(true);
+    expect(blockedBody.data.some((p) => p.attributes.authorParticipantId === otherId)).toBe(false);
+
+    // A stranger probing someone else's community lists learns nothing,
+    // not even that the participant exists (ADR-050).
+    const denied = await call(`/v1/participants/${patId}/community-spaces`, strangerAcc);
+    expect(denied.status).toBe(404);
+    expect(((await denied.json()) as { error: { code: string } }).error.code).toBe('RESOURCE_NOT_FOUND');
   });
 });
 

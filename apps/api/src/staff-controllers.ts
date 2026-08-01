@@ -37,7 +37,7 @@ import {
   submitEvidenceReview,
   type EvidenceDecisionOutcome,
 } from '@platform/m10-evidence';
-import { listOpenModerationCases, recordModerationDecision } from '@platform/m18-community-social';
+import { createCommunitySpace, listOpenModerationCases, recordModerationDecision } from '@platform/m18-community-social';
 import {
   approveReportVersion,
   createReport,
@@ -743,6 +743,19 @@ export class StaffCommandController {
     if (body.withLimitations !== undefined) input.withLimitations = body.withLimitations;
     await approveResearchFinding(this.deps.m13, ctx, input);
     return { data: { type: 'ResearchFinding', id: researchFindingId, meta: { state: 'Approved' } } };
+  }
+
+  // ── M18 community administration ───────────────────────────────────────
+
+  @Post('community-spaces')
+  async createCommunitySpace(@Req() req: Request, @Body() body: { name: string; rulesText: string }) {
+    const ctx = requireActor(req);
+    // community.create (OrganisationAdministrator): the space starts with
+    // rule version 1 — members always join against an explicit version.
+    const result = await createCommunitySpace(this.deps.m18, ctx, body);
+    return {
+      data: { type: 'CommunitySpace', id: result.spaceId, meta: { ruleVersionId: result.ruleVersionId } },
+    };
   }
 
   // ── M10 evidence & knowledge integration (ADR-044 / ADR-052) ──────────

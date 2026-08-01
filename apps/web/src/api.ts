@@ -72,6 +72,31 @@ export interface ThreadMessage {
   createdAt: string;
 }
 
+export interface CommunitySpaceSummary {
+  spaceId: string;
+  name: string;
+  ruleVersionId: string;
+  ruleVersionNumber: number;
+  rulesText: string;
+  membershipState: string | null;
+}
+
+export interface CommunityFeedPost {
+  postId: string;
+  authorParticipantId: string;
+  contentText: string;
+  publishedAt: string;
+}
+
+export interface OwnPostSummary {
+  postId: string;
+  spaceId: string;
+  contentText: string;
+  postState: string;
+  createdAt: string;
+  publishedAt: string | null;
+}
+
 export const api = {
   recordConsent: (s: Session, scope: string, decision: 'Granted' | 'Declined') =>
     post(s, `/v1/participants/${s.participantId}/consents`, { scope, decision, templateVersion: 'ct_v1' }),
@@ -151,6 +176,37 @@ export const api = {
     post<{ data: { id: string } }>(s, '/v1/conversation-threads', {
       connectionId,
       creatorParticipantId: s.participantId,
+    }),
+  listCommunitySpaces: (s: Session) =>
+    get<{ data: { id: string; attributes: CommunitySpaceSummary }[] }>(
+      s,
+      `/v1/participants/${s.participantId}/community-spaces`,
+    ),
+  listCommunityFeed: (s: Session, spaceId: string) =>
+    get<{ data: { id: string; attributes: CommunityFeedPost }[] }>(
+      s,
+      `/v1/participants/${s.participantId}/community-spaces/${spaceId}/feed`,
+    ),
+  listMyPosts: (s: Session) =>
+    get<{ data: { id: string; attributes: OwnPostSummary }[] }>(
+      s,
+      `/v1/participants/${s.participantId}/social-posts`,
+    ),
+  joinCommunity: (s: Session, spaceId: string, ruleVersionId: string) =>
+    post<{ data: { id: string } }>(s, `/v1/community-spaces/${spaceId}/join`, {
+      participantId: s.participantId,
+      ruleVersionId,
+    }),
+  draftSocialPost: (s: Session, spaceId: string, contentText: string) =>
+    post<{ data: { id: string } }>(s, '/v1/social-posts', {
+      spaceId,
+      participantId: s.participantId,
+      contentText,
+    }),
+  publishSocialPost: (s: Session, postId: string) =>
+    post<{ data: { id: string } }>(s, `/v1/social-posts/${postId}/publish`, {
+      participantId: s.participantId,
+      confirmed: true,
     }),
 };
 

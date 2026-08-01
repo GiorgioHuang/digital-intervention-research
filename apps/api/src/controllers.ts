@@ -49,10 +49,16 @@ import {
   createBlock,
   createMessageDraft,
   createThread,
+  draftSocialPost,
+  joinCommunity,
+  listCommunityFeed,
+  listCommunitySpaces,
   listConnections,
   listMatchCandidates,
+  listMyPosts,
   listThreadMessages,
   listThreads,
+  publishSocialPost,
   recordMatchDecision,
   revokeBlock,
   submitUserReport,
@@ -581,5 +587,78 @@ export class CommandController {
       confirmed: body.confirmed === true,
     });
     return { data: { type: 'Connection', id: result.connectionId, meta: { state: 'Active' } } };
+  }
+
+  // ── M18 community spaces & posts (Doc 20 community; ADR-113) ──────────
+
+  @Get('participants/:participantId/community-spaces')
+  async listCommunitySpaces(@Req() req: Request, @Param('participantId') participantId: string) {
+    const ctx = requireActor(req);
+    // Each space carries the exact rule version a join would agree to.
+    const items = await listCommunitySpaces(this.deps.m18, ctx, participantId);
+    return { data: items.map((s) => ({ type: 'CommunitySpace', id: s.spaceId, attributes: s })) };
+  }
+
+  @Get('participants/:participantId/community-spaces/:spaceId/feed')
+  async listCommunityFeed(
+    @Req() req: Request,
+    @Param('participantId') participantId: string,
+    @Param('spaceId') spaceId: string,
+  ) {
+    const ctx = requireActor(req);
+    // Member-only, strictly chronological, blocks fail-closed (ADR-113).
+    const items = await listCommunityFeed(this.deps.m18, ctx, { spaceId, participantId });
+    return { data: items.map((p) => ({ type: 'SocialPost', id: p.postId, attributes: p })) };
+  }
+
+  @Get('participants/:participantId/social-posts')
+  async listMyPosts(@Req() req: Request, @Param('participantId') participantId: string) {
+    const ctx = requireActor(req);
+    const items = await listMyPosts(this.deps.m18, ctx, participantId);
+    return { data: items.map((p) => ({ type: 'SocialPost', id: p.postId, attributes: p })) };
+  }
+
+  @Post('community-spaces/:spaceId/join')
+  async joinCommunity(
+    @Req() req: Request,
+    @Param('spaceId') spaceId: string,
+    @Body() body: { participantId: string; ruleVersionId: string },
+  ) {
+    const ctx = requireActor(req);
+    // Requires the community-participation consent scope; the exact rule
+    // version being agreed to is recorded on the membership.
+    const result = await joinCommunity(this.deps.m18, ctx, {
+      spaceId,
+      participantId: body.participantId,
+      ruleVersionId: body.ruleVersionId,
+    });
+    return { data: { type: 'CommunityMembership', id: result.membershipId, meta: { state: 'Active' } } };
+  }
+
+  @Post('social-posts')
+  async draftSocialPost(
+    @Req() req: Request,
+    @Body() body: { spaceId: string; participantId: string; contentText: string },
+  ) {
+    const ctx = requireActor(req);
+    const result = await draftSocialPost(this.deps.m18, ctx, body);
+    return { data: { type: 'SocialPost', id: result.postId, meta: { state: 'Draft' } } };
+  }
+
+  @Post('social-posts/:postId/publish')
+  async publishSocialPost(
+    @Req() req: Request,
+    @Param('postId') postId: string,
+    @Body() body: { participantId: string; confirmed: boolean },
+  ) {
+    const ctx = requireActor(req);
+    // Explicit confirmed "Publish to [Community]" — a draft never leaves
+    // the author without this step.
+    await publishSocialPost(this.deps.m18, ctx, {
+      postId,
+      participantId: body.participantId,
+      confirmed: body.confirmed === true,
+    });
+    return { data: { type: 'SocialPost', id: postId, meta: { state: 'Published' } } };
   }
 }

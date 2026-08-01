@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { StaffApp } from './StaffApp.js';
 import { SupporterApp } from './SupporterApp.js';
+import { CommunityPanel } from './components/CommunityPanel.js';
 import { ConsentPanel } from './components/ConsentPanel.js';
 import { MatchingPanel } from './components/MatchingPanel.js';
 import { MessagesScreen } from './components/MessagesScreen.js';
@@ -15,7 +16,7 @@ import type { Session } from './api.js';
  * Session comes from the dev-header stub for now (OIDC pending ADR-104):
  * the participant enters the identifiers issued during synthetic setup.
  */
-type Screen = 'home' | 'consent' | 'message' | 'matching' | 'help';
+type Screen = 'home' | 'consent' | 'message' | 'matching' | 'community' | 'help';
 
 export function App() {
   const [session, setSession] = useState<Session | null>(null);
@@ -95,6 +96,11 @@ export function App() {
             </button>
           </li>
           <li>
+            <button aria-current={screen === 'community' ? 'page' : undefined} onClick={() => setScreen('community')}>
+              社区
+            </button>
+          </li>
+          <li>
             <button aria-current={screen === 'help' ? 'page' : undefined} onClick={() => setScreen('help')}>
               帮助与安全
             </button>
@@ -117,6 +123,9 @@ export function App() {
                 <button onClick={() => setScreen('matching')}>认识新朋友（可选）</button>
               </li>
               <li>
+                <button onClick={() => setScreen('community')}>去社区看看（可选）</button>
+              </li>
+              <li>
                 <button onClick={() => setScreen('help')}>获取帮助或报告问题</button>
               </li>
             </ul>
@@ -125,6 +134,7 @@ export function App() {
         {screen === 'consent' && <ConsentPanel session={session} />}
         {screen === 'message' && <MessagesScreen session={session} />}
         {screen === 'matching' && <MatchingPanel session={session} />}
+        {screen === 'community' && <CommunityPanel session={session} />}
         {screen === 'help' && (
           <section aria-labelledby="help-heading">
             <h1 id="help-heading">帮助与安全</h1>
