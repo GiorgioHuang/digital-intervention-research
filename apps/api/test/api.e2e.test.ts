@@ -26,7 +26,7 @@ describe.skipIf(!dbAvailable)('HTTP API (e2e)', () => {
   let pool: pg.Pool;
   let patAcc: string, patId: string, strangerAcc: string;
   let researcherAcc: string, approverAcc: string, safetyAcc: string, supporterAcc: string, adminAcc: string;
-  let privacyAcc: string, moderatorAcc: string;
+  let privacyAcc: string, moderatorAcc: string, evidenceReviewerAcc: string;
 
   const call = (path: string, actor: string | undefined, body?: object, headers?: Record<string, string>) =>
     fetch(`${baseUrl}${path}`, {
@@ -77,6 +77,8 @@ describe.skipIf(!dbAvailable)('HTTP API (e2e)', () => {
     await assignRole(m01, orgCtx, { userAccountId: privacyAcc, role: 'PrivacyReviewer', confirmed: true });
     ({ userAccountId: moderatorAcc } = await createUserAccount(m01, orgCtx, { displayName: 'Mod' }));
     await assignRole(m01, orgCtx, { userAccountId: moderatorAcc, role: 'Moderator', confirmed: true });
+    ({ userAccountId: evidenceReviewerAcc } = await createUserAccount(m01, orgCtx, { displayName: 'Evi' }));
+    await assignRole(m01, orgCtx, { userAccountId: evidenceReviewerAcc, role: 'EvidenceReviewer', confirmed: true });
     // Supporter relationship (approved by the participant) seeds the
     // life-story contribution path; relationship endpoints are not yet
     // HTTP-exposed so this uses the module commands directly.
@@ -92,7 +94,10 @@ describe.skipIf(!dbAvailable)('HTTP API (e2e)', () => {
     });
 
     app = await NestFactory.create(
-      buildAppModule({ DATABASE_URL, API_PORT: 0, LOG_LEVEL: 'error', AUTH_MODE: 'dev-header' }),
+      buildAppModule({
+        DATABASE_URL, API_PORT: 0, LOG_LEVEL: 'error', AUTH_MODE: 'dev-header',
+        KNOWLEDGE_PLATFORM_MODE: 'simulator',
+      }),
       { logger: false },
     );
     await app.listen(0);
@@ -858,6 +863,57 @@ describe.skipIf(!dbAvailable)('HTTP API (e2e)', () => {
     const denied = await call(`/v1/participants/${patId}/connections`, strangerAcc);
     expect(denied.status).toBe(404);
     expect(((await denied.json()) as { error: { code: string } }).error.code).toBe('RESOURCE_NOT_FOUND');
+  });
+
+  it('M10 evidence chain: knowledge search → review → reference → decision → snapshot', async () => {
+    // Search goes through the Knowledge Platform ACL (simulator mode here;
+    // 'mcp' mode swaps in the real Healthy Aging Knowledge Graph client
+    // without touching this surface).
+    const search = await call('/v1/evidence/search?q=loneliness', researcherAcc);
+    expect(search.status).toBe(200);
+    const searchBody = (await search.json()) as {
+      data: { id: string; attributes: { sourceSystem: string; externalVersion: string } }[];
+    };
+    expect(searchBody.data.some((r) => r.id === 'kp-ref-0002')).toBe(true);
+
+    // Participants hold no evidence.search grant.
+    expect((await call('/v1/evidence/search?q=loneliness', patAcc)).status).toBe(403);
+
+    const review = await call('/v1/evidence-reviews', researcherAcc, {
+      researchProjectId: `rp_e2e_ev_${Date.now()}`,
+      question: 'Do digital social interventions reduce loneliness?',
+    });
+    expect(review.status).toBe(201);
+    const reviewId = ((await review.json()) as { data: { id: string } }).data.id;
+
+    const ref = await call(`/v1/evidence-reviews/${reviewId}/references`, researcherAcc, {
+      externalIdentifier: 'kp-ref-0002',
+    });
+    expect(ref.status).toBe(201);
+
+    expect((await call(`/v1/evidence-reviews/${reviewId}/submit`, researcherAcc, {})).status).toBe(201);
+
+    // Approval is EvidenceReviewer-only (separation of duties): the
+    // submitting researcher cannot approve.
+    expect((await call(`/v1/evidence-reviews/${reviewId}/approve`, researcherAcc, { confirmed: true })).status).toBe(403);
+    expect(
+      (await call(`/v1/evidence-reviews/${reviewId}/approve`, evidenceReviewerAcc, { confirmed: true })).status,
+    ).toBe(201);
+
+    const decision = await call('/v1/evidence-decisions', researcherAcc, {
+      evidenceReviewId: reviewId,
+      outcome: 'Support',
+      rationale: 'Umbrella review evidence supports proceeding to protocol design.',
+    });
+    expect(decision.status).toBe(201);
+    const decisionId = ((await decision.json()) as { data: { id: string } }).data.id;
+
+    const approved = await call(`/v1/evidence-decisions/${decisionId}/approve`, evidenceReviewerAcc, {
+      confirmed: true,
+    });
+    expect(approved.status).toBe(201);
+    const approvedBody = (await approved.json()) as { data: { meta: { evidenceSnapshotId: string } } };
+    expect(approvedBody.data.meta.evidenceSnapshotId).toMatch(/^es_/);
   });
 });
 

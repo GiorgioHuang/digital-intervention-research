@@ -24,7 +24,7 @@
 | `apps/worker` / `apps/scheduler`（outbox 发布循环 + 过期清扫（候选/互相接受/关系）+ 投递未知对账 + outbox 卡死恢复 + 对象扫描 + 幂等清理；cron 与阈值配置驱动） | Implemented（6 项 sweep 集成测试） |
 | `packages/policy` 权限引擎 + `m01-identity-org` + `m03-consent-permission` | Implemented（27 引擎单测 + 13 集成测试） |
 | `m02-participant` + `m04-research-design` + `m05-enrolment` | Implemented（P3 链路 12 集成测试） |
-| `m06-intervention-portfolio` + `m10-evidence`（含 KP 模拟器） | Implemented（9 集成测试） |
+| `m06-intervention-portfolio` + `m10-evidence`（KP 模拟器默认 + 真实 Healthy Aging Knowledge Graph MCP 客户端，实弹测试见 KNOWLEDGE_GRAPH_INTEGRATION.md） | Implemented（9 集成测试 + 6 真实调用/失败关闭测试） |
 | `m17-life-story` | Implemented（11 集成测试：作者权三态/版本不可变/可见性/贡献流/撤回） |
 | `m18-community-social`（社区/匹配/连接/消息全链） + `m16-integration`（供应商模拟器+回调认证+对象存储隔离/扫描管线） | Implemented（24 集成测试） |
 | `m09-safety` + `m11-ai`（信号/人工事件；Model+Tool Gateway，Level-5 全禁） | Implemented（8 集成测试） |

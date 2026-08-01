@@ -520,3 +520,13 @@
   code: [SECURITY_AND_PRIVACY_PLAN.md, THREAT_MODEL.md, ACCESSIBILITY_TEST_PLAN.md]
   tests: [apps/web/test/consent-panel.test.tsx]
   status: implemented
+
+- implementation_id: IMP-M10-KG-MCP-001
+  module: m10
+  summary: Real Knowledge Platform integration over the Healthy Aging Knowledge Graph MCP (aging-knowledge-graph, Cloud Run + Neon at knowledge-graph.internal.example) - JSON-RPC client behind the existing KnowledgePlatformPort ACL (graceage_search deduplicated to top-5 graceage_node_detail), retrieval-identity versioning (sha256 content hash of the exact node-detail payload, persisted as externalVersion provenance since the graph API exposes no graph-level version), fail-closed DEPENDENCY_UNAVAILABLE on any transport or protocol failure (never an empty "no evidence" answer); permission-gated evidence.search query; full M10 chain over REST (search, review create/submit/approve with separation of duties, reference attach with live resolution, decision draft/approve producing the immutable snapshot); KNOWLEDGE_PLATFORM_MODE config defaults to the deterministic simulator with mcp opt-in requiring KNOWLEDGE_MCP_URL; real-call test suite runs against a live local server in development and the deployed Cloud Run instance in CI (honest skip when unreachable); audit report with capability matrix in KNOWLEDGE_GRAPH_INTEGRATION.md
+  trace_ids: [ATR-023]
+  adr_ids: [ADR-044, ADR-052, ADR-110]
+  docs: ["Doc 9 knowledge platform ACL", "Appendix B retrieval identity", "KNOWLEDGE_GRAPH_INTEGRATION.md"]
+  code: [packages/modules/m10-evidence/src/infrastructure/kp-mcp-client.ts, packages/modules/m10-evidence/src/application/queries.ts, apps/api/src/config.ts, apps/api/src/app.module.ts, apps/api/src/staff-controllers.ts, .github/workflows/ci.yml]
+  tests: [packages/modules/m10-evidence/test/kp-mcp.real-call.test.ts, apps/api/test/api.e2e.test.ts]
+  status: implemented

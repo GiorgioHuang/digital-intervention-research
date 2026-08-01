@@ -8,6 +8,7 @@
 - 约 200 个确定性测试（CI 每推送全量执行，全新数据库 + 迁移演练 up→down→up）。
 - 关键不变量全部有代码+测试证据：Effective Permission 七要素、granular Consent 与撤回传播、协议/干预/证据快照/数据集锁定不可变性、AI Draft≠Testimony、Block fail-closed、独立 MatchDecision、MutualAcceptance 单次消费、CommunicationBasis、消息双状态机与精确 SendConfirmation、回调认证/重放防护、SafetySignal 人工权威、Level-5 AI 禁止全清单、Output≠Interpretation≠Finding、职责分离（自批双层禁止）。
 - 合成试点端到端主线 + 场景矩阵（见 SYNTHETIC_PILOT_PLAN.md）。
+- Knowledge Platform 真实对接：Healthy Aging Knowledge Graph MCP 客户端（ADR-052/110）经 REST 全链暴露（evidence.search → 评审 → 引用 provenance → 双人批准 → 快照），CI 每推送对已部署 Cloud Run+Neon 实例真实调用冒烟；模拟器保持默认（KNOWLEDGE_PLATFORM_MODE 显式切换）。审计与能力矩阵见 KNOWLEDGE_GRAPH_INTEGRATION.md。
 
 ## 未就绪 / 显式缺口（不伪造完成）
 

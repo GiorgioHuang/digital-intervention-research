@@ -19,7 +19,7 @@ ADR-001…060 全部按 Accepted/Deferred/Prohibited 原样遵从；实现不启
 | ADR-107 | 队列/调度 | pg-boss（PG 持久队列+cron），按工作负载分队列；与 outbox 同库事务语义 | Adopted for Implementation | ATR-023 |
 | ADR-108 | Search/Vector | PG 全文检索；pgvector 可选且默认关闭；派生投影再授权 | Adopted for Implementation | ATR-015/016 |
 | ADR-109 | AI 供应商/网关栈 | Model Gateway+Provider Registry+别名先行；确定性本地模拟 Provider；真实供应商接入以批准为前提 | Pending External Approval | ATR-018 |
-| ADR-110 | Knowledge Platform 传输 | MCP 优先、REST 回退的 M10 ACL 接口；开发用确定性 KP 模拟器 | Proposed | ATR-005 |
+| ADR-110 | Knowledge Platform 传输 | MCP 优先、REST 回退的 M10 ACL 接口；真实 MCP 客户端已实现并对接 Healthy Aging Knowledge Graph（JSON-RPC POST /mcp，Cloud Run+Neon 实例，retrieval-identity 版本化，失败关闭）；确定性 KP 模拟器保持默认（KNOWLEDGE_PLATFORM_MODE 显式切换），见 KNOWLEDGE_GRAPH_INTEGRATION.md | Adopted for Implementation | ATR-005 |
 | ADR-111 | 通信供应商 | M16 适配器契约+回调认证/重放防护先行；确定性 Provider Simulator（可脚本化 accepted/delivered/failed/unknown/重放/乱序） | Pending External Approval | ATR-014/023 |
 | ADR-112 | 匹配算法/属性注册表 | 属性注册表+禁用属性 DB 约束+规则式候选生成骨架；算法与注册表内容待批 | Pending External Approval | ATR-009/010 |
 | ADR-113 | 社区 feed 排序 | 默认时间序（治理排序待批）；不实现注意力优化 | Pending External Approval | ATR-008 |

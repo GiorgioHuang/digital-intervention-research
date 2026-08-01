@@ -27,6 +27,16 @@ import {
   submitInterventionVersion,
 } from '@platform/m06-intervention-portfolio';
 import { listSignalsAwaitingTriage, triageSafetySignal } from '@platform/m09-safety';
+import {
+  approveEvidenceDecision,
+  approveEvidenceReview,
+  attachKnowledgeReference,
+  createEvidenceReview,
+  draftEvidenceDecision,
+  searchKnowledgeEvidence,
+  submitEvidenceReview,
+  type EvidenceDecisionOutcome,
+} from '@platform/m10-evidence';
 import { listOpenModerationCases, recordModerationDecision } from '@platform/m18-community-social';
 import {
   approveReportVersion,
@@ -733,5 +743,88 @@ export class StaffCommandController {
     if (body.withLimitations !== undefined) input.withLimitations = body.withLimitations;
     await approveResearchFinding(this.deps.m13, ctx, input);
     return { data: { type: 'ResearchFinding', id: researchFindingId, meta: { state: 'Approved' } } };
+  }
+
+  // ── M10 evidence & knowledge integration (ADR-044 / ADR-052) ──────────
+
+  @Get('evidence/search')
+  async searchEvidence(@Req() req: Request, @Query('q') q?: string) {
+    const ctx = requireActor(req);
+    // Live read-through to the Knowledge Platform ACL; upstream failure is
+    // a 503 DEPENDENCY_UNAVAILABLE, never an empty "no evidence" answer.
+    const items = await searchKnowledgeEvidence(this.deps.m10, ctx, q ?? '');
+    return { data: items.map((r) => ({ type: 'KnowledgeResource', id: r.externalIdentifier, attributes: r })) };
+  }
+
+  @Post('evidence-reviews')
+  async createEvidenceReview(
+    @Req() req: Request,
+    @Body() body: { researchProjectId: string; question: string },
+  ) {
+    const ctx = requireActor(req);
+    const result = await createEvidenceReview(this.deps.m10, ctx, body);
+    return { data: { type: 'EvidenceReview', id: result.evidenceReviewId } };
+  }
+
+  @Post('evidence-reviews/:reviewId/references')
+  async attachReference(
+    @Req() req: Request,
+    @Param('reviewId') evidenceReviewId: string,
+    @Body() body: { externalIdentifier: string },
+  ) {
+    const ctx = requireActor(req);
+    const result = await attachKnowledgeReference(this.deps.m10, ctx, {
+      evidenceReviewId,
+      externalIdentifier: body.externalIdentifier,
+    });
+    return { data: { type: 'KnowledgeReference', id: result.knowledgeReferenceId } };
+  }
+
+  @Post('evidence-reviews/:reviewId/submit')
+  async submitEvidenceReview(@Req() req: Request, @Param('reviewId') reviewId: string) {
+    const ctx = requireActor(req);
+    await submitEvidenceReview(this.deps.m10, ctx, reviewId);
+    return { data: { type: 'EvidenceReview', id: reviewId, meta: { state: 'In Review' } } };
+  }
+
+  @Post('evidence-reviews/:reviewId/approve')
+  async approveEvidenceReview(
+    @Req() req: Request,
+    @Param('reviewId') reviewId: string,
+    @Body() body: { confirmed: boolean },
+  ) {
+    const ctx = requireActor(req);
+    await approveEvidenceReview(this.deps.m10, ctx, reviewId, body.confirmed === true);
+    return { data: { type: 'EvidenceReview', id: reviewId, meta: { state: 'Approved' } } };
+  }
+
+  @Post('evidence-decisions')
+  async draftEvidenceDecision(
+    @Req() req: Request,
+    @Body() body: { evidenceReviewId: string; outcome: EvidenceDecisionOutcome; rationale: string },
+  ) {
+    const ctx = requireActor(req);
+    const result = await draftEvidenceDecision(this.deps.m10, ctx, body);
+    return { data: { type: 'EvidenceDecision', id: result.evidenceDecisionId, meta: { state: 'Draft' } } };
+  }
+
+  @Post('evidence-decisions/:decisionId/approve')
+  async approveEvidenceDecision(
+    @Req() req: Request,
+    @Param('decisionId') evidenceDecisionId: string,
+    @Body() body: { confirmed: boolean },
+  ) {
+    const ctx = requireActor(req);
+    const result = await approveEvidenceDecision(this.deps.m10, ctx, {
+      evidenceDecisionId,
+      confirmed: body.confirmed === true,
+    });
+    return {
+      data: {
+        type: 'EvidenceDecision',
+        id: evidenceDecisionId,
+        meta: { state: 'Approved', evidenceSnapshotId: result.evidenceSnapshotId },
+      },
+    };
   }
 }

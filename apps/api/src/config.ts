@@ -12,12 +12,28 @@ const envSchema = z.object({
   // 'oidc' is the production target (pending ADR-104); 'dev-header' is an
   // explicit development/synthetic-pilot stub and the only mode implemented.
   AUTH_MODE: z.enum(['dev-header', 'oidc']).default('dev-header'),
+  // Knowledge Platform ACL backing (ADR-052 "MCP preferred"): 'simulator'
+  // is the deterministic default (fail closed — the real dependency is
+  // opt-in); 'mcp' talks JSON-RPC to the Healthy Aging Knowledge Graph MCP
+  // endpoint and requires KNOWLEDGE_MCP_URL.
+  KNOWLEDGE_PLATFORM_MODE: z.enum(['simulator', 'mcp']).default('simulator'),
+  KNOWLEDGE_MCP_URL: z.string().url().optional(),
+});
+
+const envSchemaChecked = envSchema.superRefine((cfg, issues) => {
+  if (cfg.KNOWLEDGE_PLATFORM_MODE === 'mcp' && cfg.KNOWLEDGE_MCP_URL === undefined) {
+    issues.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['KNOWLEDGE_MCP_URL'],
+      message: 'required when KNOWLEDGE_PLATFORM_MODE=mcp',
+    });
+  }
 });
 
 export type ApiConfig = z.infer<typeof envSchema>;
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
-  const parsed = envSchema.safeParse(env);
+  const parsed = envSchemaChecked.safeParse(env);
   if (!parsed.success) {
     const issues = parsed.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; ');
     throw new Error(`Invalid environment configuration: ${issues}`);

@@ -61,6 +61,13 @@ jobs:
           pnpm migrate
 
       - name: Tests (unit + integration)
+        # KNOWLEDGE_MCP_URL points the M10 real-call suite at the deployed
+        # Healthy Aging Knowledge Graph MCP endpoint (Cloud Run + Neon), so
+        # every push exercises genuine JSON-RPC round trips. The suite
+        # probes /health first and skips honestly if the service is down —
+        # availability of an external dependency must not flake the build.
+        env:
+          KNOWLEDGE_MCP_URL: https://knowledge-graph.internal.example
         run: pnpm test
 
       # Runs against the populated post-test database: dump -> restore

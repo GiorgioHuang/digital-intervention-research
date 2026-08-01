@@ -68,6 +68,9 @@ importers:
       '@platform/m09-safety':
         specifier: workspace:*
         version: link:../../packages/modules/m09-safety
+      '@platform/m10-evidence':
+        specifier: workspace:*
+        version: link:../../packages/modules/m10-evidence
       '@platform/m12-dataset':
         specifier: workspace:*
         version: link:../../packages/modules/m12-dataset

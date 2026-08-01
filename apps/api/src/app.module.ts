@@ -7,6 +7,7 @@ import { createRoleAssignmentQuery } from '@platform/m01-identity-org';
 import { createParticipantQuery } from '@platform/m02-participant';
 import { createPermissionService } from '@platform/m03-consent-permission';
 import { createProtocolVersionQuery } from '@platform/m04-research-design';
+import { createKnowledgePlatformMcpClient, createKnowledgePlatformSimulator } from '@platform/m10-evidence';
 import { createBlockQuery } from '@platform/m18-community-social';
 import type { ApiConfig } from './config.js';
 import { HealthController, PG_POOL } from './health.controller.js';
@@ -28,6 +29,12 @@ export function buildAppModule(config: ApiConfig) {
   });
   const checkPermission = permissions.evaluate.bind(permissions);
   const moduleDeps = { pool, clock, checkPermission };
+  // ADR-052: the external Healthy Aging Knowledge Graph stays behind the
+  // KnowledgePlatformPort ACL; 'mcp' mode makes real JSON-RPC calls.
+  const knowledgePlatform =
+    config.KNOWLEDGE_PLATFORM_MODE === 'mcp'
+      ? createKnowledgePlatformMcpClient({ baseUrl: config.KNOWLEDGE_MCP_URL! })
+      : createKnowledgePlatformSimulator();
   const deps: ApiDeps = {
     pool,
     clock,
@@ -43,6 +50,7 @@ export function buildAppModule(config: ApiConfig) {
     },
     m06: moduleDeps,
     m09: moduleDeps,
+    m10: { ...moduleDeps, knowledgePlatform },
     m12: moduleDeps,
     m13: moduleDeps,
     m14: moduleDeps,
