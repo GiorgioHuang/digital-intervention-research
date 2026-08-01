@@ -2,7 +2,7 @@
   "name": "healthy-aging-research-platform",
   "private": true,
   "version": "0.1.0",
-  "description": "Healthy Aging Digital Intervention Research Platform — modular monolith MVP (see IMPLEMENTATION_PLAN.md)",
+  "description": "Healthy Aging Digital Intervention Research Platform \u2014 modular monolith MVP (see IMPLEMENTATION_PLAN.md)",
   "engines": {
     "node": ">=22"
   },
@@ -21,7 +21,8 @@
     "traceability:check": "node tools/check-traceability.mjs",
     "dev:deps": "docker compose up -d postgres minio",
     "dev:deps:down": "docker compose down",
-    "drill:backup": "node tools/backup-restore-drill.mjs"
+    "drill:backup": "node tools/backup-restore-drill.mjs",
+    "traceability:research": "node tools/check-research-traceability.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.2",

@@ -51,6 +51,9 @@ jobs:
       - name: Traceability matrix check
         run: pnpm traceability:check
 
+      - name: Research traceability matrix check
+        run: pnpm traceability:research
+
       - name: Migration drill (up → down-all → up)
         run: |
           pnpm migrate

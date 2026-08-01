@@ -1,0 +1,80 @@
+# RESEARCH_TRACEABILITY_MATRIX 的机器可读层（Master Prompt v1.2 Traceability Format）。
+# finding_status 词汇：Doc 19 v1.3 §38 + not_started/in_analysis。
+# 规则：非 supported 不得标 supported；每条至少 1 个 Trace ID 与 1 个 ADR ID。
+
+- research_item: RQ-P1
+  question: "Is the framework internally coherent?"
+  epistemic_status: theoretical
+  trace_ids: [ATR-023]
+  adr_ids: [ADR-008]
+  concepts: [all-C01-C18]
+  scenarios: [pending-WP-07]
+  code: [packages/modules, packages/policy]
+  tests: [packages/synthetic-pilot/test/synthetic-pilot.test.ts]
+  finding_status: in_analysis
+
+- research_item: RQ-P2
+  question: "Are Healthy Aging outcomes separated from platform activity?"
+  epistemic_status: theoretical
+  trace_ids: [ATR-019]
+  adr_ids: [ADR-048]
+  concepts: [C-01, C-03, C-04, C-15]
+  scenarios: [pending-WP-07]
+  code: [packages/modules/m07-delivery, packages/modules/m08-assessment]
+  tests: [packages/synthetic-pilot/test/synthetic-pilot.test.ts]
+  finding_status: in_analysis
+
+- research_item: RQ-P3
+  question: "Do the proposed intervention mechanisms logically connect activities to future outcomes?"
+  epistemic_status: theoretical
+  trace_ids: [ATR-006]
+  adr_ids: [ADR-048]
+  concepts: [C-03, C-04, C-05]
+  scenarios: [pending-WP-02]
+  code: []
+  tests: []
+  finding_status: not_started
+
+- research_item: RQ-P4
+  question: "Can Participant control be represented consistently across Consent, Visibility, Life Story, matching, messaging and AI?"
+  epistemic_status: theoretical
+  trace_ids: [ATR-003, ATR-010, ATR-014, ATR-016]
+  adr_ids: [ADR-018, ADR-036, ADR-042, ADR-050]
+  concepts: [C-02, C-06, C-07, C-10, C-11, C-16]
+  scenarios: [SCN-pilot-withdrawal-30]
+  code: [packages/policy/src/engine.ts, packages/modules/m03-consent-permission, packages/modules/m17-life-story, packages/modules/m18-community-social]
+  tests: [packages/policy/test, apps/api/test/api.e2e.test.ts]
+  finding_status: in_analysis
+
+- research_item: RQ-P5
+  question: "Are the M01-M18 boundaries sufficient to preserve authority and research lineage?"
+  epistemic_status: theoretical
+  trace_ids: [ATR-013, ATR-017, ATR-018]
+  adr_ids: [ADR-008, ADR-039, ADR-051]
+  concepts: [C-12, C-14, C-16, C-18]
+  scenarios: [pending-WP-07]
+  code: [.dependency-cruiser.cjs, packages/modules]
+  tests: [packages/modules/m13-analysis/test, packages/modules/m15-governance/test]
+  finding_status: in_analysis
+
+- research_item: WP-01
+  question: "Concept and terminology audit: which concepts are explicit, executable, ambiguous?"
+  epistemic_status: theoretical
+  trace_ids: [ATR-023]
+  adr_ids: [ADR-008]
+  concepts: [C-01..C-18]
+  scenarios: []
+  code: [CONCEPT_CATALOGUE.md]
+  tests: [apps/web/test/consent-panel.test.tsx, apps/api/test/api.e2e.test.ts]
+  finding_status: in_analysis
+
+- research_item: CON-REGISTER
+  question: "Which contradictions exist between code, Handbook versions and governance artefacts?"
+  epistemic_status: contradiction
+  trace_ids: [ATR-023]
+  adr_ids: [ADR-101]
+  concepts: [governance]
+  scenarios: []
+  code: [CONTRADICTION_REGISTER.md]
+  tests: []
+  finding_status: in_analysis
