@@ -31,6 +31,7 @@
     "@platform/m17-life-story": "workspace:*",
     "@platform/m18-community-social": "workspace:*",
     "@platform/policy": "workspace:*",
+    "express": "^5.2.1",
     "pino": "^9.13.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",

@@ -18,6 +18,15 @@ const envSchema = z.object({
   // endpoint and requires KNOWLEDGE_MCP_URL.
   KNOWLEDGE_PLATFORM_MODE: z.enum(['simulator', 'mcp']).default('simulator'),
   KNOWLEDGE_MCP_URL: z.string().url().optional(),
+  // Interim perimeter for cloud deployments (THREAT_MODEL: the dev-header
+  // auth stub must never be publicly reachable unguarded): when set, every
+  // /v1 request must present the token. Static assets and /health stay
+  // open — they carry no data. This is a compensating control, NOT
+  // authentication; OIDC (ADR-104) remains required before any real use.
+  ACCESS_TOKEN: z.string().min(16).optional(),
+  // When set, the API also serves the built web app from this directory
+  // (single Cloud Run service serves UI + API from one origin).
+  WEB_DIST_DIR: z.string().optional(),
 });
 
 const envSchemaChecked = envSchema.superRefine((cfg, issues) => {
@@ -33,7 +42,9 @@ const envSchemaChecked = envSchema.superRefine((cfg, issues) => {
 export type ApiConfig = z.infer<typeof envSchema>;
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
-  const parsed = envSchemaChecked.safeParse(env);
+  // Cloud Run injects PORT; an explicit API_PORT still wins.
+  const withPort = env['API_PORT'] === undefined && env['PORT'] !== undefined ? { ...env, API_PORT: env['PORT'] } : env;
+  const parsed = envSchemaChecked.safeParse(withPort);
   if (!parsed.success) {
     const issues = parsed.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; ');
     throw new Error(`Invalid environment configuration: ${issues}`);

@@ -19,7 +19,7 @@
 
 | 威胁（STRIDE） | 缓解 | 证据 | 残余风险 |
 |---|---|---|---|
-| 冒充他人（S） | 开发期为 dev-header 桩——**无真实认证**；权限引擎按 actor↔participant 身份映射裁决所有权 | engine 单测 + e2e 403/404 | **高（开发环境固有）**：生产 OIDC 待 ADR-104；当前环境绝不可对外暴露 |
+| 冒充他人（S） | 开发期为 dev-header 桩——**无真实认证**；权限引擎按 actor↔participant 身份映射裁决所有权。云部署新增补偿边界（DEPLOYMENT.md）：`ACCESS_TOKEN` 共享密钥门（常数时间比较，/v1 全量拦截，401 标准封装），部署工作流 fail closed——令牌密钥不存在则只以 IAM-only ingress 部署 | engine 单测 + e2e 403/404 + 令牌门 e2e（无令牌 401/错误令牌 401/health 开放） | **高（固有）**：令牌是边界不是认证——共享、不区分个人、不可单人撤销；生产 OIDC 仍待 ADR-104；部署环境仅限合成数据（ADR-062） |
 | 越权访问他人资源（E） | ownerOnly + 受保护存在性 404；Block 实时 fail closed | e2e：档案/对象/会话/队列跨身份探测全部 404/403 | 低 |
 | 存在性枚举（I） | DenyAndHideExistence 统一 404 | e2e 多处断言 | 低 |
 | 篡改请求重放命令（T/R） | 幂等记录（scope 唯一约束）；版本绑定命令（expectedVersion/412） | database 集成测试；e2e 412 | 低 |

@@ -1,5 +1,27 @@
+import { timingSafeEqual } from 'node:crypto';
 import type { Request, Response, NextFunction } from 'express';
 import { PlatformError, createRequestContext, type RequestContext } from '@platform/kernel';
+
+/**
+ * Shared-secret perimeter for cloud deployments: every /v1 request must
+ * carry X-Access-Token. Constant-time comparison; a missing or wrong token
+ * is 401 in the standard error envelope. This gate is a compensating
+ * control in front of the dev-header stub, not authentication (ADR-104).
+ */
+export function accessTokenMiddleware(token: string) {
+  const expected = Buffer.from(token);
+  return (req: Request, res: Response, next: NextFunction): void => {
+    // originalUrl, not path: inside a mounted middleware `path` is relative
+    // to the mount point and the /v1 prefix check would silently pass.
+    if (!req.originalUrl.startsWith('/v1')) return next();
+    const presented = req.headers['x-access-token'];
+    const buf = typeof presented === 'string' ? Buffer.from(presented) : Buffer.alloc(0);
+    if (buf.length === expected.length && timingSafeEqual(buf, expected)) return next();
+    res.status(401).json({
+      error: { code: 'AUTHENTICATION_REQUIRED', message: 'Access token required', requestId: 'unknown', retryable: false },
+    });
+  };
+}
 
 export interface PlatformRequest extends Request {
   platformCtx: RequestContext;

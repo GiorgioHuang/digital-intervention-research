@@ -540,3 +540,13 @@
   code: [packages/modules/m18-community-social/src/application/queries.ts, apps/api/src/controllers.ts, apps/api/src/staff-controllers.ts, apps/web/src/components/CommunityPanel.tsx, apps/web/src/App.tsx, apps/web/src/api.ts]
   tests: [apps/web/test/community-panel.test.tsx, apps/api/test/api.e2e.test.ts]
   status: implemented
+
+- implementation_id: IMP-OPS-CLOUDRUN-CICD-001
+  module: ops
+  summary: Cloud Run + Neon continuous deployment - deploy workflow chained on green CI only (workflow_run, deploying the exact CI-verified commit), keyless Workload Identity Federation with a repo-scoped provider, migrations executed against Neon from the workflow before each rollout, single-service container (API serving the built web app same-origin, pg-boss worker and staggered scheduler via a launcher that fails the whole container closed if any process dies); interim access perimeter for the exposed dev-header stub - constant-time X-Access-Token gate over all /v1 routes (401 standard envelope, /health and static assets open) with fail-closed ingress (no token secret means IAM-only, never unauthenticated public), web clients capture ?token once, strip it from the URL, and attach it everywhere; deployed platform runs KNOWLEDGE_PLATFORM_MODE=mcp against the live Knowledge Graph; skip-with-notice guard until GCP variables are configured; one-time setup script and honest-limitations deployment doc
+  trace_ids: [ATR-021, ATR-023]
+  adr_ids: [ADR-103, ADR-104, ADR-105]
+  docs: ["DEPLOYMENT.md", "THREAT_MODEL.md", "Doc 14 environment controls"]
+  code: [Dockerfile, tools/start-cloud.mjs, .github/workflows/deploy.yml, scripts/setup-gcp.sh, apps/api/src/http-context.ts, apps/api/src/main.ts, apps/api/src/config.ts, apps/web/src/api.ts]
+  tests: [apps/api/test/api.e2e.test.ts, apps/web/test/access-token.test.ts]
+  status: implemented

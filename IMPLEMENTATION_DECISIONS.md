@@ -12,9 +12,9 @@ ADR-001…060 全部按 Accepted/Deferred/Prohibited 原样遵从；实现不启
 |---|---|---|---|---|
 | ADR-101 | 后端语言框架 | TypeScript 5(strict)/Node 22/NestJS；模块=Nest module+包边界；依赖巡航强制 M01–M18 隔离 | Adopted for Implementation | ATR-003/004/022, CHG-* |
 | ADR-102 | 参与者客户端 | React+Vite 响应式 PWA；OpenAPI 生成客户端 | Adopted for Implementation | ATR-006 |
-| ADR-103 | 托管平台 | 未定；容器化+12-factor 保持可移植；识别数据入库前必须批准 | Pending External Approval | ATR-021 |
+| ADR-103 | 托管平台 | **合成数据概念原型环境**采用 Cloud Run（单服务，CI 绿后自动部署，见 DEPLOYMENT.md）；容器化+12-factor 保持可移植；**真实/识别数据的生产托管决定仍待批**——该部署不预决生产选型 | Adopted for Implementation（仅原型环境；生产待批） | ATR-021 |
 | ADR-104 | 身份供应商 | 开发期 Keycloak(OIDC)；M01 为 UserAccount 权威；OIDC ACL 隔离 | Proposed（生产 IdP 待批） | ATR-003 |
-| ADR-105 | 托管 PostgreSQL | 本地/CI 用 PG16 容器；生产托管服务待批 | Proposed | ATR-019 |
+| ADR-105 | 托管 PostgreSQL | 本地/CI 用 PG16 容器；概念原型环境用 Neon（HAIP_DATABASE_URL，迁移每次部署前执行）；真实数据的生产托管服务待批 | Adopted for Implementation（仅原型环境；生产待批） | ATR-019 |
 | ADR-106 | 对象存储 | S3 兼容接口；本地 MinIO；上传隔离/扫描管线按 Doc 16 §46–50 | Proposed | ATR-021 |
 | ADR-107 | 队列/调度 | pg-boss（PG 持久队列+cron），按工作负载分队列；与 outbox 同库事务语义 | Adopted for Implementation | ATR-023 |
 | ADR-108 | Search/Vector | PG 全文检索；pgvector 可选且默认关闭；派生投影再授权 | Adopted for Implementation | ATR-015/016 |

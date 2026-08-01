@@ -22,10 +22,31 @@ export interface Session {
   participantId: string;
 }
 
+/**
+ * Deployed environments sit behind a shared access token (server-side
+ * X-Access-Token gate). captureAccessToken() stores a token passed once
+ * via ?token=… and strips it from the address bar; both API clients then
+ * attach it to every request. Locally no token is set and nothing changes.
+ */
+export function captureAccessToken(): void {
+  const url = new URL(window.location.href);
+  const token = url.searchParams.get('token');
+  if (token !== null && token !== '') {
+    window.localStorage.setItem('platformAccessToken', token);
+    url.searchParams.delete('token');
+    window.history.replaceState(null, '', url.toString());
+  }
+}
+
+export function accessTokenHeader(): Record<string, string> {
+  const token = window.localStorage.getItem('platformAccessToken');
+  return token === null ? {} : { 'x-access-token': token };
+}
+
 async function post<T>(session: Session, path: string, body: object): Promise<T> {
   const res = await fetch(path, {
     method: 'POST',
-    headers: { 'content-type': 'application/json', 'x-actor-id': session.actorId },
+    headers: { 'content-type': 'application/json', 'x-actor-id': session.actorId, ...accessTokenHeader() },
     body: JSON.stringify(body),
   });
   const json = (await res.json()) as T & { error?: ApiError };
@@ -34,7 +55,7 @@ async function post<T>(session: Session, path: string, body: object): Promise<T>
 }
 
 async function get<T>(session: Session, path: string): Promise<T> {
-  const res = await fetch(path, { headers: { 'x-actor-id': session.actorId } });
+  const res = await fetch(path, { headers: { 'x-actor-id': session.actorId, ...accessTokenHeader() } });
   const json = (await res.json()) as T & { error?: ApiError };
   if (!res.ok) throw new PlatformApiError(json.error as ApiError, res.status);
   return json;

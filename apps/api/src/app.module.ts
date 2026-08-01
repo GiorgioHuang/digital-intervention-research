@@ -14,7 +14,7 @@ import { HealthController, PG_POOL } from './health.controller.js';
 import { API_DEPS, CommandController, type ApiDeps } from './controllers.js';
 import { StaffCommandController } from './staff-controllers.js';
 import { PlatformErrorFilter } from './error-filter.js';
-import { requestContextMiddleware } from './http-context.js';
+import { accessTokenMiddleware, requestContextMiddleware } from './http-context.js';
 
 export function buildAppModule(config: ApiConfig) {
   const pool = createPool({ connectionString: config.DATABASE_URL, applicationName: 'api' });
@@ -70,6 +70,9 @@ export function buildAppModule(config: ApiConfig) {
   })
   class AppModule implements NestModule {
     configure(consumer: MiddlewareConsumer): void {
+      if (config.ACCESS_TOKEN !== undefined) {
+        consumer.apply(accessTokenMiddleware(config.ACCESS_TOKEN)).forRoutes('*');
+      }
       consumer.apply(requestContextMiddleware(config.AUTH_MODE)).forRoutes('*');
     }
   }

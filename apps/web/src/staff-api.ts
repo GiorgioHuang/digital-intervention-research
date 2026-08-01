@@ -1,4 +1,4 @@
-import { PlatformApiError, type ApiError } from './api.js';
+import { accessTokenHeader, PlatformApiError, type ApiError } from './api.js';
 
 /**
  * Staff-side HTTP client. Same boundary rules as the participant client:
@@ -20,6 +20,7 @@ async function post<T>(session: StaffSession, path: string, body: object): Promi
       'content-type': 'application/json',
       'x-actor-id': session.actorId,
       'x-auth-strength': session.authStrength,
+      ...accessTokenHeader(),
     },
     body: JSON.stringify(body),
   });
@@ -30,7 +31,7 @@ async function post<T>(session: StaffSession, path: string, body: object): Promi
 
 async function get<T>(session: StaffSession, path: string): Promise<T> {
   const res = await fetch(path, {
-    headers: { 'x-actor-id': session.actorId, 'x-auth-strength': session.authStrength },
+    headers: { 'x-actor-id': session.actorId, 'x-auth-strength': session.authStrength, ...accessTokenHeader() },
   });
   const json = (await res.json()) as T & { error?: ApiError };
   if (!res.ok) throw new PlatformApiError(json.error as ApiError, res.status);

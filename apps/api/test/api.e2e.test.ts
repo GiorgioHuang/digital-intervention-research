@@ -1009,6 +1009,46 @@ describe.skipIf(!dbAvailable)('HTTP API (e2e)', () => {
     expect(denied.status).toBe(404);
     expect(((await denied.json()) as { error: { code: string } }).error.code).toBe('RESOURCE_NOT_FOUND');
   });
+
+  it('ACCESS_TOKEN gate: /v1 requires the token, /health stays open (cloud perimeter)', async () => {
+    const token = 'e2e-access-token-0123456789abcdef';
+    const gated = await NestFactory.create(
+      buildAppModule({
+        DATABASE_URL, API_PORT: 0, LOG_LEVEL: 'error', AUTH_MODE: 'dev-header',
+        KNOWLEDGE_PLATFORM_MODE: 'simulator',
+        ACCESS_TOKEN: token,
+      }),
+      { logger: false },
+    );
+    try {
+      await gated.listen(0);
+      const gatedUrl = await gated.getUrl();
+
+      // Liveness stays open (Cloud Run health checks; no data exposed).
+      expect((await fetch(`${gatedUrl}/health`)).status).toBe(200);
+
+      // Every /v1 request without the token is 401 — regardless of dev-header identity.
+      const noToken = await fetch(`${gatedUrl}/v1/participants/${patId}/community-spaces`, {
+        headers: { 'x-actor-id': patAcc },
+      });
+      expect(noToken.status).toBe(401);
+      expect(((await noToken.json()) as { error: { code: string } }).error.code).toBe('AUTHENTICATION_REQUIRED');
+
+      // A wrong token of the same length is rejected too.
+      const wrong = await fetch(`${gatedUrl}/v1/participants/${patId}/community-spaces`, {
+        headers: { 'x-actor-id': patAcc, 'x-access-token': token.replace(/f$/, '0') },
+      });
+      expect(wrong.status).toBe(401);
+
+      // With the token the normal permission engine takes over unchanged.
+      const ok = await fetch(`${gatedUrl}/v1/participants/${patId}/community-spaces`, {
+        headers: { 'x-actor-id': patAcc, 'x-access-token': token },
+      });
+      expect(ok.status).toBe(200);
+    } finally {
+      await gated.close();
+    }
+  });
 });
 
 describe.skipIf(dbAvailable)('HTTP API (skipped)', () => {
