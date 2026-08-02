@@ -20,7 +20,7 @@ PROJECT_NUMBER="${PROJECT_NUMBER:-$(gcloud projects describe "$PROJECT_ID" --for
 REPO="${REPO:-GiorgioHuang/digital-intervention-research}"
 REGION="${REGION:-us-east1}"
 POOL="${POOL:-github-pool}"
-PROVIDER="${PROVIDER:-github-haip}"
+PROVIDER="${PROVIDER:-github-hadi}"
 SA_NAME="${SA_NAME:-deployer}"
 SA_EMAIL="${SA_NAME}@${PROJECT_ID}.iam.gserviceaccount.com"
 RUNTIME_SA="${PROJECT_NUMBER}-compute@developer.gserviceaccount.com"
@@ -73,21 +73,21 @@ put_secret() {
   echo "  ${NAME} set; runtime SA granted accessor"
 }
 
-echo "== HAIP_DATABASE_URL secret (Neon connection string) =="
+echo "== HADI_DATABASE_URL secret (Neon connection string) =="
 if [ -n "${DATABASE_URL:-}" ]; then
-  put_secret HAIP_DATABASE_URL "$DATABASE_URL"
+  put_secret HADI_DATABASE_URL "$DATABASE_URL"
 else
   echo "  DATABASE_URL not provided — create a Neon database first, then:"
-  echo "    printf '%s' 'postgresql://…?sslmode=require' | gcloud secrets create HAIP_DATABASE_URL --data-file=-"
+  echo "    printf '%s' 'postgresql://…?sslmode=require' | gcloud secrets create HADI_DATABASE_URL --data-file=-"
 fi
 
-echo "== HAIP_ACCESS_TOKEN secret (public-ingress gate) =="
+echo "== HADI_ACCESS_TOKEN secret (public-ingress gate) =="
 if [ -n "${ACCESS_TOKEN:-}" ]; then
-  put_secret HAIP_ACCESS_TOKEN "$ACCESS_TOKEN"
+  put_secret HADI_ACCESS_TOKEN "$ACCESS_TOKEN"
 else
   echo "  ACCESS_TOKEN not provided — WITHOUT this secret the service deploys IAM-only (not public)."
   echo "  To open the token-gated public URL later:"
-  echo "    openssl rand -hex 24 | tr -d '\\n' | gcloud secrets create HAIP_ACCESS_TOKEN --data-file=-"
+  echo "    openssl rand -hex 24 | tr -d '\\n' | gcloud secrets create HADI_ACCESS_TOKEN --data-file=-"
 fi
 
 cat <<EOF

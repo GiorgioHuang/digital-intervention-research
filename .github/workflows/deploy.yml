@@ -3,7 +3,7 @@ name: Deploy to Cloud Run
 # CI/CD chain: runs after the CI workflow succeeds on main (plus manual
 # dispatch). Keyless auth via Workload Identity Federation — no long-lived
 # keys in GitHub. DATABASE_URL and the access token live in GCP Secret
-# Manager (HAIP_DATABASE_URL / HAIP_ACCESS_TOKEN), injected at deploy time.
+# Manager (HADI_DATABASE_URL / HADI_ACCESS_TOKEN), injected at deploy time.
 # Until the repo Variables below are configured the workflow skips with a
 # notice instead of failing (one-time setup: scripts/setup-gcp.sh, see
 # DEPLOYMENT.md).
@@ -67,11 +67,11 @@ jobs:
         # during rollout). The connection string never leaves Secret Manager
         # unmasked.
         run: |
-          if ! gcloud secrets describe HAIP_DATABASE_URL --project "${{ vars.GCP_PROJECT_ID }}" >/dev/null 2>&1; then
-            echo "::error::HAIP_DATABASE_URL secret not found in Secret Manager — create the Neon database and store its URL (see DEPLOYMENT.md)."
+          if ! gcloud secrets describe HADI_DATABASE_URL --project "${{ vars.GCP_PROJECT_ID }}" >/dev/null 2>&1; then
+            echo "::error::HADI_DATABASE_URL secret not found in Secret Manager — create the Neon database and store its URL (see DEPLOYMENT.md)."
             exit 1
           fi
-          DBURL=$(gcloud secrets versions access latest --secret=HAIP_DATABASE_URL --project "${{ vars.GCP_PROJECT_ID }}")
+          DBURL=$(gcloud secrets versions access latest --secret=HADI_DATABASE_URL --project "${{ vars.GCP_PROJECT_ID }}")
           echo "::add-mask::$DBURL"
           pnpm install --frozen-lockfile
           DATABASE_URL="$DBURL" pnpm migrate
@@ -83,7 +83,7 @@ jobs:
           NUM=$(gcloud projects describe "$PROJECT" --format='value(projectNumber)' 2>/dev/null || true)
           [ -z "$NUM" ] && { echo "::warning::could not resolve project number; skipping secret IAM"; exit 0; }
           RUNTIME_SA="${NUM}-compute@developer.gserviceaccount.com"
-          for S in HAIP_DATABASE_URL HAIP_ACCESS_TOKEN; do
+          for S in HADI_DATABASE_URL HADI_ACCESS_TOKEN; do
             if gcloud secrets describe "$S" --project "$PROJECT" >/dev/null 2>&1; then
               gcloud secrets add-iam-policy-binding "$S" --project "$PROJECT" \
                 --member "serviceAccount:${RUNTIME_SA}" \
@@ -96,18 +96,18 @@ jobs:
         if: steps.cfg.outputs.enabled == 'true'
         run: |
           PROJECT="${{ vars.GCP_PROJECT_ID }}"
-          SECRETS="DATABASE_URL=HAIP_DATABASE_URL:latest"
+          SECRETS="DATABASE_URL=HADI_DATABASE_URL:latest"
           # Fail closed on exposure (THREAT_MODEL: the dev-header auth stub
           # must never be publicly reachable unguarded): with the
-          # HAIP_ACCESS_TOKEN secret present the service is public behind
+          # HADI_ACCESS_TOKEN secret present the service is public behind
           # the X-Access-Token gate; without it, ingress stays IAM-only.
-          if gcloud secrets describe HAIP_ACCESS_TOKEN --project "$PROJECT" >/dev/null 2>&1; then
-            SECRETS="$SECRETS,ACCESS_TOKEN=HAIP_ACCESS_TOKEN:latest"
+          if gcloud secrets describe HADI_ACCESS_TOKEN --project "$PROJECT" >/dev/null 2>&1; then
+            SECRETS="$SECRETS,ACCESS_TOKEN=HADI_ACCESS_TOKEN:latest"
             AUTH_FLAG="--allow-unauthenticated"
-            echo "::notice::HAIP_ACCESS_TOKEN found — public ingress behind the access-token gate."
+            echo "::notice::HADI_ACCESS_TOKEN found — public ingress behind the access-token gate."
           else
             AUTH_FLAG="--no-allow-unauthenticated"
-            echo "::notice::HAIP_ACCESS_TOKEN secret not found — deploying with IAM-only ingress (fail closed). Create the secret to open the token-gated public URL."
+            echo "::notice::HADI_ACCESS_TOKEN secret not found — deploying with IAM-only ingress (fail closed). Create the secret to open the token-gated public URL."
           fi
           ENVVARS="AUTH_MODE=dev-header,WEB_DIST_DIR=/app/apps/web/dist,RUN_JOBS=${{ vars.RUN_JOBS || 'true' }},COMMIT_SHA=${{ github.event.workflow_run.head_sha || github.sha }}"
           # Real Knowledge Graph integration (ADR-052/110): the deployed

@@ -5,9 +5,9 @@
 ## 架构
 
 - **单 Cloud Run 服务**（默认名 `haip-platform`）：一个容器内由 `tools/start-cloud.mjs` 启动三个进程——API（同源静态托管 `apps/web/dist` 的 Web 应用）+ pg-boss worker + scheduler（`RUN_JOBS=true`，scheduler 错峰 5 秒启动以避免 pg-boss 初始化死锁）。任一进程退出即整容器退出（fail closed：宁可重启，不带病运行掉了安全清扫的服务）。
-- **Neon PostgreSQL**：`DATABASE_URL` 由 Secret Manager 的 `HAIP_DATABASE_URL` 注入；迁移在部署工作流内、新版本上线**之前**由 GitHub runner 直接对 Neon 执行（全部迁移可逆且 CI 每推送演练）。
+- **Neon PostgreSQL**：`DATABASE_URL` 由 Secret Manager 的 `HADI_DATABASE_URL` 注入；迁移在部署工作流内、新版本上线**之前**由 GitHub runner 直接对 Neon 执行（全部迁移可逆且 CI 每推送演练）。
 - **Knowledge Graph 真实对接**：部署环境默认 `KNOWLEDGE_PLATFORM_MODE=mcp`，指向 https://knowledge-graph.internal.example。
-- **访问边界（fail closed）**：`HAIP_ACCESS_TOKEN` 密钥存在 → 公网开放但所有 `/v1` 请求必须携带 `X-Access-Token`（常数时间比较；静态资源与 /health 开放，不含数据）；密钥不存在 → 服务以 IAM-only ingress 部署，不对公网开放。Web 端首次用 `<url>/?token=<令牌>` 打开即存储并从地址栏剥离。
+- **访问边界（fail closed）**：`HADI_ACCESS_TOKEN` 密钥存在 → 公网开放但所有 `/v1` 请求必须携带 `X-Access-Token`（常数时间比较；静态资源与 /health 开放，不含数据）；密钥不存在 → 服务以 IAM-only ingress 部署，不对公网开放。Web 端首次用 `<url>/?token=<令牌>` 打开即存储并从地址栏剥离。
 
 ## CI/CD 链
 
@@ -23,7 +23,7 @@
    ACCESS_TOKEN="$(openssl rand -hex 24)" \
      bash scripts/setup-gcp.sh
    ```
-   脚本可重复运行：启用 API、复用/创建 `github-pool` WIF 池并为**本仓库**新建 provider `github-haip`（WIF 条件按仓库钉死，KG 仓库的 provider 无法共用）、复用 `deployer` SA 并授予本仓库模拟权、写入 `HAIP_DATABASE_URL` / `HAIP_ACCESS_TOKEN` 密钥。
+   脚本可重复运行：启用 API、复用/创建 `github-pool` WIF 池并为**本仓库**新建 provider `github-hadi`（WIF 条件按仓库钉死，KG 仓库的 provider 无法共用）、复用 `deployer` SA 并授予本仓库模拟权、写入 `HADI_DATABASE_URL` / `HADI_ACCESS_TOKEN` 密钥。
 3. **GitHub 仓库变量**（Settings → Secrets and variables → Actions → Variables，脚本结尾原样打印）：`GCP_PROJECT_ID`、`GCP_WIF_PROVIDER`、`GCP_SERVICE_ACCOUNT`、`GCP_REGION`。
 
 之后任意一次推送即完成部署；访问 `https://<service-url>/?token=<ACCESS_TOKEN>`。
