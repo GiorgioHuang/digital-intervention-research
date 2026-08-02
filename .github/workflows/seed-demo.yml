@@ -42,7 +42,7 @@ jobs:
         run: |
           DBURL=$(gcloud secrets versions access latest --secret=HADI_DATABASE_URL --project "${{ vars.GCP_PROJECT_ID }}")
           echo "::add-mask::$DBURL"
-          DATABASE_URL="$DBURL" pnpm seed:demo | tee /tmp/seed.out
+          DATABASE_URL="$DBURL" DEMO_JSON_OUT=/tmp/demo.json pnpm seed:demo | tee /tmp/seed.out
           # The identifiers are not secrets (they are opaque synthetic ids
           # for a stub sign-in), so they go to the run summary where they
           # are easy to copy.
@@ -52,3 +52,41 @@ jobs:
             sed -n '/演示账号/,$p' /tmp/seed.out
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Verify the seeded participant through the deployed API
+        # Seeding the database proves nothing about what the browser sees.
+        # This replays the exact requests the participant workspace makes —
+        # same access token, same dev-header identity — so "the screen is
+        # empty" can be attributed to the server or the client with evidence
+        # rather than guesswork.
+        run: |
+          URL=$(gcloud run services describe "${{ vars.CLOUD_RUN_SERVICE || 'hadi-platform' }}" \
+            --project "${{ vars.GCP_PROJECT_ID }}" --region "${{ vars.GCP_REGION || 'us-east1' }}" \
+            --format='value(status.url)')
+          TOKEN=$(gcloud secrets versions access latest --secret=HADI_ACCESS_TOKEN --project "${{ vars.GCP_PROJECT_ID }}" 2>/dev/null || true)
+          [ -n "$TOKEN" ] && echo "::add-mask::$TOKEN"
+          ACTOR=$(node -e "console.log(require('/tmp/demo.json').participantActorId ?? '')")
+          PID=$(node -e "console.log(require('/tmp/demo.json').participantId ?? '')")
+          SPACE=$(node -e "console.log(require('/tmp/demo.json').spaceId ?? '')")
+          echo "participant actor=$ACTOR participant=$PID space=$SPACE"
+
+          call() {
+            printf '\n--- %s\n' "$1"
+            curl -s -o /tmp/body.json -w 'HTTP %{http_code}\n' --max-time 30 \
+              -H "x-actor-id: $ACTOR" -H "x-access-token: $TOKEN" "$URL$1"
+            head -c 800 /tmp/body.json; echo
+          }
+          call "/v1/participants/$PID/community-spaces"
+          FAILED=0
+          grep -q '"CommunitySpace"' /tmp/body.json || FAILED=1
+          call "/v1/participants/$PID/community-spaces/$SPACE/feed"
+          grep -q '"SocialPost"' /tmp/body.json || FAILED=1
+          call "/v1/participants/$PID/conversation-threads"
+          grep -q '"ConversationThread"' /tmp/body.json || FAILED=1
+          call "/v1/participants/$PID/connections"
+          grep -q '"Connection"' /tmp/body.json || FAILED=1
+          if [ "$FAILED" != "0" ]; then
+            echo "::error::the deployed API did not return the seeded data for this participant"
+            exit 1
+          fi
+          echo "OK: spaces, feed, threads and connections all returned seeded data"

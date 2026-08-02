@@ -12,6 +12,7 @@
  *
  *   DATABASE_URL=… node packages/synthetic-pilot/seed-demo.mjs
  */
+import { writeFileSync } from 'node:fs';
 import { SystemClock, createRequestContext } from '@platform/kernel';
 import { createPool } from '@platform/database';
 import { POLICY_V1 } from '@platform/policy';
@@ -59,6 +60,27 @@ if (DATABASE_URL === undefined || DATABASE_URL === '') {
 const ORG_NAME = 'HADI 演示组织（合成数据）';
 const pool = createPool({ connectionString: DATABASE_URL, applicationName: 'seed-demo' });
 
+/**
+ * Machine-readable summary for follow-up checks (DEMO_JSON_OUT), so a
+ * verification step can exercise the deployed API as a seeded participant
+ * instead of a human retyping identifiers.
+ */
+function writeJson(participants, spaceId) {
+  const out = process.env['DEMO_JSON_OUT'];
+  if (out === undefined || out === '') return;
+  // Prefer the seeded demo participant by name; a database that also holds
+  // rows from other runs must not silently hand back an unrelated one.
+  const first = participants.find((p) => p.display_name === '安 Ann') ?? participants[0];
+  writeFileSync(
+    out,
+    JSON.stringify({
+      participantActorId: first?.user_account_id ?? null,
+      participantId: first?.id ?? null,
+      spaceId: spaceId ?? null,
+    }),
+  );
+}
+
 function printAccounts(rows, participants, spaceName) {
   console.log('\n=== 演示账号（dev-header 登录桩；全部为合成数据）===\n');
   for (const r of rows) console.log(`  ${r.role.padEnd(26)} actor id: ${r.id}   (${r.display_name})`);
@@ -82,12 +104,27 @@ async function existingDemo() {
   const participants = await pool.query(
     `SELECT id, display_name, user_account_id FROM participant_profile.participants ORDER BY created_at`,
   );
-  const space = await pool.query(`SELECT name FROM community_social.community_spaces ORDER BY created_at LIMIT 1`);
+  // The space reported back must be one the demo participant actually
+  // belongs to — the feed is member-only, so any other space would make a
+  // follow-up check fail for the wrong reason.
+  const space = await pool.query(
+    `SELECT s.id, s.name
+       FROM community_social.community_spaces s
+       JOIN community_social.community_memberships m
+         ON m.space_id = s.id AND m.membership_state = 'Active'
+       JOIN participant_profile.participants p
+         ON p.id = m.participant_id AND p.display_name = '安 Ann'
+      ORDER BY s.created_at DESC
+      LIMIT 1`,
+  );
   // Listing is database-wide, not filtered to this seed run: on a demo
   // environment that is the whole population, and hiding rows created by
   // other means would misrepresent what is actually there.
   console.log('演示数据已存在，未做任何更改。以下是数据库中现有的账号：');
   printAccounts(accounts.rows, participants.rows, space.rows[0]?.name);
+  // The demo participants are the ones registered by this seed; the first
+  // row by creation time is 安 Ann.
+  writeJson(participants.rows, space.rows[0]?.id);
   return true;
 }
 
@@ -252,6 +289,7 @@ async function main() {
     ],
     '园艺角',
   );
+  writeJson([{ id: annId, display_name: '安 Ann', user_account_id: annAcc }], spaceId);
 }
 
 main()

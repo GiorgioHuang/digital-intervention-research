@@ -56,6 +56,25 @@ main ul {
   padding-inline-start: 1.25rem;
 }
 
+/* A 44px touch target inside a 29px line box overflows and the controls
+   visually collide, which is exactly the case on the task-oriented Home
+   list. Buttons in content lists are laid out as blocks with their own
+   spacing so每个动作都是一个完整、可点的行 (Doc 20 large targets). */
+main li {
+  margin-block: 0.75rem;
+}
+
+main li > button,
+main li > form > button {
+  display: block;
+  width: 100%;
+  text-align: start;
+}
+
+main p > button {
+  margin-block: 0.25rem;
+}
+
 blockquote {
   border-inline-start: 0.25rem solid currentColor;
   margin-inline: 0;
