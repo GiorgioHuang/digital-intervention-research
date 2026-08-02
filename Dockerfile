@@ -3,7 +3,10 @@
 # Cloud Build via `gcloud run deploy --source .` from the deploy workflow.
 FROM node:22-slim AS build
 WORKDIR /app
-RUN corepack enable
+# Pinned pnpm via npm, NOT corepack: corepack's signature verification of
+# freshly-published pnpm releases is a known intermittent build breaker.
+# Keep the version in lockstep with the packageManager field in package.json.
+RUN npm install -g pnpm@10.33.0
 COPY . .
 RUN pnpm install --frozen-lockfile \
   && pnpm build \

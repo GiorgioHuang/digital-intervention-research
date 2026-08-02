@@ -113,7 +113,7 @@ jobs:
           # Real Knowledge Graph integration (ADR-052/110): the deployed
           # platform talks to the live MCP endpoint.
           ENVVARS="$ENVVARS,KNOWLEDGE_PLATFORM_MODE=mcp,KNOWLEDGE_MCP_URL=${{ vars.KNOWLEDGE_MCP_URL || 'https://knowledge-graph.internal.example' }}"
-          gcloud run deploy "${{ vars.CLOUD_RUN_SERVICE || 'haip-platform' }}" \
+          gcloud run deploy "${{ vars.CLOUD_RUN_SERVICE || 'hadi-platform' }}" \
             --source . \
             --project "$PROJECT" \
             --region "${{ vars.GCP_REGION || 'us-east1' }}" \
@@ -127,6 +127,6 @@ jobs:
       - name: Show URL
         if: steps.cfg.outputs.enabled == 'true'
         run: |
-          gcloud run services describe "${{ vars.CLOUD_RUN_SERVICE || 'haip-platform' }}" \
+          gcloud run services describe "${{ vars.CLOUD_RUN_SERVICE || 'hadi-platform' }}" \
             --project "${{ vars.GCP_PROJECT_ID }}" --region "${{ vars.GCP_REGION || 'us-east1' }}" \
             --format='value(status.url)'
