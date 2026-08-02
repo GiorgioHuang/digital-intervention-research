@@ -1,0 +1,54 @@
+name: Seed demo data
+
+# Manual only. Populates the DEPLOYED database with the synthetic demo
+# organisation, role accounts, participants, community and messaging
+# fixtures, then prints the identifiers for the dev-header sign-in stub.
+# Idempotent: a second run reports the existing accounts and changes
+# nothing. SYNTHETIC DATA ONLY (ADR-062) — never point this at a database
+# holding real personal data.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  seed:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          project_id: ${{ vars.GCP_PROJECT_ID }}
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install and build
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm build
+
+      - name: Seed
+        run: |
+          DBURL=$(gcloud secrets versions access latest --secret=HADI_DATABASE_URL --project "${{ vars.GCP_PROJECT_ID }}")
+          echo "::add-mask::$DBURL"
+          DATABASE_URL="$DBURL" pnpm seed:demo | tee /tmp/seed.out
+          # The identifiers are not secrets (they are opaque synthetic ids
+          # for a stub sign-in), so they go to the run summary where they
+          # are easy to copy.
+          {
+            echo '## 演示账号'
+            echo '```'
+            sed -n '/演示账号/,$p' /tmp/seed.out
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

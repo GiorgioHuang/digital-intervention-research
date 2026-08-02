@@ -550,3 +550,13 @@
   code: [Dockerfile, tools/start-cloud.mjs, .github/workflows/deploy.yml, scripts/setup-gcp.sh, apps/api/src/http-context.ts, apps/api/src/main.ts, apps/api/src/config.ts, apps/web/src/api.ts]
   tests: [apps/api/test/api.e2e.test.ts, apps/web/test/access-token.test.ts]
   status: implemented
+
+- implementation_id: IMP-OPS-SEED-DEMO-001
+  module: ops
+  summary: Synthetic demo seed for deployed environments - one organisation, nine role accounts, two participants with granted consents, a community space with versioned rules and published posts, matching through mutual acceptance to an active connection with a confirmed message, an AI-drafted life-story item confirmed as testimony, and a participant-approved supporter relationship; every record is created through the module commands so the permission engine, consent gates, and confirmation requirements apply exactly as they do in the app (nothing is written straight to tables); idempotent (a second run reports existing accounts and changes nothing) and exposed as a manual-only workflow that reads the deployed connection string from Secret Manager and publishes the identifiers to the run summary
+  trace_ids: [ATR-023]
+  adr_ids: [ADR-062, ADR-104]
+  docs: ["DEPLOYMENT.md", "Doc 19 §2 synthetic-only"]
+  code: [packages/synthetic-pilot/seed-demo.mjs, .github/workflows/seed-demo.yml, package.json]
+  tests: [packages/synthetic-pilot/test/synthetic-pilot.test.ts]
+  status: implemented

@@ -6,7 +6,8 @@
   "scripts": {
     "build": "echo skip",
     "typecheck": "echo skip",
-    "test": "vitest run"
+    "test": "vitest run",
+    "seed:demo": "node seed-demo.mjs"
   },
   "devDependencies": {
     "@platform/database": "workspace:*",

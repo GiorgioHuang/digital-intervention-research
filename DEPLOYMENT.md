@@ -46,3 +46,15 @@ PORT=8099 WEB_DIST_DIR=$PWD/apps/web/dist ACCESS_TOKEN=local-smoke-token-0123456
   node tools/start-cloud.mjs
 # 期望：/health 200；/ 返回 SPA；/v1 无令牌 401 标准错误封装；带令牌走正常权限引擎
 ```
+
+## 演示账号（合成数据）
+
+部署环境的数据库初始为空——dev-header 登录桩要求 actor/participant 在库中真实存在。运行一次种子即可：
+
+**GitHub → Actions → “Seed demo data” → Run workflow**（幂等：重复运行只打印已有账号，不重复创建）。账号标识会打印在运行摘要里。
+
+种子内容（全部合成，ADR-062）：一个组织；九个角色账号（组织管理员/研究员/审批人/证据评审/安全评审/隐私评审/社区审核/协调员/支持者）；两位参与者（安 Ann、本 Ben，已授予 study-participation、open-matching、participant-messaging、community-participation、supporter-involvement、supporter-contribution 同意）；社区「园艺角」含版本化规则与两人各一条已发布帖子；匹配 → 互相接受 → 连接 → 一条已确认发送的消息；一条 AI 起草并经本人确认为 Testimony 的生命故事条目（可见性 Selected People）；一条经参与者批准的支持者关系。
+
+登录方式：首页「参与者」填 actor id + participant id；「员工入口」只填 actor id（审批类 MFA 动作在员工页勾选强认证）；「支持者入口」填支持者 actor id。
+
+本地同样可用：`DATABASE_URL=… pnpm seed:demo`。
