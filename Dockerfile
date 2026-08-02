@@ -8,9 +8,12 @@ WORKDIR /app
 # Keep the version in lockstep with the packageManager field in package.json.
 RUN npm install -g pnpm@10.33.0
 COPY . .
+# Cloud Build's default machine has far less memory than a CI runner, so the
+# per-package builds run with bounded concurrency instead of one tsc process
+# per core; `prune` is best-effort (a larger image beats a failed build).
 RUN pnpm install --frozen-lockfile \
-  && pnpm build \
-  && pnpm prune --prod
+  && pnpm -r --workspace-concurrency=2 --filter './packages/**' --filter './apps/**' run build \
+  && (pnpm prune --prod || echo "prune skipped")
 
 FROM node:22-slim
 ENV NODE_ENV=production

@@ -124,6 +124,26 @@ jobs:
             --update-secrets "$SECRETS" \
             --update-env-vars "$ENVVARS"
 
+      - name: Cloud Build log (on failure)
+        # `gcloud run deploy --source` only prints "check build logs for
+        # details" — the actual compiler/installer error lives in Cloud
+        # Build. Surface its tail here so a failed deploy is diagnosable
+        # from the Actions run alone.
+        if: failure() && steps.cfg.outputs.enabled == 'true'
+        run: |
+          PROJECT="${{ vars.GCP_PROJECT_ID }}"
+          BUILD=$(gcloud builds list --project "$PROJECT" --region "${{ vars.GCP_REGION || 'us-east1' }}" \
+            --limit 1 --format='value(id)' 2>/dev/null || true)
+          if [ -z "$BUILD" ]; then
+            BUILD=$(gcloud builds list --project "$PROJECT" --limit 1 --format='value(id)' 2>/dev/null || true)
+          fi
+          if [ -z "$BUILD" ]; then echo "::warning::no Cloud Build id found"; exit 0; fi
+          echo "== Cloud Build $BUILD (last 200 lines) =="
+          gcloud builds log "$BUILD" --project "$PROJECT" --region "${{ vars.GCP_REGION || 'us-east1' }}" 2>/dev/null \
+            | tail -200 \
+            || gcloud builds log "$BUILD" --project "$PROJECT" 2>/dev/null | tail -200 \
+            || echo "::warning::could not fetch build log"
+
       - name: Show URL
         if: steps.cfg.outputs.enabled == 'true'
         run: |
