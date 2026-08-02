@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { StaffSession } from './staff-api.js';
+import { AccessTokenGate } from './components/AccessTokenGate.js';
 import { StaffApproverPanel } from './components/StaffApproverPanel.js';
 import { StaffCoordinatorPanel } from './components/StaffCoordinatorPanel.js';
 import { StaffResearcherPanel } from './components/StaffResearcherPanel.js';
@@ -79,6 +80,7 @@ export function StaffApp({ onExit }: { onExit: () => void }) {
         </ul>
       </nav>
       <main id="staff-main">
+        <AccessTokenGate />
         <p>
           当前身份：{session.actorId}（{session.authStrength === 'mfa' ? 'MFA' : '密码'}级认证）
         </p>

@@ -24,23 +24,64 @@ export interface Session {
 
 /**
  * Deployed environments sit behind a shared access token (server-side
- * X-Access-Token gate). captureAccessToken() stores a token passed once
- * via ?token=… and strips it from the address bar; both API clients then
- * attach it to every request. Locally no token is set and nothing changes.
+ * X-Access-Token gate). A token may arrive once as ?token=… — it is stored
+ * and stripped from the address bar so it does not linger in history — but
+ * it must ALSO be enterable in the app: the stripped history entry can
+ * never re-authenticate on its own, and clearing site data wipes the
+ * stored copy. Locally no token is configured and nothing changes.
  */
+const TOKEN_KEY = 'platformAccessToken';
+export const AUTH_REQUIRED_EVENT = 'platform-auth-required';
+
+export function readAccessToken(): string {
+  try {
+    return window.localStorage.getItem(TOKEN_KEY) ?? '';
+  } catch {
+    // Storage can be unavailable (private mode, blocked cookies); the app
+    // still works for one session via the in-memory fallback below.
+    return memoryToken;
+  }
+}
+
+let memoryToken = '';
+
+export function storeAccessToken(token: string): void {
+  memoryToken = token;
+  try {
+    if (token === '') window.localStorage.removeItem(TOKEN_KEY);
+    else window.localStorage.setItem(TOKEN_KEY, token);
+  } catch {
+    /* memory fallback already set */
+  }
+}
+
 export function captureAccessToken(): void {
   const url = new URL(window.location.href);
   const token = url.searchParams.get('token');
   if (token !== null && token !== '') {
-    window.localStorage.setItem('platformAccessToken', token);
+    storeAccessToken(token);
     url.searchParams.delete('token');
     window.history.replaceState(null, '', url.toString());
   }
 }
 
 export function accessTokenHeader(): Record<string, string> {
-  const token = window.localStorage.getItem('platformAccessToken');
-  return token === null ? {} : { 'x-access-token': token };
+  const token = readAccessToken();
+  return token === '' ? {} : { 'x-access-token': token };
+}
+
+/**
+ * A rejected access token is an environment problem, not a permission
+ * decision about the signed-in person, so it is announced once for the
+ * shell to handle rather than surfaced as an error code inside whichever
+ * panel happened to make the call.
+ */
+export function raiseApiError(json: { error?: ApiError }, status: number): never {
+  const error = json.error as ApiError;
+  if (status === 401 && error?.code === 'AUTHENTICATION_REQUIRED') {
+    window.dispatchEvent(new CustomEvent(AUTH_REQUIRED_EVENT));
+  }
+  throw new PlatformApiError(error, status);
 }
 
 async function post<T>(session: Session, path: string, body: object): Promise<T> {
@@ -50,14 +91,14 @@ async function post<T>(session: Session, path: string, body: object): Promise<T>
     body: JSON.stringify(body),
   });
   const json = (await res.json()) as T & { error?: ApiError };
-  if (!res.ok) throw new PlatformApiError(json.error as ApiError, res.status);
+  if (!res.ok) raiseApiError(json, res.status);
   return json;
 }
 
 async function get<T>(session: Session, path: string): Promise<T> {
   const res = await fetch(path, { headers: { 'x-actor-id': session.actorId, ...accessTokenHeader() } });
   const json = (await res.json()) as T & { error?: ApiError };
-  if (!res.ok) throw new PlatformApiError(json.error as ApiError, res.status);
+  if (!res.ok) raiseApiError(json, res.status);
   return json;
 }
 

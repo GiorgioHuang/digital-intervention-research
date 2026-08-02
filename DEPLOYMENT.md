@@ -57,4 +57,6 @@ PORT=8099 WEB_DIST_DIR=$PWD/apps/web/dist ACCESS_TOKEN=local-smoke-token-0123456
 
 登录方式：首页「参与者」填 actor id + participant id；「员工入口」只填 actor id（审批类 MFA 动作在员工页勾选强认证）；「支持者入口」填支持者 actor id。
 
+访问口令：首次用 `<url>/?token=<令牌>` 打开会存入本机浏览器并从地址栏剥离（因此历史记录里的地址不含令牌）。若清过站点数据或换了设备，任一请求会返回 401，界面顶部会出现「需要此环境的访问口令」横幅，直接在那里重新输入即可——不必再去翻带 token 的链接。
+
 本地同样可用：`DATABASE_URL=… pnpm seed:demo`。

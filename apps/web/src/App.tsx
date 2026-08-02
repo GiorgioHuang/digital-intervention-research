@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { StaffApp } from './StaffApp.js';
 import { SupporterApp } from './SupporterApp.js';
+import { AccessTokenGate } from './components/AccessTokenGate.js';
 import { CommunityPanel } from './components/CommunityPanel.js';
 import { ConsentPanel } from './components/ConsentPanel.js';
 import { MatchingPanel } from './components/MatchingPanel.js';
@@ -108,6 +109,7 @@ export function App() {
         </ul>
       </nav>
       <main id="main-content">
+        <AccessTokenGate />
         {screen === 'home' && (
           <section aria-labelledby="home-heading">
             <h1 id="home-heading">今天想做什么？</h1>

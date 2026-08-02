@@ -560,3 +560,13 @@
   code: [packages/synthetic-pilot/seed-demo.mjs, .github/workflows/seed-demo.yml, package.json]
   tests: [packages/synthetic-pilot/test/synthetic-pilot.test.ts]
   status: implemented
+
+- implementation_id: IMP-WEB-ACCESS-TOKEN-001
+  module: ops
+  summary: Recoverable access-token entry in the web shell - the deployed environment's shared token is stripped from the address bar on capture, so a copy lost to cleared site data was previously unrecoverable from the UI and every call failed with a bare AUTHENTICATION_REQUIRED code; a rejected token is now announced once by the client layer and surfaced by the shell as an environment problem with the one action that fixes it, worded so it never blames the signed-in person's account or permissions, with storage-unavailable (private mode) falling back to memory for the session; the supporter workspace's own request helper was omitting the token header entirely and now shares the participant client's behaviour
+  trace_ids: [ATR-023]
+  adr_ids: [ADR-104]
+  docs: ["DEPLOYMENT.md", "Doc 20 error wording"]
+  code: [apps/web/src/api.ts, apps/web/src/components/AccessTokenGate.tsx, apps/web/src/App.tsx, apps/web/src/StaffApp.tsx, apps/web/src/SupporterApp.tsx, apps/web/src/staff-api.ts]
+  tests: [apps/web/test/access-token-gate.test.tsx, apps/web/test/access-token.test.ts]
+  status: implemented

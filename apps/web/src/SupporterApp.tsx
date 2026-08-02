@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { PlatformApiError, type ApiError } from './api.js';
+import { accessTokenHeader, PlatformApiError, raiseApiError, type ApiError } from './api.js';
+import { AccessTokenGate } from './components/AccessTokenGate.js';
 
 interface SupporterSession {
   actorId: string;
@@ -8,11 +9,11 @@ interface SupporterSession {
 async function req<T>(session: SupporterSession, path: string, body?: object): Promise<T> {
   const res = await fetch(path, {
     method: body === undefined ? 'GET' : 'POST',
-    headers: { 'content-type': 'application/json', 'x-actor-id': session.actorId },
+    headers: { 'content-type': 'application/json', 'x-actor-id': session.actorId, ...accessTokenHeader() },
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
   });
   const json = (await res.json()) as T & { error?: ApiError };
-  if (!res.ok) throw new PlatformApiError(json.error as ApiError, res.status);
+  if (!res.ok) raiseApiError(json, res.status);
   return json;
 }
 
@@ -86,6 +87,7 @@ export function SupporterApp({ onExit }: { onExit: () => void }) {
   return (
     <main>
       <h1>支持者工作区</h1>
+      <AccessTokenGate />
       <section aria-labelledby="contrib-heading">
         <h2 id="contrib-heading">提出生命故事贡献</h2>
         <p>提交需要对方已批准你们的关系，且本人同意了「支持者贡献」。内容先到达本人，由本人决定是否采纳。</p>

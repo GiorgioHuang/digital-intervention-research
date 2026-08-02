@@ -1,4 +1,4 @@
-import { accessTokenHeader, PlatformApiError, type ApiError } from './api.js';
+import { accessTokenHeader, raiseApiError, type ApiError } from './api.js';
 
 /**
  * Staff-side HTTP client. Same boundary rules as the participant client:
@@ -25,7 +25,7 @@ async function post<T>(session: StaffSession, path: string, body: object): Promi
     body: JSON.stringify(body),
   });
   const json = (await res.json()) as T & { error?: ApiError };
-  if (!res.ok) throw new PlatformApiError(json.error as ApiError, res.status);
+  if (!res.ok) raiseApiError(json, res.status);
   return json;
 }
 
@@ -34,7 +34,7 @@ async function get<T>(session: StaffSession, path: string): Promise<T> {
     headers: { 'x-actor-id': session.actorId, 'x-auth-strength': session.authStrength, ...accessTokenHeader() },
   });
   const json = (await res.json()) as T & { error?: ApiError };
-  if (!res.ok) throw new PlatformApiError(json.error as ApiError, res.status);
+  if (!res.ok) raiseApiError(json, res.status);
   return json;
 }
 
