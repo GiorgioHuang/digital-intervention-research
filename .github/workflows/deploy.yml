@@ -144,9 +144,38 @@ jobs:
             || gcloud builds log "$BUILD" --project "$PROJECT" 2>/dev/null | tail -200 \
             || echo "::warning::could not fetch build log"
 
-      - name: Show URL
+      - name: Smoke-test the deployed revision
         if: steps.cfg.outputs.enabled == 'true'
+        # A deploy that reports success but serves a broken container is
+        # worse than a failed deploy, so the revision has to answer for
+        # itself: liveness, the SPA shell, and the access-token gate
+        # actually refusing an ungated /v1 request.
         run: |
-          gcloud run services describe "${{ vars.CLOUD_RUN_SERVICE || 'hadi-platform' }}" \
+          URL=$(gcloud run services describe "${{ vars.CLOUD_RUN_SERVICE || 'hadi-platform' }}" \
             --project "${{ vars.GCP_PROJECT_ID }}" --region "${{ vars.GCP_REGION || 'us-east1' }}" \
-            --format='value(status.url)'
+            --format='value(status.url)')
+          echo "Service URL: $URL"
+          echo "$URL" >> "$GITHUB_STEP_SUMMARY"
+
+          # First request may cold-start the instance; allow a few attempts.
+          for i in 1 2 3 4 5 6; do
+            HEALTH=$(curl -s -o /tmp/health.json -w '%{http_code}' --max-time 30 "$URL/health" || echo 000)
+            [ "$HEALTH" = "200" ] && break
+            echo "  health attempt $i: HTTP $HEALTH — retrying"
+            sleep 10
+          done
+          echo "health: HTTP $HEALTH"; cat /tmp/health.json 2>/dev/null || true; echo
+          [ "$HEALTH" = "200" ] || { echo "::error::deployed revision is not healthy"; exit 1; }
+
+          SHELL_CODE=$(curl -s -o /tmp/index.html -w '%{http_code}' --max-time 30 "$URL/" || echo 000)
+          grep -q "<div id=\"root\"" /tmp/index.html \
+            || { echo "::error::web app not served (HTTP $SHELL_CODE)"; exit 1; }
+          echo "web shell: HTTP $SHELL_CODE, root element present"
+
+          GATED=$(curl -s -o /dev/null -w '%{http_code}' --max-time 30 \
+            -H 'x-actor-id: smoke' "$URL/v1/participants/smoke/community-spaces" || echo 000)
+          echo "ungated /v1: HTTP $GATED"
+          if gcloud secrets describe HADI_ACCESS_TOKEN --project "${{ vars.GCP_PROJECT_ID }}" >/dev/null 2>&1; then
+            [ "$GATED" = "401" ] || { echo "::error::access-token gate is NOT enforcing (expected 401, got $GATED)"; exit 1; }
+            echo "access-token gate enforcing"
+          fi
