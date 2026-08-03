@@ -136,10 +136,10 @@ Mode / Theme Override（dark、高对比、字号、密度、简化）
 | `--color-danger-border` | `#C02626` | / page | **5.92:1** | 3 |
 | `--color-danger-solid-bg` | `#9B1C1C` | 与 solid-fg | **8.15:1** | 4.5 |
 | `--color-danger-solid-fg` | `#FFFFFF` | 见上 | — | — |
-| `--color-safety-bg` | `#F3EBFA` | — | — | — |
-| `--color-safety-fg` | `#5B2080` | / safety-bg | **9.21:1** | 4.5 |
-| ″ | ″ | / page | **10.70:1** | 4.5 |
-| `--color-safety-border` | `#7A34A8` | / page | **7.28:1** | 3 |
+| `--color-safety-bg` | `#E9EDFA` | — | — | — |
+| `--color-safety-fg` | `#152A6B` | / safety-bg | **11.40:1** | 4.5 |
+| ″ | ″ | / page | **13.33:1** | 4.5 |
+| `--color-safety-border` | `#2B3F8F` | / page | **9.50:1** | 3 |
 | `--color-moderation-bg` | `#E3F2F2` | — | — | — |
 | `--color-moderation-fg` | `#0C5257` | / moderation-bg | **7.73:1** | 4.5 |
 | ″ | ″ | / page | **8.90:1** | 4.5 |
@@ -209,10 +209,10 @@ Mode / Theme Override（dark、高对比、字号、密度、简化）
 | `--color-danger-border` | `#D45C5C` | / page | **4.94:1** | 3 |
 | `--color-danger-solid-bg` | `#F5AFAF` | 与 solid-fg | **10.75:1** | 4.5 |
 | `--color-danger-solid-fg` | `#1A0808` | 见上 | — | — |
-| `--color-safety-bg` | `#241436` | — | — | — |
-| `--color-safety-fg` | `#D9B8F2` | / safety-bg | **9.84:1** | 4.5 |
-| ″ | ″ | / page | **10.89:1** | 4.5 |
-| `--color-safety-border` | `#A06CD0` | / page | **5.00:1** | 3 |
+| `--color-safety-bg` | `#131A33` | — | — | — |
+| `--color-safety-fg` | `#BCC9F5` | / safety-bg | **10.47:1** | 4.5 |
+| ″ | ″ | / page | **11.54:1** | 4.5 |
+| `--color-safety-border` | `#7186D6` | / page | **5.48:1** | 3 |
 | `--color-moderation-bg` | `#0B2628` | — | — | — |
 | `--color-moderation-fg` | `#9FD6D8` | / moderation-bg | **9.90:1** | 4.5 |
 | ″ | ″ | / page | **11.78:1** | 4.5 |
@@ -238,7 +238,7 @@ Mode / Theme Override（dark、高对比、字号、密度、简化）
 | **ai** | AI 参与标签、AI 草稿容器 | 表示 AI 输出的质量或置信度 |
 | disabled | 当前不可用的控件 | 权限不足的**隐藏**（受保护存在见 §E.9） |
 
-**danger / safety / moderation 三者必须视觉可分且互不替代**：这是 Doc 20 §311 把 Safety 与 moderation 单列为语义族的原因。红=破坏性动作，紫=安全（人身与福祉），青=审核（内容与行为规则）。三者在灰度下靠图标形状（△ / ⬡ / ▢）与文字区分，见 §A.9 与 §B.1。
+**danger / safety / moderation 三者必须视觉可分且互不替代**：这是 Doc 20 §311 把 Safety 与 moderation 单列为语义族的原因。红=破坏性动作，**深蓝=安全（人身与福祉）**，青=审核（内容与行为规则）。深蓝与 info 蓝、action 蓝同属蓝族（safety-fg 与 info-fg 相互对比度仅 1.51:1），因此 Safety 的区分**主要靠图标形状与文字，颜色是次要线索**——这正是「颜色不得是唯一状态指示」在本系统中的具体后果，Safety 事务必须始终带 ⬡ 图标与「安全」字样。三者在灰度下靠图标形状（△ / ⬡ / ▢）与文字区分，见 §A.9 与 §B.1。
 
 #### A.1.4 可见性色使用（Doc 20 §312）
 
@@ -1338,9 +1338,9 @@ for (let i = 0; i < rects.length; i++)
   --color-danger-border: #c02626;  /* 5.92:1 / page */
   --color-danger-solid-bg: #9b1c1c;
   --color-danger-solid-fg: #ffffff; /* 8.15:1 */
-  --color-safety-bg: #f3ebfa;
-  --color-safety-fg: #5b2080;      /* 9.21:1 / safety-bg */
-  --color-safety-border: #7a34a8;  /* 7.28:1 / page */
+  --color-safety-bg: #e9edfa;
+  --color-safety-fg: #152a6b;      /* 11.40:1 / safety-bg */
+  --color-safety-border: #2b3f8f;  /* 9.50:1 / page */
   --color-moderation-bg: #e3f2f2;
   --color-moderation-fg: #0c5257;  /* 7.73:1 / moderation-bg */
   --color-moderation-border: #12747b; /* 5.51:1 / page */
@@ -1397,9 +1397,9 @@ for (let i = 0; i < rects.length; i++)
     --color-danger-border: #d45c5c;
     --color-danger-solid-bg: #f5afaf;
     --color-danger-solid-fg: #1a0808;
-    --color-safety-bg: #241436;
-    --color-safety-fg: #d9b8f2;
-    --color-safety-border: #a06cd0;
+    --color-safety-bg: #131a33;
+    --color-safety-fg: #bcc9f5;
+    --color-safety-border: #7186d6;
     --color-moderation-bg: #0b2628;
     --color-moderation-fg: #9fd6d8;
     --color-moderation-border: #3e9ea4;
@@ -1454,9 +1454,9 @@ for (let i = 0; i < rects.length; i++)
   --color-danger-border: #d45c5c;
   --color-danger-solid-bg: #f5afaf;
   --color-danger-solid-fg: #1a0808;
-  --color-safety-bg: #241436;
-  --color-safety-fg: #d9b8f2;
-  --color-safety-border: #a06cd0;
+  --color-safety-bg: #131a33;
+  --color-safety-fg: #bcc9f5;
+  --color-safety-border: #7186d6;
   --color-moderation-bg: #0b2628;
   --color-moderation-fg: #9fd6d8;
   --color-moderation-border: #3e9ea4;
