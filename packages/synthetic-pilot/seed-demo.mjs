@@ -125,42 +125,7 @@ async function existingDemo() {
   // The demo participants are the ones registered by this seed; the first
   // row by creation time is Ann.
   writeJson(participants.rows, space.rows[0]?.id);
-  await reportLegacyNonEnglishRows();
   return true;
-}
-
-/**
- * The interface is English (decision D-9), but a demo database seeded
- * before that decision still holds Chinese display names, and this script
- * short-circuits once demo data exists — so re-running it would never
- * replace them. Silence there would read as "the environment is clean"
- * when a participant still sees Chinese community names in the list.
- *
- * Reporting only. Renaming or deleting rows in a deployed database is not
- * something a seed script should decide on its own; the operator gets the
- * exact rows and chooses.
- */
-async function reportLegacyNonEnglishRows() {
-  const cjk = '[\\u4e00-\\u9fff]';
-  const checks = [
-    ['community space', 'community_social.community_spaces', 'name'],
-    ['organisation', 'identity_org.organisations', 'name'],
-    ['account display name', 'identity_org.user_accounts', 'display_name'],
-    ['participant display name', 'participant_profile.participants', 'display_name'],
-  ];
-  const found = [];
-  for (const [label, table, column] of checks) {
-    const res = await pool.query(`SELECT id, ${column} AS text FROM ${table} WHERE ${column} ~ $1`, [cjk]);
-    for (const r of res.rows) found.push(`  ${label.padEnd(24)} ${r.id}  ${r.text}`);
-  }
-  if (found.length === 0) return;
-  console.log(
-    `\n!! ${found.length} row(s) still carry non-English display text, left from seeding before the English-only\n` +
-      '   decision. They are shown to participants as-is. This script did not change them — decide whether to\n' +
-      '   rename or remove them:\n',
-  );
-  for (const line of found) console.log(line);
-  console.log('');
 }
 
 async function main() {
