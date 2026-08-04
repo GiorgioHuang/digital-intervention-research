@@ -2,6 +2,7 @@ import { Body, Controller, Get, Inject, Param, Post, Query, Req } from '@nestjs/
 import type { Request } from 'express';
 import type { Clock } from '@platform/kernel';
 import type { Pool } from '@platform/database';
+import type { M02Deps } from '@platform/m02-participant';
 import {
   approveRelationship,
   proposeRelationship,
@@ -72,6 +73,7 @@ export interface ApiDeps {
   pool: Pool;
   clock: Clock;
   permissions: PermissionServicePort;
+  m02: M02Deps;
   m03: M03Deps;
   m04: M04Deps;
   m05: M05Deps;

@@ -1,19 +1,21 @@
 import { useState } from 'react';
 import type { StaffSession } from './staff-api.js';
 import { AccessTokenGate } from './components/AccessTokenGate.js';
+import { StaffAdminPanel } from './components/StaffAdminPanel.js';
 import { StaffApproverPanel } from './components/StaffApproverPanel.js';
 import { StaffCoordinatorPanel } from './components/StaffCoordinatorPanel.js';
 import { StaffResearcherPanel } from './components/StaffResearcherPanel.js';
 import { StaffModeratorPanel } from './components/StaffModeratorPanel.js';
 import { StaffSafetyTriagePanel } from './components/StaffSafetyTriagePanel.js';
 
-type StaffScreen = 'coordinator' | 'researcher' | 'approver' | 'safety' | 'moderation';
+type StaffScreen = 'coordinator' | 'researcher' | 'approver' | 'safety' | 'moderation' | 'admin';
 const SCREENS: { key: StaffScreen; label: string }[] = [
   { key: 'coordinator', label: 'Enrolment' },
   { key: 'researcher', label: 'Research' },
   { key: 'approver', label: 'Approvals' },
   { key: 'safety', label: 'Safety triage' },
   { key: 'moderation', label: 'Moderation' },
+  { key: 'admin', label: 'Administration' },
 ];
 
 /**
@@ -26,7 +28,11 @@ const SCREENS: { key: StaffScreen; label: string }[] = [
 export function StaffApp({ onExit }: { onExit: () => void }) {
   const [session, setSession] = useState<StaffSession | null>(null);
   const [screen, setScreen] = useState<StaffScreen>('coordinator');
-  const [form, setForm] = useState({ actorId: '', authStrength: 'password' as 'password' | 'mfa' });
+  const [form, setForm] = useState({
+    actorId: '',
+    organisationId: '',
+    authStrength: 'password' as 'password' | 'mfa',
+  });
 
   if (session === null) {
     return (
@@ -39,12 +45,25 @@ export function StaffApp({ onExit }: { onExit: () => void }) {
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            if (form.actorId !== '') setSession({ actorId: form.actorId, authStrength: form.authStrength });
+            if (form.actorId !== '')
+              setSession({
+                actorId: form.actorId,
+                authStrength: form.authStrength,
+                organisationId: form.organisationId,
+              });
           }}
         >
           <p>
             <label htmlFor="staff-actor">Account identifier (actor id)</label>{' '}
             <input id="staff-actor" value={form.actorId} onChange={(e) => setForm({ ...form, actorId: e.target.value })} />
+          </p>
+          <p>
+            <label htmlFor="staff-org">Organisation identifier</label>{' '}
+            <input
+              id="staff-org"
+              value={form.organisationId}
+              onChange={(e) => setForm({ ...form, organisationId: e.target.value })}
+            />
           </p>
           <p>
             <label htmlFor="staff-strength">Authentication strength</label>{' '}
@@ -95,6 +114,7 @@ export function StaffApp({ onExit }: { onExit: () => void }) {
         {screen === 'approver' && <StaffApproverPanel session={session} />}
         {screen === 'safety' && <StaffSafetyTriagePanel session={session} />}
         {screen === 'moderation' && <StaffModeratorPanel session={session} />}
+        {screen === 'admin' && <StaffAdminPanel session={session} />}
       </main>
     </div>
   );

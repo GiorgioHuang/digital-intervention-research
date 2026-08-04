@@ -1,5 +1,6 @@
 import { Body, Controller, Get, Inject, Param, Post, Query, Req } from '@nestjs/common';
 import type { Request } from 'express';
+import { PlatformError } from '@platform/kernel';
 import {
   activateProtocolVersion,
   approveProtocolVersion,
@@ -8,6 +9,7 @@ import {
   listProtocolVersionsInReview,
   submitProtocolVersion,
 } from '@platform/m04-research-design';
+import { listParticipantsForOrganisation } from '@platform/m02-participant';
 import {
   activateEnrolment,
   enrolParticipant,
@@ -104,6 +106,22 @@ export class StaffCommandController {
     const ctx = requireActor(req);
     const items = await listPendingApprovals(this.deps.m15, ctx);
     return { data: items.map((i) => ({ type: 'ApprovalRecord', id: i.approvalRecordId, attributes: i })) };
+  }
+
+  /**
+   * Administrative participant list for one organisation (decision D-13).
+   * The organisation comes from the request context, never from a query
+   * parameter: a caller-supplied organisation would turn this into a probe
+   * for which organisations exist and who is in them.
+   */
+  @Get('participants')
+  async administeredParticipants(@Req() req: Request) {
+    const ctx = requireActor(req);
+    if (ctx.organisationId === undefined) {
+      throw new PlatformError('ORGANISATION_CONTEXT_REQUIRED', 'An organisation context is required to list participants');
+    }
+    const items = await listParticipantsForOrganisation(this.deps.m02, ctx);
+    return { data: items.map((i) => ({ type: 'Participant', id: i.participantId, attributes: i })) };
   }
 
   @Get('protocol-versions/in-review')

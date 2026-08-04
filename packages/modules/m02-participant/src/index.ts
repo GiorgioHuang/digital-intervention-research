@@ -4,4 +4,8 @@ export {
   recordAccessibilityPreference,
   type M02Deps,
 } from './application/commands.js';
+export {
+  listParticipantsForOrganisation,
+  type AdministeredParticipant,
+} from './application/queries.js';
 export { createParticipantQuery } from './infrastructure/repository.js';

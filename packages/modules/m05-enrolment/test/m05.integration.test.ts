@@ -11,7 +11,12 @@ import {
   seedBootstrapAdministrator,
   type M01Deps,
 } from '@platform/m01-identity-org';
-import { createParticipantQuery, registerParticipant, type M02Deps } from '@platform/m02-participant';
+import {
+  createParticipantQuery,
+  listParticipantsForOrganisation,
+  registerParticipant,
+  type M02Deps,
+} from '@platform/m02-participant';
 import { createPermissionService, recordConsentDecision, type M03Deps } from '@platform/m03-consent-permission';
 import {
   activateProtocolVersion,
@@ -52,7 +57,7 @@ describe.skipIf(!dbAvailable)('P3 research core: project -> protocol -> enrolmen
   let pool: pg.Pool;
   const clock = new FixedClock('2026-07-30T12:00:00Z');
   let m01: M01Deps, m02: M02Deps, m03: M03Deps, m04: M04Deps, m05: M05Deps;
-  let adminId: string, orgId: string, researcherId: string, approverId: string, coordinatorId: string;
+  let adminId: string, orgAdminId: string, orgId: string, researcherId: string, approverId: string, coordinatorId: string;
   let participantAccountId: string, participantId: string;
   let projectId: string, versionId: string;
 
@@ -89,11 +94,21 @@ describe.skipIf(!dbAvailable)('P3 research core: project -> protocol -> enrolmen
     ({ organisationId: orgId } = await createOrganisation(m01, ctx(adminId), { name: 'P3 Org' }));
     const adminCtx = ctx(adminId, { organisationId: orgId });
 
+    ({ userAccountId: orgAdminId } = await createUserAccount(m01, adminCtx, { displayName: 'Org Admin' }));
     ({ userAccountId: researcherId } = await createUserAccount(m01, adminCtx, { displayName: 'Researcher' }));
     ({ userAccountId: approverId } = await createUserAccount(m01, adminCtx, { displayName: 'Approver' }));
     ({ userAccountId: coordinatorId } = await createUserAccount(m01, adminCtx, { displayName: 'Coordinator' }));
-    ({ userAccountId: participantAccountId } = await createUserAccount(m01, adminCtx, { displayName: 'Pat' }));
+    ({ userAccountId: participantAccountId } = await createUserAccount(m01, adminCtx, {
+      displayName: 'Pat',
+      organisationId: orgId,
+    }));
 
+    await assignRole(m01, adminCtx, {
+      userAccountId: orgAdminId,
+      role: 'OrganisationAdministrator',
+      organisationId: orgId,
+      confirmed: true,
+    });
     await assignRole(m01, adminCtx, { userAccountId: researcherId, role: 'Researcher', organisationId: orgId, confirmed: true });
     await assignRole(m01, adminCtx, { userAccountId: approverId, role: 'ResearchApprover', organisationId: orgId, confirmed: true });
     await assignRole(m01, adminCtx, { userAccountId: coordinatorId, role: 'ResearchCoordinator', organisationId: orgId, confirmed: true });
@@ -292,6 +307,49 @@ describe.skipIf(!dbAvailable)('P3 research core: project -> protocol -> enrolmen
   it('exact protocol version reference is preserved on the enrolment (no silent migration)', async () => {
     const row = await pool.query(`SELECT protocol_version_id FROM enrolment.enrolments WHERE id = $1`, [enrolmentId]);
     expect(row.rows[0].protocol_version_id).toBe(versionId);
+  });
+
+  /**
+   * Decision D-13. The listing is scoped by the query as well as by the
+   * permission, because either alone is a hole: a permission without a
+   * scoped query lets a correctly-roled administrator read another
+   * organisation, and a scoped query without a permission lets anyone read
+   * their own.
+   */
+  it('an administrator lists only their own organisation, and only administrative fields', async () => {
+    const orgAdminCtx = ctx(orgAdminId, { organisationId: orgId, purposeCode: 'platform-administration' });
+    const listed = await listParticipantsForOrganisation(m02, orgAdminCtx);
+    const pat = listed.find((p) => p.participantId === participantId);
+    expect(pat?.displayName).toBe('Pat P.');
+    expect(pat?.participantState).toBe('Active');
+    // Administrative facts only — nothing about enrolment or consent.
+    expect(Object.keys(pat ?? {}).sort()).toEqual(
+      ['displayName', 'participantId', 'participantState', 'registeredAt', 'userAccountId'].sort(),
+    );
+
+    // A second organisation the administrator does not hold a role in.
+    const { organisationId: otherOrgId } = await createOrganisation(m01, ctx(adminId), { name: 'Other Org' });
+    const otherCtx = ctx(orgAdminId, { organisationId: otherOrgId, purposeCode: 'platform-administration' });
+    await expect(listParticipantsForOrganisation(m02, otherCtx)).rejects.toMatchObject({
+      code: 'AUTHORISATION_DENIED',
+    });
+
+    // A role that is not administrative cannot read it at all.
+    await expect(
+      listParticipantsForOrganisation(m02, ctx(researcherId, { organisationId: orgId, purposeCode: 'platform-administration' })),
+    ).rejects.toMatchObject({ code: 'AUTHORISATION_DENIED' });
+
+    // Purpose is required: the same administrator without one is refused.
+    await expect(
+      listParticipantsForOrganisation(m02, ctx(orgAdminId, { organisationId: orgId })),
+    ).rejects.toMatchObject({ code: 'AUTHORISATION_DENIED' });
+
+    // The platform operator does not get this by virtue of running the
+    // platform. Administering the software and seeing the people in a
+    // study are different jobs, and SystemAdministrator holds the first.
+    await expect(
+      listParticipantsForOrganisation(m02, ctx(adminId, { organisationId: orgId, purposeCode: 'platform-administration' })),
+    ).rejects.toMatchObject({ code: 'AUTHORISATION_DENIED' });
   });
 });
 

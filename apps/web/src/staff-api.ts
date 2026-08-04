@@ -11,6 +11,28 @@ import { accessTokenHeader, raiseApiError, type ApiError } from './api.js';
 export interface StaffSession {
   actorId: string;
   authStrength: 'password' | 'mfa';
+  /**
+   * Organisation the staff member is acting in. Scoped reads use it, and
+   * the server takes it from the request context rather than a query
+   * parameter — a caller-supplied organisation would turn a scoped
+   * listing into a probe for which organisations exist.
+   */
+  organisationId?: string;
+}
+
+/**
+ * Purpose accompanies a request; the permission engine refuses an action
+ * whose declared purpose does not match the one it allows. Sending it only
+ * where it is needed keeps a purpose from being asserted by default.
+ */
+function purposeHeader(purpose?: string): Record<string, string> {
+  return purpose === undefined ? {} : { 'x-purpose-code': purpose };
+}
+
+function orgHeader(session: StaffSession): Record<string, string> {
+  return session.organisationId === undefined || session.organisationId === ''
+    ? {}
+    : { 'x-organisation-id': session.organisationId };
 }
 
 async function post<T>(session: StaffSession, path: string, body: object): Promise<T> {
@@ -20,6 +42,7 @@ async function post<T>(session: StaffSession, path: string, body: object): Promi
       'content-type': 'application/json',
       'x-actor-id': session.actorId,
       'x-auth-strength': session.authStrength,
+      ...orgHeader(session),
       ...accessTokenHeader(),
     },
     body: JSON.stringify(body),
@@ -29,9 +52,15 @@ async function post<T>(session: StaffSession, path: string, body: object): Promi
   return json;
 }
 
-async function get<T>(session: StaffSession, path: string): Promise<T> {
+async function get<T>(session: StaffSession, path: string, purpose?: string): Promise<T> {
   const res = await fetch(path, {
-    headers: { 'x-actor-id': session.actorId, 'x-auth-strength': session.authStrength, ...accessTokenHeader() },
+    headers: {
+      'x-actor-id': session.actorId,
+      'x-auth-strength': session.authStrength,
+      ...orgHeader(session),
+      ...purposeHeader(purpose),
+      ...accessTokenHeader(),
+    },
   });
   const json = (await res.json()) as T & { error?: ApiError };
   if (!res.ok) raiseApiError(json, res.status);
@@ -86,6 +115,13 @@ export interface ModerationCaseItem {
   caseState: string;
   reportCategory: string | null;
   reportDescription: string | null;
+}
+export interface AdministeredParticipant {
+  participantId: string;
+  displayName: string;
+  participantState: string;
+  userAccountId: string | null;
+  registeredAt: string;
 }
 export interface EnrolmentItem {
   enrolmentId: string;
@@ -151,6 +187,11 @@ export const staffApi = {
         ? '/v1/enrolments'
         : `/v1/enrolments?researchProjectId=${encodeURIComponent(researchProjectId)}`,
     ),
+
+  // M02 administrative participant list (decision D-13): identifier, name
+  // and account state only — no research content, so it is not consent-gated.
+  listParticipants: (s: StaffSession) =>
+    get<List<AdministeredParticipant>>(s, '/v1/participants', 'platform-administration'),
 
   // Moderation (queue omits reporter identity by design)
   listOpenModerationCases: (s: StaffSession) => get<List<ModerationCaseItem>>(s, '/v1/moderation-cases/open'),

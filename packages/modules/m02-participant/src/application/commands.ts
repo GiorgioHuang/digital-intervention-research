@@ -13,6 +13,7 @@ export type PermissionCheck = (
       state: string;
       protectedExistence: boolean;
       ownerParticipantId?: string;
+      organisationId?: string;
     };
     confirmed?: boolean;
   },

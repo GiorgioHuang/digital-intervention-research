@@ -39,6 +39,7 @@ export function buildAppModule(config: ApiConfig) {
     pool,
     clock,
     permissions,
+    m02: moduleDeps,
     m03: { pool, clock, permissions },
     m04: moduleDeps,
     m05: {

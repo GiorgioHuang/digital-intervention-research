@@ -162,7 +162,10 @@ async function main() {
   // organisation-scoped so their permission checks do not depend on the
   // organisation header being present.
   const mk = async (name, role, scoped = true) => {
-    const { userAccountId } = await createUserAccount(base, a, { displayName: name });
+    // The organisation membership is what ties an account to an
+    // organisation; without it the account exists but belongs to nobody,
+    // and every organisation-scoped listing comes back empty.
+    const { userAccountId } = await createUserAccount(base, a, { displayName: name, organisationId: orgId });
     await assignRole(base, a, { userAccountId, role, ...(scoped ? { organisationId: orgId } : {}), confirmed: true });
     return userAccountId;
   };

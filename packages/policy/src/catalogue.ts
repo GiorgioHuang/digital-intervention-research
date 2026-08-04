@@ -30,6 +30,7 @@ export const POLICY_V1: PolicyConfiguration = {
       'role.revoke',
       'audit.view',
       'community.create',
+      'participant.list-administrative',
     ],
     ResearchCoordinator: [
       'user.view',
@@ -206,6 +207,25 @@ export const POLICY_V1: PolicyConfiguration = {
       consentScopes: ['study-participation'],
       requiresPurpose: true,
       allowedPurposes: ['research-operations', 'intervention-delivery', 'safety-review'],
+    },
+    /**
+     * Administrative listing of the participants in your own organisation
+     * (decision D-13). Deliberately NOT consent-gated, unlike
+     * `participant.view-assigned`: this carries no research content — an
+     * identifier, a name and an account state — and gating it on
+     * study-participation consent would make a participant who withdrew
+     * disappear from the administration they still need.
+     *
+     * Protected existence (ADR-050) survives because this is an
+     * enumeration inside a scope the administrator already holds, not a
+     * lookup that answers "does this identifier exist" for an id supplied
+     * by the caller. The query filters to the organisation as well; the
+     * permission decides whether you may look, the query decides what you
+     * see, and both are needed.
+     */
+    'participant.list-administrative': {
+      requiresPurpose: true,
+      allowedPurposes: ['platform-administration'],
     },
     // Supporter access rides on an authorising Relationship AND sharing consent.
     'participant.view-shared': {
