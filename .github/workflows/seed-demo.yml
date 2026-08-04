@@ -6,8 +6,19 @@ name: Seed demo data
 # Idempotent: a second run reports the existing accounts and changes
 # nothing. SYNTHETIC DATA ONLY (ADR-062) — never point this at a database
 # holding real personal data.
+#
+# The optional wipe reverts every migration first, which DROPS EVERY TABLE
+# AND EVERY ROW in the deployed database. It is guarded by a typed word
+# rather than a checkbox: a checkbox next to "seed" is one mis-click away
+# from destroying an environment, and this cannot be undone.
 on:
   workflow_dispatch:
+    inputs:
+      wipe:
+        description: 'Destroy all data first? Type WIPE to confirm. Anything else seeds without deleting.'
+        required: false
+        default: ''
+        type: string
 
 permissions:
   contents: read
@@ -38,6 +49,20 @@ jobs:
           pnpm install --frozen-lockfile
           pnpm build
 
+      - name: Wipe the deployed database (irreversible; only on typed confirmation)
+        if: inputs.wipe == 'WIPE'
+        run: |
+          DBURL=$(gcloud secrets versions access latest --secret=HADI_DATABASE_URL --project "${{ vars.GCP_PROJECT_ID }}")
+          echo "::add-mask::$DBURL"
+          echo "::warning::Reverting every migration. All data in the deployed database is being destroyed."
+          # Down-all then up: the schemas and their contents go, and the
+          # structure comes back empty for the seed step to fill. If the
+          # re-apply fails the job stops here, leaving a loud failure rather
+          # than a running service pointed at half a database.
+          DATABASE_URL="$DBURL" pnpm migrate:reset
+          DATABASE_URL="$DBURL" pnpm migrate
+          echo "Database reset. Every identifier issued before this run is now invalid."
+
       - name: Seed
         run: |
           DBURL=$(gcloud secrets versions access latest --secret=HADI_DATABASE_URL --project "${{ vars.GCP_PROJECT_ID }}")
@@ -47,9 +72,9 @@ jobs:
           # for a stub sign-in), so they go to the run summary where they
           # are easy to copy.
           {
-            echo '## 演示账号'
+            echo '## Demo accounts'
             echo '```'
-            sed -n '/演示账号/,$p' /tmp/seed.out
+            sed -n '/=== Demo accounts/,$p' /tmp/seed.out
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
