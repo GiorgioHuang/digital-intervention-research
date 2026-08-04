@@ -11,6 +11,7 @@ export {
   type M17Deps,
 } from './application/commands.js';
 export {
+  findArchiveForContribution,
   getMyLifeStory,
   listContributionsAwaitingReview,
   listMyContributions,

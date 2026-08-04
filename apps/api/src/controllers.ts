@@ -8,6 +8,7 @@ import {
   approveRelationship,
   listOwnConsents,
   listOwnRelationships,
+  listRelationshipsForActor,
   proposeRelationship,
   recordConsentDecision,
   revokeRelationship,
@@ -37,6 +38,7 @@ import {
   confirmTestimony,
   createArchive,
   createItem,
+  findArchiveForContribution,
   getMyLifeStory,
   listContributionsAwaitingReview,
   listMyContributions,
@@ -81,6 +83,8 @@ export interface ApiDeps {
   permissions: PermissionServicePort;
   /** Account display names (M01), for screens that would otherwise print an identifier at a person. */
   accountNames: AccountNameQueryPort;
+  /** Participant display names (M02), for the same reason on the supporter side. */
+  participantNames: { findDisplayNames(participantIds: string[]): Promise<Map<string, string>> };
   m02: M02Deps;
   m03: M03Deps;
   m04: M04Deps;
@@ -445,6 +449,38 @@ export class CommandController {
         attributes: { ...r, relatedDisplayName: names.get(r.relatedActorId) ?? null },
       })),
     };
+  }
+
+  /**
+   * The relationships the caller is named in as the supporting side. A
+   * supporter had no way to learn who they support or on what terms, and
+   * the participant's name is resolved here for the same reason as above.
+   */
+  @Get('relationships/mine')
+  async supportedPeople(@Req() req: Request) {
+    const ctx = requireActor(req);
+    const items = await listRelationshipsForActor(this.deps.m03, ctx);
+    const names = await this.deps.participantNames.findDisplayNames(items.map((r) => r.participantId));
+    return {
+      data: items.map((r) => ({
+        type: 'Relationship',
+        id: r.relationshipId,
+        attributes: { ...r, participantDisplayName: names.get(r.participantId) ?? null },
+      })),
+    };
+  }
+
+  /**
+   * Where a contribution for this participant would go. Gated on the very
+   * permission that allows contributing — if you may contribute, you may
+   * know where to — so it hands out nothing the caller could not already
+   * act on.
+   */
+  @Get('participants/:participantId/life-story/archive-for-contribution')
+  async archiveForContribution(@Req() req: Request, @Param('participantId') participantId: string) {
+    const ctx = requireActor(req);
+    const archiveId = await findArchiveForContribution(this.deps.m17, ctx, participantId);
+    return { data: { type: 'LifeStoryArchive', id: archiveId }, meta: { started: archiveId !== null } };
   }
 
   @Post('relationships')

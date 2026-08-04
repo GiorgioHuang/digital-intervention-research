@@ -39,6 +39,43 @@ export async function listMyContributions(deps: M17Deps, ctx: RequestContext): P
   }));
 }
 
+/**
+ * Where a supporter would put a contribution for this participant.
+ *
+ * The supporter workspace asked people to type an archive identifier they
+ * could only have been told out of band, which made the whole
+ * contribution path unusable by anyone who had not been handed an
+ * internal id. This answers the same question the contribute command
+ * already gates on, under exactly that gate: if you may contribute, you
+ * may know where to. It creates nothing — only the participant creates
+ * their own archive.
+ *
+ * Null when the participant has not started a life story. That is a true
+ * answer rather than a refusal, and it does not reveal anything the
+ * permission has not already granted: whoever passes `life-story.contribute`
+ * holds an approved relationship and the participant's supporter-contribution
+ * consent.
+ */
+export async function findArchiveForContribution(
+  deps: M17Deps,
+  ctx: RequestContext,
+  participantId: string,
+): Promise<string | null> {
+  const decision = await deps.checkPermission(ctx, {
+    action: 'life-story.contribute',
+    resource: {
+      type: 'LifeStoryArchive',
+      id: 'for-contribution',
+      state: 'Active',
+      protectedExistence: true,
+      ownerParticipantId: participantId,
+    },
+  });
+  assertAllowed(decision, false);
+  const res = await deps.pool.query(`SELECT id FROM life_story.archives WHERE participant_id = $1`, [participantId]);
+  return (res.rows[0]?.id as string | undefined) ?? null;
+}
+
 export interface MyLifeStoryItem {
   itemId: string;
   title: string;

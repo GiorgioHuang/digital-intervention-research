@@ -71,6 +71,61 @@ export async function listOwnRelationships(
   }));
 }
 
+export interface SupportedPersonView {
+  relationshipId: string;
+  participantId: string;
+  relationshipType: string;
+  relationshipState: string;
+  permittedActions: string[];
+  expiresAt: string | null;
+}
+
+/**
+ * The relationships in which the requesting actor is the supported-from
+ * side — "who am I a supporter for, and on what terms".
+ *
+ * Strictly the caller's own: the actor id comes from the request context
+ * and is never a parameter, so this cannot be pointed at somebody else's
+ * relationships. That is the same shape as `listMyContributions`, and the
+ * lesson recorded in D-13 about scope that arrives as an argument.
+ *
+ * A supporter previously had no way to learn who they support or what
+ * they are permitted to do, and the contribution form asked them to type
+ * an archive identifier they could only have been told out of band.
+ *
+ * Relationship state is reported exactly as recorded and nothing more.
+ * Whether an action will actually succeed depends on the participant's
+ * consent and on other things that are theirs to decide; reporting this
+ * as though it were the whole answer would let a supporter conclude
+ * things about the participant that the participant did not choose to
+ * tell them.
+ */
+export async function listRelationshipsForActor(
+  deps: M03Deps,
+  ctx: RequestContext,
+): Promise<SupportedPersonView[]> {
+  const decision = await deps.permissions.evaluate(ctx, {
+    action: 'relationship.view-own',
+    resource: { type: 'Relationship', id: 'own', state: 'Any', protectedExistence: false },
+  });
+  assertAllowed(decision, false);
+  const res = await deps.pool.query(
+    `SELECT id, participant_id, relationship_type, relationship_state, permitted_actions, expires_at
+       FROM consent_permission.relationships
+      WHERE related_actor_id = $1
+      ORDER BY created_at DESC`,
+    [ctx.actor!.id],
+  );
+  return res.rows.map((r) => ({
+    relationshipId: r.id as string,
+    participantId: r.participant_id as string,
+    relationshipType: r.relationship_type as string,
+    relationshipState: r.relationship_state as string,
+    permittedActions: (r.permitted_actions ?? []) as string[],
+    expiresAt: r.expires_at === null ? null : (r.expires_at as Date).toISOString(),
+  }));
+}
+
 export interface ConsentStateView {
   scope: string;
   /** Granted | Declined | Restricted | Deferred | Withdrawn. */

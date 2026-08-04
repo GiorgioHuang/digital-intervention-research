@@ -124,7 +124,13 @@ export const POLICY_V1: PolicyConfiguration = {
       'object.upload',
       'object.assign',
     ],
-    Supporter: ['participant.view-shared', 'life-story.contribute', 'report.submit', 'contribution.view-own'],
+    Supporter: [
+      'participant.view-shared',
+      'life-story.contribute',
+      'report.submit',
+      'contribution.view-own',
+      'relationship.view-own',
+    ],
     Moderator: ['moderation.triage', 'moderation.decide', 'moderation-queue.view'],
     // Governance reviewers (M15): holds and break-glass retrospective
     // review. Deliberately disjoint from break-glass execution so the
@@ -261,6 +267,13 @@ export const POLICY_V1: PolicyConfiguration = {
 
     'consent.record': { ownerPermitted: true, ownerOnly: true },
     'consent.withdraw': { ownerPermitted: true, ownerOnly: true, confirmationRequired: true },
+    /**
+     * A supporter reading the relationships they are named in. Scoped by
+     * the requesting actor inside the query rather than by an owner rule,
+     * because the reader here is the related party, not the participant
+     * the relationship is about.
+     */
+    'relationship.view-own': {},
     'relationship.propose': {},
     'relationship.approve': { ownerPermitted: true, ownerOnly: true, confirmationRequired: true },
     'relationship.revoke': { ownerPermitted: true, ownerOnly: true },

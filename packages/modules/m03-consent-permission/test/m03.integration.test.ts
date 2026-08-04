@@ -20,7 +20,11 @@ import {
   withdrawConsent,
   type M03Deps,
 } from '../src/application/consent-commands.js';
-import { listOwnConsents, listOwnRelationships } from '../src/application/consent-queries.js';
+import {
+  listOwnConsents,
+  listOwnRelationships,
+  listRelationshipsForActor,
+} from '../src/application/consent-queries.js';
 
 const DATABASE_URL =
   process.env['DATABASE_URL'] ?? 'postgres://platform:platform_dev_only@localhost:5432/research_platform';
@@ -442,6 +446,25 @@ describe.skipIf(!dbAvailable)('M01+M03 identity, consent and permission (integra
     });
     await expect(listOwnRelationships(m03, ctxFor(researcherId), participantId)).rejects.toMatchObject({
       code: 'RESOURCE_NOT_FOUND',
+    });
+  });
+
+  /**
+   * The other side of the same record. A supporter had no way to learn
+   * who they support or on what terms, and the contribution form asked
+   * them for an archive identifier they could only have been told out of
+   * band.
+   */
+  it('a supporter reads the relationships they are named in, and only those', async () => {
+    const mine = await listRelationshipsForActor(m03, ctxFor(supporterId));
+    expect(mine.length).toBeGreaterThan(0);
+    expect(mine.every((r) => r.participantId === participantId)).toBe(true);
+
+    // Scoped by the requesting actor and never by an argument — there is
+    // nothing to point at somebody else's relationships with — and the
+    // action itself is not held by staff roles.
+    await expect(listRelationshipsForActor(m03, ctxFor(researcherId))).rejects.toMatchObject({
+      code: 'AUTHORISATION_DENIED',
     });
   });
 });

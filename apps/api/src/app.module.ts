@@ -40,6 +40,7 @@ export function buildAppModule(config: ApiConfig) {
     clock,
     permissions,
     accountNames: createAccountNameQuery(pool),
+    participantNames: createParticipantQuery(pool),
     m02: moduleDeps,
     m03: { pool, clock, permissions },
     m04: moduleDeps,

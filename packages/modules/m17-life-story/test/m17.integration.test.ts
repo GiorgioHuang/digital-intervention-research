@@ -24,6 +24,7 @@ import {
   confirmTestimony,
   createArchive,
   createItem,
+  findArchiveForContribution,
   getMyLifeStory,
   listContributionsAwaitingReview,
   proposeContribution,
@@ -235,6 +236,23 @@ describe.skipIf(!dbAvailable)('M17 Life Story (integration)', () => {
     expect(v.rows[0].source_type).toBe('SupporterContribution');
     expect(v.rows[0].testimony_state).toBe('NotTestimony');
     expect(v.rows[0].authored_by_actor_id).toBe(supporterId);
+  });
+
+  /**
+   * The supporter workspace used to ask for an archive identifier nobody
+   * could learn from inside the product. This answers it under exactly
+   * the permission that already allows contributing — so it hands out
+   * nothing the caller could not already act on — and refuses everyone
+   * else without confirming there is anything there.
+   */
+  it('a permitted contributor can find where a contribution goes; nobody else can', async () => {
+    expect(await findArchiveForContribution(m17, ctx(supporterId), participantId)).toBe(archiveId);
+
+    for (const actor of [coordinatorId, adminId]) {
+      await expect(findArchiveForContribution(m17, ctx(actor), participantId)).rejects.toMatchObject({
+        code: 'RESOURCE_NOT_FOUND',
+      });
+    }
   });
 
   it('NEGATIVE supporter cannot accept their own contribution', async () => {

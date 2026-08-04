@@ -11,7 +11,9 @@ export {
 export {
   listOwnConsents,
   listOwnRelationships,
+  listRelationshipsForActor,
   type ConsentStateView,
   type OwnRelationshipView,
+  type SupportedPersonView,
 } from './application/consent-queries.js';
 export { expireRelationships } from './application/sweeps.js';
