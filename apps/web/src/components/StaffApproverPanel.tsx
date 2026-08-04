@@ -17,11 +17,11 @@ type PendingAction =
   | { kind: 'approval-decide'; id: string; decision: 'Approved' | 'Rejected'; reason: string };
 
 const ACTION_LABELS: Record<PendingAction['kind'], string> = {
-  'protocol-approve': '批准协议版本（MFA）',
-  'protocol-activate': '激活协议版本',
-  'dataset-lock': '锁定数据集版本（MFA，锁定后不可变）',
-  'export-decide': '导出决定（MFA）',
-  'approval-decide': 'M15 审批决定（MFA）',
+  'protocol-approve': 'Approve protocol version (strong authentication)',
+  'protocol-activate': 'Activate protocol version',
+  'dataset-lock': 'Lock dataset version (strong authentication; a locked version cannot be changed)',
+  'export-decide': 'Export decision (strong authentication)',
+  'approval-decide': 'M15 approval decision (strong authentication)',
 };
 
 /**
@@ -58,9 +58,9 @@ export function StaffApproverPanel({ session }: { session: StaffSession }) {
         exports: exports.data.map((i) => i.attributes),
         approvals: approvals.data.map((i) => i.attributes),
       });
-      setAnnouncement('待办已更新。');
+      setAnnouncement('Pending work updated.');
     } catch (err) {
-      setAnnouncement(err instanceof PlatformApiError ? `未能获取待办：${err.error.code}` : '网络错误');
+      setAnnouncement(err instanceof PlatformApiError ? `Could not load pending work: ${err.error.code}` : 'Network error');
     }
   };
 
@@ -74,114 +74,125 @@ export function StaffApproverPanel({ session }: { session: StaffSession }) {
       else if (action.kind === 'dataset-lock') await staffApi.lockDatasetVersion(session, action.id);
       else if (action.kind === 'export-decide') await staffApi.decideExport(session, action.id, action.decision);
       else await staffApi.decideApproval(session, action.id, action.decision, action.reason);
-      setAnnouncement(`已执行：${ACTION_LABELS[action.kind]}（${action.id}）`);
+      setAnnouncement(`Done: ${ACTION_LABELS[action.kind]} (${action.id})`);
     } catch (err) {
-      setAnnouncement(err instanceof PlatformApiError ? `未成功：${err.error.code}` : '网络错误，未提交');
+      setAnnouncement(
+        err instanceof PlatformApiError ? `Not successful: ${err.error.code}` : 'Network error — nothing was submitted.',
+      );
     }
   };
 
   return (
     <section aria-labelledby="approver-heading">
-      <h2 id="approver-heading">批准工作台</h2>
+      <h2 id="approver-heading">Approvals</h2>
       <p>
-        每个决定都署名并绑定精确的工件。你不能批准自己提交的内容——服务端会拒绝（职责分离）。
-        {session.authStrength !== 'mfa' && ' 注意：标注 MFA 的操作在当前密码级别下会被拒绝。'}
+        Every decision is recorded in your name and bound to an exact artefact. You cannot approve something you submitted
+        yourself — the server refuses it, and another person with the right permission has to decide it (separation of
+        duties).
+        {session.authStrength !== 'mfa' &&
+          ' Note: the actions marked as needing strong authentication will be refused while you are signed in at password level.'}
       </p>
 
       <p>
-        <button onClick={() => void loadQueues()}>查看待办</button>
+        <button onClick={() => void loadQueues()}>View pending work</button>
       </p>
       {queues !== null && (
         <section aria-labelledby="queues-heading">
-          <h3 id="queues-heading">待办列表</h3>
-          <h4>待评审协议版本（{queues.protocols.length}）</h4>
+          <h3 id="queues-heading">Pending work</h3>
+          <h4>Protocol versions in review ({queues.protocols.length})</h4>
           <ul style={{ listStyle: 'none', padding: 0 }}>
             {queues.protocols.map((p) => (
               <li key={p.protocolVersionId}>
-                {p.protocolVersionId}（版本 {p.versionNumber}，项目 {p.researchProjectId}，提交人 {p.submittedByActorId ?? '未知'}
-                {p.submittedByActorId === session.actorId ? '——是你，不能自批' : ''}）{' '}
-                <button onClick={() => setProtocolVersionId(p.protocolVersionId)}>选择</button>
+                {p.protocolVersionId} (version {p.versionNumber}, project {p.researchProjectId}, submitted by{' '}
+                {p.submittedByActorId ?? 'unknown'}
+                {p.submittedByActorId === session.actorId ? ' — that is you, so you cannot approve it' : ''}){' '}
+                <button onClick={() => setProtocolVersionId(p.protocolVersionId)}>Select</button>
               </li>
             ))}
           </ul>
-          <h4>可锁定数据集版本（{queues.locks.length}）</h4>
+          <h4>Dataset versions that can be locked ({queues.locks.length})</h4>
           <ul style={{ listStyle: 'none', padding: 0 }}>
             {queues.locks.map((v) => (
               <li key={v.datasetVersionId}>
-                {v.datasetVersionId}（版本 {v.versionNumber}，清单哈希 {v.manifestHash.slice(0, 12)}…）{' '}
-                <button onClick={() => setDatasetVersionId(v.datasetVersionId)}>选择</button>
+                {v.datasetVersionId} (version {v.versionNumber}, manifest hash {v.manifestHash.slice(0, 12)}…){' '}
+                <button onClick={() => setDatasetVersionId(v.datasetVersionId)}>Select</button>
               </li>
             ))}
           </ul>
-          <h4>待决定导出（{queues.exports.length}）</h4>
+          <h4>Exports waiting for a decision ({queues.exports.length})</h4>
           <ul style={{ listStyle: 'none', padding: 0 }}>
             {queues.exports.map((e) => (
               <li key={e.exportRequestId}>
-                {e.exportRequestId}（{e.exportType}，目的：{e.purpose}，接收方：{e.recipient}，去标识：{e.deIdentification}）{' '}
-                <button onClick={() => setExportRequestId(e.exportRequestId)}>选择</button>
+                {e.exportRequestId} ({e.exportType}, purpose: {e.purpose}, recipient: {e.recipient}, de-identification:{' '}
+                {e.deIdentification}){' '}
+                <button onClick={() => setExportRequestId(e.exportRequestId)}>Select</button>
               </li>
             ))}
           </ul>
-          <h4>待决定审批记录（{queues.approvals.length}）</h4>
+          <h4>Approval records waiting for a decision ({queues.approvals.length})</h4>
           <ul style={{ listStyle: 'none', padding: 0 }}>
             {queues.approvals.map((a) => (
               <li key={a.approvalRecordId}>
-                {a.approvalRecordId}（{a.artefactType} {a.artefactId} 版本 {a.artefactVersion}，申请人 {a.requestedByActorId}
-                {a.requestedByActorId === session.actorId ? '——是你，不能自批' : ''}）{' '}
-                <button onClick={() => setApproval((f) => ({ ...f, id: a.approvalRecordId }))}>选择</button>
+                {a.approvalRecordId} ({a.artefactType} {a.artefactId} version {a.artefactVersion}, requested by{' '}
+                {a.requestedByActorId}
+                {a.requestedByActorId === session.actorId ? ' — that is you, so you cannot approve it' : ''}){' '}
+                <button onClick={() => setApproval((f) => ({ ...f, id: a.approvalRecordId }))}>Select</button>
               </li>
             ))}
           </ul>
         </section>
       )}
 
-      <h3>协议版本</h3>
+      <h3>Protocol version</h3>
       <p>
-        <label htmlFor="ap-pv">协议版本标识</label>{' '}
+        <label htmlFor="ap-pv">Protocol version identifier</label>{' '}
         <input id="ap-pv" value={protocolVersionId} onChange={(e) => setProtocolVersionId(e.target.value)} />{' '}
         <button disabled={protocolVersionId === ''} onClick={() => setPending({ kind: 'protocol-approve', id: protocolVersionId })}>
-          批准（MFA）
+          Approve protocol version (strong authentication)
         </button>{' '}
         <button disabled={protocolVersionId === ''} onClick={() => setPending({ kind: 'protocol-activate', id: protocolVersionId })}>
-          激活
+          Activate protocol version
         </button>
       </p>
 
-      <h3>数据集锁定</h3>
-      <p>锁定是人工 MFA 权威；锁定后的版本不可变，分析只能针对锁定版本运行。</p>
+      <h3>Dataset lock</h3>
       <p>
-        <label htmlFor="ap-dv">数据集版本标识</label>{' '}
+        Locking is a human decision that needs strong authentication. A locked version cannot be changed, and analysis can
+        only run against a locked version.
+      </p>
+      <p>
+        <label htmlFor="ap-dv">Dataset version identifier</label>{' '}
         <input id="ap-dv" value={datasetVersionId} onChange={(e) => setDatasetVersionId(e.target.value)} />{' '}
         <button disabled={datasetVersionId === ''} onClick={() => setPending({ kind: 'dataset-lock', id: datasetVersionId })}>
-          锁定数据集版本（MFA）
+          Lock dataset version (strong authentication)
         </button>
       </p>
 
-      <h3>导出决定</h3>
+      <h3>Export decision</h3>
       <p>
-        <label htmlFor="ap-ex">导出申请标识</label>{' '}
+        <label htmlFor="ap-ex">Export request identifier</label>{' '}
         <input id="ap-ex" value={exportRequestId} onChange={(e) => setExportRequestId(e.target.value)} />{' '}
         <button
           disabled={exportRequestId === ''}
           onClick={() => setPending({ kind: 'export-decide', id: exportRequestId, decision: 'Approved' })}
         >
-          批准导出（MFA）
+          Approve export (strong authentication)
         </button>{' '}
         <button
           disabled={exportRequestId === ''}
           onClick={() => setPending({ kind: 'export-decide', id: exportRequestId, decision: 'Rejected' })}
         >
-          拒绝导出（MFA）
+          Reject export (strong authentication)
         </button>
       </p>
 
-      <h3>M15 审批记录</h3>
+      <h3>M15 approval record</h3>
       <p>
-        <label htmlFor="ap-apr">审批记录标识</label>{' '}
+        <label htmlFor="ap-apr">Approval record identifier</label>{' '}
         <input id="ap-apr" value={approval.id} onChange={(e) => setApproval({ ...approval, id: e.target.value })} />{' '}
         <input
-          aria-label="审批理由"
-          placeholder="理由（必填）"
+          aria-label="Reason for the approval decision"
+          placeholder="Reason (required)"
           value={approval.reason}
           onChange={(e) => setApproval({ ...approval, reason: e.target.value })}
         />{' '}
@@ -189,25 +200,25 @@ export function StaffApproverPanel({ session }: { session: StaffSession }) {
           disabled={approval.id === '' || approval.reason === ''}
           onClick={() => setPending({ kind: 'approval-decide', id: approval.id, decision: 'Approved', reason: approval.reason })}
         >
-          批准（MFA）
+          Approve approval record (strong authentication)
         </button>{' '}
         <button
           disabled={approval.id === '' || approval.reason === ''}
           onClick={() => setPending({ kind: 'approval-decide', id: approval.id, decision: 'Rejected', reason: approval.reason })}
         >
-          拒绝（MFA）
+          Reject approval record (strong authentication)
         </button>
       </p>
 
       {pending !== null && (
         <div role="alertdialog" aria-labelledby="approve-confirm">
           <p id="approve-confirm">
-            确认执行「{ACTION_LABELS[pending.kind]}」，对象：<strong>{pending.id}</strong>
-            {'decision' in pending ? `，决定：${pending.decision === 'Approved' ? '批准' : '拒绝'}` : ''}？
-            此决定将以你的身份署名并写入审计。
+            Confirm “{ACTION_LABELS[pending.kind]}” on <strong>{pending.id}</strong>
+            {'decision' in pending ? `, decision: ${pending.decision === 'Approved' ? 'approve' : 'reject'}` : ''}? This
+            decision is recorded in your name in the audit trail.
           </p>
-          <button onClick={() => void execute()}>确认执行</button>{' '}
-          <button onClick={() => setPending(null)}>返回</button>
+          <button onClick={() => void execute()}>Confirm</button>{' '}
+          <button onClick={() => setPending(null)}>Back</button>
         </div>
       )}
 

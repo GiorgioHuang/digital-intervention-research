@@ -31,7 +31,7 @@ export function MessagePanel({
     try {
       const res = await api.listThreadMessages(session, threadId);
       setHistory(res.data.map((m) => m.attributes));
-      setNotice(res.data.length === 0 ? '还没有消息。' : '消息记录已更新。');
+      setNotice(res.data.length === 0 ? 'There are no messages yet.' : 'The message history has been updated.');
     } catch (err) {
       setActionError(presentError(err));
     }
@@ -43,7 +43,7 @@ export function MessagePanel({
       setDraft({ id: res.data.id, version: 1, text });
       setReviewing(false);
       setDeliveryState('Not Submitted');
-      setNotice('草稿已保存。尚未发送。');
+      setNotice('Your draft is saved. It has not been sent.');
     } catch (err) {
       setActionError(presentError(err));
     }
@@ -55,7 +55,7 @@ export function MessagePanel({
       const res = await api.confirmSend(session, draft.id, draft.version, [recipient.participantId]);
       setReviewing(false);
       setDeliveryState(res.data.meta.deliveryState);
-      setNotice('已确认发送。消息正在排队，尚未送达。');
+      setNotice('You have confirmed sending. The message is queued for sending; it has not arrived yet.');
     } catch (err) {
       setActionError(presentError(err));
     }
@@ -65,30 +65,30 @@ export function MessagePanel({
 
   return (
     <section aria-labelledby="message-heading">
-      <h2 id="message-heading">写消息</h2>
+      <h2 id="message-heading">Write a message</h2>
       <p>
-        收件人：<strong>{recipient.displayName}</strong>
+        To: <strong>{recipient.displayName}</strong>
       </p>
       <p>
-        <button onClick={() => void loadHistory()}>查看消息记录</button>
+        <button onClick={() => void loadHistory()}>Show message history</button>
       </p>
       {history !== null && history.length > 0 && (
-        <ol style={{ listStyle: 'none', padding: 0 }} aria-label="消息记录">
+        <ol style={{ listStyle: 'none', padding: 0 }} aria-label="Message history">
           {history.map((m) => (
             <li key={m.messageId} style={{ border: '1px solid currentColor', padding: '0.5rem', marginBlock: '0.5rem' }}>
               <p>
-                <strong>{m.senderParticipantId === session.participantId ? '我' : recipient.displayName}</strong>：
+                <strong>{m.senderParticipantId === session.participantId ? 'You' : recipient.displayName}</strong>:{' '}
                 {m.contentText}
               </p>
               {/* Own messages show their truthful delivery state; drafts say so. */}
               {m.senderParticipantId === session.participantId && (
-                <p>状态：{DELIVERY_STATE_LABELS[m.deliveryState] ?? m.deliveryState}</p>
+                <p>Status: {DELIVERY_STATE_LABELS[m.deliveryState] ?? m.deliveryState}</p>
               )}
             </li>
           ))}
         </ol>
       )}
-      <label htmlFor="message-text">消息内容</label>
+      <label htmlFor="message-text">Your message</label>
       <textarea
         id="message-text"
         rows={4}
@@ -101,26 +101,27 @@ export function MessagePanel({
       />
       <p>
         {/* Save Draft and Review-and-send are separate, equal actions. */}
-        <button onClick={() => void saveDraft()}>保存草稿</button>{' '}
+        <button onClick={() => void saveDraft()}>Save draft</button>{' '}
         <button disabled={draft === null || edited} onClick={() => setReviewing(true)}>
-          检查并发送
+          Review and send
         </button>
-        {edited && <span> 内容已修改——请先重新保存草稿，再检查并发送。</span>}
+        {edited && <span> You have changed the text — save the draft again before you review and send.</span>}
       </p>
       {reviewing && draft !== null && (
         <div role="alertdialog" aria-labelledby="send-confirm-heading">
-          <h3 id="send-confirm-heading">发送确认</h3>
+          <h3 id="send-confirm-heading">Send confirmation</h3>
           <p>
-            你即将把以下内容（版本 {draft.version}）发送给 <strong>{recipient.displayName}</strong>：
+            You are about to send the following text (version {draft.version}) to{' '}
+            <strong>{recipient.displayName}</strong>:
           </p>
           <blockquote>{draft.text}</blockquote>
-          <button onClick={() => void confirmSend()}>发送消息</button>{' '}
-          <button onClick={() => setReviewing(false)}>返回，不发送</button>
+          <button onClick={() => void confirmSend()}>Send message</button>{' '}
+          <button onClick={() => setReviewing(false)}>Go back without sending</button>
         </div>
       )}
       {deliveryState !== null && (
         <p>
-          当前状态：<strong>{DELIVERY_STATE_LABELS[deliveryState] ?? deliveryState}</strong>
+          Current status: <strong>{DELIVERY_STATE_LABELS[deliveryState] ?? deliveryState}</strong>
         </p>
       )}
       {actionError !== null && <ErrorState error={actionError} />}

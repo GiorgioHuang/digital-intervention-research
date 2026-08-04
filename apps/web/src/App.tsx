@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { StaffApp } from './StaffApp.js';
 import { SupporterApp } from './SupporterApp.js';
 import { AccessTokenGate } from './components/AccessTokenGate.js';
@@ -19,12 +19,26 @@ import type { Session } from './api.js';
  */
 type Screen = 'home' | 'consent' | 'message' | 'matching' | 'community' | 'help';
 
+/**
+ * Four destinations, not five (design decision D-10). Measured at the
+ * smallest supported width (320px, the 400%-zoom target in
+ * DESIGN_SYSTEM §G): a slot is (320 - 18 outer padding - gaps) / n, and a
+ * label rendered at --type-size-0 needs 53–77px. Five slots give 56.8px
+ * each while "Community" needs 77px, so it either clips or wraps to
+ * "Com/muni/ty" — both were visible in the 390px capture. Four slots give
+ * 72px against a 67px worst case ("Messages", bold when current), so every
+ * label stays one whole word at every supported width.
+ *
+ * Community is the slot that gives way because it is the one destination
+ * the study explicitly treats as optional; Doc 20 §33 requires permanent
+ * access to Consent and Help, not to Community. It stays one tap from
+ * Home, which is itself always in the bar.
+ */
 const PRIMARY_DESTINATIONS: { key: Screen; label: string; fullLabel: string }[] = [
-  { key: 'home', label: '首页', fullLabel: '首页' },
-  { key: 'consent', label: '同意', fullLabel: '我的同意选择' },
-  { key: 'message', label: '消息', fullLabel: '消息' },
-  { key: 'community', label: '社区', fullLabel: '社区' },
-  { key: 'help', label: '帮助', fullLabel: '帮助与安全' },
+  { key: 'home', label: 'Home', fullLabel: 'Home' },
+  { key: 'consent', label: 'Consent', fullLabel: 'My consent choices' },
+  { key: 'message', label: 'Messages', fullLabel: 'Messages' },
+  { key: 'help', label: 'Help', fullLabel: 'Help and safety' },
 ];
 
 export function App() {
@@ -32,6 +46,25 @@ export function App() {
   const [screen, setScreen] = useState<Screen>('home');
   const [form, setForm] = useState({ actorId: '', participantId: '' });
   const [mode, setMode] = useState<'participant' | 'staff' | 'supporter'>('participant');
+  const navRef = useRef<HTMLElement | null>(null);
+
+  /**
+   * The bottom bar is fixed, so `main` has to reserve exactly as much space
+   * as the bar actually occupies — otherwise the last confirm button on a
+   * screen sits underneath it permanently. The height is not a constant:
+   * at 200%/400% zoom the bar wraps to two rows. Measuring it is the only
+   * honest way to keep the reservation correct.
+   */
+  useEffect(() => {
+    const nav = navRef.current;
+    if (nav === null || typeof ResizeObserver === 'undefined') return;
+    const apply = () =>
+      document.documentElement.style.setProperty('--nav-primary-height', `${nav.offsetHeight}px`);
+    apply();
+    const observer = new ResizeObserver(apply);
+    observer.observe(nav);
+    return () => observer.disconnect();
+  }, [session, mode]);
 
   if (mode === 'staff') {
     return <StaffApp onExit={() => setMode('participant')} />;
@@ -43,8 +76,11 @@ export function App() {
   if (session === null) {
     return (
       <main>
-        <h1>健康老龄化研究平台（开发环境）</h1>
-        <p>开发登录桩：输入合成环境分配的标识。此登录方式仅用于开发，正式身份认证待批准（ADR-104）。</p>
+        <h1>Healthy Ageing Research Platform (development environment)</h1>
+        <p>
+          Development sign-in stub: enter the identifiers issued for this synthetic environment. Nothing here
+          verifies who you are — real authentication is the pending OIDC work (ADR-104).
+        </p>
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -54,23 +90,23 @@ export function App() {
           }}
         >
           <p>
-            <label htmlFor="actor-id">账户标识（actor id）</label>{' '}
+            <label htmlFor="actor-id">Account identifier (actor id)</label>{' '}
             <input id="actor-id" value={form.actorId} onChange={(e) => setForm({ ...form, actorId: e.target.value })} />
           </p>
           <p>
-            <label htmlFor="participant-id">参与者标识（participant id）</label>{' '}
+            <label htmlFor="participant-id">Participant identifier</label>{' '}
             <input
               id="participant-id"
               value={form.participantId}
               onChange={(e) => setForm({ ...form, participantId: e.target.value })}
             />
           </p>
-          <button type="submit">进入</button>{' '}
+          <button type="submit">Continue</button>{' '}
           <button type="button" onClick={() => setMode('supporter')}>
-            支持者入口
+            Supporter workspace
           </button>{' '}
           <button type="button" onClick={() => setMode('staff')}>
-            员工入口
+            Staff workspace
           </button>
         </form>
       </main>
@@ -80,17 +116,18 @@ export function App() {
   return (
     <div>
       <a className="skip-link" href="#main-content">
-        跳到主要内容
+        Skip to main content
       </a>
       {/*
-        Bottom bar on phones (design decision D-3), five destinations only.
-        Doc 20 §33 requires persistent access to Consent and Help, so those
-        keep permanent slots; matching is opt-in and low-frequency, reached
+        Bottom bar on phones (design decision D-3), four destinations only
+        (D-10 — see the width arithmetic above). Doc 20 §33 requires
+        persistent access to Consent and Help, so those keep permanent
+        slots; matching and community are opt-in and low-frequency, reached
         from the Home task list instead of holding a slot forever. Short
         visible labels with the fuller name as the accessible name — the
         visible text stays contained in it (WCAG 2.5.3 Label in Name).
       */}
-      <nav aria-label="主导航" className="nav-primary">
+      <nav aria-label="Primary" className="nav-primary" ref={navRef}>
         <ul>
           {PRIMARY_DESTINATIONS.map((d) => (
             <li key={d.key}>
@@ -109,23 +146,23 @@ export function App() {
         <AccessTokenGate />
         {screen === 'home' && (
           <section aria-labelledby="home-heading">
-            <h1 id="home-heading">今天想做什么？</h1>
+            <h1 id="home-heading">What would you like to do today?</h1>
             {/* Task list, not a feed: each entry is one clear action. */}
             <ul>
               <li>
-                <button onClick={() => setScreen('consent')}>查看或更改我的同意选择</button>
+                <button onClick={() => setScreen('consent')}>Review or change my consent choices</button>
               </li>
               <li>
-                <button onClick={() => setScreen('message')}>给已建立联系的人写消息</button>
+                <button onClick={() => setScreen('message')}>Write to someone you are connected with</button>
               </li>
               <li>
-                <button onClick={() => setScreen('matching')}>认识新朋友（可选）</button>
+                <button onClick={() => setScreen('matching')}>Meet new people (optional)</button>
               </li>
               <li>
-                <button onClick={() => setScreen('community')}>去社区看看（可选）</button>
+                <button onClick={() => setScreen('community')}>Visit the community (optional)</button>
               </li>
               <li>
-                <button onClick={() => setScreen('help')}>获取帮助或报告问题</button>
+                <button onClick={() => setScreen('help')}>Get help or report a problem</button>
               </li>
             </ul>
           </section>
@@ -136,9 +173,15 @@ export function App() {
         {screen === 'community' && <CommunityPanel session={session} />}
         {screen === 'help' && (
           <section aria-labelledby="help-heading">
-            <h1 id="help-heading">帮助与安全</h1>
-            <p>你可以随时联系研究团队，或报告让你不适的内容。报告会由工作人员查看——不会由自动系统单独决定。</p>
-            <p>如果你或他人处于紧急危险中，请直接拨打当地紧急电话。本平台不是紧急求助渠道。</p>
+            <h1 id="help-heading">Help and safety</h1>
+            <p>
+              You can contact the research team at any time, or report anything that made you uncomfortable.
+              Reports are read by staff — no automated system decides them on its own.
+            </p>
+            <p>
+              If you or someone else is in immediate danger, call your local emergency number. This platform is
+              not an emergency service.
+            </p>
             <SafetyPanel session={session} />
           </section>
         )}

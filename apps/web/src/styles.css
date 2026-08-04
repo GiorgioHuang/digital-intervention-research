@@ -620,25 +620,42 @@ nav [aria-current='page'] {
   border-block-start: var(--border-default) solid var(--color-border-default);
   border-block-end: none;
 }
+/* 一行放不下时换行成两行，绝不横滚（I.2 已否决横滚导航），也绝不裁切
+   标签。3.6rem 的基准让默认字号下 320px 仍是单行，而 200%/400% 放大时
+   自然退化为多行。 */
 .nav-primary ul {
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   justify-content: space-between;
   gap: var(--space-1);
 }
-.nav-primary li { flex: 1 1 0; }
+.nav-primary li { flex: 1 1 3.6rem; min-inline-size: 3.6rem; }
+/* 标签必须整词单行：折行后的 "Com/muni/ty" 既难读，也让五个槽位高度不齐。
+   因此压到 --type-size-0 并去掉左右内距换取宽度；--target-min 决定的触控
+   高度不受影响（min-height 仍在），所以缩字号不会缩小可点区域。 */
 .nav-primary button {
   width: 100%;
   justify-content: center;
-  padding-inline: var(--space-1);
+  padding-inline: 0;
   border-color: transparent;
+  font-size: var(--type-size-0);
+  font-weight: var(--type-weight-medium);
+  white-space: nowrap;
+  text-align: center;
 }
 /* 当前位置：结构（顶部粗条）+ 字重 + 颜色，三通道 */
 .nav-primary [aria-current='page'] {
   border-inline-start: none;
   border-block-start: var(--border-emphasis) solid var(--color-action-primary-bg);
+  font-weight: var(--type-weight-bold);
 }
+/* 底部栏是 fixed 的，所以 main 必须自己留出等高的下内距，否则最后一个
+   确认按钮会被永久遮住。--nav-primary-height 由 App 在运行时按实际测量
+   写入（换行成两行、系统安全区变化时都会跟着变）；缺省值覆盖 JS 尚未
+   执行的第一帧。 */
 body:has(.nav-primary) main {
-  padding-block-end: calc(var(--target-min) + var(--space-6) + env(safe-area-inset-bottom, 0px));
+  padding-block-end: calc(
+    var(--nav-primary-height, var(--target-min)) + var(--space-6) + env(safe-area-inset-bottom, 0px)
+  );
 }
 
 /* 平板与桌面：回到静态顶部导航，标签有空间时不需要压缩 */
@@ -651,7 +668,12 @@ body:has(.nav-primary) main {
   }
   .nav-primary ul { flex-wrap: wrap; justify-content: flex-start; gap: var(--target-gap); }
   .nav-primary li { flex: 0 0 auto; }
-  .nav-primary button { width: auto; padding-inline: var(--space-3); }
+  .nav-primary button {
+    width: auto;
+    padding-inline: var(--space-3);
+    font-size: var(--type-size-1);
+    font-weight: var(--type-weight-semibold);
+  }
   .nav-primary [aria-current='page'] {
     border-block-start: none;
     border-inline-start: var(--border-emphasis) solid var(--color-action-primary-bg);

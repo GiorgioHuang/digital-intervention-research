@@ -26,7 +26,7 @@ export interface PresentedError {
   code: string;
 }
 
-const SUPPORT = '如果你觉得这不对，可以在「帮助与安全」里联系研究团队。';
+const SUPPORT = 'If this looks wrong, you can contact the research team from Help and safety.';
 
 /**
  * Protected existence (ADR-050): a 404 may mean the thing is not there OR
@@ -35,105 +35,105 @@ const SUPPORT = '如果你觉得这不对，可以在「帮助与安全」里联
  */
 const NOT_FOUND: Omit<PresentedError, 'code'> = {
   severity: 2,
-  title: '现在打不开这一项',
-  reassurance: '你之前填写的内容没有丢，也没有提交出去。',
-  reason: '可能是标识不正确，或者这一项现在不对你开放。',
-  nextStep: `请检查一下标识；${SUPPORT}`,
+  title: 'This item cannot be opened right now',
+  reassurance: 'Nothing you typed has been lost, and nothing was submitted.',
+  reason: 'The identifier may be incorrect, or this item may not be open to you.',
+  nextStep: `Please check the identifier. ${SUPPORT}`,
 };
 
 const BY_CODE: Record<string, Omit<PresentedError, 'code'>> = {
   AUTHENTICATION_REQUIRED: {
     severity: 2,
-    title: '需要这个环境的访问口令',
-    reassurance: '刚才的操作没有执行，你填写的内容还在。',
-    reason: '这与你的账号和权限无关——它是这个研究原型环境的访问门。',
-    nextStep: '在页面顶部的提示里输入访问口令，然后再试一次。',
+    title: 'This environment needs its access passphrase',
+    reassurance: 'That action did not run, and what you typed is still here.',
+    reason: 'This is not about your account or your permissions — it is the door to this research prototype environment.',
+    nextStep: 'Enter the passphrase in the notice at the top of the page, then try again.',
   },
   AUTHORISATION_DENIED: {
     severity: 2,
-    title: '现在不能做这件事',
-    reassurance: '什么都没有改变，你填写的内容还在。',
-    reason: '这个操作需要你尚未具备的条件，例如相关的同意选择或对方的批准。',
-    nextStep: `可以先去「我的同意选择」看看相关选项；${SUPPORT}`,
+    title: 'This cannot be done right now',
+    reassurance: 'Nothing changed, and what you typed is still here.',
+    reason: 'This action needs something that is not in place yet, such as a consent choice or an approval from the other person.',
+    nextStep: `You can check the related options under My consent choices. ${SUPPORT}`,
   },
   RESOURCE_NOT_FOUND: NOT_FOUND,
   CONSENT_REQUIRED: {
     severity: 2,
-    title: '这一步需要你的同意选择',
-    reassurance: '什么都没有提交，你填写的内容还在。',
-    reason: '相关的同意选择目前不是「已同意」。',
-    nextStep: '去「我的同意选择」查看并更改；你随时可以再改回来。',
+    title: 'This step needs a consent choice from you',
+    reassurance: 'Nothing was submitted, and what you typed is still here.',
+    reason: 'The related consent choice is not currently set to granted.',
+    nextStep: 'Open My consent choices to review and change it. You can change it back at any time.',
   },
   BLOCKED_INTERACTION: {
     severity: 2,
-    title: '这条互动没有发生',
-    reassurance: '没有发送任何内容，对方也不会收到通知。',
-    reason: '你们之间存在屏蔽。',
-    nextStep: '你可以在「帮助与安全」里查看和管理屏蔽。',
+    title: 'This interaction did not happen',
+    reassurance: 'Nothing was sent, and the other person is not notified.',
+    reason: 'A block is in place between you.',
+    nextStep: 'You can review and manage blocks under Help and safety.',
   },
   COMMUNICATION_BASIS_REQUIRED: {
     severity: 2,
-    title: '还不能给这个人发消息',
-    reassurance: '草稿已经保存，没有发送出去。',
-    reason: '发消息需要你们之间有一段仍然有效的连接。',
-    nextStep: '可以在「认识新朋友」里查看连接状态。',
+    title: 'You cannot message this person yet',
+    reassurance: 'Your draft is saved and was not sent.',
+    reason: 'Messaging needs a connection between you that is still current.',
+    nextStep: 'You can check the connection under Meet new people.',
   },
   VERSION_CONFLICT: {
     severity: 1,
-    title: '这一项刚刚有了新的版本',
-    reassurance: '你的修改没有丢，也没有覆盖别人的改动。',
-    reason: '在你操作期间，这一项被更新过。',
-    nextStep: '请先刷新看看最新内容，再决定是否继续。',
+    title: 'This item has just been updated by someone else',
+    reassurance: 'Your changes are not lost, and nothing of theirs was overwritten.',
+    reason: 'It changed while you were working on it.',
+    nextStep: 'Refresh to see the current version, then decide whether to continue.',
   },
   INVALID_STATE_TRANSITION: {
     severity: 1,
-    title: '这一项现在的状态不允许这个操作',
-    reassurance: '什么都没有改变。',
-    nextStep: '刷新看看它现在的状态；状态变了之后可以再试。',
+    title: 'Its current state does not allow this action',
+    reassurance: 'Nothing changed.',
+    nextStep: 'Refresh to see its current state; you can try again once it changes.',
   },
   VALIDATION_FAILED: {
     severity: 1,
-    title: '有一项还需要修改',
-    reassurance: '你写的内容还在下面，没有丢。',
-    nextStep: '按提示修改后再提交一次。',
+    title: 'One field still needs a change',
+    reassurance: 'What you wrote is still below and has not been lost.',
+    nextStep: 'Make the change described, then submit again.',
   },
   STEP_UP_AUTHENTICATION_REQUIRED: {
     severity: 2,
-    title: '这个操作需要更强的身份验证',
-    reassurance: '操作没有执行，你填写的内容还在。',
-    nextStep: '用强认证方式重新登录后再试。',
+    title: 'This action needs stronger authentication',
+    reassurance: 'The action did not run, and what you typed is still here.',
+    nextStep: 'Sign in again with strong authentication, then try again.',
   },
   DEPENDENCY_UNAVAILABLE: {
     severity: 1,
-    title: '暂时联系不上外部系统',
-    reassurance: '你的内容没有丢，这一步也没有半途生效。',
-    reason: '这是外部系统的问题，不是你操作有误。',
-    nextStep: '过一会儿再试一次。',
+    title: 'An external system cannot be reached right now',
+    reassurance: 'Your content is not lost, and this step did not half-happen.',
+    reason: 'This is a problem in the external system, not something you did wrong.',
+    nextStep: 'Please try again in a little while.',
   },
   RATE_LIMITED: {
     severity: 1,
-    title: '操作太频繁了',
-    reassurance: '内容没有丢。',
-    nextStep: '稍等一下再试。',
+    title: 'Too many requests in a short time',
+    reassurance: 'Nothing was lost.',
+    nextStep: 'Wait a moment, then try again.',
   },
 };
 
 const NETWORK: Omit<PresentedError, 'code'> = {
   severity: 1,
-  title: '没有连上服务器',
-  reassurance: '你写的内容还在，这次操作没有提交出去。',
-  nextStep: '检查网络后再试一次。',
+  title: 'The server could not be reached',
+  reassurance: 'What you wrote is still here, and nothing was submitted.',
+  nextStep: 'Check your connection, then try again.',
 };
 
 const UNKNOWN: Omit<PresentedError, 'code'> = {
   severity: 1,
-  title: '这一步没有成功',
+  title: 'This step did not succeed',
   // Never claim to know what happened when we do not: an unmapped code
   // may or may not have taken effect, and saying otherwise would be a
   // guess presented as fact.
-  reassurance: '你写的内容还在。',
-  reason: '我们没能确定具体原因，也不确定这次操作是否已经生效。',
-  nextStep: '请先刷新看看结果，不要直接重复提交；如果还有问题，请在「帮助与安全」里联系研究团队。',
+  reassurance: 'What you wrote is still here.',
+  reason: 'We could not determine the cause, and we do not know whether it took effect.',
+  nextStep: 'Refresh to check the result rather than submitting again. If the problem continues, contact the research team from Help and safety.',
 };
 
 export function presentError(err: unknown): PresentedError {

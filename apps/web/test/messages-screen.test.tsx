@@ -51,14 +51,14 @@ describe('MessagesScreen (API-driven lists replace manual identifiers)', () => {
     const calls = stubFetch();
     render(<MessagesScreen session={session} />);
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: '查看我的会话与联系' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Show my conversations and connections' }));
     });
     expect(calls.some((c) => c.path === '/v1/participants/pt_a/conversation-threads')).toBe(true);
     expect(calls.some((c) => c.path === '/v1/participants/pt_a/connections')).toBe(true);
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /与 pt_b 的会话/ }));
+      fireEvent.click(screen.getByRole('button', { name: /Conversation with pt_b/ }));
     });
-    expect(screen.getByText('写消息')).toBeTruthy();
+    expect(screen.getByText('Write a message')).toBeTruthy();
     expect(screen.getByText('pt_b')).toBeTruthy();
   });
 
@@ -66,15 +66,15 @@ describe('MessagesScreen (API-driven lists replace manual identifiers)', () => {
     const calls = stubFetch();
     render(<MessagesScreen session={session} />);
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: '查看我的会话与联系' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Show my conversations and connections' }));
     });
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: '开始会话' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Start a conversation' }));
     });
     const post = calls.find((c) => c.method === 'POST');
     expect(post?.path).toBe('/v1/conversation-threads');
     // The composer opens for the connection's counterpart.
-    expect(screen.getByText('写消息')).toBeTruthy();
+    expect(screen.getByText('Write a message')).toBeTruthy();
     expect(screen.getByText('pt_c')).toBeTruthy();
   });
 });

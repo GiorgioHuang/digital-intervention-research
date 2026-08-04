@@ -31,12 +31,13 @@ export function AccessTokenGate() {
 
   return (
     <section role="alert" aria-labelledby="token-gate-heading" style={{ border: '0.15rem solid currentColor', padding: '1rem', marginBlock: '0.75rem' }}>
-      <h2 id="token-gate-heading">需要此环境的访问口令</h2>
+      <h2 id="token-gate-heading">This environment needs its access passphrase</h2>
       <p>
-        服务器拒绝了刚才的请求，因为浏览器没有携带这个环境的访问口令。这与你的账号和权限无关——它是这个研究原型环境的访问门。
+        The server refused that request because the browser did not send this environment's access passphrase. This is
+        not about your account or your permissions — it is the door to this research prototype environment.
       </p>
       <p>
-        <label htmlFor="access-token">访问口令</label>
+        <label htmlFor="access-token">Access passphrase</label>
       </p>
       <input
         id="access-token"
@@ -55,12 +56,16 @@ export function AccessTokenGate() {
             setSaved(true);
           }}
         >
-          保存口令
+          Save passphrase
         </button>
       </p>
-      {saved && <p>口令已保存。请再点一次刚才的操作；如果仍然失败，说明口令不正确。</p>}
+      {saved && (
+        <p>The passphrase is saved. Please try that action once more; if it still fails, the passphrase is not correct.</p>
+      )}
       <p>
-        <small>口令只保存在这台设备的浏览器里，不会随页面地址传播。</small>
+        <small>
+          The passphrase is kept only in this device's browser, and is not carried in the page address.
+        </small>
       </p>
     </section>
   );

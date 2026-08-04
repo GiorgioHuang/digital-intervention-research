@@ -5,9 +5,9 @@ import { ErrorState } from './StateBlock.js';
 
 type Decision = 'Interested' | 'Not Now' | 'Dismissed';
 const DECISION_LABELS: Record<Decision, string> = {
-  Interested: '感兴趣',
-  'Not Now': '暂时不',
-  Dismissed: '不再显示这个人',
+  Interested: 'Interested',
+  'Not Now': 'Not now',
+  Dismissed: "Don't show this person again",
 };
 
 /**
@@ -41,7 +41,11 @@ export function MatchingPanel({ session }: { session: Session }) {
     try {
       const res = await api.listMatchCandidates(session);
       setCandidates(res.data.map((c) => c.attributes));
-      setAnnouncement(res.data.length === 0 ? '目前没有新的推荐。没有推荐也完全没关系。' : '推荐已更新。');
+      setAnnouncement(
+        res.data.length === 0
+          ? 'There are no new suggestions right now. Having no suggestions is perfectly all right.'
+          : 'The suggestions have been updated.',
+      );
     } catch (err) {
       setActionError(presentError(err));
     }
@@ -57,12 +61,12 @@ export function MatchingPanel({ session }: { session: Session }) {
       const ma = res.data.meta.mutualAcceptanceId;
       if (ma !== undefined) {
         setMutualAcceptanceId(ma);
-        setAnnouncement('你们双方都表示了兴趣。是否建立联系，仍由你决定。');
+        setAnnouncement('You have both said you are interested. Whether to connect is still your decision.');
       } else {
         setAnnouncement(
           decision === 'Interested'
-            ? '已记录你的兴趣。对方不会收到通知；只有当对方也表示兴趣时，你们才会看到彼此的意愿。'
-            : '已记录你的选择。对方不会收到任何通知。',
+            ? 'Your interest has been recorded. The other person is not notified; only if they also say they are interested will the two of you see it.'
+            : 'Your choice has been recorded. The other person is not notified at all.',
         );
       }
     } catch (err) {
@@ -72,13 +76,16 @@ export function MatchingPanel({ session }: { session: Session }) {
 
   return (
     <section aria-labelledby="matching-heading">
-      <h2 id="matching-heading">认识新朋友（可选）</h2>
-      <p>匹配默认关闭。开启前需要你在「我的同意选择」中同意「开放匹配」。你随时可以撤回，不影响其他功能。</p>
+      <h2 id="matching-heading">Meet new people (optional)</h2>
+      <p>
+        Matching is off by default. Before it can be switched on, you need to grant "Open matching" under My consent
+        choices. You can withdraw at any time, and that does not affect anything else.
+      </p>
 
       <section aria-labelledby="optin-heading">
-        <h3 id="optin-heading">开启匹配</h3>
+        <h3 id="optin-heading">Switch on matching</h3>
         <p>
-          <label htmlFor="interests">我愿意用于匹配的兴趣（用逗号分隔）</label>
+          <label htmlFor="interests">Interests I am willing to use for matching (separated by commas)</label>
         </p>
         <textarea id="interests" rows={2} value={interests} onChange={(e) => setInterests(e.target.value)} />
         <p>
@@ -91,20 +98,23 @@ export function MatchingPanel({ session }: { session: Session }) {
                     { interests: interests.split(/[,，]/).map((s) => s.trim()).filter((s) => s !== '') },
                     true,
                   ),
-                '匹配已开启。只有你选择分享的兴趣会被用于推荐。',
+                'Matching is now on. Only the interests you chose to share are used for suggestions.',
               )
             }
           >
-            开启匹配
+            Switch on matching
           </button>
         </p>
       </section>
 
       <section aria-labelledby="candidate-heading">
-        <h3 id="candidate-heading">当前推荐</h3>
-        <p>每个选择都同样正当，「暂时不」不会影响之后的推荐。你的选择不会被告知对方。</p>
+        <h3 id="candidate-heading">Current suggestions</h3>
         <p>
-          <button onClick={() => void loadCandidates()}>查看当前推荐</button>
+          All three choices are equally valid. Choosing "Not now" does not affect later suggestions. The other person
+          is not told what you chose.
+        </p>
+        <p>
+          <button onClick={() => void loadCandidates()}>Show current suggestions</button>
         </p>
         {candidates !== null && (
           <ul style={{ listStyle: 'none', padding: 0 }}>
@@ -126,36 +136,41 @@ export function MatchingPanel({ session }: { session: Session }) {
         {pending !== null && (
           <div role="alertdialog" aria-labelledby="decision-confirm-heading">
             <p id="decision-confirm-heading">
-              确认对这条推荐（版本 {pending.candidate.candidateVersion}）选择「{DECISION_LABELS[pending.decision]}」？
-              对方不会收到通知。
+              Choose "{DECISION_LABELS[pending.decision]}" for this suggestion (version{' '}
+              {pending.candidate.candidateVersion})? The other person is not notified.
             </p>
             <blockquote>{pending.candidate.explanation}</blockquote>
-            <button onClick={() => void decide()}>确认</button>{' '}
-            <button onClick={() => setPending(null)}>返回</button>
+            <button onClick={() => void decide()}>Confirm</button>{' '}
+            <button onClick={() => setPending(null)}>Go back</button>
           </div>
         )}
       </section>
 
       {mutualAcceptanceId !== null && (
         <section aria-labelledby="mutual-heading">
-          <h3 id="mutual-heading">你们互相表示了兴趣</h3>
-          <p>是否建立联系仍由你决定。不建立联系也不会通知对方。</p>
-          <button onClick={() => setConfirmingConnection(true)}>建立联系</button>
+          <h3 id="mutual-heading">You have both said you are interested</h3>
+          <p>
+            Whether to connect is still your decision. If you do not connect, the other person is not notified.
+          </p>
+          <button onClick={() => setConfirmingConnection(true)}>Connect</button>
           {confirmingConnection && (
             <div role="alertdialog" aria-labelledby="conn-confirm-heading">
-              <p id="conn-confirm-heading">确认建立联系？建立后你们可以互发消息；你随时可以屏蔽对方或断开联系。</p>
+              <p id="conn-confirm-heading">
+                Connect with this person? Once you are connected, the two of you can exchange messages. You can block
+                them or end the connection at any time.
+              </p>
               <button
                 onClick={() => {
                   setConfirmingConnection(false);
                   void run(
                     () => api.activateConnection(session, mutualAcceptanceId, true),
-                    '联系已建立。现在可以在「消息」中互发消息了。',
+                    'You are now connected. You can write to each other under Messages.',
                   );
                 }}
               >
-                确认建立联系
+                Confirm connection
               </button>{' '}
-              <button onClick={() => setConfirmingConnection(false)}>返回</button>
+              <button onClick={() => setConfirmingConnection(false)}>Go back</button>
             </div>
           )}
         </section>

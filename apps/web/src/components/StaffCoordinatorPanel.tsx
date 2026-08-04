@@ -21,9 +21,9 @@ export function StaffCoordinatorPanel({ session }: { session: StaffSession }) {
     try {
       const res = await staffApi.listEnrolments(session, listProjectId);
       setEnrolments(res.data.map((i) => i.attributes));
-      setAnnouncement('入组列表已更新。');
+      setAnnouncement('Enrolment list updated.');
     } catch (err) {
-      setAnnouncement(err instanceof PlatformApiError ? `未能获取列表：${err.error.code}` : '网络错误');
+      setAnnouncement(err instanceof PlatformApiError ? `Could not load the list: ${err.error.code}` : 'Network error');
     }
   };
 
@@ -32,27 +32,29 @@ export function StaffCoordinatorPanel({ session }: { session: StaffSession }) {
       await fn();
       setAnnouncement(done);
     } catch (err) {
-      setAnnouncement(err instanceof PlatformApiError ? `未成功：${err.error.code}` : '网络错误，未提交');
+      setAnnouncement(
+        err instanceof PlatformApiError ? `Not successful: ${err.error.code}` : 'Network error — nothing was submitted.',
+      );
     }
   };
 
   return (
     <section aria-labelledby="coord-heading">
-      <h2 id="coord-heading">入组协调</h2>
+      <h2 id="coord-heading">Enrolment</h2>
 
       <section aria-labelledby="invite-heading">
-        <h3 id="invite-heading">邀请参与者</h3>
-        <p>邀请只能针对已批准/已激活的协议版本——草稿协议不能作为入组依据。</p>
+        <h3 id="invite-heading">Invite a participant</h3>
+        <p>An invitation can only cite an approved or activated protocol version — a draft protocol cannot be the basis for enrolment.</p>
         <p>
-          <label htmlFor="inv-pat">参与者标识</label>{' '}
+          <label htmlFor="inv-pat">Participant identifier</label>{' '}
           <input id="inv-pat" value={invite.participantId} onChange={(e) => setInvite({ ...invite, participantId: e.target.value })} />
         </p>
         <p>
-          <label htmlFor="inv-proj">项目标识</label>{' '}
+          <label htmlFor="inv-proj">Project identifier</label>{' '}
           <input id="inv-proj" value={invite.projectId} onChange={(e) => setInvite({ ...invite, projectId: e.target.value })} />
         </p>
         <p>
-          <label htmlFor="inv-pv">协议版本标识</label>{' '}
+          <label htmlFor="inv-pv">Protocol version identifier</label>{' '}
           <input id="inv-pv" value={invite.protocolVersionId} onChange={(e) => setInvite({ ...invite, protocolVersionId: e.target.value })} />
         </p>
         <p>
@@ -62,28 +64,28 @@ export function StaffCoordinatorPanel({ session }: { session: StaffSession }) {
               void run(async () => {
                 const res = await staffApi.invite(session, invite.participantId, invite.projectId, invite.protocolVersionId);
                 setEnrolmentId(res.data.id);
-              }, '邀请已创建。')
+              }, 'Invitation created.')
             }
           >
-            创建邀请
+            Create invitation
           </button>
         </p>
       </section>
 
       <section aria-labelledby="list-heading">
-        <h3 id="list-heading">入组列表</h3>
+        <h3 id="list-heading">Enrolment list</h3>
         <p>
-          <label htmlFor="list-proj">按项目筛选（可留空）</label>{' '}
+          <label htmlFor="list-proj">Filter by project (optional)</label>{' '}
           <input id="list-proj" value={listProjectId} onChange={(e) => setListProjectId(e.target.value)} />{' '}
-          <button onClick={() => void loadEnrolments()}>查看入组列表</button>
+          <button onClick={() => void loadEnrolments()}>View enrolment list</button>
         </p>
         {enrolments !== null && (
           <ul style={{ listStyle: 'none', padding: 0 }}>
-            {enrolments.length === 0 && <li>没有匹配的入组记录。</li>}
+            {enrolments.length === 0 && <li>No enrolments match.</li>}
             {enrolments.map((e) => (
               <li key={e.enrolmentId}>
-                {e.enrolmentId}（参与者 {e.participantId}，项目 {e.researchProjectId}，状态：{e.enrolmentState}）{' '}
-                <button onClick={() => setEnrolmentId(e.enrolmentId)}>选择</button>
+                {e.enrolmentId} (participant {e.participantId}, project {e.researchProjectId}, state: {e.enrolmentState}){' '}
+                <button onClick={() => setEnrolmentId(e.enrolmentId)}>Select</button>
               </li>
             ))}
           </ul>
@@ -91,24 +93,24 @@ export function StaffCoordinatorPanel({ session }: { session: StaffSession }) {
       </section>
 
       <section aria-labelledby="chain-heading">
-        <h3 id="chain-heading">入组流转</h3>
+        <h3 id="chain-heading">Enrolment steps</h3>
         <p>
-          <label htmlFor="enr-id">入组标识</label>{' '}
+          <label htmlFor="enr-id">Enrolment identifier</label>{' '}
           <input id="enr-id" value={enrolmentId} onChange={(e) => setEnrolmentId(e.target.value)} />
         </p>
         <p>
           {(
             [
-              ['start-screening', '开始筛查'],
-              ['start-consent', '开始同意流程'],
-              ['enrol', '入组'],
-              ['activate', '激活'],
+              ['start-screening', 'Start screening'],
+              ['start-consent', 'Start consent'],
+              ['enrol', 'Enrol'],
+              ['activate', 'Activate'],
             ] as const
           ).map(([step, label]) => (
             <span key={step}>
               <button
                 disabled={enrolmentId === ''}
-                onClick={() => void run(() => staffApi.enrolmentStep(session, enrolmentId, step), `已执行：${label}`)}
+                onClick={() => void run(() => staffApi.enrolmentStep(session, enrolmentId, step), `Done: ${label}`)}
               >
                 {label}
               </button>{' '}
@@ -116,20 +118,20 @@ export function StaffCoordinatorPanel({ session }: { session: StaffSession }) {
           ))}
         </p>
 
-        <h4>资格决定（人工职责）</h4>
-        <p>资格由你决定并署名——不是系统打分。理由必填。</p>
+        <h4>Eligibility decision (a human responsibility)</h4>
+        <p>You make the eligibility decision and it is recorded in your name — it is not a score produced by the system. A reason is required.</p>
         <p>
           <select
-            aria-label="资格决定"
+            aria-label="Eligibility decision"
             value={eligibility.decision}
             onChange={(e) => setEligibility({ ...eligibility, decision: e.target.value as 'Eligible' | 'Ineligible' })}
           >
-            <option value="Eligible">符合条件</option>
-            <option value="Ineligible">不符合条件</option>
+            <option value="Eligible">Eligible</option>
+            <option value="Ineligible">Not eligible</option>
           </select>{' '}
           <input
-            aria-label="资格决定理由"
-            placeholder="理由（必填）"
+            aria-label="Reason for the eligibility decision"
+            placeholder="Reason (required)"
             value={eligibility.reason}
             onChange={(e) => setEligibility({ ...eligibility, reason: e.target.value })}
           />{' '}
@@ -138,34 +140,38 @@ export function StaffCoordinatorPanel({ session }: { session: StaffSession }) {
             onClick={() =>
               void run(
                 () => staffApi.eligibilityDecision(session, enrolmentId, eligibility.decision, eligibility.reason),
-                '资格决定已记录（署名为你）。',
+                'Eligibility decision recorded in your name.',
               )
             }
           >
-            记录资格决定
+            Record eligibility decision
           </button>
         </p>
 
-        <h4>退出</h4>
+        <h4>Withdrawal</h4>
         <p>
           <button disabled={enrolmentId === ''} onClick={() => setConfirmingWithdraw(true)}>
-            为该参与者办理退出
+            Withdraw this participant
           </button>
         </p>
         {confirmingWithdraw && (
           <div role="alertdialog" aria-labelledby="wd-confirm">
             <p id="wd-confirm">
-              确认办理退出？退出会停止后续数据收集并触发传播；已锁定的研究数据集不会被改写。
+              Withdraw this participant? Withdrawal stops further data collection and propagates to related records; research
+              datasets that are already locked are not rewritten.
             </p>
             <button
               onClick={() => {
                 setConfirmingWithdraw(false);
-                void run(() => staffApi.withdrawEnrolment(session, enrolmentId, 'participant-request'), '退出已记录并开始传播。');
+                void run(
+                  () => staffApi.withdrawEnrolment(session, enrolmentId, 'participant-request'),
+                  'Withdrawal recorded and propagation started.',
+                );
               }}
             >
-              确认退出
+              Confirm withdrawal
             </button>{' '}
-            <button onClick={() => setConfirmingWithdraw(false)}>返回</button>
+            <button onClick={() => setConfirmingWithdraw(false)}>Back</button>
           </div>
         )}
       </section>

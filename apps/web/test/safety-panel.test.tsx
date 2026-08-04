@@ -29,13 +29,13 @@ describe('SafetyPanel (block & report, Doc 20 / ADR-037/038)', () => {
   it('report goes to human review and the UI says so; submission posts category and description', async () => {
     const calls = stubFetch();
     render(<SafetyPanel session={session} />);
-    expect(screen.getByText(/不会由自动系统单独决定/)).toBeTruthy();
+    expect(screen.getByText(/no automated system decides them on its own/)).toBeTruthy();
     // A report survives a later block (ADR-038) — the UI states this.
-    expect(screen.getByText(/即使你之后屏蔽了对方，这份报告仍会被处理/)).toBeTruthy();
-    fireEvent.change(screen.getByLabelText('对方的标识'), { target: { value: 'actor_bad' } });
-    fireEvent.change(screen.getByLabelText(/发生了什么/), { target: { value: '给我发骚扰消息' } });
+    expect(screen.getByText(/your report is still handled/)).toBeTruthy();
+    fireEvent.change(screen.getByLabelText("The other person's identifier"), { target: { value: 'actor_bad' } });
+    fireEvent.change(screen.getByLabelText(/What happened/), { target: { value: 'They sent me harassing messages' } });
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: '提交报告' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Submit report' }));
     });
     expect(calls.length).toBe(1);
     expect(calls[0]?.path).toBe('/v1/reports');
@@ -46,16 +46,16 @@ describe('SafetyPanel (block & report, Doc 20 / ADR-037/038)', () => {
   it('block requires explicit confirmation and can be backed out of without any API call', async () => {
     const calls = stubFetch();
     render(<SafetyPanel session={session} />);
-    fireEvent.change(screen.getByLabelText('要屏蔽的人的标识'), { target: { value: 'actor_bad' } });
-    fireEvent.click(screen.getByRole('button', { name: '屏蔽此人' }));
+    fireEvent.change(screen.getByLabelText('Identifier of the person to block'), { target: { value: 'actor_bad' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Block this person' }));
     expect(screen.getByRole('alertdialog')).toBeTruthy();
     expect(calls.length).toBe(0);
-    fireEvent.click(screen.getByRole('button', { name: '返回，不屏蔽' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Go back without blocking' }));
     expect(screen.queryByRole('alertdialog')).toBeNull();
     expect(calls.length).toBe(0);
-    fireEvent.click(screen.getByRole('button', { name: '屏蔽此人' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Block this person' }));
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: '确认屏蔽' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Confirm block' }));
     });
     expect(calls.length).toBe(1);
     expect(calls[0]?.path).toBe('/v1/blocks');
@@ -65,10 +65,10 @@ describe('SafetyPanel (block & report, Doc 20 / ADR-037/038)', () => {
   it('safety concern raises a participant-sourced SafetySignal and shows the emergency disclaimer', async () => {
     const calls = stubFetch();
     render(<SafetyPanel session={session} />);
-    expect(screen.getByText(/本平台不是紧急求助渠道/)).toBeTruthy();
-    fireEvent.change(screen.getByLabelText('安全担忧内容'), { target: { value: '最近感到不安全' } });
+    expect(screen.getByText(/not an emergency service/)).toBeTruthy();
+    fireEvent.change(screen.getByLabelText('Your safety concern'), { target: { value: 'I have been feeling unsafe recently' } });
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: '提交安全担忧' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Submit safety concern' }));
     });
     expect(calls[0]?.path).toBe('/v1/safety-signals');
     expect(calls[0]?.body['sourceType']).toBe('Participant');

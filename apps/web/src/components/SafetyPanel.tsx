@@ -29,13 +29,16 @@ export function SafetyPanel({ session }: { session: Session }) {
 
   return (
     <section aria-labelledby="safety-heading">
-      <h2 id="safety-heading">屏蔽与报告</h2>
+      <h2 id="safety-heading">Blocking and reporting</h2>
 
       <section aria-labelledby="report-heading">
-        <h3 id="report-heading">报告让你不适的内容或行为</h3>
-        <p>报告会由工作人员查看，不会由自动系统单独决定。即使你之后屏蔽了对方，这份报告仍会被处理。</p>
+        <h3 id="report-heading">Report something that made you uncomfortable</h3>
         <p>
-          <label htmlFor="report-actor">对方的标识</label>{' '}
+          Reports are read by staff — no automated system decides them on its own. If you block the other person
+          afterwards, your report is still handled.
+        </p>
+        <p>
+          <label htmlFor="report-actor">The other person's identifier</label>{' '}
           <input
             id="report-actor"
             value={report.actorId}
@@ -43,20 +46,20 @@ export function SafetyPanel({ session }: { session: Session }) {
           />
         </p>
         <p>
-          <label htmlFor="report-category">类型</label>{' '}
+          <label htmlFor="report-category">Type</label>{' '}
           <select
             id="report-category"
             value={report.category}
             onChange={(e) => setReport({ ...report, category: e.target.value })}
           >
-            <option value="harassment">骚扰</option>
-            <option value="unsafe-content">不安全内容</option>
-            <option value="scam">疑似诈骗</option>
-            <option value="other">其他</option>
+            <option value="harassment">Harassment</option>
+            <option value="unsafe-content">Unsafe content</option>
+            <option value="scam">Possible scam</option>
+            <option value="other">Something else</option>
           </select>
         </p>
         <p>
-          <label htmlFor="report-description">发生了什么（用你自己的话）</label>
+          <label htmlFor="report-description">What happened (in your own words)</label>
         </p>
         <textarea
           id="report-description"
@@ -70,51 +73,58 @@ export function SafetyPanel({ session }: { session: Session }) {
             onClick={() =>
               void run(
                 () => api.submitReport(session, report.actorId, report.category, report.description),
-                '报告已提交，工作人员会查看。',
+                'Your report has been submitted. Staff will read it.',
               )
             }
           >
-            提交报告
+            Submit report
           </button>
         </p>
       </section>
 
       <section aria-labelledby="block-heading">
-        <h3 id="block-heading">屏蔽某人</h3>
-        <p>屏蔽后，对方将无法与你互发消息，你们也不会再互相出现在匹配中。对方不会收到通知。</p>
+        <h3 id="block-heading">Block someone</h3>
         <p>
-          <label htmlFor="block-actor">要屏蔽的人的标识</label>{' '}
+          Once you block someone, the two of you cannot message each other, and you will not appear in each other's
+          suggestions. The other person is not notified.
+        </p>
+        <p>
+          <label htmlFor="block-actor">Identifier of the person to block</label>{' '}
           <input id="block-actor" value={blockTarget} onChange={(e) => setBlockTarget(e.target.value)} />
         </p>
         <p>
           <button disabled={blockTarget === ''} onClick={() => setConfirmingBlock(true)}>
-            屏蔽此人
+            Block this person
           </button>
         </p>
         {confirmingBlock && (
           <div role="alertdialog" aria-labelledby="block-confirm-heading">
             <p id="block-confirm-heading">
-              确定要屏蔽 {blockTarget} 吗？屏蔽是你自己的决定，随时可以撤销；撤销屏蔽不会恢复已经错过的内容。
+              Block {blockTarget}? Blocking is your own decision and you can undo it at any time; undoing a block does
+              not bring back anything you missed in the meantime.
             </p>
             <button
               onClick={() => {
                 setConfirmingBlock(false);
-                void run(() => api.createBlock(session, blockTarget, true), '已屏蔽。');
+                void run(() => api.createBlock(session, blockTarget, true), 'The block is in place.');
               }}
             >
-              确认屏蔽
+              Confirm block
             </button>{' '}
-            <button onClick={() => setConfirmingBlock(false)}>返回，不屏蔽</button>
+            <button onClick={() => setConfirmingBlock(false)}>Go back without blocking</button>
           </div>
         )}
       </section>
 
       <section aria-labelledby="concern-heading">
-        <h3 id="concern-heading">我有安全方面的担忧</h3>
-        <p>安全团队会查看你的反馈。如果你或他人处于紧急危险中，请直接拨打当地紧急电话——本平台不是紧急求助渠道。</p>
+        <h3 id="concern-heading">I have a safety concern</h3>
+        <p>
+          The safety team reads what you send here. If you or someone else is in immediate danger, call your local
+          emergency number — this platform is not an emergency service.
+        </p>
         <textarea
           id="concern-text"
-          aria-label="安全担忧内容"
+          aria-label="Your safety concern"
           rows={3}
           value={concern}
           onChange={(e) => setConcern(e.target.value)}
@@ -125,11 +135,11 @@ export function SafetyPanel({ session }: { session: Session }) {
             onClick={() =>
               void run(
                 () => api.recordSafetySignal(session, 'wellbeing-concern', 'Moderate', concern),
-                '已提交给安全团队。',
+                'Your safety concern has been sent to the safety team.',
               )
             }
           >
-            提交安全担忧
+            Submit safety concern
           </button>
         </p>
       </section>

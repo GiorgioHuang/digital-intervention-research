@@ -56,15 +56,15 @@ describe('access-token recovery after a 401', () => {
     });
 
     const alert = screen.getByRole('alert');
-    expect(alert.textContent).toContain('访问口令');
+    expect(alert.textContent).toContain('Access passphrase');
     // The wording must not blame the person's account or permissions.
-    expect(alert.textContent).toContain('与你的账号和权限无关');
+    expect(alert.textContent).toContain('not about your account or your permissions');
 
-    fireEvent.change(screen.getByLabelText('访问口令'), { target: { value: ' tok-xyz ' } });
+    fireEvent.change(screen.getByLabelText('Access passphrase'), { target: { value: ' tok-xyz ' } });
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: '保存口令' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Save passphrase' }));
     });
-    expect(screen.getByRole('alert').textContent).toContain('请再点一次刚才的操作');
+    expect(screen.getByRole('alert').textContent).toContain('try that action once more');
     // Trimmed and now attached to every subsequent call.
     expect(accessTokenHeader()).toEqual({ 'x-access-token': 'tok-xyz' });
   });

@@ -19,15 +19,15 @@ import { EmptyState, ErrorState, LoadingState } from './StateBlock.js';
  * an explicit confirmed "发布到[社区]" step, mirroring message sending.
  */
 const POST_STATE_LABELS: Record<string, string> = {
-  Draft: '草稿 — 只有你能看到',
-  Published: '已发布',
-  Hidden: '已被暂时隐藏（审核中）',
-  Restricted: '已被限制可见',
-  Removed: '已被移除（人工审核决定）',
-  Deleted: '已删除',
-  Archived: '已归档',
-  Restored: '已恢复',
-  Withdrawn: '已撤回',
+  Draft: 'Draft — only you can see it',
+  Published: 'Published',
+  Hidden: 'Hidden for now (under review)',
+  Restricted: 'Limited visibility',
+  Removed: 'Removed (decided by a person, not by an automated system)',
+  Deleted: 'Deleted',
+  Archived: 'Archived',
+  Restored: 'Restored',
+  Withdrawn: 'Withdrawn',
 };
 
 export function CommunityPanel({ session }: { session: Session }) {
@@ -53,7 +53,7 @@ export function CommunityPanel({ session }: { session: Session }) {
     try {
       const res = await api.listCommunitySpaces(session);
       setSpaces(res.data.map((s) => s.attributes));
-      if (res.data.length === 0) setAnnouncement('目前还没有开放的社区。');
+      if (res.data.length === 0) setAnnouncement('There are no open communities yet.');
     } catch (err) {
       setSpaces([]);
       setSpacesError(presentError(err));
@@ -84,7 +84,11 @@ export function CommunityPanel({ session }: { session: Session }) {
     try {
       const res = await api.listCommunityFeed(session, space.spaceId);
       setFeed(res.data.map((p) => p.attributes));
-      setAnnouncement(res.data.length === 0 ? '这个社区还没有帖子。' : '帖子已按时间顺序显示。');
+      setAnnouncement(
+        res.data.length === 0
+          ? 'There are no posts in this community yet.'
+          : 'The posts are shown in time order, newest first.',
+      );
     } catch (err) {
       setFeed([]);
       setFeedError(presentError(err));
@@ -100,7 +104,9 @@ export function CommunityPanel({ session }: { session: Session }) {
     setActionError(null);
     try {
       await api.joinCommunity(session, space.spaceId, space.ruleVersionId);
-      setAnnouncement(`已加入「${space.name}」。你随时可以停止参与，这不影响其他功能。`);
+      setAnnouncement(
+        `You have joined "${space.name}". You can stop taking part at any time, and that does not affect anything else.`,
+      );
       await loadSpaces();
     } catch (err) {
       // A consent-gated join denial arrives as a protected-existence 404,
@@ -109,10 +115,11 @@ export function CommunityPanel({ session }: { session: Session }) {
       if (err instanceof PlatformApiError && (err.status === 403 || err.status === 404)) {
         setActionError({
           severity: 2,
-          title: `现在还不能加入「${space.name}」`,
-          reassurance: '你没有被加入这个社区，也没有任何内容被发布。',
-          reason: '加入社区需要你先同意「社区参与」。',
-          nextStep: '去「我的同意选择」同意「社区参与」，然后再回来加入；你随时可以再改回去。',
+          title: `You cannot join "${space.name}" yet`,
+          reassurance: 'You have not been added to this community, and nothing was published.',
+          reason: 'Joining a community needs your consent for "Join the community" first.',
+          nextStep:
+            'Open My consent choices, grant "Join the community", then come back and join. You can change it back at any time.',
           code: err.error?.code ?? 'AUTHORISATION_DENIED',
         });
       } else {
@@ -127,7 +134,7 @@ export function CommunityPanel({ session }: { session: Session }) {
     try {
       await api.draftSocialPost(session, openSpace.spaceId, composeText.trim());
       setComposeText('');
-      setAnnouncement('草稿已保存。只有你能看到；发布前需要你明确确认。');
+      setAnnouncement('Your draft is saved. Only you can see it, and publishing needs an explicit confirmation from you.');
       await loadMyPosts();
     } catch (err) {
       setActionError(presentError(err));
@@ -141,7 +148,7 @@ export function CommunityPanel({ session }: { session: Session }) {
     setActionError(null);
     try {
       await api.publishSocialPost(session, post.postId);
-      setAnnouncement('已发布。社区成员现在可以看到这条帖子。');
+      setAnnouncement('Published. Members of that community can now see this post.');
       await loadMyPosts();
       if (openSpace !== null && openSpace.spaceId === post.spaceId) await openFeed(openSpace);
     } catch (err) {
@@ -154,21 +161,22 @@ export function CommunityPanel({ session }: { session: Session }) {
 
   return (
     <section aria-labelledby="community-heading">
-      <h2 id="community-heading">社区（可选）</h2>
+      <h2 id="community-heading">Community (optional)</h2>
       <p>
-        参加社区完全是可选的。加入前会看到该社区的规则；帖子按时间顺序显示，没有算法排序，也没有点赞或浏览量。
-        你屏蔽的人的帖子不会显示，对方也看不到你的帖子。
+        Taking part in a community is entirely optional. You see the community's rules before you join. Posts are shown
+        in time order — there is no algorithmic ranking, and no likes or view counts. Posts from people you have blocked
+        are not shown to you, and they cannot see your posts.
       </p>
 
       <section aria-labelledby="spaces-heading">
-        <h3 id="spaces-heading">社区列表</h3>
+        <h3 id="spaces-heading">Community list</h3>
         <p>
-          <button onClick={() => void loadSpaces()}>刷新列表</button>
+          <button onClick={() => void loadSpaces()}>Refresh the list</button>
         </p>
-        {spacesLoading && <LoadingState label="正在获取社区列表…" />}
+        {spacesLoading && <LoadingState label="Loading the community list…" />}
         {spacesError !== null && <ErrorState error={spacesError} />}
         {!spacesLoading && spacesError === null && spaces !== null && spaces.length === 0 && (
-          <EmptyState title="目前还没有开放的社区" detail="有新的社区开放时，会出现在这里。" />
+          <EmptyState title="There are no open communities yet" detail="When a new community opens, it will appear here." />
         )}
         {spaces !== null && spaces.length > 0 && (
           <ul style={{ listStyle: 'none', padding: 0 }}>
@@ -176,12 +184,12 @@ export function CommunityPanel({ session }: { session: Session }) {
               <li key={s.spaceId} style={{ border: '1px solid currentColor', padding: '1rem', marginBlock: '0.75rem' }}>
                 <p>
                   <strong>{s.name}</strong>{' '}
-                  {s.membershipState === 'Active' ? <span>（你是成员）</span> : <span>（未加入）</span>}
+                  {s.membershipState === 'Active' ? <span>(you are a member)</span> : <span>(not joined)</span>}
                 </p>
                 {s.membershipState === 'Active' ? (
-                  <button onClick={() => void openFeed(s)}>进入「{s.name}」</button>
+                  <button onClick={() => void openFeed(s)}>Open "{s.name}"</button>
                 ) : (
-                  <button onClick={() => setJoining(s)}>查看规则并加入</button>
+                  <button onClick={() => setJoining(s)}>Read the rules and join</button>
                 )}
               </li>
             ))}
@@ -190,24 +198,27 @@ export function CommunityPanel({ session }: { session: Session }) {
         {joining !== null && (
           <div role="alertdialog" aria-labelledby="join-confirm-heading">
             <p id="join-confirm-heading">
-              加入「{joining.name}」前，请先阅读社区规则（第 {joining.ruleVersionNumber} 版）：
+              Before you join "{joining.name}", please read the community rules (version {joining.ruleVersionNumber}):
             </p>
             <blockquote>{joining.rulesText}</blockquote>
-            <p>加入即表示你同意上面这一版规则。加入需要你已同意「社区参与」；你随时可以停止参与。</p>
-            <button onClick={() => void join()}>同意规则并加入</button>{' '}
-            <button onClick={() => setJoining(null)}>返回</button>
+            <p>
+              Joining means you agree to the version of the rules shown above. Joining also needs your consent for
+              "Join the community". You can stop taking part at any time.
+            </p>
+            <button onClick={() => void join()}>Agree to the rules and join</button>{' '}
+            <button onClick={() => setJoining(null)}>Go back</button>
           </div>
         )}
       </section>
 
       {openSpace !== null && (
         <section aria-labelledby="feed-heading">
-          <h3 id="feed-heading">「{openSpace.name}」的帖子</h3>
-          <p>帖子按时间从新到旧显示。</p>
-          {feedLoading && <LoadingState label="正在获取帖子…" />}
+          <h3 id="feed-heading">Posts in "{openSpace.name}"</h3>
+          <p>Posts are shown in time order, newest first.</p>
+          {feedLoading && <LoadingState label="Loading the posts…" />}
           {feedError !== null && <ErrorState error={feedError} />}
           {!feedLoading && feedError === null && feed !== null && feed.length === 0 && (
-            <EmptyState title="这个社区还没有帖子" detail="你可以在下面写第一条。" />
+            <EmptyState title="There are no posts in this community yet" detail="You can write the first one below." />
           )}
           {feed !== null && feed.length > 0 && (
             <ul style={{ listStyle: 'none', padding: 0 }}>
@@ -216,7 +227,7 @@ export function CommunityPanel({ session }: { session: Session }) {
                   <p>{p.contentText}</p>
                   <p>
                     <small>
-                      {p.authorParticipantId === session.participantId ? '你' : `成员 ${p.authorParticipantId}`} ·{' '}
+                      {p.authorParticipantId === session.participantId ? 'You' : `Member ${p.authorParticipantId}`} ·{' '}
                       {new Date(p.publishedAt).toLocaleString()}
                     </small>
                   </p>
@@ -226,9 +237,11 @@ export function CommunityPanel({ session }: { session: Session }) {
           )}
 
           <section aria-labelledby="compose-heading">
-            <h4 id="compose-heading">写一条帖子</h4>
+            <h4 id="compose-heading">Write a post</h4>
             <p>
-              <label htmlFor="compose-text">想分享的内容（先存为草稿，发布前需要你确认）</label>
+              <label htmlFor="compose-text">
+                What you would like to share (it is saved as a draft first; publishing needs your confirmation)
+              </label>
             </p>
             <textarea
               id="compose-text"
@@ -237,7 +250,7 @@ export function CommunityPanel({ session }: { session: Session }) {
               onChange={(e) => setComposeText(e.target.value)}
             />
             <p>
-              <button onClick={() => void draft()}>保存草稿</button>
+              <button onClick={() => void draft()}>Save draft</button>
             </p>
           </section>
         </section>
@@ -245,27 +258,33 @@ export function CommunityPanel({ session }: { session: Session }) {
 
       {drafts.length > 0 && (
         <section aria-labelledby="drafts-heading">
-          <h3 id="drafts-heading">我的草稿</h3>
-          <p>草稿只有你能看到。发布后社区成员可以看到，工作人员按社区规则进行人工审核。</p>
+          <h3 id="drafts-heading">My drafts</h3>
+          <p>
+            Only you can see a draft. Once it is published, members of that community can see it, and staff review it
+            against the community rules.
+          </p>
           <ul style={{ listStyle: 'none', padding: 0 }}>
             {drafts.map((p) => (
               <li key={p.postId} style={{ border: '1px dashed currentColor', padding: '1rem', marginBlock: '0.75rem' }}>
                 <p>{p.contentText}</p>
                 <p>
                   <small>
-                    {POST_STATE_LABELS[p.postState] ?? p.postState} · 社区：{spaceName(p.spaceId)}
+                    {POST_STATE_LABELS[p.postState] ?? p.postState} · Community: {spaceName(p.spaceId)}
                   </small>
                 </p>
-                <button onClick={() => setPublishing(p)}>发布…</button>
+                <button onClick={() => setPublishing(p)}>Publish…</button>
               </li>
             ))}
           </ul>
           {publishing !== null && (
             <div role="alertdialog" aria-labelledby="publish-confirm-heading">
-              <p id="publish-confirm-heading">确认发布到「{spaceName(publishing.spaceId)}」？发布后社区成员都能看到。</p>
+              <p id="publish-confirm-heading">
+                Publish this to "{spaceName(publishing.spaceId)}"? Once published, members of that community can see
+                it.
+              </p>
               <blockquote>{publishing.contentText}</blockquote>
-              <button onClick={() => void publish()}>确认发布</button>{' '}
-              <button onClick={() => setPublishing(null)}>返回</button>
+              <button onClick={() => void publish()}>Confirm publishing</button>{' '}
+              <button onClick={() => setPublishing(null)}>Go back</button>
             </div>
           )}
         </section>

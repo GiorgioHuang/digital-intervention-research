@@ -37,7 +37,7 @@ describe('staff work queues replace manual identifier entry', () => {
             id: 'ss_9',
             attributes: {
               signalId: 'ss_9', sourceType: 'Participant', category: 'wellbeing',
-              severity: 'High', description: '感到不安全', signalState: 'Recorded',
+              severity: 'High', description: 'Feeling unsafe', signalState: 'Recorded',
             },
           },
         ],
@@ -45,11 +45,11 @@ describe('staff work queues replace manual identifier entry', () => {
     });
     render(<StaffSafetyTriagePanel session={session} />);
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: '查看待处理信号' }));
+      fireEvent.click(screen.getByRole('button', { name: 'View signals waiting for triage' }));
     });
-    expect(screen.getByText(/感到不安全/)).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: '处理此信号' }));
-    expect((screen.getByLabelText('信号标识') as HTMLInputElement).value).toBe('ss_9');
+    expect(screen.getByText(/Feeling unsafe/)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Work on this signal' }));
+    expect((screen.getByLabelText('Signal identifier') as HTMLInputElement).value).toBe('ss_9');
   });
 
   it('approver queues show the submitter so self-approval is visible before trying', async () => {
@@ -69,11 +69,11 @@ describe('staff work queues replace manual identifier entry', () => {
     });
     render(<StaffApproverPanel session={session} />);
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: '查看待办' }));
+      fireEvent.click(screen.getByRole('button', { name: 'View pending work' }));
     });
     // The queue itself warns that this item was submitted by the viewer.
-    expect(screen.getByText(/是你，不能自批/)).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: '选择' }));
-    expect((screen.getByLabelText('协议版本标识') as HTMLInputElement).value).toBe('pv_7');
+    expect(screen.getByText(/that is you, so you cannot approve it/)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Select' }));
+    expect((screen.getByLabelText('Protocol version identifier') as HTMLInputElement).value).toBe('pv_7');
   });
 });

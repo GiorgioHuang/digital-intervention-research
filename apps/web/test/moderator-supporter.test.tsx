@@ -32,7 +32,7 @@ describe('moderator panel (human, confirmed, immutable decisions)', () => {
                   type: 'ModerationCase', id: 'mc_1',
                   attributes: {
                     moderationCaseId: 'mc_1', subjectActorId: 'actor_subject',
-                    caseState: 'Reported', reportCategory: 'harassment', reportDescription: '骚扰消息',
+                    caseState: 'Reported', reportCategory: 'harassment', reportDescription: 'Harassing messages',
                   },
                 },
               ],
@@ -45,23 +45,23 @@ describe('moderator panel (human, confirmed, immutable decisions)', () => {
     );
     render(<StaffModeratorPanel session={session} />);
     // The UI states the reporter-anonymity and immutability rules up front.
-    expect(screen.getByText(/不显示举报人身份/)).toBeTruthy();
+    expect(screen.getByText(/never shows who reported/)).toBeTruthy();
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: '查看待处理个案' }));
+      fireEvent.click(screen.getByRole('button', { name: 'View open cases' }));
     });
-    expect(screen.getByText(/骚扰消息/)).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: '处理此个案' }));
-    expect((screen.getByLabelText('个案标识') as HTMLInputElement).value).toBe('mc_1');
+    expect(screen.getByText(/Harassing messages/)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Work on this case' }));
+    expect((screen.getByLabelText('Case identifier') as HTMLInputElement).value).toBe('mc_1');
 
     // Reason is mandatory; nothing posts before the confirmation dialog.
-    expect(screen.getByRole('button', { name: '记录决定' })).toHaveProperty('disabled', true);
-    fireEvent.change(screen.getByLabelText(/理由/), { target: { value: '首次违规，警告' } });
-    fireEvent.click(screen.getByRole('button', { name: '记录决定' }));
+    expect(screen.getByRole('button', { name: 'Record decision' })).toHaveProperty('disabled', true);
+    fireEvent.change(screen.getByLabelText(/Reason/), { target: { value: 'First breach; warning' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Record decision' }));
     const dialog = screen.getByRole('alertdialog');
-    expect(dialog.textContent).toContain('不可更改');
+    expect(dialog.textContent).toContain('cannot be changed');
     expect(calls.filter((c) => c.body !== undefined).length).toBe(0);
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: '确认记录' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
     });
     const post = calls.find((c) => c.body !== undefined);
     expect(post?.path).toBe('/v1/moderation-cases/mc_1/decision');
@@ -90,7 +90,7 @@ describe('supporter workspace (contribution ≠ testimony)', () => {
                   type: 'LifeStoryContribution', id: 'ctr_1',
                   attributes: {
                     contributionId: 'ctr_1', archiveId: 'arc_1',
-                    contentText: '我记得那年的花园', contributionState: 'Accepted',
+                    contentText: 'I remember the garden that year', contributionState: 'Accepted',
                   },
                 },
               ],
@@ -103,14 +103,14 @@ describe('supporter workspace (contribution ≠ testimony)', () => {
     );
     render(<SupporterApp onExit={() => undefined} />);
     // Honest framing before login: the participant decides.
-    expect(screen.getByText(/是否采纳始终由本人决定/)).toBeTruthy();
-    fireEvent.change(screen.getByLabelText(/账户标识/), { target: { value: 'actor_sup' } });
-    fireEvent.click(screen.getByRole('button', { name: '进入' }));
+    expect(screen.getByText(/always their\s+decision/)).toBeTruthy();
+    fireEvent.change(screen.getByLabelText(/Account identifier/), { target: { value: 'actor_sup' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: '查看我的贡献' }));
+      fireEvent.click(screen.getByRole('button', { name: 'View my contributions' }));
     });
     // The accepted state is truthful: a supporter contribution, not testimony.
-    expect(screen.getByText(/不是本人证言/)).toBeTruthy();
+    expect(screen.getByText(/not as their own testimony/)).toBeTruthy();
   });
 
   it('a denied proposal explains the relationship + consent prerequisites instead of a bare error', async () => {
@@ -124,13 +124,13 @@ describe('supporter workspace (contribution ≠ testimony)', () => {
       ),
     );
     render(<SupporterApp onExit={() => undefined} />);
-    fireEvent.change(screen.getByLabelText(/账户标识/), { target: { value: 'actor_sup' } });
-    fireEvent.click(screen.getByRole('button', { name: '进入' }));
-    fireEvent.change(screen.getByLabelText('档案标识'), { target: { value: 'arc_1' } });
-    fireEvent.change(screen.getByLabelText('你想补充的内容'), { target: { value: '补充内容' } });
+    fireEvent.change(screen.getByLabelText(/Account identifier/), { target: { value: 'actor_sup' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+    fireEvent.change(screen.getByLabelText('Archive identifier'), { target: { value: 'arc_1' } });
+    fireEvent.change(screen.getByLabelText('What you would like to add'), { target: { value: 'An extra detail' } });
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: '提交贡献' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Submit contribution' }));
     });
-    expect(screen.getByRole('status').textContent).toContain('已批准你们的关系');
+    expect(screen.getByRole('status').textContent).toContain('approved your relationship');
   });
 });

@@ -4,9 +4,9 @@ import { staffApi, type StaffSession, type TriageQueueItem } from '../staff-api.
 
 type Disposition = 'Closed as Not a Safety Event' | 'Escalated' | 'Converted to Safety Event';
 const DISPOSITIONS: { value: Disposition; label: string }[] = [
-  { value: 'Closed as Not a Safety Event', label: '关闭：不是安全事件' },
-  { value: 'Escalated', label: '升级：需要更高级别审查' },
-  { value: 'Converted to Safety Event', label: '转为安全事件（需要 MFA）' },
+  { value: 'Closed as Not a Safety Event', label: 'Close as not a safety event' },
+  { value: 'Escalated', label: 'Escalate for higher-level review' },
+  { value: 'Converted to Safety Event', label: 'Convert to a safety event (needs strong authentication)' },
 ];
 
 /**
@@ -24,9 +24,13 @@ export function StaffSafetyTriagePanel({ session }: { session: StaffSession }) {
     try {
       const res = await staffApi.listPendingTriage(session);
       setQueue(res.data.map((i) => i.attributes));
-      setAnnouncement(res.data.length === 0 ? '当前没有待处理信号。' : `${res.data.length} 个待处理信号。`);
+      setAnnouncement(
+        res.data.length === 0
+          ? 'There are no signals waiting for triage.'
+          : `${res.data.length} ${res.data.length === 1 ? 'signal' : 'signals'} waiting for triage.`,
+      );
     } catch (err) {
-      setAnnouncement(err instanceof PlatformApiError ? `未能获取队列：${err.error.code}` : '网络错误');
+      setAnnouncement(err instanceof PlatformApiError ? `Could not load the queue: ${err.error.code}` : 'Network error');
     }
   };
 
@@ -38,38 +42,43 @@ export function StaffSafetyTriagePanel({ session }: { session: StaffSession }) {
       const res = await staffApi.triageSignal(session, form.signalId, form.disposition, form.reason);
       const eventId = res.data.meta.safetyEventId;
       setAnnouncement(
-        eventId === undefined ? '处置已记录。' : `处置已记录，安全事件已创建：${eventId}`,
+        eventId === undefined ? 'Disposition recorded.' : `Disposition recorded, safety event created: ${eventId}`,
       );
     } catch (err) {
-      setAnnouncement(err instanceof PlatformApiError ? `未成功：${err.error.code}` : '网络错误，未提交');
+      setAnnouncement(
+        err instanceof PlatformApiError ? `Not successful: ${err.error.code}` : 'Network error — nothing was submitted.',
+      );
     }
   };
 
   return (
     <section aria-labelledby="triage-heading">
-      <h2 id="triage-heading">安全信号 triage</h2>
-      <p>处置是人工职责：自动系统只能产生信号，永远不能创建安全事件。每个处置都需要书面理由。</p>
+      <h2 id="triage-heading">Safety triage</h2>
       <p>
-        <button onClick={() => void loadQueue()}>查看待处理信号</button>
+        The disposition is a human responsibility: an automated system can only raise a signal and can never create a safety
+        event. Every disposition needs a written reason.
+      </p>
+      <p>
+        <button onClick={() => void loadQueue()}>View signals waiting for triage</button>
       </p>
       {queue !== null && queue.length > 0 && (
         <ul style={{ listStyle: 'none', padding: 0 }}>
           {queue.map((i) => (
             <li key={i.signalId} style={{ border: '1px solid currentColor', padding: '0.5rem', marginBlock: '0.5rem' }}>
               <p>
-                [{i.severity}] {i.category} — {i.description}（来源：{i.sourceType}，状态：{i.signalState}）
+                [{i.severity}] {i.category} — {i.description} (source: {i.sourceType}, state: {i.signalState})
               </p>
-              <button onClick={() => setForm((f) => ({ ...f, signalId: i.signalId }))}>处理此信号</button>
+              <button onClick={() => setForm((f) => ({ ...f, signalId: i.signalId }))}>Work on this signal</button>
             </li>
           ))}
         </ul>
       )}
       <p>
-        <label htmlFor="triage-signal">信号标识</label>{' '}
+        <label htmlFor="triage-signal">Signal identifier</label>{' '}
         <input id="triage-signal" value={form.signalId} onChange={(e) => setForm({ ...form, signalId: e.target.value })} />
       </p>
       <p>
-        <label htmlFor="triage-disposition">处置</label>{' '}
+        <label htmlFor="triage-disposition">Disposition</label>{' '}
         <select
           id="triage-disposition"
           value={form.disposition}
@@ -83,10 +92,13 @@ export function StaffSafetyTriagePanel({ session }: { session: StaffSession }) {
         </select>
       </p>
       {conversionWithoutMfa && (
-        <p role="note">转为安全事件需要 MFA 级别认证。你当前是密码级别——提交会被服务端拒绝（这是预期行为）。</p>
+        <p role="note">
+          Converting a signal to a safety event needs strong authentication. You are signed in at password level, so the
+          server will refuse this submission — that is expected.
+        </p>
       )}
       <p>
-        <label htmlFor="triage-reason">理由（必填）</label>
+        <label htmlFor="triage-reason">Reason (required)</label>
       </p>
       <textarea
         id="triage-reason"
@@ -96,15 +108,16 @@ export function StaffSafetyTriagePanel({ session }: { session: StaffSession }) {
       />
       <p>
         <button disabled={form.signalId === '' || form.reason === ''} onClick={() => setConfirming(true)}>
-          提交处置
+          Submit disposition
         </button>
       </p>
       {confirming && (
         <div role="alertdialog" aria-labelledby="triage-confirm">
           <p id="triage-confirm">
-            确认对信号 {form.signalId} 记录处置「{DISPOSITIONS.find((d) => d.value === form.disposition)?.label}」？
+            Record the disposition “{DISPOSITIONS.find((d) => d.value === form.disposition)?.label}” for signal{' '}
+            {form.signalId}?
           </p>
-          <button onClick={() => void submit()}>确认</button> <button onClick={() => setConfirming(false)}>返回</button>
+          <button onClick={() => void submit()}>Confirm</button> <button onClick={() => setConfirming(false)}>Back</button>
         </div>
       )}
       <p aria-live="polite" role="status">

@@ -278,11 +278,11 @@ export const api = {
  * person; Unknown is never shown as success.
  */
 export const DELIVERY_STATE_LABELS: Record<string, string> = {
-  'Not Submitted': '草稿 — 尚未发送',
-  Queued: '已确认，排队发送中',
-  'Sent to Provider': '已提交给发送服务',
-  'Provider Accepted': '发送服务已接受（对方尚未收到）',
-  Delivered: '已送达对方',
-  'Delivery Failed': '发送失败 — 可重试',
-  'Delivery Unknown': '送达状态未知 — 正在核实，不代表成功',
+  'Not Submitted': 'Draft — not sent yet',
+  Queued: 'Confirmed, queued for sending',
+  'Sent to Provider': 'Handed to the delivery service',
+  'Provider Accepted': 'Accepted by the delivery service (not received by the person yet)',
+  Delivered: 'Delivered to the other person',
+  'Delivery Failed': 'Delivery failed — you can try again',
+  'Delivery Unknown': 'Delivery status unknown — being checked; this does not mean it arrived',
 };

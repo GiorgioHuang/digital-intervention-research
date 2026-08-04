@@ -22,7 +22,7 @@ export function MessagesScreen({ session }: { session: Session }) {
       const [t, c] = await Promise.all([api.listThreads(session), api.listConnections(session)]);
       setThreads(t.data.map((x) => x.attributes));
       setConnections(c.data.map((x) => x.attributes));
-      setAnnouncement('已更新。');
+      setAnnouncement('The lists have been updated.');
     } catch (err) {
       setActionError(presentError(err));
     }
@@ -40,7 +40,7 @@ export function MessagesScreen({ session }: { session: Session }) {
       };
       setThreads((ts) => [thread, ...(ts ?? [])]);
       setActive(thread);
-      setAnnouncement('会话已创建。');
+      setAnnouncement('The conversation has been created.');
     } catch (err) {
       setActionError(presentError(err));
     }
@@ -49,7 +49,7 @@ export function MessagesScreen({ session }: { session: Session }) {
   if (active !== null) {
     return (
       <section>
-        <button onClick={() => setActive(null)}>← 返回会话列表</button>
+        <button onClick={() => setActive(null)}>← Back to the conversation list</button>
         <MessagePanel
           session={session}
           threadId={active.threadId}
@@ -61,19 +61,21 @@ export function MessagesScreen({ session }: { session: Session }) {
 
   return (
     <section aria-labelledby="messages-heading">
-      <h1 id="messages-heading">消息</h1>
+      <h1 id="messages-heading">Messages</h1>
       <p>
-        <button onClick={() => void load()}>查看我的会话与联系</button>
+        <button onClick={() => void load()}>Show my conversations and connections</button>
       </p>
       {threads !== null && (
         <section aria-labelledby="threads-heading">
-          <h2 id="threads-heading">我的会话</h2>
-          {threads.length === 0 && <p>还没有会话。可以从下面的联系开始一个。</p>}
+          <h2 id="threads-heading">My conversations</h2>
+          {threads.length === 0 && (
+            <p>You have no conversations yet. You can start one from your connections below.</p>
+          )}
           <ul style={{ listStyle: 'none', padding: 0 }}>
             {threads.map((t) => (
               <li key={t.threadId} style={{ marginBlock: '0.5rem' }}>
                 <button onClick={() => setActive(t)}>
-                  与 {t.otherParticipantId} 的会话（{t.threadState === 'Active' ? '进行中' : t.threadState}）
+                  Conversation with {t.otherParticipantId} ({t.threadState === 'Active' ? 'ongoing' : t.threadState})
                 </button>
               </li>
             ))}
@@ -82,13 +84,20 @@ export function MessagesScreen({ session }: { session: Session }) {
       )}
       {connections !== null && (
         <section aria-labelledby="connections-heading">
-          <h2 id="connections-heading">我的联系</h2>
-          {connections.length === 0 && <p>还没有联系。可以在「认识新朋友」中互相表示兴趣后建立。</p>}
+          <h2 id="connections-heading">My connections</h2>
+          {connections.length === 0 && (
+            <p>
+              You have no connections yet. One can be made under Meet new people, after you and the other person have
+              both said you are interested.
+            </p>
+          )}
           <ul style={{ listStyle: 'none', padding: 0 }}>
             {connections.map((c) => (
               <li key={c.connectionId} style={{ marginBlock: '0.5rem' }}>
-                {c.otherParticipantId}（{c.connectionState === 'Active' ? '已联系' : c.connectionState}）{' '}
-                {c.connectionState === 'Active' && <button onClick={() => void startThread(c)}>开始会话</button>}
+                {c.otherParticipantId} ({c.connectionState === 'Active' ? 'connected' : c.connectionState}){' '}
+                {c.connectionState === 'Active' && (
+                  <button onClick={() => void startThread(c)}>Start a conversation</button>
+                )}
               </li>
             ))}
           </ul>

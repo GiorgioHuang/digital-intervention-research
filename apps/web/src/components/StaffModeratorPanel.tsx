@@ -4,16 +4,16 @@ import { staffApi, type ModerationCaseItem, type StaffSession } from '../staff-a
 
 type Decision = 'Dismiss' | 'Warn' | 'Restrict' | 'Hide' | 'Remove' | 'Suspend' | 'Disconnect' | 'Ban' | 'Restore' | 'Escalate';
 const DECISION_LABELS: Record<Decision, string> = {
-  Dismiss: '不成立，关闭',
-  Warn: '警告',
-  Restrict: '限制功能',
-  Hide: '隐藏内容',
-  Remove: '移除内容',
-  Suspend: '暂停账号',
-  Disconnect: '断开连接',
-  Ban: '封禁',
-  Restore: '恢复',
-  Escalate: '升级处理',
+  Dismiss: 'Dismiss and close the case',
+  Warn: 'Warn',
+  Restrict: 'Restrict features',
+  Hide: 'Hide content',
+  Remove: 'Remove content',
+  Suspend: 'Suspend account',
+  Disconnect: 'Disconnect',
+  Ban: 'Ban',
+  Restore: 'Restore',
+  Escalate: 'Escalate',
 };
 
 /**
@@ -32,9 +32,13 @@ export function StaffModeratorPanel({ session }: { session: StaffSession }) {
     try {
       const res = await staffApi.listOpenModerationCases(session);
       setQueue(res.data.map((c) => c.attributes));
-      setAnnouncement(res.data.length === 0 ? '当前没有待处理个案。' : `${res.data.length} 个待处理个案。`);
+      setAnnouncement(
+        res.data.length === 0
+          ? 'There are no open cases.'
+          : `${res.data.length} open ${res.data.length === 1 ? 'case' : 'cases'}.`,
+      );
     } catch (err) {
-      setAnnouncement(err instanceof PlatformApiError ? `未能获取队列：${err.error.code}` : '网络错误');
+      setAnnouncement(err instanceof PlatformApiError ? `Could not load the queue: ${err.error.code}` : 'Network error');
     }
   };
 
@@ -43,37 +47,43 @@ export function StaffModeratorPanel({ session }: { session: StaffSession }) {
     try {
       await staffApi.recordModerationDecision(session, form.caseId, form.decision, form.reason);
       setQueue((q) => (q === null ? q : q.filter((c) => c.moderationCaseId !== form.caseId)));
-      setAnnouncement('决定已记录（以你的身份署名，不可更改）。');
+      setAnnouncement('Decision recorded in your name. It cannot be changed.');
     } catch (err) {
-      setAnnouncement(err instanceof PlatformApiError ? `未成功：${err.error.code}` : '网络错误，未提交');
+      setAnnouncement(
+        err instanceof PlatformApiError ? `Not successful: ${err.error.code}` : 'Network error — nothing was submitted.',
+      );
     }
   };
 
   return (
     <section aria-labelledby="mod-heading">
-      <h2 id="mod-heading">内容审核</h2>
-      <p>队列不显示举报人身份——审核针对内容与行为，不针对举报人。每个决定都需书面理由，署名后不可更改。</p>
+      <h2 id="mod-heading">Moderation</h2>
       <p>
-        <button onClick={() => void loadQueue()}>查看待处理个案</button>
+        The queue never shows who reported a case — moderation judges content and behaviour, not reporters. Every decision
+        needs a written reason, and once recorded in your name it cannot be changed.
+      </p>
+      <p>
+        <button onClick={() => void loadQueue()}>View open cases</button>
       </p>
       {queue !== null && queue.length > 0 && (
         <ul style={{ listStyle: 'none', padding: 0 }}>
           {queue.map((c) => (
             <li key={c.moderationCaseId} style={{ border: '1px solid currentColor', padding: '0.5rem', marginBlock: '0.5rem' }}>
               <p>
-                [{c.reportCategory ?? '无报告'}] {c.reportDescription ?? ''}（对象：{c.subjectActorId}，状态：{c.caseState}）
+                [{c.reportCategory ?? 'no report'}] {c.reportDescription ?? ''} (subject: {c.subjectActorId}, state:{' '}
+                {c.caseState})
               </p>
-              <button onClick={() => setForm((f) => ({ ...f, caseId: c.moderationCaseId }))}>处理此个案</button>
+              <button onClick={() => setForm((f) => ({ ...f, caseId: c.moderationCaseId }))}>Work on this case</button>
             </li>
           ))}
         </ul>
       )}
       <p>
-        <label htmlFor="mod-case">个案标识</label>{' '}
+        <label htmlFor="mod-case">Case identifier</label>{' '}
         <input id="mod-case" value={form.caseId} onChange={(e) => setForm({ ...form, caseId: e.target.value })} />
       </p>
       <p>
-        <label htmlFor="mod-decision">决定</label>{' '}
+        <label htmlFor="mod-decision">Decision</label>{' '}
         <select
           id="mod-decision"
           value={form.decision}
@@ -87,20 +97,21 @@ export function StaffModeratorPanel({ session }: { session: StaffSession }) {
         </select>
       </p>
       <p>
-        <label htmlFor="mod-reason">理由（必填）</label>
+        <label htmlFor="mod-reason">Reason (required)</label>
       </p>
       <textarea id="mod-reason" rows={2} value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} />
       <p>
         <button disabled={form.caseId === '' || form.reason === ''} onClick={() => setConfirming(true)}>
-          记录决定
+          Record decision
         </button>
       </p>
       {confirming && (
         <div role="alertdialog" aria-labelledby="mod-confirm">
           <p id="mod-confirm">
-            确认对个案 {form.caseId} 记录决定「{DECISION_LABELS[form.decision]}」？此决定将以你的身份署名写入审计，且不可更改。
+            Record the decision “{DECISION_LABELS[form.decision]}” for case {form.caseId}? It is written to the audit trail
+            in your name and cannot be changed.
           </p>
-          <button onClick={() => void decide()}>确认记录</button> <button onClick={() => setConfirming(false)}>返回</button>
+          <button onClick={() => void decide()}>Confirm</button> <button onClick={() => setConfirming(false)}>Back</button>
         </div>
       )}
       <p aria-live="polite" role="status">

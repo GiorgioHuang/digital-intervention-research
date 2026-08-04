@@ -54,7 +54,7 @@ export function ErrorState({ error, actions }: { error: PresentedError; actions?
       {actions}
       {/* The code helps support and nobody else, so it stays collapsed. */}
       <details>
-        <summary>技术细节</summary>
+        <summary>Technical details</summary>
         <p>
           <code>{error.code}</code>
         </p>

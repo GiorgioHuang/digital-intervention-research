@@ -24,81 +24,88 @@ export function StaffResearcherPanel({ session }: { session: StaffSession }) {
       const res = await fn();
       setAnnouncement(done(res.data.id));
     } catch (err) {
-      setAnnouncement(err instanceof PlatformApiError ? `未成功：${err.error.code}` : '网络错误，未提交');
+      setAnnouncement(
+        err instanceof PlatformApiError ? `Not successful: ${err.error.code}` : 'Network error — nothing was submitted.',
+      );
     }
   };
 
   return (
     <section aria-labelledby="researcher-heading">
-      <h2 id="researcher-heading">研究者工作台</h2>
+      <h2 id="researcher-heading">Research workspace</h2>
 
-      <h3>创建研究项目</h3>
+      <h3>Create a research project</h3>
       <p>
-        <label htmlFor="rp-org">组织标识</label>{' '}
+        <label htmlFor="rp-org">Organisation identifier</label>{' '}
         <input id="rp-org" value={project.organisationId} onChange={(e) => setProject({ ...project, organisationId: e.target.value })} />{' '}
-        <label htmlFor="rp-title">标题</label>{' '}
+        <label htmlFor="rp-title">Title</label>{' '}
         <input id="rp-title" value={project.title} onChange={(e) => setProject({ ...project, title: e.target.value })} />{' '}
         <button
           disabled={project.organisationId === '' || project.title === ''}
-          onClick={() => void run(() => staffApi.createProject(session, project.organisationId, project.title), (id) => `项目已创建：${id}`)}
+          onClick={() =>
+            void run(() => staffApi.createProject(session, project.organisationId, project.title), (id) => `Project created: ${id}`)
+          }
         >
-          创建项目
+          Create project
         </button>
       </p>
 
-      <h3>起草并提交协议版本</h3>
-      <p>提交会记录你为提交人——之后你将不能批准这个版本（职责分离）。</p>
+      <h3>Draft and submit a protocol version</h3>
+      <p>Submitting records you as the submitter — you will not then be able to approve this version (separation of duties).</p>
       <p>
-        <label htmlFor="pv-proj">项目标识</label>{' '}
+        <label htmlFor="pv-proj">Project identifier</label>{' '}
         <input id="pv-proj" value={draft.projectId} onChange={(e) => setDraft({ ...draft, projectId: e.target.value })} />{' '}
-        <label htmlFor="pv-title">版本标题</label>{' '}
+        <label htmlFor="pv-title">Version title</label>{' '}
         <input id="pv-title" value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} />{' '}
         <button
           disabled={draft.projectId === '' || draft.title === ''}
           onClick={() =>
             void run(
               () => staffApi.draftProtocolVersion(session, draft.projectId, draft.title, { title: draft.title }),
-              (id) => `协议版本草稿已创建：${id}`,
+              (id) => `Protocol version draft created: ${id}`,
             )
           }
         >
-          起草协议版本
+          Draft protocol version
         </button>
       </p>
       <p>
-        <label htmlFor="pv-submit">要提交的版本标识</label>{' '}
+        <label htmlFor="pv-submit">Identifier of the version to submit</label>{' '}
         <input id="pv-submit" value={submitVersionId} onChange={(e) => setSubmitVersionId(e.target.value)} />{' '}
         <button
           disabled={submitVersionId === ''}
-          onClick={() => void run(() => staffApi.submitProtocolVersion(session, submitVersionId), (id) => `已提交评审：${id}`)}
+          onClick={() => void run(() => staffApi.submitProtocolVersion(session, submitVersionId), (id) => `Submitted for review: ${id}`)}
         >
-          提交评审
+          Submit for review
         </button>
       </p>
 
-      <h3>申请受控导出</h3>
-      <p>导出必须写明目的、接收方与精确来源；研究导出没有「可识别」选项——平台不会生成可识别的研究导出。</p>
+      <h3>Request a controlled export</h3>
       <p>
-        <label htmlFor="ex-purpose">目的</label>{' '}
+        An export must state its purpose, its recipient and its exact sources. There is no identifiable option for research
+        exports — the platform does not produce an identifiable research export.
+      </p>
+      <p>
+        <label htmlFor="ex-purpose">Purpose</label>{' '}
         <input id="ex-purpose" value={exportForm.purpose} onChange={(e) => setExportForm({ ...exportForm, purpose: e.target.value })} />
       </p>
       <p>
-        <label htmlFor="ex-recipient">接收方</label>{' '}
+        <label htmlFor="ex-recipient">Recipient</label>{' '}
         <input id="ex-recipient" value={exportForm.recipient} onChange={(e) => setExportForm({ ...exportForm, recipient: e.target.value })} />
       </p>
       <p>
-        <label htmlFor="ex-sources">来源（逗号分隔的精确标识）</label>{' '}
+        <label htmlFor="ex-sources">Sources (exact identifiers, comma-separated)</label>{' '}
         <input id="ex-sources" value={exportForm.sources} onChange={(e) => setExportForm({ ...exportForm, sources: e.target.value })} />
       </p>
       <p>
-        <label htmlFor="ex-deid">去标识级别</label>{' '}
+        <label htmlFor="ex-deid">De-identification level</label>{' '}
         <select
           id="ex-deid"
           value={exportForm.deIdentification}
           onChange={(e) => setExportForm({ ...exportForm, deIdentification: e.target.value as 'Pseudonymised' | 'Anonymised' })}
         >
-          <option value="Pseudonymised">假名化</option>
-          <option value="Anonymised">匿名化</option>
+          <option value="Pseudonymised">Pseudonymised</option>
+          <option value="Anonymised">Anonymised</option>
         </select>{' '}
         <button
           disabled={exportForm.purpose === '' || exportForm.recipient === '' || exportForm.sources === ''}
@@ -112,11 +119,11 @@ export function StaffResearcherPanel({ session }: { session: StaffSession }) {
                   exportForm.sources.split(/[,，]/).map((s) => s.trim()).filter((s) => s !== ''),
                   exportForm.deIdentification,
                 ),
-              (id) => `导出申请已创建（待批准）：${id}`,
+              (id) => `Export request created and waiting for a decision: ${id}`,
             )
           }
         >
-          提交导出申请
+          Submit export request
         </button>
       </p>
 

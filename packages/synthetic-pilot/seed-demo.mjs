@@ -57,7 +57,7 @@ if (DATABASE_URL === undefined || DATABASE_URL === '') {
   process.exit(1);
 }
 
-const ORG_NAME = 'HADI 演示组织（合成数据）';
+const ORG_NAME = 'HADI Demo Organisation (synthetic)';
 const pool = createPool({ connectionString: DATABASE_URL, applicationName: 'seed-demo' });
 
 /**
@@ -70,7 +70,7 @@ function writeJson(participants, spaceId) {
   if (out === undefined || out === '') return;
   // Prefer the seeded demo participant by name; a database that also holds
   // rows from other runs must not silently hand back an unrelated one.
-  const first = participants.find((p) => p.display_name === '安 Ann') ?? participants[0];
+  const first = participants.find((p) => p.display_name === 'Ann') ?? participants[0];
   writeFileSync(
     out,
     JSON.stringify({
@@ -82,13 +82,13 @@ function writeJson(participants, spaceId) {
 }
 
 function printAccounts(rows, participants, spaceName) {
-  console.log('\n=== 演示账号（dev-header 登录桩；全部为合成数据）===\n');
+  console.log('\n=== Demo accounts (dev-header sign-in stub; all synthetic) ===\n');
   for (const r of rows) console.log(`  ${r.role.padEnd(26)} actor id: ${r.id}   (${r.display_name})`);
   console.log('');
   for (const p of participants) {
-    console.log(`  参与者 ${p.display_name}: actor id ${p.user_account_id} / participant id ${p.id}`);
+    console.log(`  Participant ${p.display_name}: actor id ${p.user_account_id} / participant id ${p.id}`);
   }
-  if (spaceName !== undefined) console.log(`\n  社区：${spaceName}`);
+  if (spaceName !== undefined) console.log(`\n  Community: ${spaceName}`);
   console.log('');
 }
 
@@ -113,17 +113,17 @@ async function existingDemo() {
        JOIN community_social.community_memberships m
          ON m.space_id = s.id AND m.membership_state = 'Active'
        JOIN participant_profile.participants p
-         ON p.id = m.participant_id AND p.display_name = '安 Ann'
+         ON p.id = m.participant_id AND p.display_name = 'Ann'
       ORDER BY s.created_at DESC
       LIMIT 1`,
   );
   // Listing is database-wide, not filtered to this seed run: on a demo
   // environment that is the whole population, and hiding rows created by
   // other means would misrepresent what is actually there.
-  console.log('演示数据已存在，未做任何更改。以下是数据库中现有的账号：');
+  console.log('Demo data already exists; nothing was changed. Accounts currently in the database:');
   printAccounts(accounts.rows, participants.rows, space.rows[0]?.name);
   // The demo participants are the ones registered by this seed; the first
-  // row by creation time is 安 Ann.
+  // row by creation time is Ann.
   writeJson(participants.rows, space.rows[0]?.id);
   return true;
 }
@@ -145,7 +145,7 @@ async function main() {
   const base = { pool, clock, checkPermission };
   const m03 = { pool, clock, permissions };
 
-  const { userAccountId: adminId } = await seedBootstrapAdministrator(pool, clock, { displayName: '管理员 Admin' });
+  const { userAccountId: adminId } = await seedBootstrapAdministrator(pool, clock, { displayName: 'Admin Alex' });
   const { organisationId: orgId } = await createOrganisation(
     base,
     createRequestContext({ actor: { type: 'user', id: adminId } }),
@@ -166,23 +166,23 @@ async function main() {
     await assignRole(base, a, { userAccountId, role, ...(scoped ? { organisationId: orgId } : {}), confirmed: true });
     return userAccountId;
   };
-  const researcherId = await mk('研究员 Rae', 'Researcher');
-  const approverId = await mk('审批人 Avery', 'ResearchApprover');
-  const evidenceReviewerId = await mk('证据评审 Evan', 'EvidenceReviewer');
-  const safetyId = await mk('安全评审 Sam', 'SafetyReviewer');
-  const privacyId = await mk('隐私评审 Priya', 'PrivacyReviewer');
-  const moderatorId = await mk('社区审核 Mia', 'Moderator');
-  const coordId = await mk('协调员 Cody', 'ResearchCoordinator', false);
-  const supporterId = await mk('支持者 Sofia', 'Supporter', false);
-  const annAcc = await mk('参与者 安 Ann', 'Participant', false);
-  const benAcc = await mk('参与者 本 Ben', 'Participant', false);
+  const researcherId = await mk('Researcher Rae', 'Researcher');
+  const approverId = await mk('Approver Avery', 'ResearchApprover');
+  const evidenceReviewerId = await mk('Evidence reviewer Evan', 'EvidenceReviewer');
+  const safetyId = await mk('Safety reviewer Sam', 'SafetyReviewer');
+  const privacyId = await mk('Privacy reviewer Priya', 'PrivacyReviewer');
+  const moderatorId = await mk('Moderator Mia', 'Moderator');
+  const coordId = await mk('Coordinator Cody', 'ResearchCoordinator', false);
+  const supporterId = await mk('Supporter Sofia', 'Supporter', false);
+  const annAcc = await mk('Participant Ann', 'Participant', false);
+  const benAcc = await mk('Participant Ben', 'Participant', false);
 
   const { participantId: annId } = await registerParticipant(base, ctx(coordId), {
-    displayName: '安 Ann',
+    displayName: 'Ann',
     userAccountId: annAcc,
   });
   const { participantId: benId } = await registerParticipant(base, ctx(coordId), {
-    displayName: '本 Ben',
+    displayName: 'Ben',
     userAccountId: benAcc,
   });
 
@@ -203,15 +203,15 @@ async function main() {
   // Community: a space with published rules, both participants joined, and
   // one published post each so the feed is not empty on first sign-in.
   const { spaceId, ruleVersionId } = await createCommunitySpace(base, a, {
-    name: '园艺角',
-    rulesText: '友善交流；尊重彼此的经历；不分享他人的私人信息。工作人员会按这些规则进行人工审核。',
+    name: 'Gardening Corner',
+    rulesText: 'Be kind. Respect each other\'s experience. Do not share anyone else\'s private information. Staff review reports against these rules.',
   });
   for (const [acc, pid] of [[annAcc, annId], [benAcc, benId]]) {
     await joinCommunity(base, ctx(acc), { spaceId, participantId: pid, ruleVersionId });
   }
   for (const [acc, pid, text] of [
-    [annAcc, annId, '今年的番茄长得特别好，想和大家分享一下我的做法。'],
-    [benAcc, benId, '我在阳台种了薄荷，夏天泡茶很好喝。'],
+    [annAcc, annId, 'My tomatoes did well this year — happy to share what I changed.'],
+    [benAcc, benId, 'I grow mint on the balcony. It makes a good tea in summer.'],
   ]) {
     const { postId } = await draftSocialPost(base, ctx(acc), { spaceId, participantId: pid, contentText: text });
     await publishSocialPost(base, ctx(acc), { postId, participantId: pid, confirmed: true });
@@ -223,14 +223,14 @@ async function main() {
   for (const [acc, pid] of [[annAcc, annId], [benAcc, benId]]) {
     await activateMatchPreference(base, ctx(acc), {
       participantId: pid,
-      declaredAttributes: { interests: ['园艺', '音乐'] },
+      declaredAttributes: { interests: ['gardening', 'music'] },
       confirmed: true,
     });
   }
   const { matchCandidateId } = await generateMatchCandidate(base, ctx(coordId), {
     participantAId: annId,
     participantBId: benId,
-    explanation: '你们都把园艺列为兴趣。',
+    explanation: 'You both listed gardening as an interest.',
   });
   await recordMatchDecision(base, ctx(annAcc), { matchCandidateId, participantId: annId, expectedCandidateVersion: 1, decision: 'Interested', confirmed: true });
   const { mutualAcceptanceId } = await recordMatchDecision(base, ctx(benAcc), { matchCandidateId, participantId: benId, expectedCandidateVersion: 1, decision: 'Interested', confirmed: true });
@@ -239,7 +239,7 @@ async function main() {
   const { messageId } = await createMessageDraft(base, ctx(annAcc), {
     threadId,
     senderParticipantId: annId,
-    contentText: '你好，本！要不要聊聊各自的花园？',
+    contentText: 'Hello Ben — would you like to talk about our gardens?',
   });
   await confirmSend(base, ctx(annAcc), {
     messageId,
@@ -254,8 +254,8 @@ async function main() {
   const { archiveId } = await createArchive(base, ctx(annAcc), { participantId: annId });
   const { itemId, versionId } = await createItem(base, ctx(annAcc), {
     archiveId,
-    title: '我的园艺岁月',
-    contentText: '这是一段由 AI 起草、等待我本人确认的文字。',
+    title: 'My years in the garden',
+    contentText: 'This text was drafted by AI and is waiting for me to confirm it.',
     sourceType: 'AIDraft',
   });
   await confirmTestimony(base, ctx(annAcc), { itemId, versionId, confirmed: true });
@@ -270,26 +270,26 @@ async function main() {
   });
   await approveRelationship(m03, ctx(annAcc), { relationshipId, expectedVersion: 1, confirmed: true });
 
-  console.log('\n演示数据已创建（全部为合成数据）。');
+  console.log('\nDemo data created (all synthetic).');
   printAccounts(
     [
-      { id: adminId, display_name: '管理员 Admin', role: 'OrganisationAdministrator' },
-      { id: researcherId, display_name: '研究员 Rae', role: 'Researcher' },
-      { id: approverId, display_name: '审批人 Avery', role: 'ResearchApprover' },
-      { id: evidenceReviewerId, display_name: '证据评审 Evan', role: 'EvidenceReviewer' },
-      { id: safetyId, display_name: '安全评审 Sam', role: 'SafetyReviewer' },
-      { id: privacyId, display_name: '隐私评审 Priya', role: 'PrivacyReviewer' },
-      { id: moderatorId, display_name: '社区审核 Mia', role: 'Moderator' },
-      { id: coordId, display_name: '协调员 Cody', role: 'ResearchCoordinator' },
-      { id: supporterId, display_name: '支持者 Sofia', role: 'Supporter' },
+      { id: adminId, display_name: 'Admin Alex', role: 'OrganisationAdministrator' },
+      { id: researcherId, display_name: 'Researcher Rae', role: 'Researcher' },
+      { id: approverId, display_name: 'Approver Avery', role: 'ResearchApprover' },
+      { id: evidenceReviewerId, display_name: 'Evidence reviewer Evan', role: 'EvidenceReviewer' },
+      { id: safetyId, display_name: 'Safety reviewer Sam', role: 'SafetyReviewer' },
+      { id: privacyId, display_name: 'Privacy reviewer Priya', role: 'PrivacyReviewer' },
+      { id: moderatorId, display_name: 'Moderator Mia', role: 'Moderator' },
+      { id: coordId, display_name: 'Coordinator Cody', role: 'ResearchCoordinator' },
+      { id: supporterId, display_name: 'Supporter Sofia', role: 'Supporter' },
     ],
     [
-      { id: annId, display_name: '安 Ann', user_account_id: annAcc },
-      { id: benId, display_name: '本 Ben', user_account_id: benAcc },
+      { id: annId, display_name: 'Ann', user_account_id: annAcc },
+      { id: benId, display_name: 'Ben', user_account_id: benAcc },
     ],
-    '园艺角',
+    'Gardening Corner',
   );
-  writeJson([{ id: annId, display_name: '安 Ann', user_account_id: annAcc }], spaceId);
+  writeJson([{ id: annId, display_name: 'Ann', user_account_id: annAcc }], spaceId);
 }
 
 main()

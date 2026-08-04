@@ -9,11 +9,11 @@ import { StaffSafetyTriagePanel } from './components/StaffSafetyTriagePanel.js';
 
 type StaffScreen = 'coordinator' | 'researcher' | 'approver' | 'safety' | 'moderation';
 const SCREENS: { key: StaffScreen; label: string }[] = [
-  { key: 'coordinator', label: '入组协调' },
-  { key: 'researcher', label: '研究者' },
-  { key: 'approver', label: '批准' },
-  { key: 'safety', label: '安全 triage' },
-  { key: 'moderation', label: '内容审核' },
+  { key: 'coordinator', label: 'Enrolment' },
+  { key: 'researcher', label: 'Research' },
+  { key: 'approver', label: 'Approvals' },
+  { key: 'safety', label: 'Safety triage' },
+  { key: 'moderation', label: 'Moderation' },
 ];
 
 /**
@@ -31,8 +31,11 @@ export function StaffApp({ onExit }: { onExit: () => void }) {
   if (session === null) {
     return (
       <main>
-        <h1>员工工作区（开发环境）</h1>
-        <p>开发登录桩：输入账户标识并选择认证强度。工作区入口不是权限——每个操作都由服务端权限引擎裁决。</p>
+        <h1>Staff workspace (development environment)</h1>
+        <p>
+          Development sign-in stub: enter an account identifier and choose the authentication strength. Opening a
+          workspace is not permission — every action is judged by the server&apos;s permission engine.
+        </p>
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -40,21 +43,24 @@ export function StaffApp({ onExit }: { onExit: () => void }) {
           }}
         >
           <p>
-            <label htmlFor="staff-actor">账户标识（actor id）</label>{' '}
+            <label htmlFor="staff-actor">Account identifier (actor id)</label>{' '}
             <input id="staff-actor" value={form.actorId} onChange={(e) => setForm({ ...form, actorId: e.target.value })} />
           </p>
           <p>
-            <label htmlFor="staff-strength">认证强度</label>{' '}
+            <label htmlFor="staff-strength">Authentication strength</label>{' '}
             <select
               id="staff-strength"
               value={form.authStrength}
               onChange={(e) => setForm({ ...form, authStrength: e.target.value as 'password' | 'mfa' })}
             >
-              <option value="password">密码（MFA 级操作会被拒绝）</option>
-              <option value="mfa">MFA</option>
+              <option value="password">Password (actions that need strong authentication will be refused)</option>
+              <option value="mfa">Strong authentication</option>
             </select>
           </p>
-          <button type="submit">进入</button> <button type="button" onClick={onExit}>返回参与者入口</button>
+          <button type="submit">Continue</button>{' '}
+          <button type="button" onClick={onExit}>
+            Back to the participant sign-in
+          </button>
         </form>
       </main>
     );
@@ -63,9 +69,9 @@ export function StaffApp({ onExit }: { onExit: () => void }) {
   return (
     <div>
       <a className="skip-link" href="#staff-main">
-        跳到主要内容
+        Skip to main content
       </a>
-      <nav aria-label="员工导航">
+      <nav aria-label="Staff navigation">
         <ul>
           {SCREENS.map((s) => (
             <li key={s.key}>
@@ -75,14 +81,14 @@ export function StaffApp({ onExit }: { onExit: () => void }) {
             </li>
           ))}
           <li>
-            <button onClick={onExit}>退出员工工作区</button>
+            <button onClick={onExit}>Leave the staff workspace</button>
           </li>
         </ul>
       </nav>
       <main id="staff-main">
         <AccessTokenGate />
         <p>
-          当前身份：{session.actorId}（{session.authStrength === 'mfa' ? 'MFA' : '密码'}级认证）
+          Signed in as {session.actorId} ({session.authStrength === 'mfa' ? 'strong authentication' : 'password'})
         </p>
         {screen === 'coordinator' && <StaffCoordinatorPanel session={session} />}
         {screen === 'researcher' && <StaffResearcherPanel session={session} />}

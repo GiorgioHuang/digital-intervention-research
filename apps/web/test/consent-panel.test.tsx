@@ -31,8 +31,8 @@ describe('ConsentPanel (Doc 20 consent UX rules)', () => {
     render(<ConsentPanel session={session} />);
     // Nothing is preselected — no checkboxes/radios at all, only explicit actions.
     expect(document.querySelectorAll('input').length).toBe(0);
-    const grantButtons = screen.getAllByRole('button', { name: /^同意「/ });
-    const declineButtons = screen.getAllByRole('button', { name: /^拒绝「/ });
+    const grantButtons = screen.getAllByRole('button', { name: /^Grant "/ });
+    const declineButtons = screen.getAllByRole('button', { name: /^Decline "/ });
     expect(grantButtons.length).toBe(4);
     expect(declineButtons.length).toBe(grantButtons.length);
   });
@@ -41,7 +41,7 @@ describe('ConsentPanel (Doc 20 consent UX rules)', () => {
     const calls = stubFetch();
     render(<ConsentPanel session={session} />);
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: '拒绝「开放匹配」' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Decline "Open matching"' }));
     });
     expect(calls.length).toBe(1);
     expect(calls[0]?.body['decision']).toBe('Declined');
@@ -51,19 +51,19 @@ describe('ConsentPanel (Doc 20 consent UX rules)', () => {
   it('withdrawal requires an explicit confirmation step and can be backed out of', async () => {
     const calls = stubFetch();
     render(<ConsentPanel session={session} />);
-    fireEvent.click(screen.getByRole('button', { name: '撤回「参与研究」的同意' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Withdraw consent for "Take part in the research"' }));
     // A consequence summary is shown before anything happens.
     const dialog = screen.getByRole('alertdialog');
-    expect(dialog.textContent).toContain('已锁定的研究数据集不会被改写');
+    expect(dialog.textContent).toContain('locked');
     expect(calls.length).toBe(0);
     // Backing out makes no API call.
-    fireEvent.click(screen.getByRole('button', { name: '返回，不撤回' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Go back without withdrawing' }));
     expect(screen.queryByRole('alertdialog')).toBeNull();
     expect(calls.length).toBe(0);
     // Confirming actually withdraws.
-    fireEvent.click(screen.getByRole('button', { name: '撤回「参与研究」的同意' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Withdraw consent for "Take part in the research"' }));
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: '确认撤回「参与研究」' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Confirm withdrawal of "Take part in the research"' }));
     });
     expect(calls.length).toBe(1);
     expect(calls[0]?.path).toContain('/consents/withdraw');

@@ -32,10 +32,16 @@ describe('error presentation', () => {
       expect(p.title.length).toBeGreaterThan(0);
       expect(p.reassurance.length).toBeGreaterThan(0);
       expect(p.nextStep.length).toBeGreaterThan(0);
-      // No blame, no bare codes in the human-facing text.
+      // No blame, no bare codes in the human-facing text. "not something
+      // you did wrong" is the opposite of blame, so negated forms are
+      // stripped before the check rather than counted as violations.
       for (const text of [p.title, p.reassurance, p.reason ?? '', p.nextStep]) {
         expect(text).not.toContain(code);
-        expect(text).not.toMatch(/你(的操作)?(错|违规)/);
+        const withoutDenials = text
+          .toLowerCase()
+          .replace(/\bnot\s+(something\s+)?you\s+did\s+wrong\b/g, '')
+          .replace(/\bnothing\s+you\s+did\s+wrong\b/g, '');
+        expect(withoutDenials).not.toMatch(/you (did|entered) (something )?wrong|your mistake|invalid input by you/);
       }
     }
   });
@@ -43,14 +49,14 @@ describe('error presentation', () => {
   it('a protected-existence 404 never confirms the thing exists', () => {
     const p = presentError(apiError('RESOURCE_NOT_FOUND', 404));
     // It must hold for both "wrong identifier" and "not yours to see".
-    expect(p.reason).toContain('标识不正确');
-    expect(p.reason).toContain('不对你开放');
+    expect(p.reason).toContain('identifier may be incorrect');
+    expect(p.reason).toContain('may not be open to you');
   });
 
   it('an unmapped code admits the outcome is unknown instead of guessing', () => {
     const p = presentError(apiError('SOMETHING_NEW', 500));
-    expect(p.reason).toContain('不确定这次操作是否已经生效');
-    expect(p.nextStep).toContain('不要直接重复提交');
+    expect(p.reason).toContain('we do not know whether it took effect');
+    expect(p.nextStep).toContain('rather than submitting again');
   });
 
   it('a non-API failure is reported as a network problem, not a server verdict', () => {
@@ -80,14 +86,14 @@ describe('error presentation', () => {
     await act(async () => {
       render(
         <>
-          <LoadingState label="正在获取社区列表…" />
-          <EmptyState title="目前还没有开放的社区" detail="有新的社区开放时，会出现在这里。" />
+          <LoadingState label="Loading communities…" />
+          <EmptyState title="No communities are open yet" detail="Any community that opens will appear here." />
         </>,
       );
     });
     // "Still loading" is announced politely; "nothing there" is a fact on
     // the page, not a status update.
-    expect(screen.getByRole('status').textContent).toContain('正在获取');
-    expect(screen.getByText('目前还没有开放的社区')).toBeTruthy();
+    expect(screen.getByRole('status').textContent).toContain('Loading');
+    expect(screen.getByText('No communities are open yet')).toBeTruthy();
   });
 });

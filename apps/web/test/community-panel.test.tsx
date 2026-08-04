@@ -7,23 +7,23 @@ const session = { actorId: 'actor_test', participantId: 'pt_a' };
 
 const SPACE_UNJOINED = {
   spaceId: 'cs_1',
-  name: '园艺角',
+  name: 'Gardening Corner',
   ruleVersionId: 'crv_1',
   ruleVersionNumber: 2,
-  rulesText: '友善交流；不分享他人隐私。',
+  rulesText: 'Be kind. Do not share other people\'s private information.',
   membershipState: null,
 };
 const SPACE_JOINED = { ...SPACE_UNJOINED, membershipState: 'Active' };
 const FEED_POST = {
   postId: 'sp_9',
   authorParticipantId: 'pt_b',
-  contentText: '今天的番茄熟了',
+  contentText: 'The tomatoes are ripe today',
   publishedAt: '2026-08-01T02:00:00Z',
 };
 const DRAFT_POST = {
   postId: 'sp_d1',
   spaceId: 'cs_1',
-  contentText: '我的第一条帖子',
+  contentText: 'My first post',
   postState: 'Draft',
   createdAt: '2026-08-01T01:00:00Z',
   publishedAt: null,
@@ -94,15 +94,15 @@ describe('CommunityPanel (optional community, versioned rules, chronological fee
       render(<CommunityPanel session={session} />);
     });
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: '查看规则并加入' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Read the rules and join' }));
     });
     const dialog = screen.getByRole('alertdialog');
     // The exact rules text and version number are shown BEFORE any join call.
-    expect(dialog.textContent).toContain('友善交流；不分享他人隐私。');
-    expect(dialog.textContent).toContain('第 2 版');
+    expect(dialog.textContent).toContain("Be kind. Do not share other people's private information.");
+    expect(dialog.textContent).toContain('2');
     expect(calls.filter((c) => c.method === 'POST').length).toBe(0);
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: '同意规则并加入' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Agree to the rules and join' }));
     });
     const join = calls.find((c) => c.method === 'POST' && c.path === '/v1/community-spaces/cs_1/join');
     expect(join?.body).toMatchObject({ participantId: 'pt_a', ruleVersionId: 'crv_1' });
@@ -114,17 +114,17 @@ describe('CommunityPanel (optional community, versioned rules, chronological fee
       render(<CommunityPanel session={session} />);
     });
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: '查看规则并加入' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Read the rules and join' }));
     });
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: '同意规则并加入' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Agree to the rules and join' }));
     });
     // A blocked action is announced as an alert, not a passive status
     // line, and it names the one thing the person can act on rather than
     // an error code. The code stays available for support, collapsed.
     const alert = screen.getByRole('alert');
-    expect(alert.textContent).toContain('社区参与');
-    expect(alert.textContent).toContain('我的同意选择');
+    expect(alert.textContent).toContain('Join the community');
+    expect(alert.textContent).toContain('My consent choices');
     // The code is present for support but starts collapsed, so the person
     // reads guidance rather than AUTHORISATION_DENIED.
     const details = alert.querySelector('details');
@@ -139,29 +139,29 @@ describe('CommunityPanel (optional community, versioned rules, chronological fee
       render(<CommunityPanel session={session} />);
     });
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: '进入「园艺角」' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Open "Gardening Corner"' }));
     });
-    expect(screen.getByText('今天的番茄熟了')).toBeTruthy();
-    expect(screen.getByText('帖子按时间从新到旧显示。')).toBeTruthy();
+    expect(screen.getByText('The tomatoes are ripe today')).toBeTruthy();
+    expect(screen.getAllByText(/newest first/).length).toBeGreaterThan(0);
 
     // Compose saves a DRAFT only — no publish call yet.
-    fireEvent.change(screen.getByLabelText(/想分享的内容/), { target: { value: '大家好' } });
+    fireEvent.change(screen.getByLabelText(/What you would like to share/), { target: { value: 'Hello everyone' } });
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: '保存草稿' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Save draft' }));
     });
     const draftCall = calls.find((c) => c.method === 'POST' && c.path === '/v1/social-posts');
-    expect(draftCall?.body).toMatchObject({ spaceId: 'cs_1', participantId: 'pt_a', contentText: '大家好' });
+    expect(draftCall?.body).toMatchObject({ spaceId: 'cs_1', participantId: 'pt_a', contentText: 'Hello everyone' });
     expect(calls.some((c) => c.path.includes('/publish'))).toBe(false);
 
     // The pre-seeded draft is labelled as private and publishes only after
     // an explicit confirmation naming the community.
-    expect(screen.getByText(/草稿 — 只有你能看到/).textContent).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: '发布…' }));
+    expect(screen.getByText(/only you can see it/).textContent).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Publish…' }));
     const dialog = screen.getByRole('alertdialog');
-    expect(dialog.textContent).toContain('发布到「园艺角」');
+    expect(dialog.textContent).toContain('Gardening Corner');
     expect(calls.some((c) => c.path.includes('/publish'))).toBe(false);
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: '确认发布' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Confirm publishing' }));
     });
     const publish = calls.find((c) => c.method === 'POST' && c.path === '/v1/social-posts/sp_d1/publish');
     expect(publish?.body).toMatchObject({ participantId: 'pt_a', confirmed: true });

@@ -165,9 +165,9 @@ export const staffApi = {
 
 /** MFA-tier actions (Doc 14): shown to staff so the step-up is never a surprise. */
 export const MFA_REQUIRED_ACTIONS = [
-  '转为安全事件（Converted to Safety Event）',
-  '协议/干预版本批准',
-  '数据集锁定（DatasetLock）',
-  '导出批准',
-  'M15 审批决定',
+  'Convert a safety signal to a safety event',
+  'Approve a protocol or intervention version',
+  'Lock a dataset version',
+  'Approve an export',
+  'Record an M15 approval decision',
 ] as const;

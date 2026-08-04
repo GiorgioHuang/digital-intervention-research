@@ -37,16 +37,16 @@ describe('staff panels (server-judged authority, honest MFA labelling)', () => {
   it('safety triage: reason is mandatory, submission is confirmed, auth strength header is forwarded', async () => {
     const calls = stubFetch();
     render(<StaffSafetyTriagePanel session={mfaSession} />);
-    fireEvent.change(screen.getByLabelText('信号标识'), { target: { value: 'ss_1' } });
+    fireEvent.change(screen.getByLabelText('Signal identifier'), { target: { value: 'ss_1' } });
     // No reason -> cannot submit.
-    expect(screen.getByRole('button', { name: '提交处置' })).toHaveProperty('disabled', true);
-    fireEvent.change(screen.getByLabelText(/理由/), { target: { value: '经核实无风险' } });
-    fireEvent.click(screen.getByRole('button', { name: '提交处置' }));
+    expect(screen.getByRole('button', { name: 'Submit disposition' })).toHaveProperty('disabled', true);
+    fireEvent.change(screen.getByLabelText(/Reason/), { target: { value: 'Checked; no risk found' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Submit disposition' }));
     // Confirmation before anything is sent.
     expect(screen.getByRole('alertdialog').textContent).toContain('ss_1');
     expect(calls.length).toBe(0);
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: '确认' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
     });
     expect(calls[0]?.path).toBe('/v1/safety-signals/ss_1/triage');
     expect(calls[0]?.headers['x-auth-strength']).toBe('mfa');
@@ -56,22 +56,22 @@ describe('staff panels (server-judged authority, honest MFA labelling)', () => {
   it('safety triage warns up front when conversion is selected without MFA', () => {
     stubFetch();
     render(<StaffSafetyTriagePanel session={pwSession} />);
-    fireEvent.change(screen.getByLabelText('处置'), { target: { value: 'Converted to Safety Event' } });
-    expect(screen.getByRole('note').textContent).toContain('MFA');
-    expect(screen.getByRole('note').textContent).toContain('会被服务端拒绝');
+    fireEvent.change(screen.getByLabelText('Disposition'), { target: { value: 'Converted to Safety Event' } });
+    expect(screen.getByRole('note').textContent).toContain('strong authentication');
+    expect(screen.getByRole('note').textContent).toContain('the server will refuse this submission');
   });
 
   it('approver: dataset lock goes through a confirmation naming the exact artefact and is audit-attributed', async () => {
     const calls = stubFetch();
     render(<StaffApproverPanel session={mfaSession} />);
-    fireEvent.change(screen.getByLabelText('数据集版本标识'), { target: { value: 'dv_9' } });
-    fireEvent.click(screen.getByRole('button', { name: '锁定数据集版本（MFA）' }));
+    fireEvent.change(screen.getByLabelText('Dataset version identifier'), { target: { value: 'dv_9' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Lock dataset version (strong authentication)' }));
     const dialog = screen.getByRole('alertdialog');
     expect(dialog.textContent).toContain('dv_9');
-    expect(dialog.textContent).toContain('署名');
+    expect(dialog.textContent).toContain('in your name');
     expect(calls.length).toBe(0);
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: '确认执行' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
     });
     expect(calls[0]?.path).toBe('/v1/dataset-versions/dv_9/lock');
     expect(calls[0]?.body['confirmed']).toBe(true);
@@ -80,27 +80,27 @@ describe('staff panels (server-judged authority, honest MFA labelling)', () => {
   it('approver panel warns when the session lacks MFA', () => {
     stubFetch();
     render(<StaffApproverPanel session={pwSession} />);
-    expect(screen.getByText(/密码级别下会被拒绝/)).toBeTruthy();
+    expect(screen.getByText(/signed in at password level/)).toBeTruthy();
   });
 
   it('coordinator: eligibility decision needs a written reason; withdrawal is confirmed with honest consequences', async () => {
     const calls = stubFetch();
     render(<StaffCoordinatorPanel session={mfaSession} />);
-    fireEvent.change(screen.getByLabelText('入组标识'), { target: { value: 'enr_1' } });
+    fireEvent.change(screen.getByLabelText('Enrolment identifier'), { target: { value: 'enr_1' } });
     // Eligibility button stays disabled without a reason.
-    expect(screen.getByRole('button', { name: '记录资格决定' })).toHaveProperty('disabled', true);
-    fireEvent.change(screen.getByLabelText('资格决定理由'), { target: { value: '符合纳入标准' } });
+    expect(screen.getByRole('button', { name: 'Record eligibility decision' })).toHaveProperty('disabled', true);
+    fireEvent.change(screen.getByLabelText('Reason for the eligibility decision'), { target: { value: 'Meets the inclusion criteria' } });
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: '记录资格决定' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Record eligibility decision' }));
     });
     expect(calls[0]?.path).toBe('/v1/enrolments/enr_1/eligibility-decision');
-    expect(calls[0]?.body['reason']).toBe('符合纳入标准');
+    expect(calls[0]?.body['reason']).toBe('Meets the inclusion criteria');
 
-    fireEvent.click(screen.getByRole('button', { name: '为该参与者办理退出' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Withdraw this participant' }));
     const dialog = screen.getByRole('alertdialog');
-    expect(dialog.textContent).toContain('已锁定的研究数据集不会被改写');
+    expect(dialog.textContent).toContain('locked');
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: '确认退出' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Confirm withdrawal' }));
     });
     expect(calls.some((c) => c.path === '/v1/enrolments/enr_1/withdraw')).toBe(true);
   });
@@ -108,15 +108,15 @@ describe('staff panels (server-judged authority, honest MFA labelling)', () => {
   it('researcher export form offers NO identifiable option and splits exact sources', async () => {
     const calls = stubFetch();
     render(<StaffResearcherPanel session={mfaSession} />);
-    const options = Array.from(screen.getByLabelText('去标识级别').querySelectorAll('option')).map((o) =>
+    const options = Array.from(screen.getByLabelText('De-identification level').querySelectorAll('option')).map((o) =>
       (o as HTMLOptionElement).value,
     );
     expect(options).toEqual(['Pseudonymised', 'Anonymised']);
-    fireEvent.change(screen.getByLabelText('目的'), { target: { value: '外部统计复核' } });
-    fireEvent.change(screen.getByLabelText('接收方'), { target: { value: 'stats-partner' } });
-    fireEvent.change(screen.getByLabelText(/来源/), { target: { value: 'dv_1, dv_2' } });
+    fireEvent.change(screen.getByLabelText('Purpose'), { target: { value: 'External statistical review' } });
+    fireEvent.change(screen.getByLabelText('Recipient'), { target: { value: 'stats-partner' } });
+    fireEvent.change(screen.getByLabelText(/Sources/), { target: { value: 'dv_1, dv_2' } });
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: '提交导出申请' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Submit export request' }));
     });
     expect(calls[0]?.path).toBe('/v1/export-requests');
     expect(calls[0]?.body['sources']).toEqual(['dv_1', 'dv_2']);
