@@ -21,7 +21,7 @@ const CONNECTION = {
   createdAt: '2026-07-30T00:00:00Z',
 };
 
-function stubFetch() {
+function stubFetchWith(thread: typeof THREAD) {
   const calls: { path: string; method: string }[] = [];
   vi.stubGlobal(
     'fetch',
@@ -29,7 +29,7 @@ function stubFetch() {
       const method = init?.method ?? 'GET';
       calls.push({ path, method });
       if (path.endsWith('/conversation-threads') && method === 'GET') {
-        return new Response(JSON.stringify({ data: [{ type: 'ConversationThread', id: THREAD.threadId, attributes: THREAD }] }), { status: 200 });
+        return new Response(JSON.stringify({ data: [{ type: 'ConversationThread', id: thread.threadId, attributes: thread }] }), { status: 200 });
       }
       if (path.endsWith('/connections')) {
         return new Response(JSON.stringify({ data: [{ type: 'Connection', id: CONNECTION.connectionId, attributes: CONNECTION }] }), { status: 200 });
@@ -39,6 +39,7 @@ function stubFetch() {
   );
   return calls;
 }
+const stubFetch = () => stubFetchWith(THREAD);
 
 describe('MessagesScreen (API-driven lists replace manual identifiers)', () => {
   beforeEach(() => {
@@ -51,10 +52,11 @@ describe('MessagesScreen (API-driven lists replace manual identifiers)', () => {
 
   it('threads and connections come from owner-scoped queries; opening a thread shows the composer', async () => {
     const calls = stubFetch();
-    render(<MessagesScreen session={session} />);
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Show my conversations and connections' }));
+      render(<MessagesScreen session={session} />);
     });
+    // Loaded on arrival: no button stands between a person and their
+    // messages.
     expect(calls.some((c) => c.path === '/v1/participants/pt_a/conversation-threads')).toBe(true);
     expect(calls.some((c) => c.path === '/v1/participants/pt_a/connections')).toBe(true);
     await act(async () => {
@@ -68,11 +70,39 @@ describe('MessagesScreen (API-driven lists replace manual identifiers)', () => {
     expect(document.body.textContent).not.toContain('pt_b');
   });
 
+  /**
+   * The reason a person is reachable is the whole permission story
+   * (ADR-031: a thread exists only on a CommunicationBasis). A
+   * participant who cannot see it has no way to understand why one person
+   * can be written to and another cannot, or what would end that.
+   */
+  it('every conversation says why the two may write to each other', async () => {
+    stubFetch();
+    await act(async () => {
+      render(<MessagesScreen session={session} />);
+    });
+    expect(screen.getByText(/Why you can write to each other: you and this person both agreed to connect/)).toBeTruthy();
+  });
+
+  /**
+   * A thread that can no longer be written to says so on the row. The
+   * alternative — letting someone open it, compose, and be refused at the
+   * end — spends their effort before telling them.
+   */
+  it('a conversation that can no longer be written to says so before it is opened', async () => {
+    cleanup();
+    vi.unstubAllGlobals();
+    stubFetchWith({ ...THREAD, threadId: 'th_2', threadState: 'Expired' });
+    await act(async () => {
+      render(<MessagesScreen session={session} />);
+    });
+    expect(screen.getByText(/The reason this conversation was possible has ended/)).toBeTruthy();
+  });
+
   it('a new conversation starts from an Active connection, not from a typed identifier', async () => {
     const calls = stubFetch();
-    render(<MessagesScreen session={session} />);
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Show my conversations and connections' }));
+      render(<MessagesScreen session={session} />);
     });
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Start a conversation' }));

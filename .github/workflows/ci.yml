@@ -45,6 +45,12 @@ jobs:
       - name: Lint
         run: pnpm lint
 
+      # `pnpm build` compiles sources only; the web tsconfig is the one that
+      # also covers test files. Without this step a type error in a test
+      # passed CI and reached main — it did, which is why the step exists.
+      - name: Typecheck (includes test files)
+        run: pnpm typecheck
+
       - name: Architecture boundaries (dependency-cruiser)
         run: pnpm depcruise
 

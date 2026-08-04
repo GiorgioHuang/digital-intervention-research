@@ -640,3 +640,13 @@
   code: [packages/modules/m03-consent-permission/src/application/consent-queries.ts, apps/api/src/controllers.ts, apps/web/src/components/ConsentPanel.tsx, apps/web/src/api.ts]
   tests: [packages/modules/m03-consent-permission/test/m03.integration.test.ts, apps/web/test/consent-panel.test.tsx]
   status: implemented
+
+- implementation_id: IMP-WEB-COMMUNICATION-BASIS-001
+  module: ops
+  summary: Every conversation states why the two people may write to each other, and a conversation that can no longer be written to says so before it is opened (PARTICIPANT_WORKSPACE A3.1/A3.3/A3.5/A4.2/A4.3). A thread exists only on a CommunicationBasis (ADR-031) and the server already returned which one, but the screen never showed it - the reason a person is reachable is the whole permission story, and a participant who cannot see it has no way to understand why one person can be written to and another cannot, or what would end that. The four basis types each get plain wording, and a thread whose state is not Active carries the reason on the list row and again inside the conversation, so nobody composes a message only to be refused after spending the effort. Conversations, connections and message history now load on arrival instead of behind a button, with a loading state; the buttons remain as explicit refresh. Also closes a CI gap this work exposed - pnpm build compiles sources only, and the web tsconfig is the one that also covers test files, so a type error in a test passed CI and reached main; a typecheck step now runs in CI
+  trace_ids: [ATR-002, ATR-024]
+  adr_ids: [ADR-031]
+  docs: ["design/PARTICIPANT_WORKSPACE.md A3.1", "design/PARTICIPANT_WORKSPACE.md A3.3", "design/PARTICIPANT_WORKSPACE.md A3.5", "Doc 20 §158-161"]
+  code: [apps/web/src/components/MessagesScreen.tsx, apps/web/src/components/MessagePanel.tsx, .github/workflows/ci.yml]
+  tests: [apps/web/test/messages-screen.test.tsx, apps/web/test/message-panel.test.tsx]
+  status: implemented

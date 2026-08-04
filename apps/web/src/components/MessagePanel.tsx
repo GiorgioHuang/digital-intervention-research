@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { api, DELIVERY_STATE_LABELS, type Session, type ThreadMessage } from '../api.js';
 import { presentError, type PresentedError } from '../errors.js';
 import { ErrorState } from './StateBlock.js';
@@ -14,10 +14,16 @@ export function MessagePanel({
   session,
   threadId,
   recipient,
+  basis,
+  closedReason,
 }: {
   session: Session;
   threadId: string;
   recipient: { participantId: string; displayName: string };
+  /** Why these two may write to each other, in the caller's words. */
+  basis?: string;
+  /** Set when the thread can no longer be written to, with the reason. */
+  closedReason?: string;
 }) {
   const [text, setText] = useState('');
   const [actionError, setActionError] = useState<PresentedError | null>(null);
@@ -26,6 +32,12 @@ export function MessagePanel({
   const [deliveryState, setDeliveryState] = useState<string | null>(null);
   const [history, setHistory] = useState<ThreadMessage[] | null>(null);
   const [notice, setNotice] = useState('');
+
+  // The history is the context for what is being written; requiring a
+  // press to see it puts the conversation behind the compose box.
+  useEffect(() => {
+    void loadHistory();
+  }, [threadId]);
 
   const loadHistory = async () => {
     try {
@@ -69,8 +81,10 @@ export function MessagePanel({
       <p>
         To: <strong>{recipient.displayName}</strong>
       </p>
+      {basis !== undefined && <p>Why you can write to each other: {basis}.</p>}
+      {closedReason !== undefined && <p role="note">{closedReason}</p>}
       <p>
-        <button onClick={() => void loadHistory()}>Show message history</button>
+        <button onClick={() => void loadHistory()}>Refresh message history</button>
       </p>
       {history !== null && history.length > 0 && (
         <ol style={{ listStyle: 'none', padding: 0 }} aria-label="Message history">

@@ -117,9 +117,10 @@ describe('MessagePanel (Doc 20 §158–161 send confirmation)', () => {
         );
       }),
     );
-    render(<MessagePanel session={session} threadId="th_1" recipient={recipient} />);
+    // The history loads with the panel: it is the context for what is
+    // being written, not something to go and fetch.
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Show message history' }));
+      render(<MessagePanel session={session} threadId="th_1" recipient={recipient} />);
     });
     expect(calls[0]).toContain('/v1/conversation-threads/th_1/messages');
     const list = screen.getByRole('list', { name: 'Message history' });

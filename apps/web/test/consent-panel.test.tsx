@@ -26,7 +26,7 @@ const CURRENT = {
 
 /** GETs carry no body; only the commands do. */
 function stubFetch(current: unknown = CURRENT) {
-  const calls: { path: string; method: string; body: Record<string, unknown> }[] = [];
+  const calls: Call[] = [];
   vi.stubGlobal(
     'fetch',
     vi.fn(async (path: string, init?: RequestInit) => {
@@ -41,7 +41,8 @@ function stubFetch(current: unknown = CURRENT) {
   );
   return calls;
 }
-const commands = (calls: { method: string }[]) => calls.filter((c) => c.method !== 'GET');
+type Call = { path: string; method: string; body: Record<string, unknown> };
+const commands = (calls: Call[]) => calls.filter((c) => c.method !== 'GET');
 
 describe('ConsentPanel (Doc 20 consent UX rules)', () => {
   beforeEach(() => {
