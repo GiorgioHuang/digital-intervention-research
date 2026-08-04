@@ -212,39 +212,70 @@ export function App() {
           <section aria-labelledby="home-heading">
             <h1 id="home-heading">What would you like to do today?</h1>
             {/*
+              The anti-feed statement, said rather than implied (design
+              A1.5). This page ends. Nothing on it refreshes to keep
+              somebody here, and a participant who has done the things
+              that are their turn is finished for the day.
+            */}
+            <p>
+              Anything that needs a decision from you is below. When those are done, they are done — nothing here
+              keeps going on its own.
+            </p>
+            {/*
               Where the participant stands, and the way out, before the
               task list. Leaving was already permitted by the server but
               unreachable from here, so in practice it meant asking staff.
             */}
             <MyResearchPart session={session} />
             <WaitingForYou session={session} />
-            {/* Task list, not a feed: each entry is one clear action. */}
-            <ul>
-              <li>
-                <button onClick={() => setScreen('consent')}>Review or change my consent choices</button>
-              </li>
-              <li>
-                <button onClick={() => setScreen('access')}>See who has access to me</button>
-              </li>
-              <li>
-                <button onClick={() => setScreen('message')}>Write to someone you are connected with</button>
-              </li>
-              <li>
-                <button onClick={() => setScreen('life-story')}>Write or read my life story</button>
-              </li>
-              <li>
-                <button onClick={() => setScreen('matching')}>Meet new people (optional)</button>
-              </li>
-              <li>
-                <button onClick={() => setScreen('community')}>Visit the community (optional)</button>
-              </li>
-              <li>
-                <button onClick={() => setScreen('data-copy')}>Ask for a copy of my information</button>
-              </li>
-              <li>
-                <button onClick={() => setScreen('help')}>Get help or report a problem</button>
-              </li>
-            </ul>
+            {/*
+              Three groups, not one flat list (design A1.6). The list
+              reached eight entries as each unreachable right was given a
+              way in, and eight unlabelled buttons is a wall rather than a
+              choice. The privacy group is a real cluster and not a tidy-up:
+              consent says what may be done, access says by whom, and a copy
+              is what you may take away — someone asking "who can see my
+              things" is answered by those three together.
+            */}
+            <section aria-labelledby="home-privacy-heading">
+              <h2 id="home-privacy-heading">Your information and who can see it</h2>
+              <ul>
+                <li>
+                  <button onClick={() => setScreen('consent')}>Review or change my consent choices</button>
+                </li>
+                <li>
+                  <button onClick={() => setScreen('access')}>See who has access to me</button>
+                </li>
+                <li>
+                  <button onClick={() => setScreen('data-copy')}>Ask for a copy of my information</button>
+                </li>
+              </ul>
+            </section>
+            <section aria-labelledby="home-anytime-heading">
+              <h2 id="home-anytime-heading">Things you can do any time</h2>
+              <ul>
+                <li>
+                  <button onClick={() => setScreen('message')}>Write to someone you are connected with</button>
+                </li>
+                <li>
+                  <button onClick={() => setScreen('life-story')}>Write or read my life story</button>
+                </li>
+                <li>
+                  <button onClick={() => setScreen('matching')}>Meet new people (optional)</button>
+                </li>
+                <li>
+                  <button onClick={() => setScreen('community')}>Visit the community (optional)</button>
+                </li>
+              </ul>
+            </section>
+            <section aria-labelledby="home-help-heading">
+              <h2 id="home-help-heading">Help and safety</h2>
+              <ul>
+                <li>
+                  <button onClick={() => setScreen('help')}>Get help or report a problem</button>
+                </li>
+              </ul>
+            </section>
           </section>
         )}
         {screen === 'consent' && <ConsentPanel session={session} />}

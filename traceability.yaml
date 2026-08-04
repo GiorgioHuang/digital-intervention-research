@@ -770,3 +770,13 @@
   code: [packages/policy/src/catalogue.ts, packages/modules/m03-consent-permission/src/application/consent-queries.ts, packages/modules/m17-life-story/src/application/queries.ts, apps/api/src/controllers.ts, apps/api/src/app.module.ts, apps/web/src/SupporterApp.tsx]
   tests: [packages/modules/m03-consent-permission/test/m03.integration.test.ts, packages/modules/m17-life-story/test/m17.integration.test.ts, apps/web/test/moderator-supporter.test.tsx]
   status: implemented
+
+- implementation_id: IMP-WEB-HOME-GROUPING-001
+  module: M18
+  summary: Groups the participant Home task list and states the anti-feed promise in words. The list reached eight entries over this session as each unreachable right was given a way in, and eight unlabelled buttons is a wall rather than a choice - the screen had become worse than when it held five. Three headed groups now - your information and who can see it, things you can do any time, and help and safety. The grouping differs from the one the design sketched, which proposed a your-turn group - that is no longer needed, because what is the participant's turn already has two named blocks of its own on Home, the waiting-for-you list and where they stand in the study. The privacy group is a real cluster rather than tidying - consent says what may be done with someone's information, who has access says by whom, and asking for a copy says what they may take away, and the three together answer the single question of who can see my things. The expectation-managing sentence from A1.5 is now said rather than implied - anything needing a decision is above, and when those are done they are done, because nothing here keeps going on its own. That sentence is the whole point of a task-oriented Home and leaving it to the layout to imply was leaving it unsaid. Tests assert the grouping by region name rather than by document order, and walk each grouped action through to the screen it names so a button that stops matching its heading fails
+  trace_ids: [ATR-002]
+  adr_ids: [ADR-054]
+  docs: ["design/PARTICIPANT_WORKSPACE.md A1.5", "design/PARTICIPANT_WORKSPACE.md A1.6", "Doc 20 sections 36 and 107"]
+  code: [apps/web/src/App.tsx]
+  tests: [apps/web/test/home.test.tsx]
+  status: implemented
