@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { staffActionError } from '../errors.js';
 import { staffApi, type StaffSession } from '../staff-api.js';
+import { DatasetWork } from './DatasetWork.js';
 import { ExportsToCarryOut } from './ExportsToCarryOut.js';
 
 /**
@@ -125,6 +126,12 @@ export function StaffResearcherPanel({ session }: { session: StaffSession }) {
           Submit export request
         </button>
       </p>
+
+      {/*
+        The dataset chain: only its last step (locking) had a screen, so
+        the four before it could be performed by nobody.
+      */}
+      <DatasetWork session={session} />
 
       {/*
         Approving used to be the end of the road: nothing listed an

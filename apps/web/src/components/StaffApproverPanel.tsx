@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { StaffSession } from '../staff-api.js';
 import { ApprovalRecords } from './approver/ApprovalRecords.js';
+import { DatasetDefinitions } from './approver/DatasetDefinitions.js';
 import { DatasetLock } from './approver/DatasetLock.js';
 import { ExportDecisions } from './approver/ExportDecisions.js';
 import { ProtocolDecisions } from './approver/ProtocolDecisions.js';
@@ -18,10 +19,13 @@ import { ProtocolDecisions } from './approver/ProtocolDecisions.js';
  * (§1.4) instead of an identifier the approver has to trust they typed
  * correctly.
  */
-type Decision = 'protocol' | 'dataset' | 'export' | 'approval';
+type Decision = 'protocol' | 'definition' | 'dataset' | 'export' | 'approval';
 
 const DECISIONS: { key: Decision; label: string }[] = [
   { key: 'protocol', label: 'Protocol versions' },
+  // The step the lock queue waits on. Without it nothing could ever
+  // reach that queue, and the locking screen had never had a row in it.
+  { key: 'definition', label: 'Dataset definitions' },
   { key: 'dataset', label: 'Dataset locks' },
   { key: 'export', label: 'Exports' },
   { key: 'approval', label: 'Approval records' },
@@ -56,6 +60,7 @@ export function StaffApproverPanel({ session }: { session: StaffSession }) {
       </nav>
 
       {screen === 'protocol' && <ProtocolDecisions session={session} />}
+      {screen === 'definition' && <DatasetDefinitions session={session} />}
       {screen === 'dataset' && <DatasetLock session={session} />}
       {screen === 'export' && <ExportDecisions session={session} />}
       {screen === 'approval' && <ApprovalRecords session={session} />}

@@ -110,6 +110,25 @@ export interface PendingExportItem {
   restrictions: string;
   requestedByActorId: string;
 }
+export interface DefinitionAwaitingApprovalItem {
+  datasetDefinitionId: string;
+  researchProjectId: string;
+  name: string;
+  variables: Record<string, unknown>;
+  createdByActorId: string;
+  createdAt: string;
+}
+export interface DatasetWorkItem {
+  datasetDefinitionId: string;
+  name: string;
+  definitionState: string;
+  approvedByActorId: string | null;
+  datasetVersionId: string | null;
+  versionNumber: number | null;
+  versionState: string | null;
+  rowCount: number | null;
+  updatedAt: string;
+}
 export interface ExportToCarryOutItem {
   exportRequestId: string;
   exportType: string;
@@ -179,6 +198,20 @@ export const staffApi = {
     post<Id>(s, `/v1/protocol-versions/${versionId}/activate`, { confirmed: true }),
   lockDatasetVersion: (s: StaffSession, versionId: string) =>
     post<Id>(s, `/v1/dataset-versions/${versionId}/lock`, { confirmed: true }),
+  createDatasetDefinition: (s: StaffSession, researchProjectId: string, name: string, variables: string[]) =>
+    post<Id>(s, '/v1/dataset-definitions', {
+      researchProjectId,
+      name,
+      // Message bodies are excluded by default (ADR-034); the dictionary
+      // names what is included, so an empty one includes nothing.
+      variables: Object.fromEntries(variables.map((v) => [v, 'included'])),
+    }),
+  approveDatasetDefinition: (s: StaffSession, definitionId: string) =>
+    post<Id>(s, `/v1/dataset-definitions/${definitionId}/approve`, { confirmed: true }),
+  generateDatasetVersion: (s: StaffSession, definitionId: string, sourceDescription: string, rowCount: number) =>
+    post<Id>(s, `/v1/dataset-definitions/${definitionId}/versions`, { sourceDescription, rowCount }),
+  completeQualityReview: (s: StaffSession, versionId: string) =>
+    post<Id>(s, `/v1/dataset-versions/${versionId}/complete-quality-review`, {}),
   decideExport: (s: StaffSession, exportRequestId: string, decision: 'Approved' | 'Rejected') =>
     post<Id>(s, `/v1/export-requests/${exportRequestId}/decide`, { decision, confirmed: true }),
   decideApproval: (s: StaffSession, approvalRecordId: string, decision: 'Approved' | 'Rejected', reason: string) =>
@@ -189,6 +222,9 @@ export const staffApi = {
   listProtocolVersionsInReview: (s: StaffSession) => get<List<ProtocolInReview>>(s, '/v1/protocol-versions/in-review'),
   listPendingApprovals: (s: StaffSession) => get<List<PendingApprovalItem>>(s, '/v1/approvals/pending'),
   listLockableDatasetVersions: (s: StaffSession) => get<List<LockableVersion>>(s, '/v1/dataset-versions/lockable'),
+  listDefinitionsAwaitingApproval: (s: StaffSession) =>
+    get<List<DefinitionAwaitingApprovalItem>>(s, '/v1/dataset-definitions/awaiting-approval'),
+  listDatasetWork: (s: StaffSession) => get<List<DatasetWorkItem>>(s, '/v1/dataset-work'),
   listPendingExports: (s: StaffSession) => get<List<PendingExportItem>>(s, '/v1/export-requests/pending'),
   listExportsToCarryOut: (s: StaffSession) =>
     get<List<ExportToCarryOutItem>>(s, '/v1/export-requests/to-carry-out'),

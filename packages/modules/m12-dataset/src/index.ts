@@ -1,2 +1,9 @@
 export * from './application/commands.js';
-export { listLockableDatasetVersions, type LockableDatasetVersion } from './application/queries.js';
+export {
+  listDatasetWork,
+  listDefinitionsAwaitingApproval,
+  listLockableDatasetVersions,
+  type DatasetWorkItem,
+  type DefinitionAwaitingApproval,
+  type LockableDatasetVersion,
+} from './application/queries.js';

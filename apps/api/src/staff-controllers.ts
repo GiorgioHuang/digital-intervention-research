@@ -66,6 +66,8 @@ import {
   completeQualityReview,
   createDatasetDefinition,
   generateDatasetVersion,
+  listDatasetWork,
+  listDefinitionsAwaitingApproval,
   listLockableDatasetVersions,
   lockDatasetVersion,
 } from '@platform/m12-dataset';
@@ -145,6 +147,31 @@ export class StaffCommandController {
    * request, so the package was never put together and the delivery
    * never recorded.
    */
+  /**
+   * Dataset definitions waiting to be approved. Without this the chain
+   * stopped at its first step and the lock queue could never fill.
+   */
+  @Get('dataset-definitions/awaiting-approval')
+  async definitionsAwaitingApproval(@Req() req: Request) {
+    const ctx = requireActor(req);
+    const items = await listDefinitionsAwaitingApproval(this.deps.m12, ctx);
+    return { data: items.map((i) => ({ type: 'DatasetDefinition', id: i.datasetDefinitionId, attributes: i })) };
+  }
+
+  /** The dataset work in front of whoever prepares data, and where it has got to. */
+  @Get('dataset-work')
+  async datasetWork(@Req() req: Request) {
+    const ctx = requireActor(req);
+    const items = await listDatasetWork(this.deps.m12, ctx);
+    return {
+      data: items.map((i) => ({
+        type: 'DatasetDefinition',
+        id: `${i.datasetDefinitionId}:${i.datasetVersionId ?? 'none'}`,
+        attributes: i,
+      })),
+    };
+  }
+
   @Get('export-requests/to-carry-out')
   async exportsToCarryOut(@Req() req: Request) {
     const ctx = requireActor(req);

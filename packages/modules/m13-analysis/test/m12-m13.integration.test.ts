@@ -17,6 +17,8 @@ import {
   completeQualityReview,
   createDatasetDefinition,
   generateDatasetVersion,
+  listDatasetWork,
+  listDefinitionsAwaitingApproval,
   lockDatasetVersion,
   type M12Deps,
 } from '@platform/m12-dataset';
@@ -93,6 +95,47 @@ describe.skipIf(!dbAvailable)('M12 dataset lock + M13 analysis chain (integratio
         variables: { message_body_text: 'text' },
       }),
     ).rejects.toMatchObject({ code: 'DEIDENTIFICATION_REQUIRED' });
+  });
+
+  /**
+   * The chain is define, approve, generate, quality-review, lock. Only
+   * the last step had a screen, so nothing could ever reach the lock
+   * queue through the product. These queues are what the four earlier
+   * steps are driven from, so they have to report the state honestly.
+   */
+  it('the work queues follow the chain, and the drafter is named before the button', async () => {
+    const { datasetDefinitionId } = await createDatasetDefinition(m12, ctx(researcherId), {
+      researchProjectId: 'rp_pilot',
+      name: 'queue-visible',
+      variables: { enrolment_state: 'text' },
+    });
+    const waiting = await listDefinitionsAwaitingApproval(m12, ctx(approverId));
+    const row = waiting.find((d) => d.datasetDefinitionId === datasetDefinitionId);
+    // Approving one's own definition is barred by the command and by a
+    // database CHECK; the approver learns that from the row.
+    expect(row?.createdByActorId).toBe(researcherId);
+    expect(Object.keys(row?.variables as Record<string, unknown>)).toContain('enrolment_state');
+
+    const work = await listDatasetWork(m12, ctx(researcherId));
+    const mine = work.find((w) => w.datasetDefinitionId === datasetDefinitionId);
+    expect(mine?.definitionState).toBe('Draft');
+    // Nothing generated yet, and the queue does not imply otherwise.
+    expect(mine?.datasetVersionId).toBeNull();
+
+    await approveDatasetDefinition(m12, ctx(approverId), { datasetDefinitionId, confirmed: true });
+    // Approved definitions leave the approval queue, so it stays a list
+    // of work rather than a history.
+    expect(
+      (await listDefinitionsAwaitingApproval(m12, ctx(approverId))).map((d) => d.datasetDefinitionId),
+    ).not.toContain(datasetDefinitionId);
+    expect(
+      (await listDatasetWork(m12, ctx(researcherId))).find((w) => w.datasetDefinitionId === datasetDefinitionId)
+        ?.approvedByActorId,
+    ).toBe(approverId);
+
+    // Read under the action that already permits the work: an approver
+    // does not hold dataset.define and does not get this list.
+    await expect(listDatasetWork(m12, ctx(approverId))).rejects.toMatchObject({ code: 'AUTHORISATION_DENIED' });
   });
 
   it('definition -> approval (separation of duties) -> generation with lineage manifest', async () => {
