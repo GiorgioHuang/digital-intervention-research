@@ -1,95 +1,809 @@
-/* Accessibility baseline (Doc 20 / WCAG 2.2 AA): rem sizing so 200% zoom
-   reflows, visible focus, large touch targets, reduced-motion respect. */
+/* =============================================================
+   健康老龄化研究平台 — 设计系统基座 v0.1
+   Doc 20 v1.3 §285–320 / WCAG 2.2 AA
+   规则：组件样式只引用 semantic 令牌；本文件之外不得出现字面色值/px/ms。
+   ============================================================= */
+
+/* ---------- 1. 令牌：非颜色（主题无关） ---------- */
 :root {
-  font-family: system-ui, -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
-  font-size: 112.5%; /* 18px base for readability */
-  line-height: 1.6;
+  /* -- 能力自适应的两个乘数（§C） -- */
+  --scale-font: 1;
+  --density: 1;
+
+  /* -- 排版 (§A.2) -- */
+  --type-family-ui: system-ui, -apple-system, 'PingFang SC', 'Noto Sans CJK SC',
+    'Microsoft YaHei', sans-serif;
+  --type-family-mono: ui-monospace, SFMono-Regular, Menlo, 'Noto Sans Mono CJK SC', monospace;
+
+  --type-size-0: 0.833rem;
+  --type-size-1: 1rem;
+  --type-size-2: 1.125rem;
+  --type-size-3: 1.333rem;
+  --type-size-4: 1.602rem;
+  --type-size-5: 1.924rem;
+  --type-size-6: 2.311rem;
+
+  --type-leading-tight: 1.25;
+  --type-leading-snug: 1.4;
+  --type-leading-normal: 1.6;
+  --type-leading-loose: 1.8;
+
+  --type-weight-regular: 400;
+  --type-weight-medium: 500;
+  --type-weight-semibold: 600;
+  --type-weight-bold: 700;
+
+  --type-tracking-normal: 0;
+  --type-tracking-mono: 0.02em;
+
+  --measure-narrow: 28rem;
+  --measure-default: 36rem;
+  --measure-wide: 56rem;
+
+  /* -- 间距 (§A.3)：单一刻度 × 密度乘数 -- */
+  --space-0: 0;
+  --space-1: calc(0.25rem * var(--density));
+  --space-2: calc(0.5rem * var(--density));
+  --space-3: calc(0.75rem * var(--density));
+  --space-4: calc(1rem * var(--density));
+  --space-5: calc(1.5rem * var(--density));
+  --space-6: calc(2rem * var(--density));
+  --space-7: calc(3rem * var(--density));
+  --space-8: calc(4rem * var(--density));
+  --space-9: calc(6rem * var(--density));
+
+  /* -- 形状与描边 (§A.4) -- */
+  --radius-0: 0;
+  --radius-1: 0.25rem;
+  --radius-2: 0.5rem;
+  --radius-3: 0.75rem;
+  --radius-pill: 999rem;
+  --border-hairline: 1px;
+  --border-default: 2px;
+  --border-strong: 3px;
+  --border-emphasis: 4px;
+
+  /* -- 焦点 (§A.5)：恒定，不随密度/字号缩放 -- */
+  --focus-ring-width: 3px;
+  --focus-ring-offset: 2px;
+  --focus-halo-width: 2px;
+  --focus-ring-total: calc(var(--focus-ring-width) + var(--focus-ring-offset));
+
+  /* -- 触控目标 (§A.8)：恒定 -- */
+  --target-min: 2.75rem;
+  --target-gap: 0.5rem;
+  --target-hit-slop: 0.25rem;
+
+  /* -- 动效 (§A.6) -- */
+  --motion-duration-instant: 0ms;
+  --motion-duration-fast: 120ms;
+  --motion-duration-normal: 200ms;
+  --motion-duration-slow: 320ms;
+  --motion-ease-standard: cubic-bezier(0.2, 0, 0.2, 1);
+  --motion-ease-enter: cubic-bezier(0, 0, 0.2, 1);
+  --motion-ease-exit: cubic-bezier(0.4, 0, 1, 1);
+
+  /* -- 层级 (§A.7)：elevation 不表示置信度或权威 -- */
+  --elevation-0: none;
+  --elevation-1: 0 1px 2px rgb(11 18 32 / 0.1), 0 0 0 1px rgb(11 18 32 / 0.06);
+  --elevation-2: 0 4px 12px rgb(11 18 32 / 0.14), 0 0 0 1px rgb(11 18 32 / 0.08);
+  --elevation-3: 0 10px 28px rgb(11 18 32 / 0.2), 0 0 0 1px rgb(11 18 32 / 0.1);
+  --layer-base: 0;
+  --layer-sticky: 10;
+  --layer-header: 20;
+  --layer-scrim: 30;
+  --layer-dialog: 40;
+  --layer-live: 50;
+
+  /* -- 图标 (§A.9) -- */
+  --icon-size-1: 1em;
+  --icon-size-2: 1.25em;
+  --icon-size-3: 1.5em;
+  --icon-stroke: 2;
+  --icon-gap: var(--space-2);
+}
+
+/* ---------- 2. 令牌：颜色 — Light（默认） (§A.1.1) ---------- */
+:root {
+  --color-surface-page: #ffffff;
+  --color-surface-raised: #f7f8fa;
+  --color-surface-sunken: #eef0f4;
+  --color-surface-inverse: #1b1f26;
+  --color-surface-scrim: rgb(11 18 32 / 0.55);
+
+  --color-text-primary: #16191f;   /* 17.60:1 / page */
+  --color-text-secondary: #4a5261; /*  7.86:1 / page */
+  --color-text-inverse: #ffffff;   /* 16.53:1 / inverse */
+  --color-text-link: #14448c;      /*  9.39:1 / page */
+
+  --color-border-subtle: #d5dae2;  /* 装饰专用，1.40:1 */
+  --color-border-default: #767e8c; /*  4.09:1 / page */
+  --color-border-strong: #414855;  /*  9.20:1 / page */
+
+  --color-action-primary-bg: #1a4fa0;        /* 7.87:1 / page */
+  --color-action-primary-fg: #ffffff;        /* 7.87:1 / bg   */
+  --color-action-primary-bg-hover: #123b7c;  /* 10.81:1 / fg  */
+  --color-action-primary-bg-active: #0d2e62; /* 13.16:1 / fg  */
+  --color-action-secondary-fg: #14448c;
+  --color-action-secondary-border: #1a4fa0;
+  --color-action-secondary-bg-hover: #e8eef8;
+
+  --color-focus-ring: #12233f; /* ≥13.51:1 与任一 surface；15.70:1 与 halo */
+  --color-focus-halo: #ffffff;
+
+  --color-info-bg: #e8f1fa;
+  --color-info-fg: #0f4c81;        /* 7.76:1 / info-bg */
+  --color-info-border: #1a6bb0;    /* 5.56:1 / page */
+  --color-success-bg: #e6f4eb;
+  --color-success-fg: #14603a;     /* 6.69:1 / success-bg */
+  --color-success-border: #1f7a4c; /* 5.32:1 / page */
+  --color-warning-bg: #fbf0dc;
+  --color-warning-fg: #6e4200;     /* 7.62:1 / warning-bg */
+  --color-warning-border: #a16207; /* 4.92:1 / page */
+  --color-danger-bg: #fdecec;
+  --color-danger-fg: #991b1b;      /* 7.28:1 / danger-bg */
+  --color-danger-border: #c02626;  /* 5.92:1 / page */
+  --color-danger-solid-bg: #9b1c1c;
+  --color-danger-solid-fg: #ffffff; /* 8.15:1 */
+  --color-safety-bg: #e9edfa;
+  --color-safety-fg: #152a6b;      /* 11.40:1 / safety-bg */
+  --color-safety-border: #2b3f8f;  /* 9.50:1 / page */
+  --color-moderation-bg: #e3f2f2;
+  --color-moderation-fg: #0c5257;  /* 7.73:1 / moderation-bg */
+  --color-moderation-border: #12747b; /* 5.51:1 / page */
+  --color-ai-bg: #efedf5;
+  --color-ai-fg: #46405c;          /* 8.43:1 / ai-bg */
+  --color-ai-border: #6a6285;      /* 5.68:1 / page */
+
+  --color-disabled-bg: #f0f1f4;
+  --color-disabled-fg: #5f6673;    /* 5.12:1 / disabled-bg */
+  --color-disabled-border: #a8aeb9;
+}
+
+/* ---------- 3. 令牌：颜色 — Dark (§A.1.2) ---------- */
+/* 两套写法并存：媒体查询（无 JS 也生效）+ 属性选择器（用户显式选择优先） */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --color-surface-page: #0e1116;
+    --color-surface-raised: #161a21;
+    --color-surface-sunken: #080a0e;
+    --color-surface-inverse: #e9ecf2;
+    --color-surface-scrim: rgb(2 4 8 / 0.66);
+
+    --color-text-primary: #e9ecf2;   /* 15.98:1 / page */
+    --color-text-secondary: #a8b0be; /*  8.66:1 / page */
+    --color-text-inverse: #0e1116;
+    --color-text-link: #9cc0ff;      /* 10.26:1 / page */
+
+    --color-border-subtle: #2a3039;
+    --color-border-default: #6d7683; /*  4.11:1 / page */
+    --color-border-strong: #99a2b0;  /*  7.34:1 / page */
+
+    --color-action-primary-bg: #7fb0ff;        /* 8.61:1 / page */
+    --color-action-primary-fg: #08101f;        /* 8.65:1 / bg */
+    --color-action-primary-bg-hover: #a6c8ff;
+    --color-action-primary-bg-active: #c2daff;
+    --color-action-secondary-fg: #9cc0ff;
+    --color-action-secondary-border: #7fb0ff;
+    --color-action-secondary-bg-hover: #182231;
+
+    --color-focus-ring: #f2f6ff; /* ≥14.19:1 与任一 surface；18.63:1 与 halo */
+    --color-focus-halo: #05070b;
+
+    --color-info-bg: #10243a;
+    --color-info-fg: #a9cff5;
+    --color-info-border: #4c8fd6;
+    --color-success-bg: #0e2a1d;
+    --color-success-fg: #9fd9b7;
+    --color-success-border: #3d9e6b;
+    --color-warning-bg: #2e2208;
+    --color-warning-fg: #f0ce8a;
+    --color-warning-border: #c08a2e;
+    --color-danger-bg: #331515;
+    --color-danger-fg: #f5afaf;
+    --color-danger-border: #d45c5c;
+    --color-danger-solid-bg: #f5afaf;
+    --color-danger-solid-fg: #1a0808;
+    --color-safety-bg: #131a33;
+    --color-safety-fg: #bcc9f5;
+    --color-safety-border: #7186d6;
+    --color-moderation-bg: #0b2628;
+    --color-moderation-fg: #9fd6d8;
+    --color-moderation-border: #3e9ea4;
+    --color-ai-bg: #21202b;
+    --color-ai-fg: #c4beda;
+    --color-ai-border: #857da5;
+
+    --color-disabled-bg: #171b22;
+    --color-disabled-fg: #8b93a1;
+    --color-disabled-border: #3a414c;
+
+    /* dark 下阴影不可见：改用描边环作为浮层边界（≥3:1） */
+    --elevation-1: 0 0 0 1px var(--color-border-default);
+    --elevation-2: 0 0 0 1px var(--color-border-default), 0 4px 12px rgb(0 0 0 / 0.6);
+    --elevation-3: 0 0 0 1px var(--color-border-strong), 0 10px 28px rgb(0 0 0 / 0.7);
+  }
+}
+/* 用户显式选择 dark（与上方同值；属性选择器胜出于媒体查询默认） */
+:root[data-theme='dark'] {
+  --color-surface-page: #0e1116;
+  --color-surface-raised: #161a21;
+  --color-surface-sunken: #080a0e;
+  --color-surface-inverse: #e9ecf2;
+  --color-surface-scrim: rgb(2 4 8 / 0.66);
+  --color-text-primary: #e9ecf2;
+  --color-text-secondary: #a8b0be;
+  --color-text-inverse: #0e1116;
+  --color-text-link: #9cc0ff;
+  --color-border-subtle: #2a3039;
+  --color-border-default: #6d7683;
+  --color-border-strong: #99a2b0;
+  --color-action-primary-bg: #7fb0ff;
+  --color-action-primary-fg: #08101f;
+  --color-action-primary-bg-hover: #a6c8ff;
+  --color-action-primary-bg-active: #c2daff;
+  --color-action-secondary-fg: #9cc0ff;
+  --color-action-secondary-border: #7fb0ff;
+  --color-action-secondary-bg-hover: #182231;
+  --color-focus-ring: #f2f6ff;
+  --color-focus-halo: #05070b;
+  --color-info-bg: #10243a;
+  --color-info-fg: #a9cff5;
+  --color-info-border: #4c8fd6;
+  --color-success-bg: #0e2a1d;
+  --color-success-fg: #9fd9b7;
+  --color-success-border: #3d9e6b;
+  --color-warning-bg: #2e2208;
+  --color-warning-fg: #f0ce8a;
+  --color-warning-border: #c08a2e;
+  --color-danger-bg: #331515;
+  --color-danger-fg: #f5afaf;
+  --color-danger-border: #d45c5c;
+  --color-danger-solid-bg: #f5afaf;
+  --color-danger-solid-fg: #1a0808;
+  --color-safety-bg: #131a33;
+  --color-safety-fg: #bcc9f5;
+  --color-safety-border: #7186d6;
+  --color-moderation-bg: #0b2628;
+  --color-moderation-fg: #9fd6d8;
+  --color-moderation-border: #3e9ea4;
+  --color-ai-bg: #21202b;
+  --color-ai-fg: #c4beda;
+  --color-ai-border: #857da5;
+  --color-disabled-bg: #171b22;
+  --color-disabled-fg: #8b93a1;
+  --color-disabled-border: #3a414c;
+  --elevation-1: 0 0 0 1px var(--color-border-default);
+  --elevation-2: 0 0 0 1px var(--color-border-default), 0 4px 12px rgb(0 0 0 / 0.6);
+  --elevation-3: 0 0 0 1px var(--color-border-strong), 0 10px 28px rgb(0 0 0 / 0.7);
+}
+
+/* ---------- 4. 能力自适应模式覆盖 (§C) ---------- */
+/* 绝不按年龄或分组自动判定：这些属性只能由用户显式设置写到 <html> 上。 */
+:root[data-font-scale='lg'] { --scale-font: 1.125; }
+:root[data-font-scale='xl'] { --scale-font: 1.25; }
+:root[data-font-scale='xxl'] { --scale-font: 1.5; }
+
+:root[data-density='compact'] { --density: 0.75; }
+:root[data-density='standard'] { --density: 1; }
+:root[data-density='spacious'] { --density: 1.25; }
+
+/* 高对比：OS 信号作初始值，用户显式选择优先 */
+@media (prefers-contrast: more) {
+  :root:not([data-contrast='standard']) {
+    --color-text-primary: #000000;
+    --color-text-secondary: #16191f;
+    --color-border-subtle: #414855;
+    --color-border-default: #16191f;
+    --color-border-strong: #000000;
+    --color-action-primary-bg: #0b2e6b;
+    --color-action-secondary-fg: #0b2e6b;
+    --border-default: 3px;
+    --icon-stroke: 2.5;
+  }
+}
+:root[data-contrast='high'] {
+  --color-text-primary: #000000;         /* 21.00:1 / #ffffff */
+  --color-text-secondary: #16191f;
+  --color-border-subtle: #414855;
+  --color-border-default: #16191f;
+  --color-border-strong: #000000;
+  --color-action-primary-bg: #0b2e6b;    /* 12.98:1 与 #ffffff 前景 */
+  --color-action-secondary-fg: #0b2e6b;
+  --border-default: 3px;
+  --icon-stroke: 2.5;
+}
+:root[data-theme='dark'][data-contrast='high'],
+:root[data-contrast='high'][data-theme='dark'] {
+  --color-surface-page: #000000;
+  --color-text-primary: #ffffff;         /* 21.00:1 / #000000 */
+  --color-text-secondary: #e9ecf2;
+  --color-border-default: #e9ecf2;
+  --color-border-strong: #ffffff;
+  --color-action-primary-bg: #bbd4ff;    /* 13.97:1 与 #000000 前景 */
+  --color-action-primary-fg: #000000;
+}
+
+/* 简化模式：隐藏次要内容、加大行高。组件用 .optional 标记可省略的内容。 */
+:root[data-simplify='on'] { --type-leading-normal: 1.8; }
+:root[data-simplify='on'] .optional { display: none; }
+
+/* 低刺激模式：去掉全部 tint 底，只留描边与文字 */
+:root[data-stimulation='low'] {
+  --color-info-bg: var(--color-surface-page);
+  --color-success-bg: var(--color-surface-page);
+  --color-warning-bg: var(--color-surface-page);
+  --color-danger-bg: var(--color-surface-page);
+  --color-safety-bg: var(--color-surface-page);
+  --color-moderation-bg: var(--color-surface-page);
+  --color-ai-bg: var(--color-surface-page);
+}
+
+/* ---------- 5. 基础排版与文档 ---------- */
+:root {
+  font-family: var(--type-family-ui);
+  font-size: calc(112.5% * var(--scale-font)); /* 18px 基准 × 用户字号 */
+  line-height: var(--type-leading-normal);
   color-scheme: light dark;
+  color: var(--color-text-primary);
+  background-color: var(--color-surface-page);
+  /* 粘性头/尾不得遮住 Tab 到的元素 (§D.5) */
+  scroll-padding-block: var(--space-8);
+}
+
+html,
+body {
+  /* 最后一道防线：任何触发它的布局都是缺陷 (§B.3.1) */
+  overflow-x: clip;
 }
 
 body {
-  margin: 0 auto;
-  max-width: 44rem;
-  padding: 1rem;
+  margin: 0;
+  padding: 0;
+  color: var(--color-text-primary);
+  background-color: var(--color-surface-page);
+  /* 长标识符不撑破布局 */
+  overflow-wrap: anywhere;
+  word-break: normal;
 }
 
-button,
-input,
-textarea {
-  font: inherit;
-  min-height: 2.75rem; /* ≥44px touch target */
-  padding: 0.5rem 1rem;
+h1, h2, h3, h4 {
+  line-height: var(--type-leading-tight);
+  font-weight: var(--type-weight-semibold);
+  margin-block: var(--space-5) var(--space-3);
+  text-wrap: balance;
+}
+h1 { font-size: var(--type-size-5); }
+h2 { font-size: var(--type-size-4); }
+h3 { font-size: var(--type-size-3); }
+h4 { font-size: var(--type-size-2); }
+
+p, li { max-width: var(--measure-default); }
+p { margin-block: var(--space-3); }
+
+small { font-size: var(--type-size-0); }
+code, kbd, samp {
+  font-family: var(--type-family-mono);
+  letter-spacing: var(--type-tracking-mono);
+  background-color: var(--color-surface-sunken);
+  padding-inline: var(--space-1);
+  border-radius: var(--radius-1);
+}
+a { color: var(--color-text-link); }
+
+/* ---------- 6. 应用外壳与布局 ---------- */
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100svh;
 }
 
-textarea,
-input {
+main {
+  display: block;
   width: 100%;
-  max-width: 100%;
+  max-width: var(--measure-default);
+  margin-inline: auto;
+  padding: var(--space-5) var(--space-4) var(--space-8);
   box-sizing: border-box;
 }
+/* 员工工作区更宽（Doc 20 §301：员工可用更宽布局） */
+main[data-workspace='staff'] { max-width: var(--measure-wide); }
 
+section { margin-block-end: var(--space-6); }
+
+/* 宽内容的唯一合法出口 (§B.3.2) */
+.scroll-x {
+  overflow-x: auto;
+  border: var(--border-default) solid var(--color-border-default);
+  border-radius: var(--radius-2);
+  padding: var(--space-2);
+}
+
+/* ---------- 7. 焦点：双环，在所有 surface 与状态下可见 (§A.5) ---------- */
 :focus-visible {
-  outline: 0.2rem solid currentColor;
-  outline-offset: 0.15rem;
+  outline: var(--focus-ring-width) solid var(--color-focus-ring);
+  outline-offset: var(--focus-ring-offset);
+  /* halo 填满 offset 间隙，使内侧相邻对比 ≥3:1，与元素填充色无关 */
+  box-shadow: 0 0 0 var(--focus-halo-width) var(--color-focus-halo);
+  border-radius: var(--radius-1);
+}
+/* 对话框打开后的编程式聚焦必须可见（此时不是 :focus-visible） */
+[role='alertdialog'] :focus,
+[role='alertdialog'][tabindex='-1']:focus,
+h1[tabindex='-1']:focus,
+h2[tabindex='-1']:focus {
+  outline: var(--focus-ring-width) solid var(--color-focus-ring);
+  outline-offset: var(--focus-ring-offset);
+  box-shadow: 0 0 0 var(--focus-halo-width) var(--color-focus-halo);
+}
+/* 焦点环不得被裁掉 (§A.5) */
+.scroll-x,
+.card,
+li,
+section {
+  overflow-clip-margin: var(--focus-ring-total);
 }
 
 .skip-link {
   position: absolute;
   left: -999rem;
 }
-
 .skip-link:focus {
   position: static;
   display: inline-block;
-  padding: 0.5rem;
+  padding: var(--space-2) var(--space-3);
+  background-color: var(--color-surface-inverse);
+  color: var(--color-text-inverse);
 }
 
-nav ul {
-  list-style: none;
-  padding: 0;
+/* ---------- 8. 触控目标：R1–R5 防复发规则 (§B.4) ---------- */
+/* R1：--target-min 是唯一来源。R2：交互元素绝不是 inline 级。 */
+button,
+input,
+select,
+textarea,
+summary,
+a[role='button'] {
+  font: inherit;
+  font-family: var(--type-family-ui);
+  min-height: var(--target-min);
+  box-sizing: border-box;
+}
+
+button,
+a[role='button'],
+summary {
+  display: inline-flex;      /* R2：绝不 display:inline */
+  align-items: center;
+  justify-content: flex-start;
+  gap: var(--icon-gap);
+  min-width: var(--target-min);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-1);
+  border: var(--border-default) solid var(--color-action-secondary-border);
+  background-color: var(--color-surface-page);
+  color: var(--color-action-secondary-fg);
+  font-weight: var(--type-weight-semibold);
+  text-align: start;
+  cursor: pointer;
+  transition: background-color var(--motion-duration-fast) var(--motion-ease-standard);
+}
+button:hover,
+a[role='button']:hover { background-color: var(--color-action-secondary-bg-hover); }
+
+/* 主动作（每屏至多一个，Doc 20 §13.2） */
+.btn-primary {
+  background-color: var(--color-action-primary-bg);
+  border-color: var(--color-action-primary-bg);
+  color: var(--color-action-primary-fg);
+}
+.btn-primary:hover { background-color: var(--color-action-primary-bg-hover); }
+.btn-primary:active { background-color: var(--color-action-primary-bg-active); }
+
+/* 破坏性动作：颜色不是唯一指示，组件必须同时带图标与明确文字 */
+.btn-danger {
+  border-color: var(--color-danger-border);
+  color: var(--color-danger-fg);
+}
+
+/* 禁用：必须配说明文字 (§B.1.4)；优先用 aria-disabled 保留可聚焦性 */
+button:disabled,
+[aria-disabled='true'] {
+  background-color: var(--color-disabled-bg);
+  border-color: var(--color-disabled-border);
+  color: var(--color-disabled-fg);
+  cursor: not-allowed;
+}
+
+/* R3：间距由布局提供，禁止靠空白文本节点。 */
+/* 任何并排的动作组统一用这个容器（替代 JSX 里的 {' '}）。 */
+.actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  gap: var(--target-gap);
+  align-items: stretch;
+  margin-block: var(--space-4);
+}
+.actions > button,
+.actions > form > button,
+.actions > a[role='button'] {
+  flex: 1 1 auto;
+  min-width: 12rem;          /* R4：换行后每行仍是完整可点块 */
+}
+/* B.4.4：关键控件与确认按钮的额外净距 */
+.actions--critical { gap: var(--space-5); }
+/* 确认对话框：取消恒在前，确认在后；窄屏纵向排列 */
+.actions--confirm { flex-direction: column; gap: var(--space-5); }
+@media (min-width: 40rem) {
+  .actions--confirm { flex-direction: row; }
 }
 
-main ul {
-  padding-inline-start: 1.25rem;
-}
-
-/* A 44px touch target inside a 29px line box overflows and the controls
-   visually collide, which is exactly the case on the task-oriented Home
-   list. Buttons in content lists are laid out as blocks with their own
-   spacing so每个动作都是一个完整、可点的行 (Doc 20 large targets). */
-main li {
-  margin-block: 0.75rem;
-}
-
+/* R4：内容流中的单一动作 = 整行块级目标（保留并推广现有首页的修补） */
+main li,
+main p { margin-block: var(--space-3); }
 main li > button,
-main li > form > button {
-  display: block;
+main li > form > button,
+main li > a[role='button'] {
+  display: flex;
   width: 100%;
   text-align: start;
 }
+main li + li { margin-block-start: var(--target-gap); }
 
-main p > button {
-  margin-block: 0.25rem;
+/* R5：包含交互元素的容器不得压缩目标 */
+main li,
+.card,
+.actions {
+  height: auto;
+  overflow: visible;
+}
+
+/* 表单 */
+label {
+  display: block;
+  font-weight: var(--type-weight-medium);
+  margin-block-end: var(--space-1);
+}
+input,
+textarea,
+select {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  padding: var(--space-2) var(--space-3);
+  border: var(--border-default) solid var(--color-border-default);
+  border-radius: var(--radius-1);
+  background-color: var(--color-surface-page);
+  color: var(--color-text-primary);
+}
+textarea { min-height: calc(var(--target-min) * 3); line-height: var(--type-leading-normal); }
+fieldset {
+  border: var(--border-default) solid var(--color-border-default);
+  border-radius: var(--radius-2);
+  padding: var(--space-4);
+  margin-block: var(--space-5);
+}
+legend { font-weight: var(--type-weight-semibold); padding-inline: var(--space-2); }
+
+/* ---------- 9. 导航 ---------- */
+nav ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--target-gap);
+}
+nav {
+  padding: var(--space-3) var(--space-4);
+  border-block-end: var(--border-hairline) solid var(--color-border-subtle);
+  background-color: var(--color-surface-raised);
+}
+nav li { max-width: none; margin: 0; }
+/* aria-current 三通道：结构（左条）+ 字重 + 颜色，绝不只靠颜色 */
+nav [aria-current='page'] {
+  border-inline-start: var(--border-emphasis) solid var(--color-action-primary-bg);
+  font-weight: var(--type-weight-bold);
+  background-color: var(--color-action-secondary-bg-hover);
+}
+
+/* ---------- 9b. 参与者主导航：手机端底部固定栏（决策 D-3） ---------- */
+/* Doc 20 §33：主目的地少而稳定；同意与帮助常驻。底部栏必须给系统手势区
+   留白，且绝不遮挡内容或确认区——因此 main 补等高的下内距。 */
+.nav-primary {
+  position: fixed;
+  inset-inline: 0;
+  inset-block-end: 0;
+  z-index: var(--layer-header);
+  padding: var(--space-2) var(--space-2)
+    calc(var(--space-2) + env(safe-area-inset-bottom, 0px));
+  border-block-start: var(--border-default) solid var(--color-border-default);
+  border-block-end: none;
+}
+.nav-primary ul {
+  flex-wrap: nowrap;
+  justify-content: space-between;
+  gap: var(--space-1);
+}
+.nav-primary li { flex: 1 1 0; }
+.nav-primary button {
+  width: 100%;
+  justify-content: center;
+  padding-inline: var(--space-1);
+  border-color: transparent;
+}
+/* 当前位置：结构（顶部粗条）+ 字重 + 颜色，三通道 */
+.nav-primary [aria-current='page'] {
+  border-inline-start: none;
+  border-block-start: var(--border-emphasis) solid var(--color-action-primary-bg);
+}
+body:has(.nav-primary) main {
+  padding-block-end: calc(var(--target-min) + var(--space-6) + env(safe-area-inset-bottom, 0px));
+}
+
+/* 平板与桌面：回到静态顶部导航，标签有空间时不需要压缩 */
+@media (min-width: 40rem) {
+  .nav-primary {
+    position: static;
+    padding: var(--space-3) var(--space-4);
+    border-block-start: none;
+    border-block-end: var(--border-hairline) solid var(--color-border-subtle);
+  }
+  .nav-primary ul { flex-wrap: wrap; justify-content: flex-start; gap: var(--target-gap); }
+  .nav-primary li { flex: 0 0 auto; }
+  .nav-primary button { width: auto; padding-inline: var(--space-3); }
+  .nav-primary [aria-current='page'] {
+    border-block-start: none;
+    border-inline-start: var(--border-emphasis) solid var(--color-action-primary-bg);
+  }
+  body:has(.nav-primary) main { padding-block-end: var(--space-6); }
+}
+
+/* 纯动作行不需要列表符号：符号与整行按钮并存只是噪音 */
+main li:has(> button):not(:has(> :not(button))) { list-style: none; }
+main ul:not([class]) > li:has(> button) { margin-inline-start: calc(var(--space-5) * -1); }
+
+main ul { padding-inline-start: var(--space-5); }
+main ul:not([class]) > li { max-width: var(--measure-default); }
+
+/* ---------- 10. 状态呈现：图标 + 文字 + 颜色 + 结构 (§B.1 / §E) ---------- */
+.icon {
+  inline-size: var(--icon-size-1);
+  block-size: var(--icon-size-1);
+  flex: none;
+  stroke-width: var(--icon-stroke);
+}
+
+/* 行内徽章：文字必须是真实文本节点，绝不用 ::before content */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--icon-gap);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-pill);
+  border: var(--border-hairline) solid currentColor;
+  font-size: var(--type-size-1);
+  font-weight: var(--type-weight-medium);
+}
+
+/* 块级状态容器：第四通道 = 左侧 4px 结构条 */
+.state {
+  display: flow-root;
+  border-inline-start: var(--border-emphasis) solid var(--color-border-strong);
+  border-radius: var(--radius-2);
+  padding: var(--space-4);
+  margin-block: var(--space-4);
+  background-color: var(--color-surface-raised);
+}
+.state__head {
+  display: flex;
+  align-items: center;
+  gap: var(--icon-gap);
+  margin-block-start: 0;
+  font-size: var(--type-size-2);
+}
+.state__head .icon { inline-size: var(--icon-size-2); block-size: var(--icon-size-2); }
+.state__actions { display: flex; flex-wrap: wrap; gap: var(--target-gap); }
+.state__detail { margin-block-start: var(--space-3); font-size: var(--type-size-1); }
+
+.state--info,       .badge--info       { background-color: var(--color-info-bg);       color: var(--color-info-fg);       border-inline-start-color: var(--color-info-border); }
+.state--success,    .badge--success    { background-color: var(--color-success-bg);    color: var(--color-success-fg);    border-inline-start-color: var(--color-success-border); }
+.state--warning,    .badge--warning    { background-color: var(--color-warning-bg);    color: var(--color-warning-fg);    border-inline-start-color: var(--color-warning-border); }
+.state--danger,     .badge--danger     { background-color: var(--color-danger-bg);     color: var(--color-danger-fg);     border-inline-start-color: var(--color-danger-border); }
+.state--safety,     .badge--safety     { background-color: var(--color-safety-bg);     color: var(--color-safety-fg);     border-inline-start-color: var(--color-safety-border); }
+.state--moderation, .badge--moderation { background-color: var(--color-moderation-bg); color: var(--color-moderation-fg); border-inline-start-color: var(--color-moderation-border); }
+.state--ai,         .badge--ai         { background-color: var(--color-ai-bg);         color: var(--color-ai-fg);         border-inline-start-color: var(--color-ai-border); }
+.state--draft,      .badge--draft      { background-color: var(--color-surface-sunken); color: var(--color-text-secondary); border-inline-start-color: var(--color-border-strong); }
+
+/* 骨架：绝不模仿徽章/按钮/对勾的形状 (§E.2) */
+.skeleton {
+  background-color: var(--color-surface-sunken);
+  border-radius: var(--radius-1);
+  block-size: var(--type-size-2);
+  margin-block: var(--space-2);
+}
+
+/* ---------- 11. 卡片、引用、对话框 ---------- */
+.card {
+  border: var(--border-default) solid var(--color-border-default);
+  border-radius: var(--radius-2);
+  padding: var(--space-4);
+  margin-block: var(--space-4);
+  background-color: var(--color-surface-raised);
+  box-shadow: var(--elevation-0); /* 内容卡片不抬升 */
 }
 
 blockquote {
-  border-inline-start: 0.25rem solid currentColor;
+  border-inline-start: var(--border-emphasis) solid var(--color-border-strong);
   margin-inline: 0;
-  padding-inline-start: 1rem;
+  padding-inline-start: var(--space-4);
+  color: var(--color-text-secondary);
 }
 
 [role='alertdialog'] {
-  border: 0.15rem solid currentColor;
-  padding: 1rem;
-  margin-block: 0.75rem;
+  border: var(--border-emphasis) solid var(--color-border-strong);
+  border-radius: var(--radius-2);
+  padding: var(--space-5);
+  margin-block: var(--space-4);
+  background-color: var(--color-surface-page);
+  box-shadow: var(--elevation-2);
+  z-index: var(--layer-dialog);
+  max-width: var(--measure-narrow);
 }
 
+/* 上下文横幅（当前身份，共享设备场景恒显） (§D.6) */
+.context-banner {
+  background-color: var(--color-surface-inverse);
+  color: var(--color-text-inverse);
+  padding: var(--space-2) var(--space-4);
+  position: sticky;
+  inset-block-start: 0;
+  z-index: var(--layer-header);
+}
+
+/* 表格：宽表放进 .scroll-x，不让页面横向滚动 (§B.3.2) */
+table { border-collapse: collapse; width: 100%; }
+th, td {
+  text-align: start;
+  padding: var(--space-2) var(--space-3);
+  border-block-end: var(--border-hairline) solid var(--color-border-subtle);
+  line-height: var(--type-leading-snug);
+}
+th { font-weight: var(--type-weight-medium); background-color: var(--color-surface-sunken); }
+
+/* ---------- 12. 响应式 (§D)：只用 min-width，移动优先 ---------- */
+@media (min-width: 40rem) {
+  main { padding-inline: var(--space-5); }
+}
+@media (min-width: 56rem) {
+  main[data-workspace='staff'] { padding-inline: var(--space-6); }
+}
+/* 矮视口（横屏手机、分屏）取消粘性，避免遮挡关键动作 (§D.5) */
+@media (max-height: 30rem) {
+  .context-banner { position: static; }
+}
+
+/* ---------- 13. 动效与 reduced-motion (§A.6) ---------- */
 @media (prefers-reduced-motion: reduce) {
-  * {
-    animation: none !important;
-    transition: none !important;
+  :root {
+    --motion-duration-fast: 0ms;
+    --motion-duration-normal: 0ms;
+    --motion-duration-slow: 0ms;
   }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ---------- 14. 打印（研究者导出核对场景） ---------- */
+@media print {
+  nav, .actions, .skip-link { display: none; }
+  main { max-width: none; }
+  .state, .card { break-inside: avoid; }
+  /* 打印时颜色必然丢失 —— 这正是状态必须带图标与文字的原因 */
 }

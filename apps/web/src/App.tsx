@@ -19,6 +19,14 @@ import type { Session } from './api.js';
  */
 type Screen = 'home' | 'consent' | 'message' | 'matching' | 'community' | 'help';
 
+const PRIMARY_DESTINATIONS: { key: Screen; label: string; fullLabel: string }[] = [
+  { key: 'home', label: '首页', fullLabel: '首页' },
+  { key: 'consent', label: '同意', fullLabel: '我的同意选择' },
+  { key: 'message', label: '消息', fullLabel: '消息' },
+  { key: 'community', label: '社区', fullLabel: '社区' },
+  { key: 'help', label: '帮助', fullLabel: '帮助与安全' },
+];
+
 export function App() {
   const [session, setSession] = useState<Session | null>(null);
   const [screen, setScreen] = useState<Screen>('home');
@@ -74,38 +82,27 @@ export function App() {
       <a className="skip-link" href="#main-content">
         跳到主要内容
       </a>
-      <nav aria-label="主导航">
+      {/*
+        Bottom bar on phones (design decision D-3), five destinations only.
+        Doc 20 §33 requires persistent access to Consent and Help, so those
+        keep permanent slots; matching is opt-in and low-frequency, reached
+        from the Home task list instead of holding a slot forever. Short
+        visible labels with the fuller name as the accessible name — the
+        visible text stays contained in it (WCAG 2.5.3 Label in Name).
+      */}
+      <nav aria-label="主导航" className="nav-primary">
         <ul>
-          <li>
-            <button aria-current={screen === 'home' ? 'page' : undefined} onClick={() => setScreen('home')}>
-              首页
-            </button>
-          </li>
-          <li>
-            <button aria-current={screen === 'consent' ? 'page' : undefined} onClick={() => setScreen('consent')}>
-              我的同意选择
-            </button>
-          </li>
-          <li>
-            <button aria-current={screen === 'message' ? 'page' : undefined} onClick={() => setScreen('message')}>
-              消息
-            </button>
-          </li>
-          <li>
-            <button aria-current={screen === 'matching' ? 'page' : undefined} onClick={() => setScreen('matching')}>
-              认识新朋友
-            </button>
-          </li>
-          <li>
-            <button aria-current={screen === 'community' ? 'page' : undefined} onClick={() => setScreen('community')}>
-              社区
-            </button>
-          </li>
-          <li>
-            <button aria-current={screen === 'help' ? 'page' : undefined} onClick={() => setScreen('help')}>
-              帮助与安全
-            </button>
-          </li>
+          {PRIMARY_DESTINATIONS.map((d) => (
+            <li key={d.key}>
+              <button
+                aria-current={screen === d.key ? 'page' : undefined}
+                aria-label={d.fullLabel}
+                onClick={() => setScreen(d.key)}
+              >
+                {d.label}
+              </button>
+            </li>
+          ))}
         </ul>
       </nav>
       <main id="main-content">
