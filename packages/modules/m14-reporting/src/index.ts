@@ -10,4 +10,9 @@ export {
   recordExportDelivery,
   type M14Deps,
 } from './application/commands.js';
-export { listPendingExportRequests, type PendingExportRequest } from './application/queries.js';
+export {
+  listMyExportRequests,
+  listPendingExportRequests,
+  type MyExportRequest,
+  type PendingExportRequest,
+} from './application/queries.js';

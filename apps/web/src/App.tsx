@@ -7,6 +7,7 @@ import { CommunityPanel } from './components/CommunityPanel.js';
 import { ConsentPanel } from './components/ConsentPanel.js';
 import { MatchingPanel } from './components/MatchingPanel.js';
 import { MessagesScreen } from './components/MessagesScreen.js';
+import { MyDataCopy } from './components/MyDataCopy.js';
 import { MyLifeStory } from './components/MyLifeStory.js';
 import { MyResearchPart } from './components/MyResearchPart.js';
 import { WaitingForYou } from './components/WaitingForYou.js';
@@ -21,7 +22,7 @@ import { api, PlatformApiError, type Session } from './api.js';
  * Session comes from the dev-header stub for now (OIDC pending ADR-104):
  * the participant enters the identifiers issued during synthetic setup.
  */
-type Screen = 'home' | 'consent' | 'message' | 'matching' | 'community' | 'life-story' | 'help';
+type Screen = 'home' | 'consent' | 'message' | 'matching' | 'community' | 'life-story' | 'data-copy' | 'help';
 
 /**
  * Four destinations, not five (design decision D-10). Measured at the
@@ -225,6 +226,9 @@ export function App() {
                 <button onClick={() => setScreen('community')}>Visit the community (optional)</button>
               </li>
               <li>
+                <button onClick={() => setScreen('data-copy')}>Ask for a copy of my information</button>
+              </li>
+              <li>
                 <button onClick={() => setScreen('help')}>Get help or report a problem</button>
               </li>
             </ul>
@@ -235,6 +239,7 @@ export function App() {
           <MessagesScreen session={session} onGetHelp={() => setScreen('help')} assistedBy={helper} />
         )}
         {screen === 'life-story' && <MyLifeStory session={session} />}
+        {screen === 'data-copy' && <MyDataCopy session={session} />}
         {screen === 'matching' && <MatchingPanel session={session} />}
         {screen === 'community' && <CommunityPanel session={session} />}
         {screen === 'help' && (

@@ -204,7 +204,30 @@ export interface MyLifeStoryItem {
   updatedAt: string;
 }
 
+export interface MyExportRequest {
+  exportRequestId: string;
+  purpose: string;
+  requestState: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export const api = {
+  listMyExportRequests: (s: Session) =>
+    get<{ data: { id: string; attributes: MyExportRequest }[] }>(
+      s,
+      `/v1/participants/${s.participantId}/export-requests`,
+    ),
+  /**
+   * Asking for a copy is confirmed but deliberately carries no reason
+   * from the participant: the right to a copy of your own information is
+   * not conditional on explaining why you want it.
+   */
+  requestMyExport: (s: Session) =>
+    post(s, `/v1/participants/${s.participantId}/export-requests`, {
+      purpose: 'A copy of my own information, requested by me',
+      confirmed: true,
+    }),
   getMyLifeStory: (s: Session) =>
     get<{ data: { id: string; attributes: MyLifeStoryItem }[]; meta: { archiveId: string | null } }>(
       s,

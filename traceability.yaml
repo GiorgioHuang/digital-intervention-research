@@ -710,3 +710,23 @@
   code: [packages/policy/src/catalogue.ts, packages/modules/m17-life-story/src/application/queries.ts, packages/modules/m17-life-story/src/index.ts, apps/api/src/controllers.ts, apps/web/src/components/MyLifeStory.tsx, apps/web/src/App.tsx]
   tests: [packages/modules/m17-life-story/test/m17.integration.test.ts, apps/web/test/my-life-story.test.tsx]
   status: implemented
+
+- implementation_id: IMP-M14-OWN-EXPORT-001
+  module: M14
+  summary: A participant can ask for a copy of their own information and see what happened to the request. Requesting was owner-permitted from the start and the route existed, but nothing in the participant workspace reached it, so this right existed only for whoever knew the API - the same shape as the withdrawal gap fixed earlier. Adding only a button would have been half the fix, because a request whose outcome the requester cannot see is indistinguishable from one that was never made and a rejection would read exactly like silence. Adds export.view-own as ownerPermitted and ownerOnly, kept separate from participant.export because that action is confirmationRequired and a read forced to claim confirmation is a read pretending to be a command, plus listMyExportRequests and a participant screen. The wording never promises delivery - the request is reviewed by someone who is not the person who asked, which the database enforces by refusing an approver equal to the requester, and each state says only what is true of it, so Approved is not written as generated and Generated is not written as delivered. Asking carries no reason from the participant, because the right to a copy of your own information is not conditional on explaining why you want it. An open request is reported as already open rather than offering a second one, since asking twice would not make it faster. The deciding approver is deliberately not returned to the requester - who decided is on the audit record, and naming them turns a governance decision into a person to argue with
+  trace_ids: [ATR-002, ATR-021]
+  adr_ids: [ADR-050, ADR-051]
+  docs: ["design/PARTICIPANT_WORKSPACE.md B12", "UI_INVENTORY.md B12", "Doc 16 section 37.5"]
+  code: [packages/policy/src/catalogue.ts, packages/modules/m14-reporting/src/application/queries.ts, packages/modules/m14-reporting/src/index.ts, apps/api/src/controllers.ts, apps/web/src/components/MyDataCopy.tsx, apps/web/src/App.tsx]
+  tests: [packages/modules/m14-reporting/test/m14.integration.test.ts, apps/web/test/my-data-copy.test.tsx]
+  status: implemented
+
+- implementation_id: IMP-M17-VISIBILITY-WITHHELD-001
+  module: M17
+  summary: Life story visibility and audience selection is deliberately not offered, recorded as decision D-16. The column is writable and changeVisibility works, but nothing reads it - the only query in the repository that reads life story items is getMyLifeStory, which is ownerOnly, so changing an item to Community or Connections produces an audience of exactly nobody. Offering that control would let a participant believe they had shared something when they had not; a lie in that direction is still a lie, it merely fails in a different way from believing something is private when it is public. Selected People is worse still - life_story.access_grants has no command that writes to it, only the bulk revoke performed on withdrawal, so it is an option with no way to select anyone. The life story screen therefore states each item's current visibility and offers no control to change it. Unlock condition - a non-owner read path that honours visibility and access_grants, and a command that writes an access grant; until both exist there is nothing here that can be controlled honestly. Recorded as deferred rather than implemented because the deliverable is the absence of a control and the reason for it
+  trace_ids: [ATR-002]
+  adr_ids: [ADR-023, ADR-020]
+  docs: ["design/DESIGN_DECISIONS.md D-16", "design/PARTICIPANT_WORKSPACE.md B11", "UI_INVENTORY.md B11"]
+  code: [packages/modules/m17-life-story/src/application/commands.ts, apps/web/src/components/MyLifeStory.tsx]
+  tests: [packages/modules/m17-life-story/test/m17.integration.test.ts]
+  status: deferred

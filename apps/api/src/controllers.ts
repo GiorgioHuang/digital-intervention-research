@@ -20,7 +20,7 @@ import { recordSafetySignal, type M09Deps } from '@platform/m09-safety';
 import type { M10Deps } from '@platform/m10-evidence';
 import type { M12Deps } from '@platform/m12-dataset';
 import type { M13Deps } from '@platform/m13-analysis';
-import { requestParticipantExport, type M14Deps } from '@platform/m14-reporting';
+import { listMyExportRequests, requestParticipantExport, type M14Deps } from '@platform/m14-reporting';
 import {
   completeUpload,
   DEFAULT_STORAGE_CONFIG,
@@ -375,6 +375,18 @@ export class CommandController {
     const ctx = requireActor(req);
     const status = await getObjectStatus(this.deps.m16storage, ctx, objectId);
     return { data: { type: 'StoredObject', id: objectId, attributes: status } };
+  }
+
+  /**
+   * The state of one's own portability requests. Owner-only: a request
+   * whose outcome the requester cannot see is indistinguishable from one
+   * that was never made.
+   */
+  @Get('participants/:participantId/export-requests')
+  async myExportRequests(@Req() req: Request, @Param('participantId') participantId: string) {
+    const ctx = requireActor(req);
+    const items = await listMyExportRequests(this.deps.m14, ctx, participantId);
+    return { data: items.map((e) => ({ type: 'ExportRequest', id: e.exportRequestId, attributes: e })) };
   }
 
   @Post('participants/:participantId/export-requests')

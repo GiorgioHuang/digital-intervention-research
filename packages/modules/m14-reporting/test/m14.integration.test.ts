@@ -19,6 +19,7 @@ import {
   decideExport,
   draftReportVersion,
   generateExportPackage,
+  listMyExportRequests,
   recordExportDelivery,
   requestParticipantExport,
   requestResearchExport,
@@ -169,6 +170,23 @@ describe.skipIf(!dbAvailable)('M14 reporting and export (integration)', () => {
     expect(row.rows[0].participant_id).toBe(patId);
     // Third-party restrictions are preserved, not silently dropped.
     expect(row.rows[0].restrictions).toContain('third-party');
+  });
+
+  /**
+   * Asking was reachable; finding out what happened was not. A request
+   * whose outcome the requester cannot see is indistinguishable from one
+   * that was never made — a rejection would read exactly like silence.
+   */
+  it('a participant reads the state of their own requests, and nobody else can', async () => {
+    const mine = await listMyExportRequests(m14, ctx(patAcc), patId);
+    expect(mine).toHaveLength(1);
+    expect(mine[0]!.requestState).toBe('Requested');
+
+    // The read is separate from the confirmed command, so it does not have
+    // to claim a confirmation it never made.
+    await expect(listMyExportRequests(m14, ctx(otherAcc), patId)).rejects.toMatchObject({
+      code: 'RESOURCE_NOT_FOUND',
+    });
   });
 });
 

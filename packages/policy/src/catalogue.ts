@@ -97,6 +97,7 @@ export const POLICY_V1: PolicyConfiguration = {
       'relationship.approve',
       'relationship.revoke',
       'participant.export',
+      'export.view-own',
       'enrolment.view-own',
       'enrolment.withdraw',
       'life-story.view-own',
@@ -249,6 +250,13 @@ export const POLICY_V1: PolicyConfiguration = {
       interaction: true,
     },
     'participant.export': { ownerPermitted: true, ownerOnly: true, confirmationRequired: true },
+    /**
+     * Reading the state of one's own portability requests. Separate from
+     * `participant.export` because that one is confirmationRequired, and a
+     * read that has to claim confirmation is a read pretending to be a
+     * command.
+     */
+    'export.view-own': { ownerPermitted: true, ownerOnly: true },
 
     'consent.record': { ownerPermitted: true, ownerOnly: true },
     'consent.withdraw': { ownerPermitted: true, ownerOnly: true, confirmationRequired: true },
