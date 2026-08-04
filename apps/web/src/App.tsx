@@ -7,7 +7,7 @@ import { ConsentPanel } from './components/ConsentPanel.js';
 import { MatchingPanel } from './components/MatchingPanel.js';
 import { MessagesScreen } from './components/MessagesScreen.js';
 import { SafetyPanel } from './components/SafetyPanel.js';
-import type { Session } from './api.js';
+import { api, PlatformApiError, type Session } from './api.js';
 
 /**
  * Task-oriented participant Home (Doc 20 §16): a short list of clear
@@ -45,6 +45,8 @@ export function App() {
   const [session, setSession] = useState<Session | null>(null);
   const [screen, setScreen] = useState<Screen>('home');
   const [form, setForm] = useState({ actorId: '', participantId: '' });
+  const [signInProblem, setSignInProblem] = useState('');
+  const [checking, setChecking] = useState(false);
   const [mode, setMode] = useState<'participant' | 'staff' | 'supporter'>('participant');
   const navRef = useRef<HTMLElement | null>(null);
 
@@ -78,15 +80,51 @@ export function App() {
       <main>
         <h1>Healthy Ageing Research Platform (development environment)</h1>
         <p>
-          Development sign-in stub: enter the identifiers issued for this synthetic environment. Nothing here
-          verifies who you are — real authentication is the pending OIDC work (ADR-104).
+          Development sign-in stub: enter the identifiers issued for this synthetic environment. Both belong to the
+          same person — the account identifier and the participant identifier are two names for one demo participant.
+          Nothing here verifies who you are — real authentication is the pending OIDC work (ADR-104).
         </p>
+        {/*
+          The two identifiers have to belong to the same person. Nothing
+          used to check that, so an unpaired combination signed in happily
+          and then every screen returned a protected-existence 404 saying
+          only "the identifier may be incorrect" — with no way to tell
+          which one, and no way back to this form. Checking once here turns
+          a dead end into one sentence.
+        */}
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            if (form.actorId && form.participantId) {
-              setSession({ actorId: form.actorId, participantId: form.participantId });
-            }
+            if (!form.actorId || !form.participantId) return;
+            const candidate = { actorId: form.actorId, participantId: form.participantId };
+            setChecking(true);
+            setSignInProblem('');
+            void api
+              .listMyConsents(candidate)
+              .then(() => setSession(candidate))
+              .catch((err: unknown) => {
+                if (err instanceof PlatformApiError && err.status === 404) {
+                  // Deliberately does not say which identifier is wrong:
+                  // that would answer "does this participant exist" for
+                  // anyone who asked (ADR-050).
+                  setSignInProblem(
+                    'These two identifiers do not work together. Either they belong to different people, or one of them is not right. Nothing was signed in.',
+                  );
+                  return;
+                }
+                if (err instanceof PlatformApiError && err.status === 401) {
+                  setSignInProblem(
+                    "This environment needs its access passphrase before anyone can sign in. Open the page again with the ?token=… link you were given.",
+                  );
+                  return;
+                }
+                // The check itself failed for some other reason. Refusing
+                // to sign in would punish the person for a problem that
+                // may have nothing to do with their identifiers.
+                setSignInProblem('');
+                setSession(candidate);
+              })
+              .finally(() => setChecking(false));
           }}
         >
           <p>
@@ -101,7 +139,10 @@ export function App() {
               onChange={(e) => setForm({ ...form, participantId: e.target.value })}
             />
           </p>
-          <button type="submit">Continue</button>{' '}
+          {signInProblem !== '' && <p role="alert">{signInProblem}</p>}
+          <button type="submit" disabled={checking}>
+            {checking ? 'Checking…' : 'Continue'}
+          </button>{' '}
           <button type="button" onClick={() => setMode('supporter')}>
             Supporter workspace
           </button>{' '}
@@ -183,6 +224,30 @@ export function App() {
               not an emergency service.
             </p>
             <SafetyPanel session={session} />
+            {/*
+              The only way out of a session was to reload the page. Someone
+              signed in with identifiers that no longer work — after a demo
+              environment is reseeded, for instance — met a 404 on every
+              screen and no control that would let them try different ones.
+            */}
+            <section aria-labelledby="signout-heading">
+              <h2 id="signout-heading">Signing in as someone else</h2>
+              <p>
+                This development environment identifies you by the identifiers you typed in. If they stop working —
+                after this demo environment is set up again, for example — nothing here is broken; the identifiers
+                have changed.
+              </p>
+              <p>
+                <button
+                  onClick={() => {
+                    setSession(null);
+                    setScreen('home');
+                  }}
+                >
+                  Sign out and enter different identifiers
+                </button>
+              </p>
+            </section>
           </section>
         )}
       </main>

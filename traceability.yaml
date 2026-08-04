@@ -650,3 +650,13 @@
   code: [apps/web/src/components/MessagesScreen.tsx, apps/web/src/components/MessagePanel.tsx, .github/workflows/ci.yml]
   tests: [apps/web/test/messages-screen.test.tsx, apps/web/test/message-panel.test.tsx]
   status: implemented
+
+- implementation_id: IMP-WEB-SIGNIN-PAIRING-001
+  module: ops
+  summary: The participant sign-in checks that the two identifiers belong to the same person, and a signed-in person can get back to the form. Reported from the deployed environment as "the message list will not load" with RESOURCE_NOT_FOUND; reproduced locally against the real API, where a matching actor/participant pair returns 200 and an unpaired one returns exactly that 404. The code was not at fault, but the product made the situation a dead end - nothing verified the pairing at sign-in, so an unpaired combination signed in happily and then every owner-scoped screen returned a protected-existence 404 whose wording can only say "the identifier may be incorrect", with no way to tell which one and no control anywhere to change identity short of reloading the page. This is reachable without any user error at all - every identifier issued before a demo reseed stops working while a session is open. The sign-in now makes one owner-scoped request and reports an unusable pair in a sentence, deliberately without naming which identifier is wrong, since that would answer "does this participant exist" for anyone who asked (ADR-050); a 401 is distinguished as the environment passphrase rather than misreported as a pairing problem; and a check that fails for any other reason still signs in, because refusing would punish someone for a problem that is not theirs. Help and safety gains a sign-out that returns to the form
+  trace_ids: [ATR-002, ATR-023]
+  adr_ids: [ADR-050, ADR-104]
+  docs: ["design/DESIGN_SYSTEM.md §E", "Doc 20 §224-237"]
+  code: [apps/web/src/App.tsx]
+  tests: [apps/web/test/sign-in.test.tsx]
+  status: implemented
