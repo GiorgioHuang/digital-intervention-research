@@ -65,7 +65,7 @@ const pool = createPool({ connectionString: DATABASE_URL, applicationName: 'seed
  * verification step can exercise the deployed API as a seeded participant
  * instead of a human retyping identifiers.
  */
-function writeJson(participants, spaceId) {
+function writeJson(participants, spaceId, organisationId) {
   const out = process.env['DEMO_JSON_OUT'];
   if (out === undefined || out === '') return;
   // Prefer the seeded demo participant by name; a database that also holds
@@ -77,12 +77,17 @@ function writeJson(participants, spaceId) {
       participantActorId: first?.user_account_id ?? null,
       participantId: first?.id ?? null,
       spaceId: spaceId ?? null,
+      organisationId: organisationId ?? null,
     }),
   );
 }
 
-function printAccounts(rows, participants, spaceName) {
+function printAccounts(rows, participants, spaceName, organisationId) {
   console.log('\n=== Demo accounts (dev-header sign-in stub; all synthetic) ===\n');
+  // The staff workspace asks for this when signing in: organisation-scoped
+  // reads (the administrative participant list) have nothing to scope to
+  // without it, so an account list that omits it is not usable on its own.
+  if (organisationId !== undefined) console.log(`  Organisation identifier: ${organisationId}\n`);
   for (const r of rows) console.log(`  ${r.role.padEnd(26)} actor id: ${r.id}   (${r.display_name})`);
   console.log('');
   for (const p of participants) {
@@ -121,10 +126,10 @@ async function existingDemo() {
   // environment that is the whole population, and hiding rows created by
   // other means would misrepresent what is actually there.
   console.log('Demo data already exists; nothing was changed. Accounts currently in the database:');
-  printAccounts(accounts.rows, participants.rows, space.rows[0]?.name);
+  printAccounts(accounts.rows, participants.rows, space.rows[0]?.name, org.rows[0].id);
   // The demo participants are the ones registered by this seed; the first
   // row by creation time is Ann.
-  writeJson(participants.rows, space.rows[0]?.id);
+  writeJson(participants.rows, space.rows[0]?.id, org.rows[0].id);
   return true;
 }
 
@@ -291,8 +296,9 @@ async function main() {
       { id: benId, display_name: 'Ben', user_account_id: benAcc },
     ],
     'Gardening Corner',
+    orgId,
   );
-  writeJson([{ id: annId, display_name: 'Ann', user_account_id: annAcc }], spaceId);
+  writeJson([{ id: annId, display_name: 'Ann', user_account_id: annAcc }], spaceId, orgId);
 }
 
 main()
