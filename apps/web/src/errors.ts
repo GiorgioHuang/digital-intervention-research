@@ -144,3 +144,87 @@ export function presentError(err: unknown): PresentedError {
   const mapped = BY_CODE[code] ?? (err.status === 404 ? NOT_FOUND : UNKNOWN);
   return { ...mapped, code };
 }
+
+/**
+ * Staff-side wording (design system §I.1: participants must never see a
+ * code, staff keep it because they act on it). Staff screens were saying
+ * only `Not successful: AUTHORISATION_DENIED`, which states neither why
+ * nor what to do — and their network branch claimed "nothing was
+ * submitted", which is not knowable: a transport failure can happen after
+ * the server has already applied the command. Both are fixed here.
+ *
+ * The code stays at the end of the line, so the existing announcements
+ * remain greppable in support conversations.
+ */
+const STAFF_BY_CODE: Record<string, { reason: string; nextStep: string }> = {
+  AUTHENTICATION_REQUIRED: {
+    reason: 'the browser did not send this environment\'s access passphrase',
+    nextStep: 'enter it in the notice at the top of the page, then repeat the action',
+  },
+  AUTHORISATION_DENIED: {
+    reason:
+      'your current role and scope do not carry this action — for approvals this is usually separation of duties, because the approver cannot be the person who submitted the artefact',
+    nextStep: 'ask a colleague who holds the permission to decide it',
+  },
+  STEP_UP_AUTHENTICATION_REQUIRED: {
+    reason: 'this action is in the strong-authentication tier',
+    nextStep: 'sign in again with strong authentication, then repeat it',
+  },
+  RESOURCE_NOT_FOUND: {
+    reason:
+      'the identifier does not resolve for you — it may not exist, or it may be outside your scope, and the two are deliberately indistinguishable',
+    nextStep: 'check the identifier against the queue listing',
+  },
+  INVALID_STATE_TRANSITION: {
+    reason: 'the artefact is no longer in the state this action requires — someone may have decided it already',
+    nextStep: 'reload the queue to see its current state',
+  },
+  VERSION_CONFLICT: {
+    reason: 'the artefact changed after this queue was loaded',
+    nextStep: 'reload the queue and decide against the current version',
+  },
+  VALIDATION_FAILED: {
+    reason: 'the server rejected the request body',
+    nextStep: 'correct the field named in the response, then submit again',
+  },
+  CONSENT_REQUIRED: {
+    reason: 'the participant has not granted the consent this step depends on',
+    nextStep: 'do not work around it — the consent decision belongs to the participant',
+  },
+  DEPENDENCY_UNAVAILABLE: {
+    reason: 'an external system this step depends on could not be reached, so the step did not half-happen',
+    nextStep: 'retry in a few minutes',
+  },
+  RATE_LIMITED: { reason: 'too many requests in a short time', nextStep: 'wait a moment, then retry' },
+};
+
+/** A queue or listing that could not be read. Nothing was changed by a read. */
+export function staffLoadError(err: unknown, what: string): string {
+  if (!(err instanceof PlatformApiError)) {
+    return `Could not load ${what}: the server could not be reached. Nothing changed. Check the connection, then try again. (NETWORK)`;
+  }
+  const code = err.error?.code ?? 'UNKNOWN';
+  const mapped = STAFF_BY_CODE[code];
+  if (mapped === undefined) {
+    return `Could not load ${what}: the cause is not one this screen recognises. Nothing changed. Reload, and report the code if it persists. (${code})`;
+  }
+  return `Could not load ${what}: ${mapped.reason}. Nothing changed. Next: ${mapped.nextStep}. (${code})`;
+}
+
+/**
+ * A command that did not succeed. The distinction that matters to an
+ * approver is whether the decision landed: a rejected command definitely
+ * did not, an unreachable server is genuinely unknown, and this says so
+ * instead of guessing.
+ */
+export function staffActionError(err: unknown, what: string): string {
+  if (!(err instanceof PlatformApiError)) {
+    return `${what} did not complete: the server could not be reached, so whether it took effect is unknown. Reload the queue to check before trying again. (NETWORK)`;
+  }
+  const code = err.error?.code ?? 'UNKNOWN';
+  const mapped = STAFF_BY_CODE[code];
+  if (mapped === undefined) {
+    return `${what} did not complete: the cause is not one this screen recognises, and whether it took effect is unknown. Reload the queue to check rather than repeating it. (${code})`;
+  }
+  return `${what} was refused: ${mapped.reason}. Nothing changed. Next: ${mapped.nextStep}. (${code})`;
+}

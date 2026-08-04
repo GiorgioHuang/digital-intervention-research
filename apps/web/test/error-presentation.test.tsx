@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
 import { act } from 'react';
 import { PlatformApiError } from '../src/api.js';
-import { presentError } from '../src/errors.js';
+import { presentError, staffActionError, staffLoadError } from '../src/errors.js';
 import { EmptyState, ErrorState, LoadingState } from '../src/components/StateBlock.js';
 
 const apiError = (code: string, status: number) =>
@@ -80,6 +80,41 @@ describe('error presentation', () => {
       render(<ErrorState error={{ ...presentError(apiError('X', 500)), severity: 3 }} />);
     });
     expect(screen.getByRole('alert').className).toContain('state--safety');
+  });
+
+  /**
+   * Staff keep the code — they act on it — but the line has to say why and
+   * what to do, and it must not claim to know an outcome it cannot know.
+   */
+  it('a refused staff command says nothing changed; an unreachable server admits it does not know', () => {
+    const refused = staffActionError(apiError('AUTHORISATION_DENIED', 403), 'Approve protocol version');
+    expect(refused).toContain('Approve protocol version was refused');
+    expect(refused).toContain('separation of duties');
+    expect(refused).toContain('Nothing changed');
+    expect(refused).toContain('Next:');
+    expect(refused).toContain('(AUTHORISATION_DENIED)');
+
+    // A transport failure can happen after the server applied the command,
+    // so "nothing was submitted" would be a guess stated as fact.
+    const unreachable = staffActionError(new TypeError('fetch failed'), 'Approve protocol version');
+    expect(unreachable).toContain('whether it took effect is unknown');
+    expect(unreachable).not.toContain('Nothing changed');
+    expect(unreachable).toContain('Reload the queue');
+
+    // An unmapped code is the same problem: unknown, so do not repeat it.
+    const unmapped = staffActionError(apiError('SOMETHING_NEW', 500), 'Lock dataset version');
+    expect(unmapped).toContain('whether it took effect is unknown');
+    expect(unmapped).toContain('rather than repeating it');
+  });
+
+  it('a staff read failure states plainly that a read changed nothing', () => {
+    const line = staffLoadError(apiError('RESOURCE_NOT_FOUND', 404), 'pending work');
+    expect(line).toContain('Could not load pending work');
+    // Protected existence holds on the staff side too: the line must not
+    // resolve "does not exist" versus "outside your scope".
+    expect(line).toContain('deliberately indistinguishable');
+    expect(line).toContain('Nothing changed');
+    expect(line).toContain('(RESOURCE_NOT_FOUND)');
   });
 
   it('loading and empty are different statements, both carrying an icon and words', async () => {

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { PlatformApiError } from '../api.js';
+import { staffActionError, staffLoadError } from '../errors.js';
 import { staffApi, type EnrolmentItem, type StaffSession } from '../staff-api.js';
 
 /**
@@ -23,7 +23,7 @@ export function StaffCoordinatorPanel({ session }: { session: StaffSession }) {
       setEnrolments(res.data.map((i) => i.attributes));
       setAnnouncement('Enrolment list updated.');
     } catch (err) {
-      setAnnouncement(err instanceof PlatformApiError ? `Could not load the list: ${err.error.code}` : 'Network error');
+      setAnnouncement(staffLoadError(err, 'the enrolment list'));
     }
   };
 
@@ -32,9 +32,7 @@ export function StaffCoordinatorPanel({ session }: { session: StaffSession }) {
       await fn();
       setAnnouncement(done);
     } catch (err) {
-      setAnnouncement(
-        err instanceof PlatformApiError ? `Not successful: ${err.error.code}` : 'Network error — nothing was submitted.',
-      );
+      setAnnouncement(staffActionError(err, 'That enrolment step'));
     }
   };
 

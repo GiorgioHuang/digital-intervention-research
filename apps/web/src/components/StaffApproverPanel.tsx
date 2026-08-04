@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { PlatformApiError } from '../api.js';
+import { staffActionError, staffLoadError } from '../errors.js';
 import {
   staffApi,
   type LockableVersion,
@@ -60,7 +60,7 @@ export function StaffApproverPanel({ session }: { session: StaffSession }) {
       });
       setAnnouncement('Pending work updated.');
     } catch (err) {
-      setAnnouncement(err instanceof PlatformApiError ? `Could not load pending work: ${err.error.code}` : 'Network error');
+      setAnnouncement(staffLoadError(err, 'pending work'));
     }
   };
 
@@ -76,9 +76,7 @@ export function StaffApproverPanel({ session }: { session: StaffSession }) {
       else await staffApi.decideApproval(session, action.id, action.decision, action.reason);
       setAnnouncement(`Done: ${ACTION_LABELS[action.kind]} (${action.id})`);
     } catch (err) {
-      setAnnouncement(
-        err instanceof PlatformApiError ? `Not successful: ${err.error.code}` : 'Network error — nothing was submitted.',
-      );
+      setAnnouncement(staffActionError(err, ACTION_LABELS[action.kind]));
     }
   };
 

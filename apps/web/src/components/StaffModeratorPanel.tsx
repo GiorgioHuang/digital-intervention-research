@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { PlatformApiError } from '../api.js';
+import { staffActionError, staffLoadError } from '../errors.js';
 import { staffApi, type ModerationCaseItem, type StaffSession } from '../staff-api.js';
 
 type Decision = 'Dismiss' | 'Warn' | 'Restrict' | 'Hide' | 'Remove' | 'Suspend' | 'Disconnect' | 'Ban' | 'Restore' | 'Escalate';
@@ -38,7 +38,7 @@ export function StaffModeratorPanel({ session }: { session: StaffSession }) {
           : `${res.data.length} open ${res.data.length === 1 ? 'case' : 'cases'}.`,
       );
     } catch (err) {
-      setAnnouncement(err instanceof PlatformApiError ? `Could not load the queue: ${err.error.code}` : 'Network error');
+      setAnnouncement(staffLoadError(err, 'the moderation queue'));
     }
   };
 
@@ -49,9 +49,7 @@ export function StaffModeratorPanel({ session }: { session: StaffSession }) {
       setQueue((q) => (q === null ? q : q.filter((c) => c.moderationCaseId !== form.caseId)));
       setAnnouncement('Decision recorded in your name. It cannot be changed.');
     } catch (err) {
-      setAnnouncement(
-        err instanceof PlatformApiError ? `Not successful: ${err.error.code}` : 'Network error — nothing was submitted.',
-      );
+      setAnnouncement(staffActionError(err, 'That moderation decision'));
     }
   };
 

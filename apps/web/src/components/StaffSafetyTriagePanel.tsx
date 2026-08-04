@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { PlatformApiError } from '../api.js';
+import { staffActionError, staffLoadError } from '../errors.js';
 import { staffApi, type StaffSession, type TriageQueueItem } from '../staff-api.js';
 
 type Disposition = 'Closed as Not a Safety Event' | 'Escalated' | 'Converted to Safety Event';
@@ -30,7 +30,7 @@ export function StaffSafetyTriagePanel({ session }: { session: StaffSession }) {
           : `${res.data.length} ${res.data.length === 1 ? 'signal' : 'signals'} waiting for triage.`,
       );
     } catch (err) {
-      setAnnouncement(err instanceof PlatformApiError ? `Could not load the queue: ${err.error.code}` : 'Network error');
+      setAnnouncement(staffLoadError(err, 'the triage queue'));
     }
   };
 
@@ -45,9 +45,7 @@ export function StaffSafetyTriagePanel({ session }: { session: StaffSession }) {
         eventId === undefined ? 'Disposition recorded.' : `Disposition recorded, safety event created: ${eventId}`,
       );
     } catch (err) {
-      setAnnouncement(
-        err instanceof PlatformApiError ? `Not successful: ${err.error.code}` : 'Network error — nothing was submitted.',
-      );
+      setAnnouncement(staffActionError(err, 'That triage decision'));
     }
   };
 

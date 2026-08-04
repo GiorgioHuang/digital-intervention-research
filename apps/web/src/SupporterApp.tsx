@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { accessTokenHeader, PlatformApiError, raiseApiError, type ApiError } from './api.js';
+import { staffActionError } from './errors.js';
 import { AccessTokenGate } from './components/AccessTokenGate.js';
 
 interface SupporterSession {
@@ -54,11 +55,9 @@ export function SupporterApp({ onExit }: { onExit: () => void }) {
       setAnnouncement(done);
     } catch (err) {
       setAnnouncement(
-        err instanceof PlatformApiError
-          ? err.status === 404
-            ? 'Not submitted: this needs the participant to have approved your relationship and to have consented to supporter contributions.'
-            : `Not successful: ${err.error.code}`
-          : 'Network error — nothing was submitted.',
+        err instanceof PlatformApiError && err.status === 404
+          ? 'Not submitted: this needs the participant to have approved your relationship and to have consented to supporter contributions.'
+          : staffActionError(err, 'That step'),
       );
     }
   };

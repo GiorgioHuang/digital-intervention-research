@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { PlatformApiError } from '../api.js';
+import { staffActionError } from '../errors.js';
 import { staffApi, type StaffSession } from '../staff-api.js';
 
 /**
@@ -24,9 +24,7 @@ export function StaffResearcherPanel({ session }: { session: StaffSession }) {
       const res = await fn();
       setAnnouncement(done(res.data.id));
     } catch (err) {
-      setAnnouncement(
-        err instanceof PlatformApiError ? `Not successful: ${err.error.code}` : 'Network error — nothing was submitted.',
-      );
+      setAnnouncement(staffActionError(err, 'That step'));
     }
   };
 
