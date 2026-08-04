@@ -8,6 +8,7 @@ import { ConsentPanel } from './components/ConsentPanel.js';
 import { MatchingPanel } from './components/MatchingPanel.js';
 import { MessagesScreen } from './components/MessagesScreen.js';
 import { MyResearchPart } from './components/MyResearchPart.js';
+import { WaitingForYou } from './components/WaitingForYou.js';
 import { SafetyPanel } from './components/SafetyPanel.js';
 import { api, PlatformApiError, type Session } from './api.js';
 
@@ -204,6 +205,7 @@ export function App() {
               unreachable from here, so in practice it meant asking staff.
             */}
             <MyResearchPart session={session} />
+            <WaitingForYou session={session} />
             {/* Task list, not a feed: each entry is one clear action. */}
             <ul>
               <li>

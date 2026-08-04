@@ -181,7 +181,22 @@ export interface MyEnrolment {
   updatedAt: string;
 }
 
+export interface ContributionAwaitingReview {
+  contributionId: string;
+  archiveId: string;
+  itemId: string | null;
+  contentText: string;
+  createdAt: string;
+}
+
 export const api = {
+  listContributionsAwaitingReview: (s: Session) =>
+    get<{ data: { id: string; attributes: ContributionAwaitingReview }[] }>(
+      s,
+      `/v1/participants/${s.participantId}/life-story/contributions/awaiting-review`,
+    ),
+  reviewContribution: (s: Session, contributionId: string, itemId: string, decision: 'Accepted' | 'Rejected') =>
+    post(s, `/v1/life-story/contributions/${contributionId}/review`, { itemId, decision }),
   listMyEnrolments: (s: Session) =>
     get<{ data: { id: string; attributes: MyEnrolment }[] }>(s, `/v1/participants/${s.participantId}/enrolments`),
   /**

@@ -35,6 +35,7 @@ import {
   confirmTestimony,
   createArchive,
   createItem,
+  listContributionsAwaitingReview,
   listMyContributions,
   proposeContribution,
   reviewContribution,
@@ -540,6 +541,18 @@ export class CommandController {
     const ctx = requireActor(req);
     // Strictly the requesting actor's own proposals with honest states.
     const items = await listMyContributions(this.deps.m17, ctx);
+    return { data: items.map((c) => ({ type: 'LifeStoryContribution', id: c.contributionId, attributes: c })) };
+  }
+
+  /**
+   * What a supporter has proposed into this participant's life story and
+   * is waiting on them to decide. Reviewing has always been owner-only;
+   * until now nothing let the owner find what was waiting.
+   */
+  @Get('participants/:participantId/life-story/contributions/awaiting-review')
+  async contributionsAwaitingReview(@Req() req: Request, @Param('participantId') participantId: string) {
+    const ctx = requireActor(req);
+    const items = await listContributionsAwaitingReview(this.deps.m17, ctx, participantId);
     return { data: items.map((c) => ({ type: 'LifeStoryContribution', id: c.contributionId, attributes: c })) };
   }
 

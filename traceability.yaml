@@ -690,3 +690,13 @@
   code: [packages/modules/m05-enrolment/src/application/queries.ts, packages/policy/src/catalogue.ts, apps/api/src/controllers.ts, apps/web/src/components/MyResearchPart.tsx, apps/web/src/App.tsx]
   tests: [packages/modules/m05-enrolment/test/m05.integration.test.ts, apps/web/test/my-research-part.test.tsx]
   status: implemented
+
+- implementation_id: IMP-M17-AWAITING-REVIEW-001
+  module: M17
+  summary: A participant can find the life-story contributions that are waiting on their decision. life-story.review-contribution has been ownerOnly from the start, which means the participant is the only person permitted to accept or reject text a supporter proposes into their own life story - but no query listed what was waiting, so a supporter could write about someone, into their story, and that person had no way to discover it was there. Being the only one allowed to decide is worth little without a way to find what is waiting. Adds listContributionsAwaitingReview, scoped by the same owner-only permission and by the archive's participant, and a Waiting for you block on the participant Home offering accept and reject with wording that states what each does - accepted text is shown as the contributor's account of things and never as the participant's own words, rejected text goes nowhere. The contributor's identity is deliberately left out of the list; who proposed something belongs on the contribution itself, not in a list that would let anyone reading over a shoulder enumerate who has been writing about this person. Assessments are deliberately excluded from the block even though Scheduled and Available records exist, because assessment.record carries no owner permission and a participant cannot complete one - listing a task they are unable to do would be pointing at a door they cannot open. The integration test pins down both halves that matter - the participant sees the pending contribution, and the supporter who wrote it, staff, and any other participant are all refused as RESOURCE_NOT_FOUND rather than being told something exists that they may not read
+  trace_ids: [ATR-002, ATR-024]
+  adr_ids: [ADR-050, ADR-054]
+  docs: ["design/PARTICIPANT_WORKSPACE.md A1.2", "Doc 20 B15", "Doc 19 participant journey"]
+  code: [packages/modules/m17-life-story/src/application/queries.ts, packages/modules/m17-life-story/src/index.ts, apps/api/src/controllers.ts, apps/web/src/components/WaitingForYou.tsx, apps/web/src/App.tsx]
+  tests: [packages/modules/m17-life-story/test/m17.integration.test.ts, apps/web/test/waiting-for-you.test.tsx]
+  status: implemented

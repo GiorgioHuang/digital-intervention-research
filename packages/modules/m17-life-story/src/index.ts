@@ -10,4 +10,9 @@ export {
   withdrawItem,
   type M17Deps,
 } from './application/commands.js';
-export { listMyContributions, type MyContribution } from './application/queries.js';
+export {
+  listContributionsAwaitingReview,
+  listMyContributions,
+  type ContributionAwaitingReview,
+  type MyContribution,
+} from './application/queries.js';

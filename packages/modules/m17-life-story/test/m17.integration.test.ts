@@ -24,6 +24,7 @@ import {
   confirmTestimony,
   createArchive,
   createItem,
+  listContributionsAwaitingReview,
   proposeContribution,
   reviewContribution,
   reviseItem,
@@ -243,6 +244,39 @@ describe.skipIf(!dbAvailable)('M17 Life Story (integration)', () => {
     });
     await expect(
       reviewContribution(m17, ctx(supporterId), { contributionId, itemId, decision: 'Accepted' }),
+    ).rejects.toMatchObject({ code: 'RESOURCE_NOT_FOUND' });
+  });
+
+  /**
+   * Being the only person permitted to decide is worth nothing without a
+   * way to find what is waiting. This pins down both halves: the
+   * participant sees the contribution left Proposed by the test above, and
+   * the same owner-only permission that stops a supporter accepting their
+   * own contribution also stops anyone reading the queue.
+   */
+  it('the participant lists contributions awaiting their review; nobody else can', async () => {
+    const waiting = await listContributionsAwaitingReview(m17, ctx(participantAccountId), participantId);
+    expect(waiting.map((c) => c.contentText)).toContain('Another memory.');
+    // Already accepted, so no longer waiting on anyone.
+    expect(waiting.map((c) => c.contentText)).not.toContain('I remember the roses you grew.');
+
+    // The supporter who wrote it, and staff, are refused — and the refusal
+    // does not reveal that anything is there to be refused about.
+    for (const actor of [supporterId, coordinatorId]) {
+      await expect(listContributionsAwaitingReview(m17, ctx(actor), participantId)).rejects.toMatchObject({
+        code: 'RESOURCE_NOT_FOUND',
+      });
+    }
+
+    // And a participant cannot read another participant's queue by asking
+    // for it — the owner check is on the resource, not on the caller alone.
+    const { participantId: otherParticipantId } = await registerParticipant(
+      m02,
+      createRequestContext({ actor: { type: 'user', id: coordinatorId }, organisationId: orgId }),
+      { displayName: 'Other P.' },
+    );
+    await expect(
+      listContributionsAwaitingReview(m17, ctx(participantAccountId), otherParticipantId),
     ).rejects.toMatchObject({ code: 'RESOURCE_NOT_FOUND' });
   });
 
