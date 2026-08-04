@@ -10,6 +10,7 @@ import { MessagesScreen } from './components/MessagesScreen.js';
 import { MyDataCopy } from './components/MyDataCopy.js';
 import { MyLifeStory } from './components/MyLifeStory.js';
 import { MyResearchPart } from './components/MyResearchPart.js';
+import { WhoHasAccess } from './components/WhoHasAccess.js';
 import { WaitingForYou } from './components/WaitingForYou.js';
 import { SafetyPanel } from './components/SafetyPanel.js';
 import { api, PlatformApiError, type Session } from './api.js';
@@ -22,7 +23,16 @@ import { api, PlatformApiError, type Session } from './api.js';
  * Session comes from the dev-header stub for now (OIDC pending ADR-104):
  * the participant enters the identifiers issued during synthetic setup.
  */
-type Screen = 'home' | 'consent' | 'message' | 'matching' | 'community' | 'life-story' | 'data-copy' | 'help';
+type Screen =
+  | 'home'
+  | 'consent'
+  | 'access'
+  | 'message'
+  | 'matching'
+  | 'community'
+  | 'life-story'
+  | 'data-copy'
+  | 'help';
 
 /**
  * Four destinations, not five (design decision D-10). Measured at the
@@ -214,6 +224,9 @@ export function App() {
                 <button onClick={() => setScreen('consent')}>Review or change my consent choices</button>
               </li>
               <li>
+                <button onClick={() => setScreen('access')}>See who has access to me</button>
+              </li>
+              <li>
                 <button onClick={() => setScreen('message')}>Write to someone you are connected with</button>
               </li>
               <li>
@@ -235,6 +248,7 @@ export function App() {
           </section>
         )}
         {screen === 'consent' && <ConsentPanel session={session} />}
+        {screen === 'access' && <WhoHasAccess session={session} />}
         {screen === 'message' && (
           <MessagesScreen session={session} onGetHelp={() => setScreen('help')} assistedBy={helper} />
         )}

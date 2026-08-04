@@ -3,7 +3,7 @@ import { APP_FILTER } from '@nestjs/core';
 import { SystemClock } from '@platform/kernel';
 import { createPool } from '@platform/database';
 import { POLICY_V1 } from '@platform/policy';
-import { createRoleAssignmentQuery } from '@platform/m01-identity-org';
+import { createAccountNameQuery, createRoleAssignmentQuery } from '@platform/m01-identity-org';
 import { createParticipantQuery } from '@platform/m02-participant';
 import { createPermissionService } from '@platform/m03-consent-permission';
 import { createProtocolVersionQuery } from '@platform/m04-research-design';
@@ -39,6 +39,7 @@ export function buildAppModule(config: ApiConfig) {
     pool,
     clock,
     permissions,
+    accountNames: createAccountNameQuery(pool),
     m02: moduleDeps,
     m03: { pool, clock, permissions },
     m04: moduleDeps,

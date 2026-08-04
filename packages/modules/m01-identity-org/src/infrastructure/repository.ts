@@ -1,5 +1,5 @@
 import type { Pool, PoolClient } from '@platform/database';
-import type { RoleAssignmentQueryPort, RoleAssignmentView } from '../contracts/index.js';
+import type { AccountNameQueryPort, RoleAssignmentQueryPort, RoleAssignmentView } from '../contracts/index.js';
 
 export async function insertUserAccount(
   client: PoolClient,
@@ -93,5 +93,18 @@ export async function findRoleAssignments(
 export function createRoleAssignmentQuery(pool: Pool): RoleAssignmentQueryPort {
   return {
     findRoleAssignments: (userAccountId) => findRoleAssignments(pool, userAccountId),
+  };
+}
+
+export function createAccountNameQuery(pool: Pool): AccountNameQueryPort {
+  return {
+    async findDisplayNames(userAccountIds: string[]): Promise<Map<string, string>> {
+      if (userAccountIds.length === 0) return new Map();
+      const res = await pool.query(
+        `SELECT id, display_name FROM identity_org.user_accounts WHERE id = ANY($1::text[])`,
+        [[...new Set(userAccountIds)]],
+      );
+      return new Map(res.rows.map((r) => [r.id as string, r.display_name as string]));
+    },
   };
 }

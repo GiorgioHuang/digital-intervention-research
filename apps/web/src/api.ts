@@ -204,6 +204,18 @@ export interface MyLifeStoryItem {
   updatedAt: string;
 }
 
+export interface MyRelationship {
+  relationshipId: string;
+  relatedActorId: string;
+  relatedDisplayName: string | null;
+  relationshipType: string;
+  relationshipState: string;
+  permittedActions: string[];
+  expiresAt: string | null;
+  recordVersion: number;
+  proposedAt: string;
+}
+
 export interface MyBlock {
   blockId: string;
   blockedActorId: string;
@@ -220,6 +232,16 @@ export interface MyExportRequest {
 }
 
 export const api = {
+  listMyRelationships: (s: Session) =>
+    get<{ data: { id: string; attributes: MyRelationship }[] }>(
+      s,
+      `/v1/participants/${s.participantId}/relationships`,
+    ),
+  /** Version-bound: approving something that changed under you is refused, not merged. */
+  approveRelationship: (s: Session, relationshipId: string, expectedVersion: number) =>
+    post(s, `/v1/relationships/${relationshipId}/approve`, { expectedVersion, confirmed: true }),
+  revokeRelationship: (s: Session, relationshipId: string, expectedVersion: number) =>
+    post(s, `/v1/relationships/${relationshipId}/revoke`, { expectedVersion }),
   listMyExportRequests: (s: Session) =>
     get<{ data: { id: string; attributes: MyExportRequest }[] }>(
       s,

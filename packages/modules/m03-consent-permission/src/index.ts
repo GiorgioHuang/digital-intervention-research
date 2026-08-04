@@ -8,5 +8,10 @@ export {
   revokeRelationship,
   type M03Deps,
 } from './application/consent-commands.js';
-export { listOwnConsents, type ConsentStateView } from './application/consent-queries.js';
+export {
+  listOwnConsents,
+  listOwnRelationships,
+  type ConsentStateView,
+  type OwnRelationshipView,
+} from './application/consent-queries.js';
 export { expireRelationships } from './application/sweeps.js';

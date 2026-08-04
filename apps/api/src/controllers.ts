@@ -2,10 +2,12 @@ import { Body, Controller, Get, Inject, Param, Post, Query, Req } from '@nestjs/
 import type { Request } from 'express';
 import type { Clock } from '@platform/kernel';
 import type { Pool } from '@platform/database';
+import type { AccountNameQueryPort } from '@platform/m01-identity-org';
 import type { M02Deps } from '@platform/m02-participant';
 import {
   approveRelationship,
   listOwnConsents,
+  listOwnRelationships,
   proposeRelationship,
   recordConsentDecision,
   revokeRelationship,
@@ -77,6 +79,8 @@ export interface ApiDeps {
   pool: Pool;
   clock: Clock;
   permissions: PermissionServicePort;
+  /** Account display names (M01), for screens that would otherwise print an identifier at a person. */
+  accountNames: AccountNameQueryPort;
   m02: M02Deps;
   m03: M03Deps;
   m04: M04Deps;
@@ -418,6 +422,30 @@ export class CommandController {
   }
 
   // --- M03 relationships -----------------------------------------------
+
+  /**
+   * Who has, or has asked for, access to this participant. Approving and
+   * revoking have always been owner-only; nothing listed what there was
+   * to approve or revoke, which made both unreachable from the one
+   * workspace entitled to reach them.
+   *
+   * The related person's name is resolved here rather than inside M03:
+   * account names belong to M01, and the composition root is where the
+   * two are allowed to meet.
+   */
+  @Get('participants/:participantId/relationships')
+  async myRelationships(@Req() req: Request, @Param('participantId') participantId: string) {
+    const ctx = requireActor(req);
+    const items = await listOwnRelationships(this.deps.m03, ctx, participantId);
+    const names = await this.deps.accountNames.findDisplayNames(items.map((r) => r.relatedActorId));
+    return {
+      data: items.map((r) => ({
+        type: 'Relationship',
+        id: r.relationshipId,
+        attributes: { ...r, relatedDisplayName: names.get(r.relatedActorId) ?? null },
+      })),
+    };
+  }
 
   @Post('relationships')
   async proposeRelationship(

@@ -275,7 +275,9 @@
 
 ## B2 我的同意选择
 
-**文档**：Doc 20 §95–102 | **状态**：已实现（`ConsentPanel.tsx`，仅 4 个范围）
+**文档**：Doc 20 §95–102 | **状态**：已实现（`ConsentPanel.tsx`，当前 6 个范围——平台实际门控的全部，见 D-2）
+
+**配套新增屏「谁能访问我」（`WhoHasAccess.tsx`，UI_INVENTORY B20）**：同意管的是「能对我的信息做什么」，授权关系管的是「由谁」，**权限引擎两者都要**——`participant.view-shared` 同时要求 `requiresRelationship` 与 `supporter-involvement` 同意。此前只有前一半上屏，参与者的工作区因此没法说出他的数据实际处于什么状态。`relationship.approve` 与 `relationship.revoke` 一直是 `ownerOnly`，却没有任何查询列出关系：提议在等一个他看不到的批准，已生效的授权也无法被唯一有权终止的人终止。新屏把两者都变成可达，并明说这两道闸互不代替（终止授权不改同意，改同意不终止授权）。**注意**：关系创建后的初始状态是 `PendingVerification`，但平台里没有任何东西会去「验证」——参与者的决定是唯一的出路，因此措辞与 `Proposed` 完全一致，不能写成「正在核验对方身份」，那会描述一道无人执行的检查，并诱使人凭它同意。
 
 ### 目标与这一屏要回答的问题
 

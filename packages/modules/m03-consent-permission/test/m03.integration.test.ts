@@ -16,10 +16,11 @@ import {
   approveRelationship,
   proposeRelationship,
   recordConsentDecision,
+  revokeRelationship,
   withdrawConsent,
   type M03Deps,
 } from '../src/application/consent-commands.js';
-import { listOwnConsents } from '../src/application/consent-queries.js';
+import { listOwnConsents, listOwnRelationships } from '../src/application/consent-queries.js';
 
 const DATABASE_URL =
   process.env['DATABASE_URL'] ?? 'postgres://platform:platform_dev_only@localhost:5432/research_platform';
@@ -384,6 +385,62 @@ describe.skipIf(!dbAvailable)('M01+M03 identity, consent and permission (integra
     // the denial does not distinguish "no such participant" from "not
     // yours" (ADR-050).
     await expect(listOwnConsents(m03, ctxFor(researcherId), participantId)).rejects.toMatchObject({
+      code: 'RESOURCE_NOT_FOUND',
+    });
+  });
+
+  /**
+   * Approving and revoking have always been owner-only, so the
+   * participant is the only person who may let a supporter in or shut one
+   * out — and nothing listed relationships, which made both unreachable.
+   * A proposal waited on an approval they could not see they had been
+   * asked for.
+   */
+  it('a participant lists who has, or has asked for, access — and ends it', async () => {
+    const own = ctxFor(participantId);
+    const { relationshipId } = await proposeRelationship(m03, ctxFor(adminId), {
+      participantId,
+      relatedActorId: supporterId,
+      relationshipType: 'FamilyMember',
+      permittedActions: ['participant.view-shared'],
+    });
+
+    const waiting = await listOwnRelationships(m03, own, participantId);
+    const proposed = waiting.find((r) => r.relationshipId === relationshipId);
+    // Every relationship is created PendingVerification; nothing in the
+    // platform verifies anything from there, and the participant's
+    // decision is the only way out. The screen therefore words it the
+    // same as Proposed rather than describing a check nobody performs.
+    expect(proposed?.relationshipState).toBe('PendingVerification');
+    expect(proposed?.permittedActions).toEqual(['participant.view-shared']);
+    // The version comes back with the row: approve and revoke are
+    // version-bound, so a list that omitted it could not drive either.
+    expect(typeof proposed?.recordVersion).toBe('number');
+
+    await approveRelationship(m03, own, {
+      relationshipId,
+      expectedVersion: proposed!.recordVersion,
+      confirmed: true,
+    });
+    const active = (await listOwnRelationships(m03, own, participantId)).find(
+      (r) => r.relationshipId === relationshipId,
+    );
+    expect(active?.relationshipState).toBe('Active');
+
+    await revokeRelationship(m03, own, { relationshipId, expectedVersion: active!.recordVersion });
+    const ended = (await listOwnRelationships(m03, own, participantId)).find(
+      (r) => r.relationshipId === relationshipId,
+    );
+    // Kept in the list rather than disappearing: someone asking who has
+    // access to them is also entitled to know who used to.
+    expect(ended?.relationshipState).toBe('Revoked');
+
+    // Owner-only, and the refusal does not distinguish "no such
+    // participant" from "not yours".
+    await expect(listOwnRelationships(m03, ctxFor(supporterId), participantId)).rejects.toMatchObject({
+      code: 'RESOURCE_NOT_FOUND',
+    });
+    await expect(listOwnRelationships(m03, ctxFor(researcherId), participantId)).rejects.toMatchObject({
       code: 'RESOURCE_NOT_FOUND',
     });
   });
