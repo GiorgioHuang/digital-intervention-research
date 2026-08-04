@@ -5,6 +5,7 @@ import type { Pool } from '@platform/database';
 import type { M02Deps } from '@platform/m02-participant';
 import {
   approveRelationship,
+  listOwnConsents,
   proposeRelationship,
   recordConsentDecision,
   revokeRelationship,
@@ -97,6 +98,22 @@ export interface ApiDeps {
 @Controller('v1')
 export class CommandController {
   constructor(@Inject(API_DEPS) private readonly deps: ApiDeps) {}
+
+  /**
+   * The participant's own current consent state, read from the same
+   * projection the permission engine consults — so what the screen shows
+   * and what the server enforces cannot drift apart.
+   */
+  @Get('participants/:participantId/consents')
+  async myConsents(@Req() req: Request, @Param('participantId') participantId: string) {
+    const ctx = requireActor(req);
+    const items = await listOwnConsents(
+      { pool: this.deps.pool, clock: this.deps.clock, permissions: this.deps.permissions },
+      ctx,
+      participantId,
+    );
+    return { data: items.map((i) => ({ type: 'ConsentState', id: i.scope, attributes: i })) };
+  }
 
   @Post('participants/:participantId/consents')
   async recordConsent(

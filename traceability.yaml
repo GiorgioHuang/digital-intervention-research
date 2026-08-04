@@ -630,3 +630,13 @@
   code: [packages/modules/m02-participant/src/application/queries.ts, packages/policy/src/catalogue.ts, apps/api/src/staff-controllers.ts, apps/web/src/components/StaffAdminPanel.tsx, apps/web/src/StaffApp.tsx, packages/synthetic-pilot/seed-demo.mjs]
   tests: [packages/modules/m05-enrolment/test/m05.integration.test.ts, apps/web/test/staff-admin.test.tsx]
   status: implemented
+
+- implementation_id: IMP-M03-CONSENT-STATE-001
+  module: M03
+  summary: A participant can see their own current consent position, read from consent_permission.consent_current - the same projection the permission engine consults when it decides whether an action is allowed, so the screen cannot claim one thing while the server enforces another. The screen previously showed only the result of a button pressed in that session, so someone returning to it saw nothing at all and could not tell what they had agreed to; a consent screen that cannot state the standing position is not a record of anything. Each scope now also states what it actually controls, and shows the consent text version the decision was made under. The offered set grows from four scopes to the six the platform genuinely enforces - the two that were missing, supporter-involvement and supporter-contribution, are precisely the ones governing what another person may read and contribute, so a participant could not review or withdraw supporter access from their own consent screen while the server was gating on it. Decision D-2 asks for all 22 scopes from Doc 20 §97; that is recorded as partially implemented rather than done, because consent_current.consent_scope has no CHECK constraint and accepts any string - adding sixteen controls that record a decision no permission check reads would assert a protection the platform does not provide, the same error D-5 exists to prevent. The read is owner-only through participant.view-own, and a request for someone else's decisions is refused as RESOURCE_NOT_FOUND rather than distinguishing non-existence from not-yours
+  trace_ids: [ATR-002, ATR-024]
+  adr_ids: [ADR-018, ADR-050, ADR-054]
+  docs: ["design/DESIGN_DECISIONS.md D-2", "design/PARTICIPANT_WORKSPACE.md A2.4", "Doc 4 consent model", "Doc 20 §97-98"]
+  code: [packages/modules/m03-consent-permission/src/application/consent-queries.ts, apps/api/src/controllers.ts, apps/web/src/components/ConsentPanel.tsx, apps/web/src/api.ts]
+  tests: [packages/modules/m03-consent-permission/test/m03.integration.test.ts, apps/web/test/consent-panel.test.tsx]
+  status: implemented

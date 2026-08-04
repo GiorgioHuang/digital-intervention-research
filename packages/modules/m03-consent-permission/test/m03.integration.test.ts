@@ -19,6 +19,7 @@ import {
   withdrawConsent,
   type M03Deps,
 } from '../src/application/consent-commands.js';
+import { listOwnConsents } from '../src/application/consent-queries.js';
 
 const DATABASE_URL =
   process.env['DATABASE_URL'] ?? 'postgres://platform:platform_dev_only@localhost:5432/research_platform';
@@ -350,6 +351,41 @@ describe.skipIf(!dbAvailable)('M01+M03 identity, consent and permission (integra
       [participantId],
     );
     expect(after.rows[0].n).toBe(before.rows[0].n);
+  });
+
+  /**
+   * The consent screen reads this. It has to be the same projection the
+   * permission engine consults, or the screen could show one position
+   * while the server enforces another and neither would look wrong.
+   */
+  it('a participant reads their own current position, and a withdrawal shows as withdrawn', async () => {
+    const own = ctxFor(participantId);
+    await recordConsentDecision(m03, own, {
+      participantId,
+      scope: 'participant-messaging',
+      decision: 'Granted',
+      templateVersion: 'ct_v1',
+    });
+    const granted = await listOwnConsents(m03, own, participantId);
+    const messaging = granted.find((c) => c.scope === 'participant-messaging');
+    expect(messaging?.decision).toBe('Granted');
+    expect(messaging?.templateVersion).toBe('ct_v1');
+
+    await withdrawConsent(m03, own, {
+      participantId,
+      scope: 'participant-messaging',
+      templateVersion: 'ct_v1',
+      confirmed: true,
+    });
+    const afterWithdrawal = await listOwnConsents(m03, own, participantId);
+    expect(afterWithdrawal.find((c) => c.scope === 'participant-messaging')?.decision).toBe('Withdrawn');
+
+    // Owner-only: another participant's decisions are not readable, and
+    // the denial does not distinguish "no such participant" from "not
+    // yours" (ADR-050).
+    await expect(listOwnConsents(m03, ctxFor(researcherId), participantId)).rejects.toMatchObject({
+      code: 'RESOURCE_NOT_FOUND',
+    });
   });
 });
 

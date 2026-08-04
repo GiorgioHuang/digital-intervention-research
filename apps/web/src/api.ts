@@ -163,7 +163,18 @@ export interface OwnPostSummary {
   publishedAt: string | null;
 }
 
+export interface ConsentState {
+  scope: string;
+  decision: string;
+  decidedAt: string;
+  templateVersion: string;
+  restrictions: string[];
+  expiresAt: string | null;
+}
+
 export const api = {
+  listMyConsents: (s: Session) =>
+    get<{ data: { id: string; attributes: ConsentState }[] }>(s, `/v1/participants/${s.participantId}/consents`),
   recordConsent: (s: Session, scope: string, decision: 'Granted' | 'Declined') =>
     post(s, `/v1/participants/${s.participantId}/consents`, { scope, decision, templateVersion: 'ct_v1' }),
   withdrawConsent: (s: Session, scope: string, confirmed: boolean) =>
