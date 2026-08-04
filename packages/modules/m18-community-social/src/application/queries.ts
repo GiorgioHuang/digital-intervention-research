@@ -329,6 +329,62 @@ export async function listCommunityFeed(
   return rows.map((r) => ({ ...r, authorDisplayName: name(r.authorParticipantId) }));
 }
 
+export interface OwnBlockSummary {
+  blockId: string;
+  blockedActorId: string;
+  /** The blocked person's name where it resolves; otherwise null. */
+  blockedDisplayName: string | null;
+  createdAt: string;
+}
+
+/**
+ * The blocks this participant has placed.
+ *
+ * The safety screen has been telling people "you can undo it at any time"
+ * while nothing anywhere listed a block or offered to lift one — a promise
+ * the product did not keep. Undoing something you cannot see is not
+ * something anyone can do.
+ *
+ * Only active blocks are returned. A lifted block is not a record the
+ * participant needs kept in front of them, and re-listing it would invite
+ * the reading that lifting was reversible on its own.
+ */
+export async function listMyBlocks(
+  deps: M18Deps,
+  ctx: RequestContext,
+  blockerId: string,
+): Promise<OwnBlockSummary[]> {
+  const decision = await deps.checkPermission(ctx, {
+    action: 'block.view-own',
+    resource: {
+      type: 'BlockRecord',
+      id: 'own',
+      state: 'Active',
+      protectedExistence: true,
+      ownerParticipantId: blockerId,
+    },
+  });
+  assertAllowed(decision, false);
+  const res = await deps.pool.query(
+    `SELECT id, blocked_actor_id, created_at
+       FROM community_social.block_records
+      WHERE blocker_actor_id = $1 AND block_state = 'Active'
+      ORDER BY created_at DESC`,
+    [blockerId],
+  );
+  const names = await deps.participants.findDisplayNames(res.rows.map((r) => r.blocked_actor_id as string));
+  return res.rows.map((r) => ({
+    blockId: r.id as string,
+    blockedActorId: r.blocked_actor_id as string,
+    // Never a placeholder that reads like a name here: the participant
+    // typed this identifier themselves, so showing it back is honest,
+    // whereas "A community member" on every row would make two blocks
+    // impossible to tell apart.
+    blockedDisplayName: names.get(r.blocked_actor_id as string) ?? null,
+    createdAt: (r.created_at as Date).toISOString(),
+  }));
+}
+
 export interface OwnPostSummary {
   postId: string;
   spaceId: string;

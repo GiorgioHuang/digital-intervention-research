@@ -1,7 +1,7 @@
-import { useState } from 'react';
-import { api, type Session } from '../api.js';
+import { useEffect, useState } from 'react';
+import { api, type MyBlock, type Session } from '../api.js';
 import { presentError, type PresentedError } from '../errors.js';
-import { ErrorState } from './StateBlock.js';
+import { EmptyState, ErrorState, LoadingState } from './StateBlock.js';
 
 /**
  * Block & Report (Doc 20; ADR-037/038): blocking is the participant's own
@@ -17,11 +17,28 @@ export function SafetyPanel({ session }: { session: Session }) {
   const [confirmingBlock, setConfirmingBlock] = useState(false);
   const [concern, setConcern] = useState('');
   const [announcement, setAnnouncement] = useState('');
+  const [blocks, setBlocks] = useState<MyBlock[] | null>(null);
+  const [blocksError, setBlocksError] = useState<PresentedError | null>(null);
+  const [unblocking, setUnblocking] = useState<MyBlock | null>(null);
+
+  const loadBlocks = async () => {
+    try {
+      setBlocks((await api.listMyBlocks(session)).data.map((d) => d.attributes));
+      setBlocksError(null);
+    } catch (err) {
+      setBlocksError(presentError(err));
+    }
+  };
+
+  useEffect(() => {
+    void loadBlocks();
+  }, []);
 
   const run = async (fn: () => Promise<unknown>, done: string) => {
     try {
       await fn();
       setAnnouncement(done);
+      await loadBlocks();
     } catch (err) {
       setActionError(presentError(err));
     }
@@ -114,6 +131,52 @@ export function SafetyPanel({ session }: { session: Session }) {
             <button onClick={() => setConfirmingBlock(false)}>Go back without blocking</button>
           </div>
         )}
+      </section>
+
+      {/*
+        The confirmation above has always said the block can be undone at
+        any time. Nothing listed a block or offered to lift one, so that
+        was a promise the product did not keep — you cannot undo something
+        you cannot see.
+      */}
+      <section aria-labelledby="blocks-heading">
+        <h3 id="blocks-heading">People you have blocked</h3>
+        {blocks === null && blocksError === null && <LoadingState label="Loading the blocks you have placed…" />}
+        {blocksError !== null && <ErrorState error={blocksError} />}
+        {blocks !== null && blocks.length === 0 && (
+          <EmptyState title="You have not blocked anyone" detail="Anyone you block will be listed here." />
+        )}
+        {(blocks ?? []).map((b) => (
+          <article key={b.blockId} aria-label={`Block ${b.blockId}`}>
+            <p>
+              <strong>{b.blockedDisplayName ?? b.blockedActorId}</strong> — blocked on{' '}
+              {new Date(b.createdAt).toLocaleDateString()}
+            </p>
+            <p>
+              <button onClick={() => setUnblocking(b)}>Unblock this person</button>
+            </p>
+            {unblocking?.blockId === b.blockId && (
+              <div role="alertdialog" aria-labelledby={`unblock-${b.blockId}`}>
+                <p id={`unblock-${b.blockId}`}>
+                  Unblock {b.blockedDisplayName ?? b.blockedActorId}? They will be able to reach you again in the same
+                  ways as anyone else. Unblocking does not bring back anything you missed, and it does not restore any
+                  connection or permission that existed before — those have to be given again on their own.
+                </p>
+                <p>
+                  <button
+                    onClick={() => {
+                      setUnblocking(null);
+                      void run(() => api.revokeBlock(session, b.blockId), 'The block has been lifted.');
+                    }}
+                  >
+                    Yes, unblock
+                  </button>{' '}
+                  <button onClick={() => setUnblocking(null)}>Keep the block</button>
+                </p>
+              </div>
+            )}
+          </article>
+        ))}
       </section>
 
       <section aria-labelledby="concern-heading">

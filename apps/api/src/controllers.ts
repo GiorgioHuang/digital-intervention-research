@@ -59,6 +59,7 @@ import {
   listCommunitySpaces,
   listConnections,
   listMatchCandidates,
+  listMyBlocks,
   listMyPosts,
   listThreadMessages,
   listThreads,
@@ -216,18 +217,28 @@ export class CommandController {
     return { data: { type: 'BlockRecord', id: result.blockId } };
   }
 
+  /**
+   * The blocks this participant placed. The safety screen promises they
+   * can be undone at any time; that promise needs something that lists
+   * them.
+   */
+  @Get('participants/:participantId/blocks')
+  async myBlocks(@Req() req: Request, @Param('participantId') participantId: string) {
+    const ctx = requireActor(req);
+    const items = await listMyBlocks(this.deps.m18, ctx, participantId);
+    return { data: items.map((b) => ({ type: 'BlockRecord', id: b.blockId, attributes: b })) };
+  }
+
   @Post('blocks/:blockId/revoke')
   async revokeBlock(
     @Req() req: Request,
     @Param('blockId') blockId: string,
-    @Body() body: { blockerId: string; confirmed: boolean },
+    @Body() body: { confirmed: boolean },
   ) {
     const ctx = requireActor(req);
-    await revokeBlock(this.deps.m18, ctx, {
-      blockId,
-      blockerId: body.blockerId,
-      confirmed: body.confirmed === true,
-    });
+    // The blocker is read from the block, not accepted from the caller:
+    // a request that names its own authority is not authority.
+    await revokeBlock(this.deps.m18, ctx, { blockId, confirmed: body.confirmed === true });
     return { data: { type: 'BlockRecord', id: blockId, meta: { state: 'Revoked' } } };
   }
 

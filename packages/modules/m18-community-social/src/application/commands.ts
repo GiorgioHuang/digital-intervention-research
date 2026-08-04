@@ -82,12 +82,31 @@ export async function createBlock(
   return { blockId };
 }
 
-/** Revoking a Block restores nothing that the Block suppressed (ADR-037). */
+/**
+ * Revoking a Block restores nothing that the Block suppressed (ADR-037).
+ *
+ * Who owns the block is read from the block, never from the caller. Taking
+ * the blocker from the request was the whole defect: with the caller
+ * naming the owner, passing their own identifier satisfied any ownership
+ * check while the update still matched on the block id alone, so a
+ * stranger could revoke a block that was protecting someone from them.
+ * The `WHERE` clause carries the same condition as the permission check
+ * for the same reason.
+ */
 export async function revokeBlock(
   deps: M18Deps,
   ctx: RequestContext,
-  input: { blockId: string; blockerId: string; confirmed: boolean },
+  input: { blockId: string; confirmed: boolean },
 ): Promise<void> {
+  const found = await deps.pool.query(
+    `SELECT blocker_actor_id, block_state FROM community_social.block_records WHERE id = $1`,
+    [input.blockId],
+  );
+  // A block nobody may touch and a block that is not there are answered
+  // the same way, so the reply does not confirm that it exists (ADR-050).
+  if (found.rowCount === 0) throw new PlatformError('RESOURCE_NOT_FOUND', 'No such block');
+  const blockerActorId = found.rows[0].blocker_actor_id as string;
+
   const decision = await deps.checkPermission(ctx, {
     action: 'block.revoke',
     resource: {
@@ -95,7 +114,7 @@ export async function revokeBlock(
       id: input.blockId,
       state: 'Active',
       protectedExistence: true,
-      ownerParticipantId: input.blockerId,
+      ownerParticipantId: blockerActorId,
     },
     confirmed: input.confirmed,
   });
@@ -104,9 +123,9 @@ export async function revokeBlock(
   await withTransaction(deps.pool, async (client) => {
     const res = await client.query(
       `UPDATE community_social.block_records
-          SET block_state = 'Revoked', revoked_at = $2, record_version = record_version + 1
-        WHERE id = $1 AND block_state = 'Active'`,
-      [input.blockId, now],
+          SET block_state = 'Revoked', revoked_at = $3, record_version = record_version + 1
+        WHERE id = $1 AND blocker_actor_id = $2 AND block_state = 'Active'`,
+      [input.blockId, blockerActorId, now],
     );
     if (res.rowCount !== 1) throw new PlatformError('INVALID_STATE_TRANSITION', 'Block is not active');
     await appendToOutbox(client, ctx, {

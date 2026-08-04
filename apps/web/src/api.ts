@@ -204,6 +204,13 @@ export interface MyLifeStoryItem {
   updatedAt: string;
 }
 
+export interface MyBlock {
+  blockId: string;
+  blockedActorId: string;
+  blockedDisplayName: string | null;
+  createdAt: string;
+}
+
 export interface MyExportRequest {
   exportRequestId: string;
   purpose: string;
@@ -297,6 +304,13 @@ export const api = {
     }),
   createBlock: (s: Session, blockedActorId: string, confirmed: boolean) =>
     post<{ data: { id: string } }>(s, '/v1/blocks', { blockerId: s.participantId, blockedActorId, confirmed }),
+  listMyBlocks: (s: Session) =>
+    get<{ data: { id: string; attributes: MyBlock }[] }>(s, `/v1/participants/${s.participantId}/blocks`),
+  /**
+   * No blocker is sent. Who placed the block is read from the block
+   * itself — a request that names its own authority is not authority.
+   */
+  revokeBlock: (s: Session, blockId: string) => post(s, `/v1/blocks/${blockId}/revoke`, { confirmed: true }),
   recordSafetySignal: (s: Session, category: string, severity: string, description: string) =>
     post<{ data: { id: string } }>(s, '/v1/safety-signals', {
       sourceType: 'Participant',

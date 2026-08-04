@@ -46,8 +46,10 @@ export { listOpenModerationCases, type OpenModerationCase } from './application/
 export {
   listCommunitySpaces,
   listCommunityFeed,
+  listMyBlocks,
   listMyPosts,
   type CommunitySpaceSummary,
   type CommunityFeedPost,
+  type OwnBlockSummary,
   type OwnPostSummary,
 } from './application/queries.js';

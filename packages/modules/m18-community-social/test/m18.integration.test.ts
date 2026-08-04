@@ -28,6 +28,7 @@ import {
   listCommunityFeed,
   publishSocialPost,
   recordModerationDecision,
+  listMyBlocks,
   revokeBlock,
   submitUserReport,
   type M18Deps,
@@ -54,6 +55,7 @@ describe.skipIf(!dbAvailable)('M18 block/report/moderation/community (integratio
   let m01: M01Deps, m02: M02Deps, m03: M03Deps, m18: M18Deps;
   let adminId: string, orgId: string, moderatorId: string, supporterId: string, coordinatorId: string;
   let patAccountId: string, patId: string;
+  let strangerAccountId: string, strangerId: string;
   const ctx = (actorId: string) => createRequestContext({ actor: { type: 'user', id: actorId } });
 
   beforeAll(async () => {
@@ -90,6 +92,16 @@ describe.skipIf(!dbAvailable)('M18 block/report/moderation/community (integratio
     ({ participantId: patId } = await registerParticipant(m02, ctx(coordinatorId), {
       displayName: 'Pat P.',
       userAccountId: patAccountId,
+    }));
+
+    // A second participant with no connection to Pat at all. Present to
+    // prove that holding the Participant role does not let someone act on
+    // another participant's blocks.
+    ({ userAccountId: strangerAccountId } = await createUserAccount(m01, adminCtx, { displayName: 'Stranger' }));
+    await assignRole(m01, adminCtx, { userAccountId: strangerAccountId, role: 'Participant', confirmed: true });
+    ({ participantId: strangerId } = await registerParticipant(m02, ctx(coordinatorId), {
+      displayName: 'Stranger S.',
+      userAccountId: strangerAccountId,
     }));
 
     // Supporter with active relationship + consent (to prove Block overrides both).
@@ -143,6 +155,56 @@ describe.skipIf(!dbAvailable)('M18 block/report/moderation/community (integratio
     expect(outbox.rows[0].n).toBe(1);
   });
 
+  /**
+   * A block is the one protection a participant can put in place without
+   * asking anyone. If another participant can take it away, it is not a
+   * protection at all — and the person with the strongest motive to remove
+   * it is the person it was placed against.
+   */
+  it('NEGATIVE another participant cannot revoke, or create, someone else\'s block', async () => {
+    await expect(
+      revokeBlock(m18, ctx(strangerAccountId), { blockId, confirmed: true }),
+    ).rejects.toMatchObject({ code: 'RESOURCE_NOT_FOUND' });
+    const still = await pool.query(`SELECT block_state FROM community_social.block_records WHERE id = $1`, [blockId]);
+    expect(still.rows[0].block_state).toBe('Active');
+
+    // Nor can they place one in another participant's name.
+    await expect(
+      createBlock(m18, ctx(strangerAccountId), { blockerId: patId, blockedActorId: moderatorId, confirmed: true }),
+    ).rejects.toMatchObject({ code: 'RESOURCE_NOT_FOUND' });
+    const none = await pool.query(
+      `SELECT count(*)::int AS n FROM community_social.block_records WHERE blocker_actor_id = $1 AND blocked_actor_id = $2`,
+      [patId, moderatorId],
+    );
+    expect(none.rows[0].n).toBe(0);
+
+    // Their own block is unaffected by all of this.
+    const { blockId: ownBlockId } = await createBlock(m18, ctx(strangerAccountId), {
+      blockerId: strangerId,
+      blockedActorId: supporterId,
+      confirmed: true,
+    });
+    await revokeBlock(m18, ctx(strangerAccountId), { blockId: ownBlockId, confirmed: true });
+  });
+
+  /**
+   * The confirmation on the safety screen has always said a block can be
+   * undone at any time. Nothing listed one, so that promise had nothing
+   * behind it.
+   */
+  it('a participant lists the blocks they placed, and only their own', async () => {
+    const mine = await listMyBlocks(m18, ctx(patAccountId), patId);
+    expect(mine.map((b) => b.blockId)).toContain(blockId);
+    expect(mine.every((b) => b.blockId !== 'blk_someone_else')).toBe(true);
+
+    // The stranger's own list is empty — they revoked their only block —
+    // and Pat's list is not readable by them at all.
+    expect(await listMyBlocks(m18, ctx(strangerAccountId), strangerId)).toHaveLength(0);
+    await expect(listMyBlocks(m18, ctx(strangerAccountId), patId)).rejects.toMatchObject({
+      code: 'RESOURCE_NOT_FOUND',
+    });
+  });
+
   it('NEGATIVE duplicate active block rejected by the database', async () => {
     await expect(
       createBlock(m18, ctx(patAccountId), { blockerId: patId, blockedActorId: supporterId, confirmed: true }),
@@ -192,7 +254,7 @@ describe.skipIf(!dbAvailable)('M18 block/report/moderation/community (integratio
   });
 
   it('block revocation restores nothing (ADR-037): view stays denied until authority re-established', async () => {
-    await revokeBlock(m18, ctx(patAccountId), { blockId, blockerId: patId, confirmed: true });
+    await revokeBlock(m18, ctx(patAccountId), { blockId, confirmed: true });
     // Block gone, but this test proves revocation did not auto-restore
     // anything else: relationship + consent were untouched here so access
     // returns ONLY because those authorities still stand on their own.

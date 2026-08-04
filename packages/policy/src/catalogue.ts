@@ -108,6 +108,7 @@ export const POLICY_V1: PolicyConfiguration = {
       'life-story.review-contribution',
       'life-story.withdraw',
       'life-story.export',
+      'block.view-own',
       'block.create',
       'block.revoke',
       'report.submit',
@@ -290,8 +291,20 @@ export const POLICY_V1: PolicyConfiguration = {
     'message.draft': { ownerPermitted: true, ownerOnly: true },
     'message.confirm-send': { ownerPermitted: true, ownerOnly: true, confirmationRequired: true, interaction: true, consentScopes: ['participant-messaging'] },
 
-    'block.create': { confirmationRequired: true },
-    'block.revoke': { confirmationRequired: true },
+    /**
+     * Blocking is the one protection a participant can put in place
+     * without asking anyone, so it must not be something another
+     * participant can undo. These carried only `confirmationRequired`,
+     * which meant the Participant role alone was enough and the engine
+     * never compared the named blocker with the caller — any participant
+     * could place a block in someone else's name, or revoke one. The
+     * person with the strongest motive to remove a block is the person it
+     * was placed against.
+     */
+    /** Seeing the blocks you placed — needed before "you can undo it" is true. */
+    'block.view-own': { ownerPermitted: true, ownerOnly: true },
+    'block.create': { ownerPermitted: true, ownerOnly: true, confirmationRequired: true },
+    'block.revoke': { ownerPermitted: true, ownerOnly: true, confirmationRequired: true },
     'report.submit': {},
     'moderation.triage': {},
     'moderation.decide': { confirmationRequired: true },
