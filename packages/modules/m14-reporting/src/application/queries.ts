@@ -76,6 +76,58 @@ export async function listMyExportRequests(
   }));
 }
 
+export interface ExportToCarryOut {
+  exportRequestId: string;
+  exportType: string;
+  purpose: string;
+  recipient: string;
+  requestState: string;
+  manifestHash: string | null;
+  updatedAt: string;
+}
+
+/**
+ * Exports that have been agreed to and now have to be carried out.
+ *
+ * Approving was the end of the road. Nothing listed an approved request,
+ * so the package was never put together and the delivery was never
+ * recorded — a participant who asked for a copy of their own information
+ * could be told truthfully that it had been agreed to and never hear
+ * another thing, because no screen anywhere could take the next step.
+ *
+ * Read under `export.generate`, the action that already permits carrying
+ * one out: if you may do the work, you may see what is waiting to be
+ * done. Deciding an export is a different job with a different action,
+ * and this queue is not that one.
+ *
+ * `Received` is deliberately absent. It is the end of the sequence, and
+ * leaving finished work in a list of work to do is how a queue stops
+ * being read.
+ */
+export async function listExportsToCarryOut(deps: M14Deps, ctx: RequestContext): Promise<ExportToCarryOut[]> {
+  const decision = await deps.checkPermission(ctx, {
+    action: 'export.generate',
+    resource: { type: 'ExportRequest', id: 'queue', state: 'Approved', protectedExistence: false },
+  });
+  assertAllowed(decision, false);
+  const res = await deps.pool.query(
+    `SELECT r.id, r.export_type, r.purpose, r.recipient, r.request_state, r.updated_at, p.manifest_hash
+       FROM reporting_submission.export_requests r
+       LEFT JOIN reporting_submission.export_packages p ON p.export_request_id = r.id
+      WHERE r.request_state IN ('Approved', 'Generated', 'Delivered')
+      ORDER BY r.updated_at ASC`,
+  );
+  return res.rows.map((r) => ({
+    exportRequestId: r.id as string,
+    exportType: r.export_type as string,
+    purpose: r.purpose as string,
+    recipient: r.recipient as string,
+    requestState: r.request_state as string,
+    manifestHash: (r.manifest_hash as string | null) ?? null,
+    updatedAt: (r.updated_at as Date).toISOString(),
+  }));
+}
+
 /** Approver work queue: export requests awaiting a decision. */
 export async function listPendingExportRequests(
   deps: M14Deps,

@@ -110,6 +110,15 @@ export interface PendingExportItem {
   restrictions: string;
   requestedByActorId: string;
 }
+export interface ExportToCarryOutItem {
+  exportRequestId: string;
+  exportType: string;
+  purpose: string;
+  recipient: string;
+  requestState: string;
+  manifestHash: string | null;
+  updatedAt: string;
+}
 export interface ModerationCaseItem {
   moderationCaseId: string;
   subjectActorId: string;
@@ -181,6 +190,16 @@ export const staffApi = {
   listPendingApprovals: (s: StaffSession) => get<List<PendingApprovalItem>>(s, '/v1/approvals/pending'),
   listLockableDatasetVersions: (s: StaffSession) => get<List<LockableVersion>>(s, '/v1/dataset-versions/lockable'),
   listPendingExports: (s: StaffSession) => get<List<PendingExportItem>>(s, '/v1/export-requests/pending'),
+  listExportsToCarryOut: (s: StaffSession) =>
+    get<List<ExportToCarryOutItem>>(s, '/v1/export-requests/to-carry-out'),
+  generateExportPackage: (s: StaffSession, exportRequestId: string) =>
+    post(s, `/v1/export-requests/${exportRequestId}/generate`, {}),
+  /**
+   * A record of what a person did, not something the platform performs.
+   * Generated is not Delivered and Delivered is not Received.
+   */
+  recordExportDelivery: (s: StaffSession, exportRequestId: string, state: 'Delivered' | 'Received') =>
+    post(s, `/v1/export-requests/${exportRequestId}/delivery`, { state }),
   listEnrolments: (s: StaffSession, researchProjectId?: string) =>
     get<List<EnrolmentItem>>(
       s,

@@ -800,3 +800,13 @@
   code: [packages/modules/m14-reporting/src/application/queries.ts, apps/web/src/staff-api.ts, apps/web/src/components/approver/ExportDecisions.tsx]
   tests: [packages/modules/m14-reporting/test/m14.integration.test.ts, apps/web/test/staff-queues.test.tsx]
   status: implemented
+
+- implementation_id: IMP-M14-EXPORT-CARRY-OUT-001
+  module: M14
+  summary: An approved export can now be carried out. Approving was the end of the road - the generate and delivery commands existed and had routes, but no query listed an approved request and no screen anywhere called them, so the package was never put together and the delivery was never recorded. A participant who asked for a copy of their own information could be told truthfully that it had been agreed to and then never hear another thing, not because anyone refused but because nothing could take the next step. Found by following the export path onward from the decision screen. Adds listExportsToCarryOut over the Approved, Generated and Delivered states, read under export.generate - the action that already permits doing the work, on the same reasoning as the archive lookup for contributors, since if you may do the work you may see what is waiting to be done, and deciding an export is a different job with a different action. Received is deliberately excluded, because leaving finished work in a list of work to do is how a queue stops being read. The screen keeps the three delivery states apart in words as Doc 16 section 37.3 requires - Approved says the package has not been put together, Generated says it exists and nothing has been handed over, Delivered says the recipient has not confirmed it - and the manifest hash appears only once there is one. The control that records delivery is labelled as recording what a person did rather than as delivering, because the platform sends nothing and a button called Deliver would claim a transfer that happened elsewhere if at all. Export expiry remains unimplemented - no command or column carries it
+  trace_ids: [ATR-021, ATR-002]
+  adr_ids: [ADR-051, ADR-050]
+  docs: ["design/RESEARCHER_WORKSPACE.md C17", "UI_INVENTORY.md C17", "Doc 16 section 37.3", "Doc 20 section 91"]
+  code: [packages/modules/m14-reporting/src/application/queries.ts, packages/modules/m14-reporting/src/index.ts, apps/api/src/staff-controllers.ts, apps/web/src/staff-api.ts, apps/web/src/components/ExportsToCarryOut.tsx, apps/web/src/components/StaffResearcherPanel.tsx]
+  tests: [packages/modules/m14-reporting/test/m14.integration.test.ts, apps/web/test/exports-to-carry-out.test.tsx]
+  status: implemented

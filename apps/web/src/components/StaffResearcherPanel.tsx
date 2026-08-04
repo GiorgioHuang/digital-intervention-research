@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { staffActionError } from '../errors.js';
 import { staffApi, type StaffSession } from '../staff-api.js';
+import { ExportsToCarryOut } from './ExportsToCarryOut.js';
 
 /**
  * Researcher workspace (M04/M14 slice): project + protocol drafting and
@@ -124,6 +125,13 @@ export function StaffResearcherPanel({ session }: { session: StaffSession }) {
           Submit export request
         </button>
       </p>
+
+      {/*
+        Approving used to be the end of the road: nothing listed an
+        approved request, so the package was never put together and the
+        delivery never recorded.
+      */}
+      <ExportsToCarryOut session={session} />
 
       <p aria-live="polite" role="status">
         {announcement}

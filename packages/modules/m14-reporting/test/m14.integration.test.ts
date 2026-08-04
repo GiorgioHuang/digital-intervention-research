@@ -19,6 +19,7 @@ import {
   decideExport,
   draftReportVersion,
   generateExportPackage,
+  listExportsToCarryOut,
   listMyExportRequests,
   listPendingExportRequests,
   recordExportDelivery,
@@ -196,6 +197,51 @@ describe.skipIf(!dbAvailable)('M14 reporting and export (integration)', () => {
    * already imposed on the request is one of them - without it the
    * approver assumes the worst about what would be released.
    */
+  /**
+   * Approving used to be the end of the road: nothing listed an approved
+   * request, so the package was never put together and the delivery
+   * never recorded. Someone could be told truthfully that their request
+   * was agreed to and never hear another thing.
+   */
+  it('an agreed export appears in the work queue, and leaves it when it is finished', async () => {
+    const { exportRequestId } = await requestParticipantExport(m14, ctx(patAcc), {
+      participantId: patId, purpose: 'a copy for me', confirmed: true,
+    });
+    // Not yet decided, so it is not work for anyone.
+    expect((await listExportsToCarryOut(m14, ctx(researcherId))).map((e) => e.exportRequestId)).not.toContain(
+      exportRequestId,
+    );
+
+    await decideExport(m14, ctx(approverId, 'mfa'), { exportRequestId, decision: 'Approved', confirmed: true });
+    const waiting = (await listExportsToCarryOut(m14, ctx(researcherId))).find(
+      (e) => e.exportRequestId === exportRequestId,
+    );
+    expect(waiting?.requestState).toBe('Approved');
+    // Nothing exists yet, and the queue does not pretend otherwise.
+    expect(waiting?.manifestHash).toBeNull();
+
+    await generateExportPackage(m14, ctx(researcherId), { exportRequestId });
+    const generated = (await listExportsToCarryOut(m14, ctx(researcherId))).find(
+      (e) => e.exportRequestId === exportRequestId,
+    );
+    expect(generated?.requestState).toBe('Generated');
+    expect(generated?.manifestHash).toMatch(/^[0-9a-f]{64}$/);
+
+    await recordExportDelivery(m14, ctx(researcherId), { exportRequestId, state: 'Delivered' });
+    await recordExportDelivery(m14, ctx(researcherId), { exportRequestId, state: 'Received' });
+    // Finished work leaves the list; a queue that keeps completed items
+    // stops being read.
+    expect((await listExportsToCarryOut(m14, ctx(researcherId))).map((e) => e.exportRequestId)).not.toContain(
+      exportRequestId,
+    );
+
+    // Read under the action that already permits doing the work; deciding
+    // an export is a different job with a different action.
+    await expect(listExportsToCarryOut(m14, ctx(patAcc))).rejects.toMatchObject({
+      code: 'AUTHORISATION_DENIED',
+    });
+  });
+
   it('the approver queue carries the limits already applied to a request', async () => {
     const pending = await listPendingExportRequests(m14, ctx(approverId));
     const portability = pending.find((p) => p.exportType === 'ParticipantPortability');

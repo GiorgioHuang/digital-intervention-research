@@ -46,6 +46,7 @@ import {
   decideExport,
   draftReportVersion,
   generateExportPackage,
+  listExportsToCarryOut,
   listPendingExportRequests,
   recordExportDelivery,
   requestResearchExport,
@@ -136,6 +137,19 @@ export class StaffCommandController {
     const ctx = requireActor(req);
     const items = await listLockableDatasetVersions(this.deps.m12, ctx);
     return { data: items.map((i) => ({ type: 'DatasetVersion', id: i.datasetVersionId, attributes: i })) };
+  }
+
+  /**
+   * Exports already agreed to, which still have to be carried out.
+   * Approving used to be the end of the road: nothing listed an approved
+   * request, so the package was never put together and the delivery
+   * never recorded.
+   */
+  @Get('export-requests/to-carry-out')
+  async exportsToCarryOut(@Req() req: Request) {
+    const ctx = requireActor(req);
+    const items = await listExportsToCarryOut(this.deps.m14, ctx);
+    return { data: items.map((i) => ({ type: 'ExportRequest', id: i.exportRequestId, attributes: i })) };
   }
 
   @Get('export-requests/pending')
