@@ -162,9 +162,12 @@ const STAFF_BY_CODE: Record<string, { reason: string; nextStep: string }> = {
     nextStep: 'enter it in the notice at the top of the page, then repeat the action',
   },
   AUTHORISATION_DENIED: {
-    reason:
-      'your current role and scope do not carry this action — for approvals this is usually separation of duties, because the approver cannot be the person who submitted the artefact',
-    nextStep: 'ask a colleague who holds the permission to decide it',
+    // Deliberately generic: this entry is reached by reads as well as
+    // commands. Separation of duties explains a refused *decision*, never
+    // a refused *listing*, so that explanation belongs in the command
+    // override below rather than here.
+    reason: 'your current role and scope do not carry it',
+    nextStep: 'check with whoever administers roles in your organisation',
   },
   STEP_UP_AUTHENTICATION_REQUIRED: {
     reason: 'this action is in the strong-authentication tier',
@@ -212,6 +215,21 @@ export function staffLoadError(err: unknown, what: string): string {
 }
 
 /**
+ * Codes whose cause differs between reading and commanding. A refused
+ * listing is a role-and-scope fact; a refused decision is usually
+ * separation of duties. Saying the latter on a failed queue load — which
+ * the shared table did at first — sends the reader looking for a conflict
+ * of interest that has nothing to do with why the list would not load.
+ */
+const STAFF_COMMAND_OVERRIDES: Record<string, { reason: string; nextStep: string }> = {
+  AUTHORISATION_DENIED: {
+    reason:
+      'your current role and scope do not carry this action — for a decision this is usually separation of duties, because the approver cannot be the person who submitted the artefact',
+    nextStep: 'ask a colleague who holds the permission to decide it',
+  },
+};
+
+/**
  * A command that did not succeed. The distinction that matters to an
  * approver is whether the decision landed: a rejected command definitely
  * did not, an unreachable server is genuinely unknown, and this says so
@@ -222,7 +240,7 @@ export function staffActionError(err: unknown, what: string): string {
     return `${what} did not complete: the server could not be reached, so whether it took effect is unknown. Reload the queue to check before trying again. (NETWORK)`;
   }
   const code = err.error?.code ?? 'UNKNOWN';
-  const mapped = STAFF_BY_CODE[code];
+  const mapped = STAFF_COMMAND_OVERRIDES[code] ?? STAFF_BY_CODE[code];
   if (mapped === undefined) {
     return `${what} did not complete: the cause is not one this screen recognises, and whether it took effect is unknown. Reload the queue to check rather than repeating it. (${code})`;
   }

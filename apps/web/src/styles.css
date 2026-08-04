@@ -683,9 +683,16 @@ body:has(.nav-primary) main {
 
 /* 纯动作行不需要列表符号：符号与整行按钮并存只是噪音 */
 main li:has(> button):not(:has(> :not(button))) { list-style: none; }
-main ul:not([class]) > li:has(> button) { margin-inline-start: calc(var(--space-5) * -1); }
+/* 负外边距是为了把「整行按钮」的任务清单拉回正文左缘，抵消 ul 的缩进。
+   它只对纵向清单成立：导航的 ul 是横向 flex，同一条规则会把每一项往左
+   拽 --space-5，于是相邻项互相重叠——员工审批屏的四个决策标签就这样叠
+   在了一起。因此排除 nav 内的列表（导航从不需要这种对齐）。 */
+main ul:not([class]):not(nav ul) > li:has(> button) {
+  margin-inline-start: calc(var(--space-5) * -1);
+}
 
 main ul { padding-inline-start: var(--space-5); }
+main nav ul { padding-inline-start: 0; }
 main ul:not([class]) > li { max-width: var(--measure-default); }
 
 /* ---------- 10. 状态呈现：图标 + 文字 + 颜色 + 结构 (§B.1 / §E) ---------- */

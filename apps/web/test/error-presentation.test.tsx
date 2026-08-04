@@ -107,6 +107,21 @@ describe('error presentation', () => {
     expect(unmapped).toContain('rather than repeating it');
   });
 
+  /**
+   * A refused listing and a refused decision have different causes. The
+   * shared table gave both the decision explanation at first, which sent
+   * a reader whose queue would not load looking for a conflict of
+   * interest that was never the reason.
+   */
+  it('separation of duties explains a refused decision, never a refused listing', () => {
+    const load = staffLoadError(apiError('AUTHORISATION_DENIED', 403), 'pending work');
+    expect(load).not.toContain('separation of duties');
+    expect(load).toContain('role and scope');
+    expect(staffActionError(apiError('AUTHORISATION_DENIED', 403), 'Approve export')).toContain(
+      'separation of duties',
+    );
+  });
+
   it('a staff read failure states plainly that a read changed nothing', () => {
     const line = staffLoadError(apiError('RESOURCE_NOT_FOUND', 404), 'pending work');
     expect(line).toContain('Could not load pending work');
