@@ -35,6 +35,7 @@ import {
   confirmTestimony,
   createArchive,
   createItem,
+  getMyLifeStory,
   listContributionsAwaitingReview,
   listMyContributions,
   proposeContribution,
@@ -534,6 +535,21 @@ export class CommandController {
     if (body.itemId !== undefined) input.itemId = body.itemId;
     const result = await proposeContribution(this.deps.m17, ctx, input);
     return { data: { type: 'LifeStoryContribution', id: result.contributionId, meta: { state: 'Proposed' } } };
+  }
+
+  /**
+   * A participant reading their own life story. Owner-only: this is not a
+   * staff-readable resource, and sharing it with anyone else runs through
+   * visibility and access grants rather than through this route.
+   */
+  @Get('participants/:participantId/life-story')
+  async myLifeStory(@Req() req: Request, @Param('participantId') participantId: string) {
+    const ctx = requireActor(req);
+    const story = await getMyLifeStory(this.deps.m17, ctx, participantId);
+    return {
+      data: story.items.map((i) => ({ type: 'LifeStoryItem', id: i.itemId, attributes: i })),
+      meta: { archiveId: story.archiveId },
+    };
   }
 
   @Get('life-story/contributions/mine')

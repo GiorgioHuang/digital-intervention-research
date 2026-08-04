@@ -189,7 +189,40 @@ export interface ContributionAwaitingReview {
   createdAt: string;
 }
 
+export interface MyLifeStoryItem {
+  itemId: string;
+  title: string;
+  itemState: string;
+  visibility: string;
+  currentVersionId: string | null;
+  versionNumber: number | null;
+  contentText: string | null;
+  sourceType: string | null;
+  testimonyState: string | null;
+  supersedesConfirmedVersion: boolean;
+  versionCount: number;
+  updatedAt: string;
+}
+
 export const api = {
+  getMyLifeStory: (s: Session) =>
+    get<{ data: { id: string; attributes: MyLifeStoryItem }[]; meta: { archiveId: string | null } }>(
+      s,
+      `/v1/participants/${s.participantId}/life-story`,
+    ),
+  createLifeStoryArchive: (s: Session) =>
+    post<{ data: { id: string } }>(s, `/v1/life-story/archives`, { participantId: s.participantId }),
+  createLifeStoryItem: (s: Session, archiveId: string, title: string, contentText: string) =>
+    post(s, `/v1/life-story/archives/${archiveId}/items`, {
+      title,
+      contentText,
+      // Written by the participant in their own words. Never AIDraft here:
+      // this screen has no drafting assistant (D-14), so claiming one wrote
+      // it would be a false provenance record.
+      sourceType: 'ParticipantAuthored',
+    }),
+  confirmTestimony: (s: Session, itemId: string, versionId: string) =>
+    post(s, `/v1/life-story/items/${itemId}/confirm-testimony`, { versionId, confirmed: true }),
   listContributionsAwaitingReview: (s: Session) =>
     get<{ data: { id: string; attributes: ContributionAwaitingReview }[] }>(
       s,

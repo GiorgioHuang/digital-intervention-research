@@ -99,6 +99,7 @@ export const POLICY_V1: PolicyConfiguration = {
       'participant.export',
       'enrolment.view-own',
       'enrolment.withdraw',
+      'life-story.view-own',
       'life-story.create',
       'life-story.edit',
       'life-story.confirm-testimony',
@@ -255,6 +256,14 @@ export const POLICY_V1: PolicyConfiguration = {
     'relationship.approve': { ownerPermitted: true, ownerOnly: true, confirmationRequired: true },
     'relationship.revoke': { ownerPermitted: true, ownerOnly: true },
 
+    /**
+     * Reading one's own life story. There was no read action at all: a
+     * participant could create, edit, confirm and withdraw items but
+     * nothing let them look at what was there. `ownerOnly` because a life
+     * story is not staff-readable by role — sharing it with anyone else
+     * goes through visibility and access grants, not through this action.
+     */
+    'life-story.view-own': { ownerPermitted: true, ownerOnly: true },
     'life-story.create': { ownerPermitted: true, ownerOnly: true },
     'life-story.edit': { ownerPermitted: true, ownerOnly: true },
     'life-story.confirm-testimony': { ownerPermitted: true, ownerOnly: true, confirmationRequired: true },

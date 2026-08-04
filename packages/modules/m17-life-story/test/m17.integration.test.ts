@@ -24,6 +24,7 @@ import {
   confirmTestimony,
   createArchive,
   createItem,
+  getMyLifeStory,
   listContributionsAwaitingReview,
   proposeContribution,
   reviewContribution,
@@ -280,6 +281,31 @@ describe.skipIf(!dbAvailable)('M17 Life Story (integration)', () => {
     ).rejects.toMatchObject({ code: 'RESOURCE_NOT_FOUND' });
   });
 
+  /**
+   * There was no read path at all before this. The story could be written
+   * to, confirmed, reshaped and contributed to, and nobody could look at
+   * it — including the person whose story it is.
+   */
+  it('the participant reads their own story, with provenance intact; nobody else can read it', async () => {
+    const story = await getMyLifeStory(m17, ctx(participantAccountId), participantId);
+    expect(story.archiveId).toBe(archiveId);
+    const item = story.items.find((i) => i.itemId === itemId);
+    // The current version is the accepted supporter contribution, which is
+    // not testimony — and the earlier confirmation is not silently carried
+    // onto it, but is not hidden either.
+    expect(item?.sourceType).toBe('SupporterContribution');
+    expect(item?.testimonyState).toBe('NotTestimony');
+    expect(item?.supersedesConfirmedVersion).toBe(true);
+    expect(item?.versionCount).toBe(3);
+    expect(item?.visibility).toBe('Selected People');
+
+    for (const actor of [supporterId, coordinatorId, adminId]) {
+      await expect(getMyLifeStory(m17, ctx(actor), participantId)).rejects.toMatchObject({
+        code: 'RESOURCE_NOT_FOUND',
+      });
+    }
+  });
+
   it('withdrawal resets visibility to Private, revokes grants, emits event; history preserved', async () => {
     await pool.query(
       `INSERT INTO life_story.access_grants (id, item_id, grantee_actor_id) VALUES ('ag_1', $1, $2)`,
@@ -301,6 +327,19 @@ describe.skipIf(!dbAvailable)('M17 Life Story (integration)', () => {
     await expect(
       reviseItem(m17, ctx(participantAccountId), { itemId, contentText: 'x', sourceType: 'ParticipantAuthored' }),
     ).rejects.toMatchObject({ code: 'RESOURCE_STATE_BLOCKED' });
+  });
+
+  /**
+   * Withdrawal takes an item away from everyone else. It must not take it
+   * away from the person who wrote it — that would be the platform
+   * deciding they may not remember their own past.
+   */
+  it('a withdrawn item is still readable by its owner, and says it was withdrawn', async () => {
+    const story = await getMyLifeStory(m17, ctx(participantAccountId), participantId);
+    const item = story.items.find((i) => i.itemId === itemId);
+    expect(item?.itemState).toBe('Withdrawn');
+    expect(item?.visibility).toBe('Private');
+    expect(item?.contentText).not.toBeNull();
   });
 });
 
