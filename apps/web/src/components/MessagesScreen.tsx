@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { api, PlatformApiError, type ConnectionSummary, type Session, type ThreadSummary } from '../api.js';
+import { api, type ConnectionSummary, type Session, type ThreadSummary } from '../api.js';
+import { presentError, type PresentedError } from '../errors.js';
+import { ErrorState } from './StateBlock.js';
 import { MessagePanel } from './MessagePanel.js';
 
 /**
@@ -10,6 +12,7 @@ import { MessagePanel } from './MessagePanel.js';
  */
 export function MessagesScreen({ session }: { session: Session }) {
   const [threads, setThreads] = useState<ThreadSummary[] | null>(null);
+  const [actionError, setActionError] = useState<PresentedError | null>(null);
   const [connections, setConnections] = useState<ConnectionSummary[] | null>(null);
   const [active, setActive] = useState<ThreadSummary | null>(null);
   const [announcement, setAnnouncement] = useState('');
@@ -21,7 +24,7 @@ export function MessagesScreen({ session }: { session: Session }) {
       setConnections(c.data.map((x) => x.attributes));
       setAnnouncement('已更新。');
     } catch (err) {
-      setAnnouncement(err instanceof PlatformApiError ? `未能获取列表：${err.error.code}` : '网络错误');
+      setActionError(presentError(err));
     }
   };
 
@@ -39,7 +42,7 @@ export function MessagesScreen({ session }: { session: Session }) {
       setActive(thread);
       setAnnouncement('会话已创建。');
     } catch (err) {
-      setAnnouncement(err instanceof PlatformApiError ? `未能创建会话：${err.error.code}` : '网络错误');
+      setActionError(presentError(err));
     }
   };
 
@@ -91,6 +94,7 @@ export function MessagesScreen({ session }: { session: Session }) {
           </ul>
         </section>
       )}
+      {actionError !== null && <ErrorState error={actionError} />}
       <p aria-live="polite" role="status">
         {announcement}
       </p>

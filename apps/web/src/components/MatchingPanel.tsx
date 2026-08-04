@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { api, PlatformApiError, type MatchCandidateSummary, type Session } from '../api.js';
+import { api, type MatchCandidateSummary, type Session } from '../api.js';
+import { presentError, type PresentedError } from '../errors.js';
+import { ErrorState } from './StateBlock.js';
 
 type Decision = 'Interested' | 'Not Now' | 'Dismissed';
 const DECISION_LABELS: Record<Decision, string> = {
@@ -19,6 +21,7 @@ const DECISION_LABELS: Record<Decision, string> = {
  */
 export function MatchingPanel({ session }: { session: Session }) {
   const [interests, setInterests] = useState('');
+  const [actionError, setActionError] = useState<PresentedError | null>(null);
   const [candidates, setCandidates] = useState<MatchCandidateSummary[] | null>(null);
   const [pending, setPending] = useState<{ candidate: MatchCandidateSummary; decision: Decision } | null>(null);
   const [mutualAcceptanceId, setMutualAcceptanceId] = useState<string | null>(null);
@@ -30,7 +33,7 @@ export function MatchingPanel({ session }: { session: Session }) {
       await fn();
       setAnnouncement(done);
     } catch (err) {
-      setAnnouncement(err instanceof PlatformApiError ? `未成功：${err.error.code}` : '网络错误，未提交');
+      setActionError(presentError(err));
     }
   };
 
@@ -40,7 +43,7 @@ export function MatchingPanel({ session }: { session: Session }) {
       setCandidates(res.data.map((c) => c.attributes));
       setAnnouncement(res.data.length === 0 ? '目前没有新的推荐。没有推荐也完全没关系。' : '推荐已更新。');
     } catch (err) {
-      setAnnouncement(err instanceof PlatformApiError ? `未能获取推荐：${err.error.code}` : '网络错误');
+      setActionError(presentError(err));
     }
   };
 
@@ -63,7 +66,7 @@ export function MatchingPanel({ session }: { session: Session }) {
         );
       }
     } catch (err) {
-      setAnnouncement(err instanceof PlatformApiError ? `未成功：${err.error.code}` : '网络错误，未提交');
+      setActionError(presentError(err));
     }
   };
 
@@ -158,6 +161,7 @@ export function MatchingPanel({ session }: { session: Session }) {
         </section>
       )}
 
+      {actionError !== null && <ErrorState error={actionError} />}
       <p aria-live="polite" role="status">
         {announcement}
       </p>

@@ -580,3 +580,13 @@
   code: [apps/web/src/styles.css, apps/web/src/App.tsx]
   tests: [apps/web/test/consent-panel.test.tsx, apps/web/test/community-panel.test.tsx]
   status: implemented
+
+- implementation_id: IMP-WEB-ERROR-STATES-001
+  module: ops
+  summary: Honest error and empty states in the participant workspace - a mapping layer turns platform error codes into four things a person can use (what happened, what survived, what did not happen, what to do next) with the code itself collapsed for support instead of shown as the message; protected-existence denials keep wording that fits both a wrong identifier and a resource not open to this person, so the screen never confirms existence; an unmapped code admits the outcome is unknown and says not to resubmit rather than guessing; loading and empty are stated as different facts; severity maps to the semantic families with safety-critical distinct from destructive, and every state carries an icon plus words so it survives greyscale (load-bearing now that Safety is blue); the API exception filter previously discarded unexpected failures with no server-side record, so a 500 left nothing to diagnose - it now logs the redacted stack while the client still receives only INTERNAL_ERROR
+  trace_ids: [ATR-022, ATR-023]
+  adr_ids: [ADR-050, ADR-122]
+  docs: ["design/DESIGN_SYSTEM.md §E", "Doc 20 §224-237", "Doc 14 §61"]
+  code: [apps/web/src/errors.ts, apps/web/src/components/StateBlock.tsx, apps/web/src/components/CommunityPanel.tsx, apps/api/src/error-filter.ts]
+  tests: [apps/web/test/error-presentation.test.tsx, apps/web/test/community-panel.test.tsx]
+  status: implemented

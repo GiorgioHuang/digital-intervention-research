@@ -2,6 +2,9 @@ import { Catch, HttpException, type ArgumentsHost, type ExceptionFilter } from '
 import type { Response } from 'express';
 import type { PlatformRequest } from './http-context.js';
 import { isPlatformError } from '@platform/kernel';
+import { createLogger } from './logger.js';
+
+const logger = createLogger('error', 'api-errors');
 
 /**
  * Doc 15 §30 error envelope: {error: {code, message, details, requestId,
@@ -34,6 +37,21 @@ export class PlatformErrorFilter implements ExceptionFilter {
       });
       return;
     }
+    // An unexpected failure that leaves no trace server-side cannot be
+    // diagnosed later: the client is told INTERNAL_ERROR by design (Doc 14
+    // §61 — no internals leak), so the stack has to be recorded here or it
+    // is lost. Redacted, like every other log line.
+    // createLogger already applies kernel redaction to every object.
+    logger.error(
+      {
+        requestId,
+        traceId,
+        method: req.method,
+        path: req.originalUrl,
+        err: exception instanceof Error ? { name: exception.name, message: exception.message, stack: exception.stack } : String(exception),
+      },
+      'Unhandled error',
+    );
     res.status(500).json({
       error: { code: 'INTERNAL_ERROR', message: 'Internal error', details: [], requestId, traceId, retryable: true },
     });

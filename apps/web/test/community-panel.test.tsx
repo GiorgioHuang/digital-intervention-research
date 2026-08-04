@@ -119,7 +119,18 @@ describe('CommunityPanel (optional community, versioned rules, chronological fee
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: '同意规则并加入' }));
     });
-    expect(screen.getByRole('status').textContent).toContain('社区参与');
+    // A blocked action is announced as an alert, not a passive status
+    // line, and it names the one thing the person can act on rather than
+    // an error code. The code stays available for support, collapsed.
+    const alert = screen.getByRole('alert');
+    expect(alert.textContent).toContain('社区参与');
+    expect(alert.textContent).toContain('我的同意选择');
+    // The code is present for support but starts collapsed, so the person
+    // reads guidance rather than AUTHORISATION_DENIED.
+    const details = alert.querySelector('details');
+    expect(details).not.toBeNull();
+    expect(details!.open).toBe(false);
+    expect(details!.textContent).toContain('AUTHORISATION_DENIED');
   });
 
   it('a member opens the chronological feed and drafts stay private until confirmed publish', async () => {

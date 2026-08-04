@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { api, PlatformApiError, type Session } from '../api.js';
+import { api, type Session } from '../api.js';
+import { presentError, type PresentedError } from '../errors.js';
+import { ErrorState } from './StateBlock.js';
 
 /**
  * Block & Report (Doc 20; ADR-037/038): blocking is the participant's own
@@ -10,6 +12,7 @@ import { api, PlatformApiError, type Session } from '../api.js';
  */
 export function SafetyPanel({ session }: { session: Session }) {
   const [report, setReport] = useState({ actorId: '', category: 'harassment', description: '' });
+  const [actionError, setActionError] = useState<PresentedError | null>(null);
   const [blockTarget, setBlockTarget] = useState('');
   const [confirmingBlock, setConfirmingBlock] = useState(false);
   const [concern, setConcern] = useState('');
@@ -20,7 +23,7 @@ export function SafetyPanel({ session }: { session: Session }) {
       await fn();
       setAnnouncement(done);
     } catch (err) {
-      setAnnouncement(err instanceof PlatformApiError ? `未成功：${err.error.code}` : '网络错误，未提交');
+      setActionError(presentError(err));
     }
   };
 
@@ -131,6 +134,7 @@ export function SafetyPanel({ session }: { session: Session }) {
         </p>
       </section>
 
+      {actionError !== null && <ErrorState error={actionError} />}
       <p aria-live="polite" role="status">
         {announcement}
       </p>

@@ -7,6 +7,8 @@ import {
   type OwnPostSummary,
   type Session,
 } from '../api.js';
+import { presentError, type PresentedError } from '../errors.js';
+import { EmptyState, ErrorState, LoadingState } from './StateBlock.js';
 
 /**
  * Community screen (Doc 20; ADR-113): joining is optional and gated on the
@@ -37,15 +39,26 @@ export function CommunityPanel({ session }: { session: Session }) {
   const [composeText, setComposeText] = useState('');
   const [publishing, setPublishing] = useState<OwnPostSummary | null>(null);
   const [announcement, setAnnouncement] = useState('');
+  // Distinguish "not loaded yet" from "loaded and empty": a blank area
+  // that silently means "still loading" misreports the system state.
+  const [spacesLoading, setSpacesLoading] = useState(true);
+  const [spacesError, setSpacesError] = useState<PresentedError | null>(null);
+  const [feedLoading, setFeedLoading] = useState(false);
+  const [feedError, setFeedError] = useState<PresentedError | null>(null);
+  const [actionError, setActionError] = useState<PresentedError | null>(null);
 
   const loadSpaces = useCallback(async () => {
+    setSpacesLoading(true);
+    setSpacesError(null);
     try {
       const res = await api.listCommunitySpaces(session);
       setSpaces(res.data.map((s) => s.attributes));
       if (res.data.length === 0) setAnnouncement('目前还没有开放的社区。');
     } catch (err) {
       setSpaces([]);
-      setAnnouncement(err instanceof PlatformApiError ? `未能获取社区列表：${err.error.code}` : '网络错误');
+      setSpacesError(presentError(err));
+    } finally {
+      setSpacesLoading(false);
     }
   }, [session]);
 
@@ -66,13 +79,17 @@ export function CommunityPanel({ session }: { session: Session }) {
   const openFeed = async (space: CommunitySpaceSummary) => {
     setOpenSpace(space);
     setFeed(null);
+    setFeedLoading(true);
+    setFeedError(null);
     try {
       const res = await api.listCommunityFeed(session, space.spaceId);
       setFeed(res.data.map((p) => p.attributes));
       setAnnouncement(res.data.length === 0 ? '这个社区还没有帖子。' : '帖子已按时间顺序显示。');
     } catch (err) {
       setFeed([]);
-      setAnnouncement(err instanceof PlatformApiError ? `未能打开社区：${err.error.code}` : '网络错误');
+      setFeedError(presentError(err));
+    } finally {
+      setFeedLoading(false);
     }
   };
 
@@ -80,28 +97,40 @@ export function CommunityPanel({ session }: { session: Session }) {
     if (joining === null) return;
     const space = joining;
     setJoining(null);
+    setActionError(null);
     try {
       await api.joinCommunity(session, space.spaceId, space.ruleVersionId);
       setAnnouncement(`已加入「${space.name}」。你随时可以停止参与，这不影响其他功能。`);
       await loadSpaces();
     } catch (err) {
+      // A consent-gated join denial arrives as a protected-existence 404,
+      // so the generic wording would send the person hunting for a wrong
+      // identifier. Name the one thing they can actually act on.
       if (err instanceof PlatformApiError && (err.status === 403 || err.status === 404)) {
-        setAnnouncement('未能加入：加入社区需要你先在「我的同意选择」中同意「社区参与」。');
+        setActionError({
+          severity: 2,
+          title: `现在还不能加入「${space.name}」`,
+          reassurance: '你没有被加入这个社区，也没有任何内容被发布。',
+          reason: '加入社区需要你先同意「社区参与」。',
+          nextStep: '去「我的同意选择」同意「社区参与」，然后再回来加入；你随时可以再改回去。',
+          code: err.error?.code ?? 'AUTHORISATION_DENIED',
+        });
       } else {
-        setAnnouncement(err instanceof PlatformApiError ? `未能加入：${err.error.code}` : '网络错误，未提交');
+        setActionError(presentError(err));
       }
     }
   };
 
   const draft = async () => {
     if (openSpace === null || composeText.trim() === '') return;
+    setActionError(null);
     try {
       await api.draftSocialPost(session, openSpace.spaceId, composeText.trim());
       setComposeText('');
       setAnnouncement('草稿已保存。只有你能看到；发布前需要你明确确认。');
       await loadMyPosts();
     } catch (err) {
-      setAnnouncement(err instanceof PlatformApiError ? `未能保存草稿：${err.error.code}` : '网络错误，未提交');
+      setActionError(presentError(err));
     }
   };
 
@@ -109,13 +138,14 @@ export function CommunityPanel({ session }: { session: Session }) {
     if (publishing === null) return;
     const post = publishing;
     setPublishing(null);
+    setActionError(null);
     try {
       await api.publishSocialPost(session, post.postId);
       setAnnouncement('已发布。社区成员现在可以看到这条帖子。');
       await loadMyPosts();
       if (openSpace !== null && openSpace.spaceId === post.spaceId) await openFeed(openSpace);
     } catch (err) {
-      setAnnouncement(err instanceof PlatformApiError ? `未能发布：${err.error.code}` : '网络错误，未提交');
+      setActionError(presentError(err));
     }
   };
 
@@ -135,7 +165,11 @@ export function CommunityPanel({ session }: { session: Session }) {
         <p>
           <button onClick={() => void loadSpaces()}>刷新列表</button>
         </p>
-        {spaces !== null && spaces.length === 0 && <p>目前还没有开放的社区。</p>}
+        {spacesLoading && <LoadingState label="正在获取社区列表…" />}
+        {spacesError !== null && <ErrorState error={spacesError} />}
+        {!spacesLoading && spacesError === null && spaces !== null && spaces.length === 0 && (
+          <EmptyState title="目前还没有开放的社区" detail="有新的社区开放时，会出现在这里。" />
+        )}
         {spaces !== null && spaces.length > 0 && (
           <ul style={{ listStyle: 'none', padding: 0 }}>
             {spaces.map((s) => (
@@ -170,7 +204,11 @@ export function CommunityPanel({ session }: { session: Session }) {
         <section aria-labelledby="feed-heading">
           <h3 id="feed-heading">「{openSpace.name}」的帖子</h3>
           <p>帖子按时间从新到旧显示。</p>
-          {feed !== null && feed.length === 0 && <p>这个社区还没有帖子。</p>}
+          {feedLoading && <LoadingState label="正在获取帖子…" />}
+          {feedError !== null && <ErrorState error={feedError} />}
+          {!feedLoading && feedError === null && feed !== null && feed.length === 0 && (
+            <EmptyState title="这个社区还没有帖子" detail="你可以在下面写第一条。" />
+          )}
           {feed !== null && feed.length > 0 && (
             <ul style={{ listStyle: 'none', padding: 0 }}>
               {feed.map((p) => (
@@ -233,6 +271,7 @@ export function CommunityPanel({ session }: { session: Session }) {
         </section>
       )}
 
+      {actionError !== null && <ErrorState error={actionError} />}
       <p aria-live="polite" role="status">
         {announcement}
       </p>

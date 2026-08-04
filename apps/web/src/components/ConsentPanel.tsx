@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { api, PlatformApiError, type Session } from '../api.js';
+import { api, type Session } from '../api.js';
+import { presentError, type PresentedError } from '../errors.js';
+import { ErrorState } from './StateBlock.js';
 
 /**
  * Granular consent (Doc 20 consent UX rules): one concept per choice, no
@@ -15,6 +17,7 @@ const SCOPES: { scope: string; label: string; description: string }[] = [
 
 export function ConsentPanel({ session }: { session: Session }) {
   const [status, setStatus] = useState<Record<string, string>>({});
+  const [actionError, setActionError] = useState<PresentedError | null>(null);
   const [pendingWithdrawal, setPendingWithdrawal] = useState<string | null>(null);
   const [announcement, setAnnouncement] = useState('');
 
@@ -24,7 +27,8 @@ export function ConsentPanel({ session }: { session: Session }) {
       setStatus((s) => ({ ...s, [scope]: done }));
       setAnnouncement(`${scope}：${done}`);
     } catch (err) {
-      const msg = err instanceof PlatformApiError ? `未成功：${err.error.code}` : '网络错误，未做任何更改';
+      setActionError(presentError(err));
+      const msg = '';
       setStatus((s) => ({ ...s, [scope]: msg }));
       setAnnouncement(msg);
     }
@@ -67,6 +71,7 @@ export function ConsentPanel({ session }: { session: Session }) {
           </li>
         ))}
       </ul>
+      {actionError !== null && <ErrorState error={actionError} />}
       <p aria-live="polite" role="status">{announcement}</p>
     </section>
   );

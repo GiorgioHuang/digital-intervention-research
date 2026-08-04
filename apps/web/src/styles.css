@@ -706,6 +706,7 @@ main ul:not([class]) > li { max-width: var(--measure-default); }
 .state__actions { display: flex; flex-wrap: wrap; gap: var(--target-gap); }
 .state__detail { margin-block-start: var(--space-3); font-size: var(--type-size-1); }
 
+.state--neutral { background-color: var(--color-surface-raised); color: var(--color-text-secondary); border-inline-start-color: var(--color-border-default); }
 .state--info,       .badge--info       { background-color: var(--color-info-bg);       color: var(--color-info-fg);       border-inline-start-color: var(--color-info-border); }
 .state--success,    .badge--success    { background-color: var(--color-success-bg);    color: var(--color-success-fg);    border-inline-start-color: var(--color-success-border); }
 .state--warning,    .badge--warning    { background-color: var(--color-warning-bg);    color: var(--color-warning-fg);    border-inline-start-color: var(--color-warning-border); }

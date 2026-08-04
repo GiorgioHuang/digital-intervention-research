@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { api, DELIVERY_STATE_LABELS, PlatformApiError, type Session, type ThreadMessage } from '../api.js';
+import { api, DELIVERY_STATE_LABELS, type Session, type ThreadMessage } from '../api.js';
+import { presentError, type PresentedError } from '../errors.js';
+import { ErrorState } from './StateBlock.js';
 
 /**
  * Messaging composer (Doc 20 §158–161): saving a draft and sending are
@@ -18,6 +20,7 @@ export function MessagePanel({
   recipient: { participantId: string; displayName: string };
 }) {
   const [text, setText] = useState('');
+  const [actionError, setActionError] = useState<PresentedError | null>(null);
   const [draft, setDraft] = useState<{ id: string; version: number; text: string } | null>(null);
   const [reviewing, setReviewing] = useState(false);
   const [deliveryState, setDeliveryState] = useState<string | null>(null);
@@ -30,7 +33,7 @@ export function MessagePanel({
       setHistory(res.data.map((m) => m.attributes));
       setNotice(res.data.length === 0 ? '还没有消息。' : '消息记录已更新。');
     } catch (err) {
-      setNotice(err instanceof PlatformApiError ? `未能获取消息记录：${err.error.code}` : '网络错误');
+      setActionError(presentError(err));
     }
   };
 
@@ -42,7 +45,7 @@ export function MessagePanel({
       setDeliveryState('Not Submitted');
       setNotice('草稿已保存。尚未发送。');
     } catch (err) {
-      setNotice(err instanceof PlatformApiError ? `未成功：${err.error.code}` : '网络错误，草稿未保存');
+      setActionError(presentError(err));
     }
   };
 
@@ -54,7 +57,7 @@ export function MessagePanel({
       setDeliveryState(res.data.meta.deliveryState);
       setNotice('已确认发送。消息正在排队，尚未送达。');
     } catch (err) {
-      setNotice(err instanceof PlatformApiError ? `发送确认未成功：${err.error.code}` : '网络错误，消息未发送');
+      setActionError(presentError(err));
     }
   };
 
@@ -120,6 +123,7 @@ export function MessagePanel({
           当前状态：<strong>{DELIVERY_STATE_LABELS[deliveryState] ?? deliveryState}</strong>
         </p>
       )}
+      {actionError !== null && <ErrorState error={actionError} />}
       <p aria-live="polite" role="status">
         {notice}
       </p>
