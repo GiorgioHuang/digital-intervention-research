@@ -7,6 +7,13 @@ export interface LockableDatasetVersion {
   datasetDefinitionId: string;
   versionNumber: number;
   manifestHash: string;
+  /**
+   * Who approved the definition this version was generated from. Locking
+   * is not barred when that is the same person as the locker (decision
+   * D-11), but the locker should still be able to see the chain rather
+   * than take it on trust.
+   */
+  definitionApprovedByActorId: string | null;
   updatedAt: string;
 }
 
@@ -21,16 +28,19 @@ export async function listLockableDatasetVersions(
   });
   assertAllowed(decision, false);
   const res = await deps.pool.query(
-    `SELECT id, dataset_definition_id, version_number, manifest_hash, updated_at
-       FROM dataset_quality.dataset_versions
-      WHERE version_state = 'Quality Reviewed'
-      ORDER BY updated_at ASC`,
+    `SELECT v.id, v.dataset_definition_id, v.version_number, v.manifest_hash, v.updated_at,
+            d.approved_by_actor_id
+       FROM dataset_quality.dataset_versions v
+       JOIN dataset_quality.dataset_definitions d ON d.id = v.dataset_definition_id
+      WHERE v.version_state = 'Quality Reviewed'
+      ORDER BY v.updated_at ASC`,
   );
   return res.rows.map((r) => ({
     datasetVersionId: r.id as string,
     datasetDefinitionId: r.dataset_definition_id as string,
     versionNumber: r.version_number as number,
     manifestHash: r.manifest_hash as string,
+    definitionApprovedByActorId: r.approved_by_actor_id as string | null,
     updatedAt: (r.updated_at as Date).toISOString(),
   }));
 }

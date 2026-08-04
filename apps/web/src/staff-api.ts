@@ -70,6 +70,7 @@ export interface LockableVersion {
   datasetDefinitionId: string;
   versionNumber: number;
   manifestHash: string;
+  definitionApprovedByActorId: string | null;
 }
 export interface PendingExportItem {
   exportRequestId: string;

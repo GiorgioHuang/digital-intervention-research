@@ -169,6 +169,41 @@ describe('staff work queues replace manual identifier entry', () => {
     ).toBe(true);
   });
 
+  /**
+   * Decision D-11: the definition's approver may also lock the version.
+   * The screen has to say so — silence would leave someone who approved
+   * the definition guessing whether the button is theirs to press — and
+   * it still names the approver, because permitted is not invisible.
+   */
+  it('locking says plainly that the definition approver may also lock, and names them', async () => {
+    stubFetch({
+      '/v1/dataset-versions/lockable': {
+        data: [
+          {
+            type: 'DatasetVersion',
+            id: 'dv_9',
+            attributes: {
+              datasetVersionId: 'dv_9', datasetDefinitionId: 'dd_2', versionNumber: 3,
+              manifestHash: 'a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90',
+              definitionApprovedByActorId: 'actor_staff',
+            },
+          },
+        ],
+      },
+    });
+    await act(async () => {
+      render(<StaffApproverPanel session={session} />);
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Dataset locks' }));
+    });
+    const article = screen.getByRole('article', { name: 'Dataset version dv_9' });
+    expect(article.textContent).toContain('that is you, which is permitted here');
+    expect(screen.getByText(/not barred by separation of duties/)).toBeTruthy();
+    // Being the approver does not disable the control.
+    expect(screen.getByRole('button', { name: 'Lock this dataset version' })).toHaveProperty('disabled', false);
+  });
+
   /** Rejecting an export uses the same permission key as approving it. */
   it('rejecting an export is presented with the same authority as approving it', async () => {
     stubFetch({

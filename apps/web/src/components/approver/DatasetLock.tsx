@@ -7,10 +7,13 @@ import { AuthStrengthNote, ConfirmDecision, ExactVersionBlock, useDecision, useQ
  * screen: locking says "analysis may run against exactly this", so the
  * hash sits next to the control and appears in full in the confirmation.
  *
- * No separation-of-duties line here: whether the person who approved the
- * dataset definition may also lock the version is still an open product
- * question (DESIGN_DECISIONS, open items). Stating a rule the platform
- * does not enforce would be worse than stating none.
+ * Approver and locker may be the same person (decision D-11), which is
+ * what the platform already does — `lockDatasetVersion` checks the
+ * version's state and the `dataset.lock` permission, and nothing else.
+ * The screen says so outright instead of leaving a locker who approved
+ * the definition to guess whether they are allowed. It still names who
+ * approved the definition, because "permitted" is not "invisible": the
+ * chain stays readable even where it is not barred.
  */
 export function DatasetLock({ session }: { session: StaffSession }) {
   const queue = useQueue<LockableVersion>(
@@ -37,6 +40,10 @@ export function DatasetLock({ session }: { session: StaffSession }) {
         A locked version cannot be changed afterwards, and analysis can only run against a locked version. Check the
         manifest hash against the one you reviewed before locking.
       </p>
+      <p>
+        Locking is not barred by separation of duties: if you approved the dataset definition, you may lock a version
+        generated from it. Each row still names who approved the definition.
+      </p>
 
       <p>
         <button onClick={() => void queue.refresh()}>Refresh the list</button>
@@ -53,7 +60,18 @@ export function DatasetLock({ session }: { session: StaffSession }) {
               versionNumber: v.versionNumber,
               hashLabel: 'Manifest hash',
               hash: v.manifestHash,
-              facts: [{ label: 'Dataset definition', value: v.datasetDefinitionId }],
+              facts: [
+                { label: 'Dataset definition', value: v.datasetDefinitionId },
+                {
+                  label: 'Definition approved by',
+                  value:
+                    v.definitionApprovedByActorId === null
+                      ? 'not recorded'
+                      : v.definitionApprovedByActorId === session.actorId
+                        ? `${v.definitionApprovedByActorId} — that is you, which is permitted here`
+                        : v.definitionApprovedByActorId,
+                },
+              ],
             }}
           />
           <p>
