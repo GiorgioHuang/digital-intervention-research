@@ -740,3 +740,13 @@
   code: [packages/policy/src/catalogue.ts, packages/modules/m18-community-social/src/application/commands.ts, packages/modules/m18-community-social/src/application/queries.ts, packages/modules/m18-community-social/src/index.ts, apps/api/src/controllers.ts, apps/web/src/components/SafetyPanel.tsx]
   tests: [packages/modules/m18-community-social/test/m18.integration.test.ts, apps/web/test/safety-panel.test.tsx]
   status: implemented
+
+- implementation_id: IMP-M08-PARTICIPANT-ASSESSMENT-BLOCKED-001
+  module: M08
+  summary: Participant-completed assessments are deliberately not built, recorded as decision D-17. Two things are missing and only one of them is a permission. The first is that assessment.record carries no owner scope at all - it is granted to ResearchCoordinator and the command does not check that the named enrolment belongs to anyone in particular, so a participant cannot complete their own assessment and the action as written would not become safe merely by handing it to them. The second is more fundamental - there is no instrument bank anywhere in the platform. assessment_records.instrument and instrument_version are free text and no table holds items, response options, scoring or versions; research_design.research_questions holds the study's research questions, which are not questionnaire items. Building the screen would mean the implementer inventing the instrument content, and instrument items are approved research material - a fabricated one would mean the study collects data from a tool nobody approved, which is a worse outcome than a missing screen. This is also why the Waiting for you block on the participant Home omits assessments even though Scheduled and Available records exist - listing a task the participant is unable to do would be pointing at a door they cannot open. Unlock conditions - approved instrument content in a versioned item bank, and an owner-scoped assessment.record-own whose resource owner is derived from the enrolment rather than accepted from the caller, following the organisation-scope lesson recorded in D-13
+  trace_ids: [ATR-002]
+  adr_ids: [ADR-050, ADR-054]
+  docs: ["design/DESIGN_DECISIONS.md D-17", "design/PARTICIPANT_WORKSPACE.md B15", "UI_INVENTORY.md B15"]
+  code: [packages/policy/src/catalogue.ts, packages/modules/m08-assessment/src/application/commands.ts, apps/web/src/components/WaitingForYou.tsx]
+  tests: [apps/web/test/waiting-for-you.test.tsx]
+  status: blocked
