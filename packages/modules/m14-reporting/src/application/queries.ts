@@ -9,6 +9,13 @@ export interface PendingExportRequest {
   recipient: string;
   sources: unknown;
   deIdentification: string;
+  /**
+   * Constraints already applied to the request. A portability request
+   * carries the third-party exclusion here; without it on the queue the
+   * approver cannot see a limit that has already been imposed and would
+   * have to assume the worst about what is being released.
+   */
+  restrictions: string;
   requestedByActorId: string;
   createdAt: string;
 }
@@ -80,7 +87,8 @@ export async function listPendingExportRequests(
   });
   assertAllowed(decision, false);
   const res = await deps.pool.query(
-    `SELECT id, export_type, purpose, recipient, sources, de_identification, requested_by_actor_id, created_at
+    `SELECT id, export_type, purpose, recipient, sources, de_identification, restrictions,
+            requested_by_actor_id, created_at
        FROM reporting_submission.export_requests
       WHERE request_state = 'Requested'
       ORDER BY created_at ASC`,
@@ -92,6 +100,7 @@ export async function listPendingExportRequests(
     recipient: r.recipient as string,
     sources: r.sources,
     deIdentification: r.de_identification as string,
+    restrictions: r.restrictions as string,
     requestedByActorId: r.requested_by_actor_id as string,
     createdAt: (r.created_at as Date).toISOString(),
   }));

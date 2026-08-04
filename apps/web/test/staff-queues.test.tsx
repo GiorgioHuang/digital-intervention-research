@@ -230,4 +230,86 @@ describe('staff work queues replace manual identifier entry', () => {
     expect(note).toContain('approving and rejecting alike');
     expect(screen.getByRole('button', { name: 'Reject this export' })).toHaveProperty('disabled', false);
   });
+
+  /**
+   * A research export releases other people's data to a third party. A
+   * portability request is a person asking for a copy of their own
+   * information, where identifiable is not a finding but the point.
+   * Presenting them as one decision could push an approver into refusing
+   * a lawful request, or make the phrase familiar enough to wave through
+   * a research export that should never carry it.
+   */
+  it('a request for someone\u2019s own information is not framed as a research export', async () => {
+    stubFetch({
+      '/v1/export-requests/pending': {
+        data: [
+          {
+            type: 'ExportRequest',
+            id: 'er_4',
+            attributes: {
+              exportRequestId: 'er_4',
+              exportType: 'ParticipantPortability',
+              purpose: 'A copy of my own information, requested by me',
+              recipient: 'participant-self',
+              deIdentification: 'None',
+              restrictions: 'third-party content excluded per source restrictions',
+              requestedByActorId: 'actor_pat',
+            },
+          },
+        ],
+      },
+    });
+    await act(async () => {
+      render(<StaffApproverPanel session={session} />);
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Exports' }));
+    });
+    expect(screen.getByText('Someone asking for a copy of their own information.')).toBeTruthy();
+    // A limit already imposed on the request, so the approver is not left
+    // assuming the worst about what would be released.
+    expect(screen.getByText('third-party content excluded per source restrictions')).toBeTruthy();
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Approve this export' }));
+    });
+    const dialog = screen.getByRole('alertdialog').textContent ?? '';
+    expect(dialog).toContain('Identifiable is correct here');
+    expect(dialog).toContain('database refuses an identifiable research export');
+  });
+
+  it('refusing a request for own information says what it refuses', async () => {
+    stubFetch({
+      '/v1/export-requests/pending': {
+        data: [
+          {
+            type: 'ExportRequest',
+            id: 'er_5',
+            attributes: {
+              exportRequestId: 'er_5',
+              exportType: 'ParticipantPortability',
+              purpose: 'A copy of my own information, requested by me',
+              recipient: 'participant-self',
+              deIdentification: 'None',
+              restrictions: '',
+              requestedByActorId: 'actor_pat',
+            },
+          },
+        ],
+      },
+    });
+    await act(async () => {
+      render(<StaffApproverPanel session={session} />);
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Exports' }));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Reject this export' }));
+    });
+    const dialog = screen.getByRole('alertdialog').textContent ?? '';
+    expect(dialog).toContain('refuses a person\u2019s request for a copy of their own information');
+    // Still the same authority as approving — rejection is not the lighter act.
+    expect(dialog).toContain('needs the same authority');
+  });
 });

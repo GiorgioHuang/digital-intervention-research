@@ -20,6 +20,7 @@ import {
   draftReportVersion,
   generateExportPackage,
   listMyExportRequests,
+  listPendingExportRequests,
   recordExportDelivery,
   requestParticipantExport,
   requestResearchExport,
@@ -187,6 +188,19 @@ describe.skipIf(!dbAvailable)('M14 reporting and export (integration)', () => {
     await expect(listMyExportRequests(m14, ctx(otherAcc), patId)).rejects.toMatchObject({
       code: 'RESOURCE_NOT_FOUND',
     });
+  });
+
+  /**
+   * The approver queue mixes two decisions that are not the same act, and
+   * the facts that tell them apart have to reach the screen. A limit
+   * already imposed on the request is one of them - without it the
+   * approver assumes the worst about what would be released.
+   */
+  it('the approver queue carries the limits already applied to a request', async () => {
+    const pending = await listPendingExportRequests(m14, ctx(approverId));
+    const portability = pending.find((p) => p.exportType === 'ParticipantPortability');
+    expect(portability?.restrictions).toContain('third-party');
+    expect(portability?.deIdentification).toBe('None');
   });
 });
 

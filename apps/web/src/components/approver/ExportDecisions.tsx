@@ -21,7 +21,22 @@ import {
  * no content hash for it, so the block shows what actually identifies the
  * decision — purpose, recipient and de-identification — rather than an
  * empty hash row implying one exists.
+ *
+ * The two kinds of request in this queue are not the same decision and
+ * are no longer presented as one. A research export releases other
+ * people's data to a third party. A portability request is a person
+ * asking for a copy of their own information, where identifiable is not
+ * a finding but the point — and an approver reading "De-identification:
+ * None" under research-export framing could reasonably refuse a lawful
+ * request, or grow used to the phrase and wave through a research export
+ * that should never carry it.
  */
+const PORTABILITY = 'ParticipantPortability';
+
+const TYPE_WORDING: Record<string, string> = {
+  ResearchExport: 'Research export — other people’s data leaving for a third party.',
+  [PORTABILITY]: 'Someone asking for a copy of their own information.',
+};
 export function ExportDecisions({ session }: { session: StaffSession }) {
   const queue = useQueue<PendingExportItem>(
     async () => (await staffApi.listPendingExports(session)).data.map((i) => i.attributes),
@@ -34,16 +49,29 @@ export function ExportDecisions({ session }: { session: StaffSession }) {
   }, []);
 
   const artefactOf = (e: PendingExportItem) => ({
-    typeLabel: 'Export request',
+    typeLabel: e.exportType === PORTABILITY ? 'Request for own information' : 'Export request',
     id: e.exportRequestId,
     facts: [
-      { label: 'Export type', value: e.exportType },
+      { label: 'What this is', value: TYPE_WORDING[e.exportType] ?? e.exportType },
       { label: 'Purpose', value: e.purpose },
       { label: 'Recipient', value: e.recipient },
       { label: 'De-identification', value: e.deIdentification },
+      // A limit already imposed on the request. Leaving it off the queue
+      // made the approver assume the worst about what was being released.
+      ...(e.restrictions === '' ? [] : [{ label: 'Limits already applied', value: e.restrictions }]),
       { label: 'Requested by', value: e.requestedByActorId },
     ],
   });
+
+  const approveConsequence = (e: PendingExportItem) =>
+    e.exportType === PORTABILITY
+      ? 'Approving lets a copy of this person’s own information be put together for them. Identifiable is correct here — it is their information. The database refuses an identifiable research export, so this level does not mean the same thing it would on one.'
+      : 'Approving releases data to the named recipient for the stated purpose, at the stated de-identification level.';
+
+  const rejectConsequence = (e: PendingExportItem) =>
+    e.exportType === PORTABILITY
+      ? 'Rejecting refuses a person’s request for a copy of their own information. It is recorded the same way an approval is, and needs the same authority.'
+      : 'Rejecting is recorded the same way an approval is, and needs the same authority.';
 
   return (
     <section aria-labelledby="export-decisions-heading">
@@ -77,8 +105,7 @@ export function ExportDecisions({ session }: { session: StaffSession }) {
                   decision.setPending({
                     label: 'Approve export',
                     artefact: artefactOf(e),
-                    consequence:
-                      'Approving releases data to the named recipient for the stated purpose, at the stated de-identification level.',
+                    consequence: approveConsequence(e),
                     run: () => staffApi.decideExport(session, e.exportRequestId, 'Approved'),
                   })
                 }
@@ -91,7 +118,7 @@ export function ExportDecisions({ session }: { session: StaffSession }) {
                   decision.setPending({
                     label: 'Reject export',
                     artefact: artefactOf(e),
-                    consequence: 'Rejecting is recorded the same way an approval is, and needs the same authority.',
+                    consequence: rejectConsequence(e),
                     run: () => staffApi.decideExport(session, e.exportRequestId, 'Rejected'),
                   })
                 }

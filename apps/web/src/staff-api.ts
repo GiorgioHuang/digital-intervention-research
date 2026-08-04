@@ -107,6 +107,7 @@ export interface PendingExportItem {
   purpose: string;
   recipient: string;
   deIdentification: string;
+  restrictions: string;
   requestedByActorId: string;
 }
 export interface ModerationCaseItem {

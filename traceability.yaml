@@ -790,3 +790,13 @@
   code: [packages/modules/m17-life-story/src/application/commands.ts, apps/api/src/controllers.ts, apps/web/src/api.ts, apps/web/src/components/WaitingForYou.tsx, packages/synthetic-pilot/seed-demo.mjs]
   tests: [packages/modules/m17-life-story/test/m17.integration.test.ts, apps/web/test/waiting-for-you.test.tsx]
   status: implemented
+
+- implementation_id: IMP-M14-EXPORT-QUEUE-FRAMING-001
+  module: M14
+  summary: The export decision screen no longer presents two different decisions as one. The approver queue carries both research exports, which release other people's data to a third party, and participant portability requests, which are a person asking for a copy of their own information - and every request was rendered with research-export framing. That made De-identification None read as an alarm on a portability request, where identifiable is not a finding but the entire point, so an approver could reasonably refuse a lawful data-subject request; and the reverse risk is that the phrase becomes familiar enough to wave through a research export that should never carry it. Found by following a participant export request through to the screen that decides it, after building the request path itself. The type is now said in plain words rather than shown as an enum, the approve and reject consequences are worded per kind, and the portability approval states that the database refuses an identifiable research export so this level does not mean there what it would mean on one - the approver is told the backstop exists rather than left to worry about it. Refusing a portability request now says what it refuses, in those words, while keeping the existing rule that rejection is not the lighter act and carries the same permission key, the same strong authentication and the same separation of duties. The queue query also returns the restrictions already recorded on a request, which a portability request carries as the third-party exclusion - without it on screen the approver had to assume the worst about what would be released
+  trace_ids: [ATR-021, ATR-002]
+  adr_ids: [ADR-051, ADR-050]
+  docs: ["design/RESEARCHER_WORKSPACE.md 1.5", "UI_INVENTORY.md C17", "Doc 16 section 37.5"]
+  code: [packages/modules/m14-reporting/src/application/queries.ts, apps/web/src/staff-api.ts, apps/web/src/components/approver/ExportDecisions.tsx]
+  tests: [packages/modules/m14-reporting/test/m14.integration.test.ts, apps/web/test/staff-queues.test.tsx]
+  status: implemented
