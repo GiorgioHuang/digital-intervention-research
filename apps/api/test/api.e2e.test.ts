@@ -549,11 +549,16 @@ describe.skipIf(!dbAvailable)('HTTP API (e2e)', () => {
     expect(triage.data.some((i) => i.id === signalId)).toBe(true);
 
     const inReview = (await (await call('/v1/protocol-versions/in-review', approverAcc)).json()) as {
-      data: { id: string; attributes: { submittedByActorId: string | null } }[];
+      data: { id: string; attributes: { submittedByActorId: string | null; contentHash: string; versionNumber: number } }[];
     };
     const seededPv = inReview.data.find((i) => i.id === pvId);
     // The queue names the submitter so separation of duties is visible up front.
     expect(seededPv?.attributes.submittedByActorId).toBe(researcherAcc);
+    // ...and the exact content the decision would bind to. Without the hash
+    // an approver cannot tell whether the version in front of them is the
+    // one they read (RESEARCHER_WORKSPACE §1.4).
+    expect(seededPv?.attributes.contentHash).toMatch(/^[0-9a-f]{64}$/);
+    expect(seededPv?.attributes.versionNumber).toBeGreaterThan(0);
 
     const approvals = (await (await call('/v1/approvals/pending', approverAcc)).json()) as { data: { id: string }[] };
     expect(approvals.data.some((i) => i.id === approvalId)).toBe(true);

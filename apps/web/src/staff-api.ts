@@ -53,7 +53,10 @@ export interface ProtocolInReview {
   protocolVersionId: string;
   researchProjectId: string;
   versionNumber: number;
+  /** The exact content the decision binds to (RESEARCHER_WORKSPACE §1.4). */
+  contentHash: string;
   submittedByActorId: string | null;
+  updatedAt: string;
 }
 export interface PendingApprovalItem {
   approvalRecordId: string;

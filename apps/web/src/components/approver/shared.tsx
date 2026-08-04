@@ -1,0 +1,223 @@
+import { useState } from 'react';
+import { staffActionError, staffLoadError } from '../../errors.js';
+
+/**
+ * Pieces every approver decision screen reuses.
+ *
+ * The rules these encode come from RESEARCHER_WORKSPACE §1.4–1.6 and are
+ * not cosmetic:
+ *
+ * - §1.4 the type, identifier, exact version and content hash of what is
+ *   being decided must be in the same viewport as the decide control, not
+ *   behind a disclosure — an approver who cannot see the hash cannot tell
+ *   whether the version in front of them is the one they read;
+ * - §1.5 separation of duties is stated *before* the control, and a
+ *   control the server would refuse is not clickable. "Clickable, then
+ *   403" is called out there as a design error;
+ * - §1.6 an action that needs strong authentication says so up front, and
+ *   — just as strictly — an action that does not must never be labelled as
+ *   if it did.
+ */
+
+/** Truncation is display only; the confirmation shows the value in full. */
+export function ShortHash({ value }: { value: string }) {
+  const [full, setFull] = useState(false);
+  if (value === '') return <span>not published by the server for this artefact</span>;
+  return (
+    <>
+      <code>{full ? value : `${value.slice(0, 16)}…`}</code>{' '}
+      <button type="button" onClick={() => setFull(!full)}>
+        {full ? 'Shorten' : 'Show the full value'}
+      </button>
+    </>
+  );
+}
+
+export interface ExactArtefact {
+  /** Human name of the type being decided, e.g. "Protocol version". */
+  typeLabel: string;
+  id: string;
+  /** Omitted for artefacts the platform does not version, e.g. an export request. */
+  versionNumber?: number;
+  hashLabel?: string;
+  hash?: string;
+  /** Field name / value pairs specific to the artefact type. */
+  facts?: { label: string; value: string }[];
+}
+
+export function ExactVersionBlock({ artefact }: { artefact: ExactArtefact }) {
+  return (
+    <dl>
+      <dt>Type</dt>
+      <dd>{artefact.typeLabel}</dd>
+      <dt>Identifier</dt>
+      <dd>
+        <code>{artefact.id}</code>
+      </dd>
+      {artefact.versionNumber !== undefined && (
+        <>
+          <dt>Version</dt>
+          <dd>v{artefact.versionNumber}</dd>
+        </>
+      )}
+      {artefact.hashLabel !== undefined && (
+        <>
+          <dt>{artefact.hashLabel}</dt>
+          <dd>
+            <ShortHash value={artefact.hash ?? ''} />
+          </dd>
+        </>
+      )}
+      {(artefact.facts ?? []).map((f) => (
+        <div key={f.label}>
+          <dt>{f.label}</dt>
+          <dd>{f.value}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+/**
+ * §1.5 layer 2: a permanent line saying what this person's relationship to
+ * the artefact is, rather than leaving them to infer it from whether a
+ * button happens to be enabled.
+ */
+export function SeparationOfDutiesLine({ isOwnSubmission }: { isOwnSubmission: boolean }) {
+  return isOwnSubmission ? (
+    <p>
+      <strong>You submitted this.</strong> Separation of duties means you cannot decide it. Another person holding the
+      permission has to.
+    </p>
+  ) : (
+    <p>You did not draft or submit this version, so you can decide it.</p>
+  );
+}
+
+/** §1.6: says what this screen will and will not ask a step-up for. */
+export function AuthStrengthNote({
+  needsMfa,
+  authStrength,
+  action,
+}: {
+  needsMfa: boolean;
+  authStrength: 'password' | 'mfa';
+  action: string;
+}) {
+  if (!needsMfa) {
+    return <p role="note">{action} needs your confirmation only — it is not in the strong-authentication tier.</p>;
+  }
+  return (
+    <p role="note">
+      {action} needs strong authentication.{' '}
+      {authStrength === 'mfa'
+        ? 'You are signed in at that level.'
+        : 'You are signed in at password level, so the server will refuse it until you sign in again with strong authentication.'}
+    </p>
+  );
+}
+
+export interface PendingDecision {
+  /** Sentence naming the action, shown in the confirmation. */
+  label: string;
+  artefact: ExactArtefact;
+  run: () => Promise<unknown>;
+  /** Extra consequence text specific to this decision. */
+  consequence?: string;
+  /**
+   * Re-read the artefact and return its current identity marker. If it no
+   * longer matches what was displayed, the decision is refused rather than
+   * applied to something the approver has not read (§1.4).
+   */
+  recheck?: () => Promise<string | null>;
+  /** The marker as displayed when the approver opened the confirmation. */
+  marker?: string;
+}
+
+/**
+ * Confirmation + execution shared by the four screens. The full hash is
+ * shown here, per §1.4, because this is the last point at which the
+ * approver can compare it against what they read.
+ */
+export function useDecision() {
+  const [pending, setPending] = useState<PendingDecision | null>(null);
+  const [announcement, setAnnouncement] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  const execute = async () => {
+    if (pending === null || busy) return;
+    const decision = pending;
+    setBusy(true);
+    try {
+      if (decision.recheck !== undefined) {
+        const now = await decision.recheck();
+        if (now !== decision.marker) {
+          setPending(null);
+          setAnnouncement(
+            now === null
+              ? 'This artefact is no longer in the queue — someone may have decided it already. Nothing was submitted. Refresh the list and start again.'
+              : 'This artefact changed while you were reading it. Nothing was submitted. Refresh the list and read the current version before deciding.',
+          );
+          return;
+        }
+      }
+      await decision.run();
+      setPending(null);
+      setAnnouncement(`Recorded: ${decision.label} on ${decision.artefact.id}. It is in the audit trail in your name.`);
+    } catch (err) {
+      setPending(null);
+      setAnnouncement(staffActionError(err, decision.label));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return { pending, setPending, announcement, setAnnouncement, execute, busy };
+}
+
+export function ConfirmDecision({
+  pending,
+  onConfirm,
+  onCancel,
+  busy,
+}: {
+  pending: PendingDecision;
+  onConfirm: () => void;
+  onCancel: () => void;
+  busy: boolean;
+}) {
+  return (
+    <div role="alertdialog" aria-labelledby="decision-confirm">
+      <h3 id="decision-confirm">Confirm: {pending.label}</h3>
+      <ExactVersionBlock artefact={pending.artefact} />
+      {pending.artefact.hash !== undefined && pending.artefact.hash !== '' && (
+        <p>
+          Full {pending.artefact.hashLabel ?? 'hash'}: <code>{pending.artefact.hash}</code>
+        </p>
+      )}
+      {pending.consequence !== undefined && <p>{pending.consequence}</p>}
+      <p>This decision is recorded in your name in the audit trail.</p>
+      <button onClick={onConfirm} disabled={busy}>
+        Confirm
+      </button>{' '}
+      <button onClick={onCancel} disabled={busy}>
+        Back
+      </button>
+    </div>
+  );
+}
+
+/** Shared queue loading so every screen reports failures the same way. */
+export function useQueue<T>(load: () => Promise<T[]>, what: string) {
+  const [items, setItems] = useState<T[] | null>(null);
+  const [error, setError] = useState('');
+  const refresh = async () => {
+    try {
+      setItems(await load());
+      setError('');
+    } catch (err) {
+      setError(staffLoadError(err, what));
+    }
+  };
+  return { items, error, refresh, setItems };
+}

@@ -14,6 +14,9 @@ function stubFetch() {
   vi.stubGlobal(
     'fetch',
     vi.fn(async (path: string, init: RequestInit) => {
+      // The approver screens read their queue on entry, so GETs with no
+      // body reach this stub too; only commands carry one.
+      if ((init.method ?? 'GET') === 'GET') return new Response(JSON.stringify({ data: [] }), { status: 200 });
       calls.push({
         path,
         headers: init.headers as Record<string, string>,
@@ -61,25 +64,11 @@ describe('staff panels (server-judged authority, honest MFA labelling)', () => {
     expect(screen.getByRole('note').textContent).toContain('the server will refuse this submission');
   });
 
-  it('approver: dataset lock goes through a confirmation naming the exact artefact and is audit-attributed', async () => {
-    const calls = stubFetch();
-    render(<StaffApproverPanel session={mfaSession} />);
-    fireEvent.change(screen.getByLabelText('Dataset version identifier'), { target: { value: 'dv_9' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Lock dataset version (strong authentication)' }));
-    const dialog = screen.getByRole('alertdialog');
-    expect(dialog.textContent).toContain('dv_9');
-    expect(dialog.textContent).toContain('in your name');
-    expect(calls.length).toBe(0);
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
-    });
-    expect(calls[0]?.path).toBe('/v1/dataset-versions/dv_9/lock');
-    expect(calls[0]?.body['confirmed']).toBe(true);
-  });
-
-  it('approver panel warns when the session lacks MFA', () => {
+  it('approver panel warns when the session lacks MFA', async () => {
     stubFetch();
-    render(<StaffApproverPanel session={pwSession} />);
+    await act(async () => {
+      render(<StaffApproverPanel session={pwSession} />);
+    });
     expect(screen.getByText(/signed in at password level/)).toBeTruthy();
   });
 

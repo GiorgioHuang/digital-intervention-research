@@ -7,6 +7,14 @@ export interface ProtocolVersionInReview {
   protocolId: string;
   researchProjectId: string;
   versionNumber: number;
+  /**
+   * The exact content this decision would bind to. RESEARCHER_WORKSPACE
+   * §1.4 requires the type, identifier, exact version number and content
+   * hash to be visible in the same viewport as the approve control — an
+   * approver who cannot see the hash cannot tell whether the version in
+   * front of them is the one they read.
+   */
+  contentHash: string;
   submittedByActorId: string | null;
   updatedAt: string;
 }
@@ -26,7 +34,8 @@ export async function listProtocolVersionsInReview(
   });
   assertAllowed(decision, false);
   const res = await deps.pool.query(
-    `SELECT v.id, v.protocol_id, p.research_project_id, v.version_number, v.submitted_by_actor_id, v.updated_at
+    `SELECT v.id, v.protocol_id, p.research_project_id, v.version_number, v.content_hash,
+            v.submitted_by_actor_id, v.updated_at
        FROM research_design.protocol_versions v
        JOIN research_design.protocols p ON p.id = v.protocol_id
       WHERE v.version_state = 'In Review'
@@ -37,6 +46,7 @@ export async function listProtocolVersionsInReview(
     protocolId: r.protocol_id as string,
     researchProjectId: r.research_project_id as string,
     versionNumber: r.version_number as number,
+    contentHash: r.content_hash as string,
     submittedByActorId: r.submitted_by_actor_id as string | null,
     updatedAt: (r.updated_at as Date).toISOString(),
   }));
