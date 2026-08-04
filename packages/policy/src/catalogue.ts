@@ -97,6 +97,7 @@ export const POLICY_V1: PolicyConfiguration = {
       'relationship.approve',
       'relationship.revoke',
       'participant.export',
+      'enrolment.view-own',
       'enrolment.withdraw',
       'life-story.create',
       'life-story.edit',
@@ -160,7 +161,20 @@ export const POLICY_V1: PolicyConfiguration = {
     'triage-queue.view': {},
     'approval-queue.view': {},
     'governance-queue.view': {},
+    // Staff queue view: unscoped by design, held only by staff roles.
     'enrolment.view': {},
+    /**
+     * A participant seeing their own enrolment — what makes "where am I in
+     * this study" and the right to leave reachable from their own screen
+     * rather than only by asking staff.
+     *
+     * A separate action rather than `ownerPermitted` on `enrolment.view`:
+     * that action is the staff queue over every enrolment, so adding
+     * owner-permission to it would have granted participants the whole
+     * queue. `ownerOnly` is what actually confines this one, exactly as it
+     * does for `participant.view-own`.
+     */
+    'enrolment.view-own': { ownerPermitted: true, ownerOnly: true },
 
     // Object storage (Doc 14 §59): uploads and assignment are owner-only
     // on the participant's own objects.

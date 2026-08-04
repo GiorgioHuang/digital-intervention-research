@@ -7,6 +7,7 @@ import { CommunityPanel } from './components/CommunityPanel.js';
 import { ConsentPanel } from './components/ConsentPanel.js';
 import { MatchingPanel } from './components/MatchingPanel.js';
 import { MessagesScreen } from './components/MessagesScreen.js';
+import { MyResearchPart } from './components/MyResearchPart.js';
 import { SafetyPanel } from './components/SafetyPanel.js';
 import { api, PlatformApiError, type Session } from './api.js';
 
@@ -197,6 +198,12 @@ export function App() {
         {screen === 'home' && (
           <section aria-labelledby="home-heading">
             <h1 id="home-heading">What would you like to do today?</h1>
+            {/*
+              Where the participant stands, and the way out, before the
+              task list. Leaving was already permitted by the server but
+              unreachable from here, so in practice it meant asking staff.
+            */}
+            <MyResearchPart session={session} />
             {/* Task list, not a feed: each entry is one clear action. */}
             <ul>
               <li>

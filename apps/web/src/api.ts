@@ -173,7 +173,27 @@ export interface ConsentState {
   expiresAt: string | null;
 }
 
+export interface MyEnrolment {
+  enrolmentId: string;
+  researchProjectId: string;
+  protocolVersionId: string;
+  enrolmentState: string;
+  updatedAt: string;
+}
+
 export const api = {
+  listMyEnrolments: (s: Session) =>
+    get<{ data: { id: string; attributes: MyEnrolment }[] }>(s, `/v1/participants/${s.participantId}/enrolments`),
+  /**
+   * Leaving is owner-permitted and confirmed. A reason is deliberately
+   * optional: the right to withdraw cannot be made conditional on
+   * explaining yourself.
+   */
+  withdrawFromStudy: (s: Session, enrolmentId: string, reasonCategory?: string) =>
+    post(s, `/v1/enrolments/${enrolmentId}/withdraw`, {
+      confirmed: true,
+      ...(reasonCategory === undefined || reasonCategory === '' ? {} : { reasonCategory }),
+    }),
   listMyConsents: (s: Session) =>
     get<{ data: { id: string; attributes: ConsentState }[] }>(s, `/v1/participants/${s.participantId}/consents`),
   recordConsent: (s: Session, scope: string, decision: 'Granted' | 'Declined') =>

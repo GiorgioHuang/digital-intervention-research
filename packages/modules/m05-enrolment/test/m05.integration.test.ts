@@ -11,6 +11,7 @@ import {
   seedBootstrapAdministrator,
   type M01Deps,
 } from '@platform/m01-identity-org';
+import { listOwnEnrolments } from '../src/application/queries.js';
 import {
   createParticipantQuery,
   listParticipantsForOrganisation,
@@ -307,6 +308,27 @@ describe.skipIf(!dbAvailable)('P3 research core: project -> protocol -> enrolmen
   it('exact protocol version reference is preserved on the enrolment (no silent migration)', async () => {
     const row = await pool.query(`SELECT protocol_version_id FROM enrolment.enrolments WHERE id = $1`, [enrolmentId]);
     expect(row.rows[0].protocol_version_id).toBe(versionId);
+  });
+
+  /**
+   * The right to withdraw was owner-permitted from the start, but the
+   * participant could not reach their own enrolment to exercise it. This
+   * pins down that they can read it and that nobody else's is visible.
+   */
+  it('a participant reads their own enrolment, and cannot read anyone else\'s', async () => {
+    const own = ctx(participantAccountId);
+    const mine = await listOwnEnrolments(m05, own, participantId);
+    expect(mine.some((e) => e.enrolmentId === enrolmentId)).toBe(true);
+    expect(mine.every((e) => e.participantId === participantId)).toBe(true);
+
+    // Another participant's enrolment is not readable, and the refusal
+    // does not distinguish "no such participant" from "not yours".
+    const otherParticipant = (
+      await registerParticipant(m02, ctx(coordinatorId, { organisationId: orgId }), { displayName: 'Second P.' })
+    ).participantId;
+    await expect(listOwnEnrolments(m05, own, otherParticipant)).rejects.toMatchObject({
+      code: 'RESOURCE_NOT_FOUND',
+    });
   });
 
   /**

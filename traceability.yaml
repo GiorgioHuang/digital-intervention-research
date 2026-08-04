@@ -680,3 +680,13 @@
   code: [packages/database/migrations/1753800000020_m18-assisted-send.sql, packages/modules/m18-community-social/src/application/messaging-commands.ts, packages/modules/m18-community-social/src/application/queries.ts, apps/web/src/components/AssistedMode.tsx, apps/web/src/components/MessagePanel.tsx, apps/web/src/App.tsx]
   tests: [apps/web/test/assisted-mode.test.tsx]
   status: implemented
+
+- implementation_id: IMP-M05-OWN-ENROLMENT-001
+  module: M05
+  summary: A participant can see where they stand in a study and leave it from their own workspace. The withdrawal command was owner-permitted from the start, so a participant was always allowed to withdraw themselves - but nothing in their workspace could find the enrolment to withdraw from, so in practice leaving meant asking the people they were leaving, which is not the same right. Adds an owner-scoped listOwnEnrolments and a participant Home section that states the stage in plain words and offers the exit. The confirmation is honest about what leaving does and does not do - nothing new is collected, but information already inside a dataset locked for analysis is not removed because locked datasets are not rewritten, and consent choices and messages are separate and are not deleted. A reason is optional and the screen says so, because the right to withdraw cannot be made conditional on explaining yourself. No pause control is offered - Paused is a valid enrolment state but no command transitions into it, so the button would do nothing. An integration test caught a real permission error made while building this - granting participants the existing enrolment.view, which is the unscoped staff queue action, would have let any participant read every enrolment, and the empty result seen at first was the query filtering rather than the engine refusing; it is now a separate enrolment.view-own carrying ownerOnly, the same shape as participant.view-own
+  trace_ids: [ATR-002, ATR-024]
+  adr_ids: [ADR-050, ADR-054, ADR-060]
+  docs: ["design/PARTICIPANT_WORKSPACE.md A1.3", "Doc 19 participant journey", "Doc 4 consent model"]
+  code: [packages/modules/m05-enrolment/src/application/queries.ts, packages/policy/src/catalogue.ts, apps/api/src/controllers.ts, apps/web/src/components/MyResearchPart.tsx, apps/web/src/App.tsx]
+  tests: [packages/modules/m05-enrolment/test/m05.integration.test.ts, apps/web/test/my-research-part.test.tsx]
+  status: implemented

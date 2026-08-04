@@ -14,7 +14,7 @@ import {
   type PermissionServicePort,
 } from '@platform/m03-consent-permission';
 import type { M04Deps } from '@platform/m04-research-design';
-import type { M05Deps } from '@platform/m05-enrolment';
+import { listOwnEnrolments, type M05Deps } from '@platform/m05-enrolment';
 import type { M06Deps } from '@platform/m06-intervention-portfolio';
 import { recordSafetySignal, type M09Deps } from '@platform/m09-safety';
 import type { M10Deps } from '@platform/m10-evidence';
@@ -98,6 +98,14 @@ export interface ApiDeps {
 @Controller('v1')
 export class CommandController {
   constructor(@Inject(API_DEPS) private readonly deps: ApiDeps) {}
+
+  /** The participant's own enrolments: where they are, and what to leave. */
+  @Get('participants/:participantId/enrolments')
+  async myEnrolments(@Req() req: Request, @Param('participantId') participantId: string) {
+    const ctx = requireActor(req);
+    const items = await listOwnEnrolments(this.deps.m05, ctx, participantId);
+    return { data: items.map((i) => ({ type: 'Enrolment', id: i.enrolmentId, attributes: i })) };
+  }
 
   /**
    * The participant's own current consent state, read from the same
