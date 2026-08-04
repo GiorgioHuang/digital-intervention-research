@@ -8,6 +8,7 @@ const session = { actorId: 'actor_test', participantId: 'pt_a' };
 const THREAD = {
   threadId: 'th_1',
   otherParticipantId: 'pt_b',
+  otherDisplayName: 'Ben',
   basisType: 'ActiveConnection',
   threadState: 'Active',
   createdAt: '2026-07-30T00:00:00Z',
@@ -15,6 +16,7 @@ const THREAD = {
 const CONNECTION = {
   connectionId: 'conn_1',
   otherParticipantId: 'pt_c',
+  otherDisplayName: 'Cara',
   connectionState: 'Active',
   createdAt: '2026-07-30T00:00:00Z',
 };
@@ -56,10 +58,14 @@ describe('MessagesScreen (API-driven lists replace manual identifiers)', () => {
     expect(calls.some((c) => c.path === '/v1/participants/pt_a/conversation-threads')).toBe(true);
     expect(calls.some((c) => c.path === '/v1/participants/pt_a/connections')).toBe(true);
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /Conversation with pt_b/ }));
+      fireEvent.click(screen.getByRole('button', { name: /Conversation with Ben/ }));
     });
     expect(screen.getByText('Write a message')).toBeTruthy();
-    expect(screen.getByText('pt_b')).toBeTruthy();
+    expect(screen.getByText('Ben')).toBeTruthy();
+    // Decision D-12: an internal identifier shown to another participant
+    // becomes a handle for correlating them across screens, so it must not
+    // appear anywhere on the page — not even beside the name.
+    expect(document.body.textContent).not.toContain('pt_b');
   });
 
   it('a new conversation starts from an Active connection, not from a typed identifier', async () => {
@@ -73,8 +79,9 @@ describe('MessagesScreen (API-driven lists replace manual identifiers)', () => {
     });
     const post = calls.find((c) => c.method === 'POST');
     expect(post?.path).toBe('/v1/conversation-threads');
-    // The composer opens for the connection's counterpart.
+    // The composer opens for the connection's counterpart, named.
     expect(screen.getByText('Write a message')).toBeTruthy();
-    expect(screen.getByText('pt_c')).toBeTruthy();
+    expect(screen.getByText('Cara')).toBeTruthy();
+    expect(document.body.textContent).not.toContain('pt_c');
   });
 });

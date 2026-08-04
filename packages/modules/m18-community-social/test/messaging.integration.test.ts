@@ -74,7 +74,7 @@ describe.skipIf(!dbAvailable)('M18/M16 messaging pipeline (integration)', () => 
     m01 = { pool, clock, checkPermission };
     m02 = { pool, clock, checkPermission };
     m03 = { pool, clock, permissions };
-    m18 = { pool, clock, checkPermission };
+    m18 = { pool, clock, checkPermission, participants };
 
     ({ userAccountId: adminId } = await seedBootstrapAdministrator(pool, clock, { displayName: 'Admin' }));
     ({ organisationId: orgId } = await createOrganisation(m01, ctx(adminId), { name: 'Msg Org' }));

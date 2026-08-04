@@ -104,7 +104,9 @@ async function get<T>(session: Session, path: string): Promise<T> {
 
 export interface ConnectionSummary {
   connectionId: string;
+  /** Kept for actions that need it; never rendered at another participant. */
   otherParticipantId: string;
+  otherDisplayName: string;
   connectionState: string;
   createdAt: string;
 }
@@ -112,6 +114,7 @@ export interface ConnectionSummary {
 export interface ThreadSummary {
   threadId: string;
   otherParticipantId: string;
+  otherDisplayName: string;
   basisType: string;
   threadState: string;
   createdAt: string;
@@ -146,6 +149,7 @@ export interface CommunitySpaceSummary {
 export interface CommunityFeedPost {
   postId: string;
   authorParticipantId: string;
+  authorDisplayName: string;
   contentText: string;
   publishedAt: string;
 }

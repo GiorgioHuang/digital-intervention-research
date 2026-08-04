@@ -17,6 +17,7 @@ const SPACE_JOINED = { ...SPACE_UNJOINED, membershipState: 'Active' };
 const FEED_POST = {
   postId: 'sp_9',
   authorParticipantId: 'pt_b',
+  authorDisplayName: 'Ben',
   contentText: 'The tomatoes are ripe today',
   publishedAt: '2026-08-01T02:00:00Z',
 };
@@ -143,6 +144,10 @@ describe('CommunityPanel (optional community, versioned rules, chronological fee
     });
     expect(screen.getByText('The tomatoes are ripe today')).toBeTruthy();
     expect(screen.getAllByText(/newest first/).length).toBeGreaterThan(0);
+    // Decision D-12: the author is named, and the internal identifier does
+    // not reach the page at all.
+    expect(screen.getByText(/Ben/)).toBeTruthy();
+    expect(document.body.textContent).not.toContain('pt_b');
 
     // Compose saves a DRAFT only — no publish call yet.
     fireEvent.change(screen.getByLabelText(/What you would like to share/), { target: { value: 'Hello everyone' } });

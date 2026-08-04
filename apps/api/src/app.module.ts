@@ -57,7 +57,7 @@ export function buildAppModule(config: ApiConfig) {
     m15: moduleDeps,
     m16storage: moduleDeps,
     m17: moduleDeps,
-    m18: moduleDeps,
+    m18: { ...moduleDeps, participants: createParticipantQuery(pool) },
   };
 
   @Module({

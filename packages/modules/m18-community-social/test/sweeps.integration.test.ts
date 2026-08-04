@@ -44,6 +44,13 @@ describe.skipIf(!dbAvailable)('M18 time-driven sweeps (integration)', () => {
       checkPermission: () => {
         throw new PlatformError('AUTHORISATION_DENIED', 'Sweeps hold no authority');
       },
+      // Sweeps read no participant names either; resolving one here would
+      // be as much a bug as checking a permission.
+      participants: {
+        findDisplayNames: () => {
+          throw new PlatformError('AUTHORISATION_DENIED', 'Sweeps do not read participant names');
+        },
+      },
     };
   }, 30_000);
 

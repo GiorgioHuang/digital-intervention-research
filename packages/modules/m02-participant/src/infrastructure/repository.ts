@@ -25,5 +25,13 @@ export function createParticipantQuery(pool: Pool): ParticipantQueryPort {
       );
       return res.rows[0]?.id;
     },
+    async findDisplayNames(participantIds: string[]): Promise<Map<string, string>> {
+      if (participantIds.length === 0) return new Map();
+      const res = await pool.query(
+        `SELECT id, display_name FROM participant_profile.participants WHERE id = ANY($1::text[])`,
+        [[...new Set(participantIds)]],
+      );
+      return new Map(res.rows.map((r) => [r.id as string, r.display_name as string]));
+    },
   };
 }

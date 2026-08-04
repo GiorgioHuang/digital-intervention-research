@@ -167,6 +167,17 @@ export function CommunityPanel({ session }: { session: Session }) {
         in time order — there is no algorithmic ranking, and no likes or view counts. Posts from people you have blocked
         are not shown to you, and they cannot see your posts.
       </p>
+      {/*
+        Until a separate public profile exists, the name other members see
+        is the one on the participant record. That is a real disclosure,
+        not a detail: someone deciding whether to post should know which
+        name it will carry, and there is currently no screen where they
+        could choose a different one.
+      */}
+      <p>
+        Posts you publish here carry the name on your participant record. There is not yet a separate name you can
+        choose for the community.
+      </p>
 
       <section aria-labelledby="spaces-heading">
         <h3 id="spaces-heading">Community list</h3>
@@ -227,7 +238,7 @@ export function CommunityPanel({ session }: { session: Session }) {
                   <p>{p.contentText}</p>
                   <p>
                     <small>
-                      {p.authorParticipantId === session.participantId ? 'You' : `Member ${p.authorParticipantId}`} ·{' '}
+                      {p.authorParticipantId === session.participantId ? 'You' : p.authorDisplayName} ·{' '}
                       {new Date(p.publishedAt).toLocaleString()}
                     </small>
                   </p>

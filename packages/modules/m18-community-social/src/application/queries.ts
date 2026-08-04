@@ -24,8 +24,27 @@ async function assertOwnView(deps: M18Deps, ctx: RequestContext, participantId: 
 export interface ConnectionSummary {
   connectionId: string;
   otherParticipantId: string;
+  /**
+   * What this person is called on screen. Until PublicProfile exists it is
+   * the name on their participant record (decision D-12); an identifier is
+   * never shown to another participant, because an internal key shown to
+   * one person becomes a handle for correlating them across screens.
+   */
+  otherDisplayName: string;
   connectionState: string;
   createdAt: string;
+}
+
+/**
+ * A participant whose name cannot be resolved is described, not numbered.
+ * The placeholder is deliberately the same for every unresolved person so
+ * it cannot be used to tell them apart.
+ */
+const UNNAMED = 'A community member';
+
+async function nameOf(deps: M18Deps, ids: string[]): Promise<(id: string) => string> {
+  const names = await deps.participants.findDisplayNames(ids);
+  return (id: string) => names.get(id) ?? UNNAMED;
 }
 
 export async function listConnections(
@@ -41,17 +60,20 @@ export async function listConnections(
       ORDER BY created_at DESC`,
     [participantId],
   );
-  return res.rows.map((r) => ({
+  const rows = res.rows.map((r) => ({
     connectionId: r.id as string,
     otherParticipantId: (r.participant_a_id === participantId ? r.participant_b_id : r.participant_a_id) as string,
     connectionState: r.connection_state as string,
     createdAt: (r.created_at as Date).toISOString(),
   }));
+  const name = await nameOf(deps, rows.map((r) => r.otherParticipantId));
+  return rows.map((r) => ({ ...r, otherDisplayName: name(r.otherParticipantId) }));
 }
 
 export interface ThreadSummary {
   threadId: string;
   otherParticipantId: string;
+  otherDisplayName: string;
   basisType: string;
   threadState: string;
   createdAt: string;
@@ -70,13 +92,15 @@ export async function listThreads(
       ORDER BY created_at DESC`,
     [participantId],
   );
-  return res.rows.map((r) => ({
+  const rows = res.rows.map((r) => ({
     threadId: r.id as string,
     otherParticipantId: (r.participant_a_id === participantId ? r.participant_b_id : r.participant_a_id) as string,
     basisType: r.basis_type as string,
     threadState: r.thread_state as string,
     createdAt: (r.created_at as Date).toISOString(),
   }));
+  const name = await nameOf(deps, rows.map((r) => r.otherParticipantId));
+  return rows.map((r) => ({ ...r, otherDisplayName: name(r.otherParticipantId) }));
 }
 
 export interface ThreadMessage {
@@ -251,6 +275,7 @@ export async function listCommunitySpaces(
 export interface CommunityFeedPost {
   postId: string;
   authorParticipantId: string;
+  authorDisplayName: string;
   contentText: string;
   publishedAt: string;
 }
@@ -290,12 +315,14 @@ export async function listCommunityFeed(
       LIMIT 100`,
     [input.spaceId, input.participantId],
   );
-  return res.rows.map((r) => ({
+  const rows = res.rows.map((r) => ({
     postId: r.id as string,
     authorParticipantId: r.author_participant_id as string,
     contentText: r.content_text as string,
     publishedAt: (r.published_at as Date).toISOString(),
   }));
+  const name = await nameOf(deps, rows.map((r) => r.authorParticipantId));
+  return rows.map((r) => ({ ...r, authorDisplayName: name(r.authorParticipantId) }));
 }
 
 export interface OwnPostSummary {

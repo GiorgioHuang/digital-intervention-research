@@ -66,6 +66,15 @@ async function main(): Promise<void> {
     checkPermission: () => {
       throw new PlatformError('AUTHORISATION_DENIED', 'Sweeps hold no authority');
     },
+    // Sweeps read no participant names. Throwing rather than returning an
+    // empty map keeps this honest: if a sweep ever needs a name, that is a
+    // design change to make deliberately, not something to discover from
+    // an unexplained "A community member" in a log line.
+    participants: {
+      findDisplayNames: (): never => {
+        throw new PlatformError('AUTHORISATION_DENIED', 'Sweeps do not read participant names');
+      },
+    },
   };
   for (const queue of SWEEP_QUEUES) await boss.createQueue(queue);
   await boss.work('match-candidate-expiry', async () => {

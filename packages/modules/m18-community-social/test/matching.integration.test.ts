@@ -63,7 +63,7 @@ describe.skipIf(!dbAvailable)('M18 matching -> MutualAcceptance -> Connection (i
     m01 = { pool, clock, checkPermission };
     m02 = { pool, clock, checkPermission };
     m03 = { pool, clock, permissions };
-    m18 = { pool, clock, checkPermission };
+    m18 = { pool, clock, checkPermission, participants };
 
     ({ userAccountId: adminId } = await seedBootstrapAdministrator(pool, clock, { displayName: 'Admin' }));
     ({ organisationId: orgId } = await createOrganisation(m01, ctx(adminId), { name: 'Match Org' }));

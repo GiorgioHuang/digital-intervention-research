@@ -12,10 +12,22 @@ export type PermissionCheck = (
   },
 ) => Promise<PolicyDecisionResult>;
 
+/**
+ * Just enough of the participant read side for this module to put a name
+ * where it would otherwise print an internal identifier (decision D-12).
+ * Declared here rather than imported from M02 so the dependency stays one
+ * way: M18 states what it needs, and the composition root supplies M02's
+ * query object, which satisfies this structurally.
+ */
+export interface ParticipantNamePort {
+  findDisplayNames(participantIds: string[]): Promise<Map<string, string>>;
+}
+
 export interface M18Deps {
   pool: Pool;
   clock: Clock;
   checkPermission: PermissionCheck;
+  participants: ParticipantNamePort;
 }
 
 /**

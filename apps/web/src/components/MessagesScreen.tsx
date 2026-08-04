@@ -34,6 +34,7 @@ export function MessagesScreen({ session }: { session: Session }) {
       const thread: ThreadSummary = {
         threadId: res.data.id,
         otherParticipantId: conn.otherParticipantId,
+        otherDisplayName: conn.otherDisplayName,
         basisType: 'ActiveConnection',
         threadState: 'Active',
         createdAt: new Date().toISOString(),
@@ -53,7 +54,7 @@ export function MessagesScreen({ session }: { session: Session }) {
         <MessagePanel
           session={session}
           threadId={active.threadId}
-          recipient={{ participantId: active.otherParticipantId, displayName: active.otherParticipantId }}
+          recipient={{ participantId: active.otherParticipantId, displayName: active.otherDisplayName }}
         />
       </section>
     );
@@ -75,7 +76,7 @@ export function MessagesScreen({ session }: { session: Session }) {
             {threads.map((t) => (
               <li key={t.threadId} style={{ marginBlock: '0.5rem' }}>
                 <button onClick={() => setActive(t)}>
-                  Conversation with {t.otherParticipantId} ({t.threadState === 'Active' ? 'ongoing' : t.threadState})
+                  Conversation with {t.otherDisplayName} ({t.threadState === 'Active' ? 'ongoing' : t.threadState})
                 </button>
               </li>
             ))}
@@ -94,7 +95,7 @@ export function MessagesScreen({ session }: { session: Session }) {
           <ul style={{ listStyle: 'none', padding: 0 }}>
             {connections.map((c) => (
               <li key={c.connectionId} style={{ marginBlock: '0.5rem' }}>
-                {c.otherParticipantId} ({c.connectionState === 'Active' ? 'connected' : c.connectionState}){' '}
+                {c.otherDisplayName} ({c.connectionState === 'Active' ? 'connected' : c.connectionState}){' '}
                 {c.connectionState === 'Active' && (
                   <button onClick={() => void startThread(c)}>Start a conversation</button>
                 )}

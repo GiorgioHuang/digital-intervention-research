@@ -25,6 +25,7 @@ import {
   createCommunitySpace,
   draftSocialPost,
   joinCommunity,
+  listCommunityFeed,
   publishSocialPost,
   recordModerationDecision,
   revokeBlock,
@@ -71,7 +72,7 @@ describe.skipIf(!dbAvailable)('M18 block/report/moderation/community (integratio
     m01 = { pool, clock, checkPermission };
     m02 = { pool, clock, checkPermission };
     m03 = { pool, clock, permissions };
-    m18 = { pool, clock, checkPermission };
+    m18 = { pool, clock, checkPermission, participants };
 
     ({ userAccountId: adminId } = await seedBootstrapAdministrator(pool, clock, { displayName: 'Admin' }));
     ({ organisationId: orgId } = await createOrganisation(m01, ctx(adminId), { name: 'M18 Org' }));
@@ -234,6 +235,39 @@ describe.skipIf(!dbAvailable)('M18 block/report/moderation/community (integratio
     await publishSocialPost(m18, ctx(patAccountId), { postId, participantId: patId, confirmed: true });
     const post = await pool.query(`SELECT post_state FROM community_social.social_posts WHERE id = $1`, [postId]);
     expect(post.rows[0].post_state).toBe('Published');
+
+    // Decision D-12: the feed carries a name, not an internal identifier.
+    // Until PublicProfile exists that name is the one on the participant
+    // record, and it must actually be resolved — a screen that prints the
+    // key hands every reader a handle for correlating that person.
+    const feed = await listCommunityFeed(m18, ctx(patAccountId), { spaceId, participantId: patId });
+    const mine = feed.find((f) => f.postId === postId);
+    expect(mine?.authorDisplayName).toBe('Pat P.');
+    expect(mine?.authorDisplayName).not.toContain('pt_');
+  });
+
+  it('a participant whose name cannot be resolved is described, never numbered', async () => {
+    // Nothing in the platform deletes a participant row, so this is not a
+    // reachable state today; the guarantee still has to hold, because the
+    // alternative fallback — printing the id — is the exact defect D-12
+    // exists to remove.
+    const bare: M18Deps = { ...m18, participants: { findDisplayNames: async () => new Map() } };
+    const { spaceId, ruleVersionId } = await createCommunitySpace(
+      m18,
+      createRequestContext({ actor: { type: 'user', id: adminId }, organisationId: orgId }),
+      { name: 'Unnamed Corner', rulesText: 'Be kind.' },
+    );
+    await joinCommunity(m18, ctx(patAccountId), { spaceId, participantId: patId, ruleVersionId });
+    const { postId } = await draftSocialPost(m18, ctx(patAccountId), {
+      spaceId,
+      participantId: patId,
+      contentText: 'Hello again',
+    });
+    await publishSocialPost(m18, ctx(patAccountId), { postId, participantId: patId, confirmed: true });
+
+    const feed = await listCommunityFeed(bare, ctx(patAccountId), { spaceId, participantId: patId });
+    expect(feed[0]?.authorDisplayName).toBe('A community member');
+    expect(feed[0]?.authorDisplayName).not.toContain(patId);
   });
 });
 
