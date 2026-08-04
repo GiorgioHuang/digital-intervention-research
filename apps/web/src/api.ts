@@ -280,8 +280,17 @@ export const api = {
       s,
       `/v1/participants/${s.participantId}/life-story/contributions/awaiting-review`,
     ),
-  reviewContribution: (s: Session, contributionId: string, itemId: string, decision: 'Accepted' | 'Rejected') =>
-    post(s, `/v1/life-story/contributions/${contributionId}/review`, { itemId, decision }),
+  /** Saying no needs nowhere to put anything, so the item is only sent when accepting. */
+  reviewContribution: (
+    s: Session,
+    contributionId: string,
+    decision: 'Accepted' | 'Rejected',
+    itemId?: string,
+  ) =>
+    post(s, `/v1/life-story/contributions/${contributionId}/review`, {
+      decision,
+      ...(itemId === undefined ? {} : { itemId }),
+    }),
   listMyEnrolments: (s: Session) =>
     get<{ data: { id: string; attributes: MyEnrolment }[] }>(s, `/v1/participants/${s.participantId}/enrolments`),
   /**

@@ -49,6 +49,7 @@ import {
   confirmTestimony,
   createArchive,
   createItem,
+  proposeContribution,
 } from '@platform/m17-life-story';
 
 const DATABASE_URL = process.env['DATABASE_URL'];
@@ -277,6 +278,26 @@ async function main() {
     permittedActions: ['life-story.contribute'],
   });
   await approveRelationship(m03, ctx(annAcc), { relationshipId, expectedVersion: 1, confirmed: true });
+
+  // Something actually waiting on Ann, so the "Waiting for you" block on
+  // Home is not permanently empty in the demo. No part of the story is
+  // named, because a supporter writing from their own workspace is not
+  // shown the participant's story and cannot name one — accepting it
+  // therefore asks Ann where it belongs.
+  await proposeContribution(base, ctx(supporterId), {
+    archiveId,
+    contentText: 'I remember you carrying seedlings up the hill in the rain that spring.',
+  });
+
+  // A relationship Ben has not decided on, so the approve path is visible
+  // from both sides: Ben sees a decision waiting, Sofia sees that he has
+  // not decided.
+  await proposeRelationship(m03, ctx(coordId), {
+    participantId: benId,
+    relatedActorId: supporterId,
+    relationshipType: 'Friend',
+    permittedActions: ['participant.view-shared'],
+  });
 
   console.log('\nDemo data created (all synthetic).');
   printAccounts(

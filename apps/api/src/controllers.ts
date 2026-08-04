@@ -663,14 +663,15 @@ export class CommandController {
   async reviewContribution(
     @Req() req: Request,
     @Param('contributionId') contributionId: string,
-    @Body() body: { itemId: string; decision: 'Accepted' | 'Rejected' },
+    @Body() body: { itemId?: string; decision: 'Accepted' | 'Rejected' },
   ) {
     const ctx = requireActor(req);
     // Only the archive owner reviews; acceptance creates a version with
     // source SupporterContribution — it does NOT become testimony.
+    // Saying no needs nowhere to put anything, so itemId is optional.
     const result = await reviewContribution(this.deps.m17, ctx, {
       contributionId,
-      itemId: body.itemId,
+      ...(body.itemId === undefined || body.itemId === '' ? {} : { itemId: body.itemId }),
       decision: body.decision,
     });
     return {

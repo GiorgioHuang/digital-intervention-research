@@ -401,9 +401,25 @@ export async function proposeContribution(
 export async function reviewContribution(
   deps: M17Deps,
   ctx: RequestContext,
-  input: { contributionId: string; itemId: string; decision: 'Accepted' | 'Rejected' },
+  input: { contributionId: string; itemId?: string; decision: 'Accepted' | 'Rejected' },
 ): Promise<{ versionId?: string }> {
-  const item = await loadItem(deps.pool, input.itemId);
+  // Ownership comes from the contribution, through the archive it was
+  // offered to — never from an item the caller names. Taking it from the
+  // named item let a contribution be judged against a different story
+  // than the one it was written into, and it meant a contribution with no
+  // item attached could not be reached at all.
+  const found = await deps.pool.query(
+    `SELECT c.archive_id, c.item_id, a.participant_id
+       FROM life_story.contributions c
+       JOIN life_story.archives a ON a.id = c.archive_id
+      WHERE c.id = $1`,
+    [input.contributionId],
+  );
+  if (found.rowCount === 0) throw new PlatformError('RESOURCE_NOT_FOUND', 'Contribution not found');
+  const archiveId = found.rows[0].archive_id as string;
+  const ownerParticipantId = found.rows[0].participant_id as string;
+  const attachedItemId = (found.rows[0].item_id as string | null) ?? null;
+
   const decision = await deps.checkPermission(ctx, {
     action: 'life-story.review-contribution',
     resource: {
@@ -411,10 +427,29 @@ export async function reviewContribution(
       id: input.contributionId,
       state: 'Proposed',
       protectedExistence: true,
-      ownerParticipantId: item.participantId,
+      ownerParticipantId,
     },
   });
   assertAllowed(decision, false);
+
+  /*
+   * Saying no needs nowhere to put anything. Requiring an item to reject
+   * was the whole defect: a supporter proposing text without naming a
+   * part of the story created something the participant could neither
+   * accept nor refuse, and it sat there permanently.
+   */
+  let target: ItemRow | undefined;
+  if (input.decision === 'Accepted') {
+    const targetId = input.itemId ?? attachedItemId;
+    if (targetId === undefined || targetId === null) {
+      throw new PlatformError('VALIDATION_ERROR', 'Accepting needs the part of the story it goes into');
+    }
+    target = await loadItem(deps.pool, targetId);
+    // Text offered to one story does not end up in another.
+    if (target.archiveId !== archiveId) {
+      throw new PlatformError('RESOURCE_NOT_FOUND', 'That part of the story is not in this archive');
+    }
+  }
 
   const now = deps.clock.now();
   let versionId: string | undefined;
@@ -430,7 +465,7 @@ export async function reviewContribution(
     if (row === undefined) throw new PlatformError('INVALID_STATE_TRANSITION', 'Contribution is not in Proposed');
     if (input.decision === 'Accepted') {
       versionId = await insertVersion(client, {
-        itemId: item.id,
+        itemId: target!.id,
         contentText: row.content_text,
         sourceType: 'SupporterContribution',
         authoredByActorId: row.contributor_actor_id,

@@ -267,6 +267,90 @@ describe.skipIf(!dbAvailable)('M17 Life Story (integration)', () => {
   });
 
   /**
+   * A supporter writing from their own workspace cannot name a part of
+   * the story, because they are not shown it. Requiring an item to
+   * REJECT was the defect: such a contribution could be neither accepted
+   * nor refused, so it sat in the participant's list permanently.
+   */
+  it('a contribution with no part named can still be refused, and accepted into a chosen part', async () => {
+    const { contributionId: loose } = await proposeContribution(m17, ctx(supporterId), {
+      archiveId,
+      contentText: 'Something offered without saying where it belongs.',
+    });
+    await reviewContribution(m17, ctx(participantAccountId), { contributionId: loose, decision: 'Rejected' });
+    const refused = await pool.query(
+      `SELECT contribution_state FROM life_story.contributions WHERE id = $1`,
+      [loose],
+    );
+    expect(refused.rows[0].contribution_state).toBe('Rejected');
+
+    // Accepting the same shape needs somewhere to put it, chosen by the
+    // participant, and the answer is a validation error rather than a
+    // silent no-op.
+    const { contributionId: second } = await proposeContribution(m17, ctx(supporterId), {
+      archiveId,
+      contentText: 'Another one with no place named.',
+    });
+    await expect(
+      reviewContribution(m17, ctx(participantAccountId), { contributionId: second, decision: 'Accepted' }),
+    ).rejects.toMatchObject({ code: 'VALIDATION_ERROR' });
+    // Into a part of the story the participant picks, which is their
+    // decision and not the supporter's.
+    const { itemId: chosen } = await createItem(m17, ctx(participantAccountId), {
+      archiveId,
+      title: 'Where I want this to go',
+      contentText: 'A part of my story I wrote myself.',
+      sourceType: 'ParticipantAuthored',
+    });
+    const { versionId } = await reviewContribution(m17, ctx(participantAccountId), {
+      contributionId: second,
+      itemId: chosen,
+      decision: 'Accepted',
+    });
+    expect(versionId).toBeDefined();
+    const v = await pool.query(
+      `SELECT source_type, testimony_state FROM life_story.item_versions WHERE id = $1`,
+      [versionId],
+    );
+    expect(v.rows[0].source_type).toBe('SupporterContribution');
+    expect(v.rows[0].testimony_state).toBe('NotTestimony');
+  });
+
+  /**
+   * Ownership now comes from the contribution rather than from an item
+   * the caller names, so text offered to one story cannot be steered into
+   * another.
+   */
+  it('NEGATIVE a contribution cannot be accepted into a part of a different story', async () => {
+    const otherAccount = (await createUserAccount(m01, createRequestContext({ actor: { type: 'user', id: adminId }, organisationId: orgId }), { displayName: 'Second P.' })).userAccountId;
+    await assignRole(m01, createRequestContext({ actor: { type: 'user', id: adminId }, organisationId: orgId }), { userAccountId: otherAccount, role: 'Participant', confirmed: true });
+    const { participantId: otherPid } = await registerParticipant(
+      m02,
+      createRequestContext({ actor: { type: 'user', id: coordinatorId }, organisationId: orgId }),
+      { displayName: 'Second P.', userAccountId: otherAccount },
+    );
+    const { archiveId: otherArchive } = await createArchive(m17, ctx(otherAccount), { participantId: otherPid });
+    const { itemId: otherItem } = await createItem(m17, ctx(otherAccount), {
+      archiveId: otherArchive,
+      title: 'Their own story',
+      contentText: 'Written by the other participant.',
+      sourceType: 'ParticipantAuthored',
+    });
+
+    const { contributionId } = await proposeContribution(m17, ctx(supporterId), {
+      archiveId,
+      contentText: 'Offered to the first participant only.',
+    });
+    await expect(
+      reviewContribution(m17, ctx(participantAccountId), {
+        contributionId,
+        itemId: otherItem,
+        decision: 'Accepted',
+      }),
+    ).rejects.toMatchObject({ code: 'RESOURCE_NOT_FOUND' });
+  });
+
+  /**
    * Being the only person permitted to decide is worth nothing without a
    * way to find what is waiting. This pins down both halves: the
    * participant sees the contribution left Proposed by the test above, and

@@ -780,3 +780,13 @@
   code: [apps/web/src/App.tsx]
   tests: [apps/web/test/home.test.tsx]
   status: implemented
+
+- implementation_id: IMP-M17-REVIEW-WITHOUT-ITEM-001
+  module: M17
+  summary: Fixes a contribution that could be neither accepted nor refused. reviewContribution required an itemId for both decisions and took the reviewing participant's identity from that item, so a contribution proposed without naming a part of the story was unreachable - it sat in the participant's Waiting for you list permanently with two buttons that could not work. That became the normal case rather than an edge one when the supporter workspace was rebuilt to stop asking for internal identifiers, because a supporter is not shown the participant's story and therefore cannot name a part of it. Found while checking whether the demo seed exercises the paths built in this session, not by a failing test. Two changes. Ownership now comes from the contribution through the archive it was offered to, never from an item the caller names - the same correction as the block fix, arriving from another direction, and it closes a second problem at once because the named item was never checked against the contribution's archive, so text offered to one story could be steered into another by anyone who owned both. Refusing now needs no item at all, since saying no needs nowhere to put anything. Accepting still needs somewhere, and when the supporter named no part the participant chooses which part of their own story it belongs in - their decision, not the supporter's and not the screen's. A participant who has written nothing yet is told there is nowhere to put it and can still say no. The demo seed now leaves a contribution genuinely waiting on a participant and a relationship a participant has not decided on, so both owner-only decision paths show real state in the deployed environment instead of permanently empty blocks
+  trace_ids: [ATR-007, ATR-002]
+  adr_ids: [ADR-024, ADR-042, ADR-050]
+  docs: ["design/PARTICIPANT_WORKSPACE.md A1.2", "design/MODERATION_SAFETY_SUPPORTER.md D2", "Doc 20 sections 127-128"]
+  code: [packages/modules/m17-life-story/src/application/commands.ts, apps/api/src/controllers.ts, apps/web/src/api.ts, apps/web/src/components/WaitingForYou.tsx, packages/synthetic-pilot/seed-demo.mjs]
+  tests: [packages/modules/m17-life-story/test/m17.integration.test.ts, apps/web/test/waiting-for-you.test.tsx]
+  status: implemented

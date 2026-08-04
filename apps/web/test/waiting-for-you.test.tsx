@@ -18,7 +18,7 @@ const waiting = {
   ],
 };
 
-function stubFetch(body: unknown) {
+function stubFetch(body: unknown, parts: unknown[] = []) {
   const calls: { path: string; method: string; body: Record<string, unknown> }[] = [];
   vi.stubGlobal(
     'fetch',
@@ -29,11 +29,47 @@ function stubFetch(body: unknown) {
         method,
         body: method === 'GET' ? {} : (JSON.parse(init!.body as string) as Record<string, unknown>),
       });
-      return new Response(JSON.stringify(method === 'GET' ? body : { data: { id: 'x' } }), { status: 200 });
+      if (method !== 'GET') return new Response(JSON.stringify({ data: { id: 'x' } }), { status: 200 });
+      if (path.endsWith('/life-story')) {
+        return new Response(JSON.stringify({ data: parts, meta: { archiveId: 'ar_1' } }), { status: 200 });
+      }
+      return new Response(JSON.stringify(body), { status: 200 });
     }),
   );
   return calls;
 }
+
+const storyPart = (itemId: string, title: string) => ({
+  id: itemId,
+  attributes: {
+    itemId,
+    title,
+    itemState: 'Active',
+    visibility: 'Private',
+    currentVersionId: 'lv_1',
+    versionNumber: 1,
+    contentText: 'x',
+    sourceType: 'ParticipantAuthored',
+    testimonyState: 'NotTestimony',
+    supersedesConfirmedVersion: false,
+    versionCount: 1,
+    updatedAt: '2026-08-01T00:00:00Z',
+  },
+});
+
+/** What the supporter workspace actually produces: no part named. */
+const unattached = {
+  data: [
+    {
+      id: 'con_2',
+      attributes: {
+        contributionId: 'con_2', archiveId: 'ar_1', itemId: null,
+        contentText: 'Offered without saying where it belongs.',
+        createdAt: '2026-08-01T00:00:00Z',
+      },
+    },
+  ],
+};
 
 /**
  * A supporter can propose text into a participant's life story, and
@@ -88,6 +124,57 @@ describe('what is waiting for the participant', () => {
     });
     expect(calls.find((c) => c.method === 'POST')?.body['decision']).toBe('Rejected');
     expect(screen.getByRole('status').textContent).toContain('Nothing of it goes into your story');
+  });
+
+  /**
+   * A supporter writing from their own workspace cannot name a part of
+   * the story — they are not shown it. Requiring one to REFUSE meant such
+   * a contribution could be neither accepted nor refused and sat in this
+   * list permanently.
+   */
+  it('refusing something with no part named needs no part, and sends none', async () => {
+    const calls = stubFetch(unattached);
+    await act(async () => {
+      render(<WaitingForYou session={session} />);
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Do not add this' }));
+    });
+    const post = calls.find((c) => c.method === 'POST');
+    expect(post?.body['decision']).toBe('Rejected');
+    expect(post?.body['itemId']).toBeUndefined();
+    expect(screen.getByRole('status').textContent).toContain('Nothing of it goes into your story');
+  });
+
+  it('accepting it asks where it should go, and the participant chooses', async () => {
+    const calls = stubFetch(unattached, [storyPart('li_9', 'My garden years')]);
+    await act(async () => {
+      render(<WaitingForYou session={session} />);
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Add this to my story' }));
+    });
+    // Nothing was decided by opening the question.
+    expect(calls.some((c) => c.method === 'POST')).toBe(false);
+    expect(screen.getByRole('heading', { name: 'Where should this go?' })).toBeTruthy();
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Add it to \u201cMy garden years\u201d' }));
+    });
+    const post = calls.find((c) => c.method === 'POST');
+    expect(post?.body['decision']).toBe('Accepted');
+    expect(post?.body['itemId']).toBe('li_9');
+  });
+
+  it('with no part of the story written, it says so and still allows refusing', async () => {
+    stubFetch(unattached, []);
+    await act(async () => {
+      render(<WaitingForYou session={session} />);
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Add this to my story' }));
+    });
+    expect(screen.getByText(/there is nowhere to add this/)).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Do not add this' })).toBeTruthy();
   });
 
   it('an empty list says nothing is waiting rather than looking broken', async () => {
