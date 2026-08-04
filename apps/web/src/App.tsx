@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { StaffApp } from './StaffApp.js';
 import { SupporterApp } from './SupporterApp.js';
 import { AccessTokenGate } from './components/AccessTokenGate.js';
+import { AssistedMode } from './components/AssistedMode.js';
 import { CommunityPanel } from './components/CommunityPanel.js';
 import { ConsentPanel } from './components/ConsentPanel.js';
 import { MatchingPanel } from './components/MatchingPanel.js';
@@ -48,6 +49,13 @@ export function App() {
   const [signInProblem, setSignInProblem] = useState('');
   const [checking, setChecking] = useState(false);
   const [mode, setMode] = useState<'participant' | 'staff' | 'supporter'>('participant');
+  /**
+   * Who is sitting with the participant, if anyone (decision D-15). Held
+   * here so the banner is on every screen rather than only where it was
+   * switched on — assistance that is easy to forget about is the kind
+   * that stops being disclosed.
+   */
+  const [helper, setHelper] = useState<string | null>(null);
   const navRef = useRef<HTMLElement | null>(null);
 
   /**
@@ -185,6 +193,7 @@ export function App() {
       </nav>
       <main id="main-content">
         <AccessTokenGate />
+        <AssistedMode helper={helper} onChange={setHelper} />
         {screen === 'home' && (
           <section aria-labelledby="home-heading">
             <h1 id="home-heading">What would you like to do today?</h1>
@@ -209,7 +218,9 @@ export function App() {
           </section>
         )}
         {screen === 'consent' && <ConsentPanel session={session} />}
-        {screen === 'message' && <MessagesScreen session={session} onGetHelp={() => setScreen('help')} />}
+        {screen === 'message' && (
+          <MessagesScreen session={session} onGetHelp={() => setScreen('help')} assistedBy={helper} />
+        )}
         {screen === 'matching' && <MatchingPanel session={session} />}
         {screen === 'community' && <CommunityPanel session={session} />}
         {screen === 'help' && (

@@ -134,6 +134,7 @@ export interface ThreadMessage {
   messageVersion: number;
   lifecycleState: string;
   deliveryState: string;
+  sentWithAssistance: boolean;
   createdAt: string;
 }
 
@@ -184,11 +185,17 @@ export const api = {
       senderParticipantId: s.participantId,
       contentText,
     }),
-  confirmSend: (s: Session, messageId: string, expectedMessageVersion: number, recipientIds: string[]) =>
+  confirmSend: (
+    s: Session,
+    messageId: string,
+    expectedMessageVersion: number,
+    recipientIds: string[],
+    assisted = false,
+  ) =>
     post<{ data: { meta: { lifecycleState: string; deliveryState: string } } }>(
       s,
       `/v1/messages/${messageId}/confirm-send`,
-      { senderParticipantId: s.participantId, expectedMessageVersion, recipientIds, confirmed: true },
+      { senderParticipantId: s.participantId, expectedMessageVersion, recipientIds, confirmed: true, assisted },
     ),
   submitReport: (s: Session, reportedActorId: string, category: string, description: string) =>
     post<{ data: { id: string; meta: { moderationCaseId: string } } }>(s, '/v1/reports', {

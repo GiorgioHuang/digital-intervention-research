@@ -170,12 +170,20 @@ export class CommandController {
   async confirmSend(
     @Req() req: Request,
     @Param('messageId') messageId: string,
-    @Body() body: { senderParticipantId: string; expectedMessageVersion: number; recipientIds: string[]; confirmed: boolean },
+    @Body()
+    body: {
+      senderParticipantId: string;
+      expectedMessageVersion: number;
+      recipientIds: string[];
+      confirmed: boolean;
+      assisted?: boolean;
+    },
   ) {
     const ctx = requireActor(req);
     const result = await confirmSend(this.deps.m18, ctx, {
       messageId,
       senderParticipantId: body.senderParticipantId,
+      ...(body.assisted === undefined ? {} : { assisted: body.assisted }),
       expectedMessageVersion: body.expectedMessageVersion,
       recipientIds: body.recipientIds,
       confirmed: body.confirmed === true,

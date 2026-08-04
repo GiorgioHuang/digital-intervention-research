@@ -34,7 +34,15 @@ const CLOSED_THREAD_WORDING: Record<string, string> = {
   Expired: 'The reason this conversation was possible has ended, so nothing more can be sent.',
   Archived: 'This conversation is archived. You can read it, but nothing more can be sent.',
 };
-export function MessagesScreen({ session, onGetHelp }: { session: Session; onGetHelp?: () => void }) {
+export function MessagesScreen({
+  session,
+  onGetHelp,
+  assistedBy,
+}: {
+  session: Session;
+  onGetHelp?: () => void;
+  assistedBy?: string | null;
+}) {
   const [threads, setThreads] = useState<ThreadSummary[] | null>(null);
   const [actionError, setActionError] = useState<PresentedError | null>(null);
   const [connections, setConnections] = useState<ConnectionSummary[] | null>(null);
@@ -87,6 +95,7 @@ export function MessagesScreen({ session, onGetHelp }: { session: Session; onGet
           recipient={{ participantId: active.otherParticipantId, displayName: active.otherDisplayName }}
           basis={BASIS_WORDING[active.basisType] ?? active.basisType}
           {...(onGetHelp === undefined ? {} : { onGetHelp })}
+          assisted={assistedBy != null}
           {...(active.threadState === 'Active'
             ? {}
             : {

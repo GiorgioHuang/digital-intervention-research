@@ -220,6 +220,14 @@ export async function confirmSend(
     expectedMessageVersion: number;
     recipientIds: string[];
     confirmed: boolean;
+    /**
+     * True when the participant pressed send while someone was helping
+     * them (decision D-15). The helper never acts for them — assistance
+     * is read-only — but the recipient is told, because a conversation
+     * whose audience is larger than one party believes is not the
+     * conversation they think they are having.
+     */
+    assisted?: boolean;
   },
 ): Promise<{ sendConfirmationId: string }> {
   const msg = await deps.pool.query(
@@ -266,9 +274,16 @@ export async function confirmSend(
     const upd = await client.query(
       `UPDATE community_social.messages
           SET lifecycle_state = 'Queued', delivery_state = 'Queued', recipient_set_hash = $2,
+              sent_with_assistance = $5,
               record_version = record_version + 1, updated_at = $3
         WHERE id = $1 AND lifecycle_state = 'Draft' AND message_version = $4`,
-      [input.messageId, recipientHash(input.recipientIds), now, input.expectedMessageVersion],
+      [
+        input.messageId,
+        recipientHash(input.recipientIds),
+        now,
+        input.expectedMessageVersion,
+        input.assisted === true,
+      ],
     );
     if (upd.rowCount !== 1) throw new PlatformError('SEND_CONFIRMATION_MISMATCH', 'Draft changed concurrently');
     await client.query(

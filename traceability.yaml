@@ -670,3 +670,13 @@
   code: [apps/web/src/components/MessagePanel.tsx, apps/web/src/components/MessagesScreen.tsx, apps/web/src/App.tsx]
   tests: [apps/web/test/message-panel.test.tsx]
   status: implemented
+
+- implementation_id: IMP-M18-ASSISTED-DISCLOSURE-001
+  module: M18
+  summary: Assisted mode as read-only assistance with disclosure to the recipient (decision D-15). The helper never acts for the participant, so no second identity is introduced - ActorReference and the audit table are unchanged, because who did what was already true when only the participant can press anything. What the feature adds is honesty about who is present. The participant turns it on and off themselves, since a mode someone else could switch on would be surveillance wearing the word help, and a persistent banner states that the helper can see the screen and cannot press anything for them. The helper's name is entered by the participant, stays on the device and is never transmitted - the banner needs it to say something meaningful and nobody else has a use for it. Messages confirmed while assistance is on are marked, and the recipient is told that someone was helping the sender and could see the conversation; the reason is not authorship, which is genuinely the participant's, but that the conversation's audience is larger than the other party would otherwise assume, which is theirs to know. Stored as messages.sent_with_assistance - the fact only, never the helper's identity, because putting a third party the recipient has no relationship with into their conversation is neither necessary nor legitimate
+  trace_ids: [ATR-002, ATR-024]
+  adr_ids: [ADR-031, ADR-104]
+  docs: ["design/DESIGN_DECISIONS.md D-15", "design/PARTICIPANT_WORKSPACE.md C7", "Doc 20 B13"]
+  code: [packages/database/migrations/1753800000020_m18-assisted-send.sql, packages/modules/m18-community-social/src/application/messaging-commands.ts, packages/modules/m18-community-social/src/application/queries.ts, apps/web/src/components/AssistedMode.tsx, apps/web/src/components/MessagePanel.tsx, apps/web/src/App.tsx]
+  tests: [apps/web/test/assisted-mode.test.tsx]
+  status: implemented

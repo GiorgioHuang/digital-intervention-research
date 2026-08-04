@@ -110,6 +110,8 @@ export interface ThreadMessage {
   messageVersion: number;
   lifecycleState: string;
   deliveryState: string;
+  /** True when the sender confirmed this send while someone was helping them (D-15). */
+  sentWithAssistance: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -137,7 +139,8 @@ export async function listThreadMessages(
     throw new PlatformError('RESOURCE_NOT_FOUND', 'Thread not found');
   }
   const res = await deps.pool.query(
-    `SELECT id, sender_participant_id, content_text, message_version, lifecycle_state, delivery_state, created_at, updated_at
+    `SELECT id, sender_participant_id, content_text, message_version, lifecycle_state, delivery_state,
+            sent_with_assistance, created_at, updated_at
        FROM community_social.messages
       WHERE thread_id = $1
         AND (lifecycle_state <> 'Draft' OR sender_participant_id = $2)
@@ -151,6 +154,7 @@ export async function listThreadMessages(
     messageVersion: r.message_version as number,
     lifecycleState: r.lifecycle_state as string,
     deliveryState: r.delivery_state as string,
+    sentWithAssistance: r.sent_with_assistance as boolean,
     createdAt: (r.created_at as Date).toISOString(),
     updatedAt: (r.updated_at as Date).toISOString(),
   }));

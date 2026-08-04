@@ -23,6 +23,7 @@ export function MessagePanel({
   basis,
   closedReason,
   onGetHelp,
+  assisted = false,
 }: {
   session: Session;
   threadId: string;
@@ -33,6 +34,12 @@ export function MessagePanel({
   closedReason?: string;
   /** Navigates to Help and safety, where blocking and reporting live. */
   onGetHelp?: () => void;
+  /**
+   * True while someone is helping the participant use the app (D-15).
+   * The helper presses nothing — but they can read the conversation, so
+   * the recipient is told.
+   */
+  assisted?: boolean;
 }) {
   const [text, setText] = useState('');
   const [actionError, setActionError] = useState<PresentedError | null>(null);
@@ -73,7 +80,7 @@ export function MessagePanel({
   const confirmSend = async () => {
     if (!draft) return;
     try {
-      const res = await api.confirmSend(session, draft.id, draft.version, [recipient.participantId]);
+      const res = await api.confirmSend(session, draft.id, draft.version, [recipient.participantId], assisted);
       setReviewing(false);
       setDeliveryState(res.data.meta.deliveryState);
       setNotice('You have confirmed sending. The message is queued for sending; it has not arrived yet.');
@@ -106,6 +113,18 @@ export function MessagePanel({
               {/* Own messages show their truthful delivery state; drafts say so. */}
               {m.senderParticipantId === session.participantId && (
                 <p>Status: {DELIVERY_STATE_LABELS[m.deliveryState] ?? m.deliveryState}</p>
+              )}
+              {/*
+                D-15: the recipient is told that someone was with the
+                sender. It is stated as a fact about the circumstances, not
+                as a doubt about the message or the person.
+              */}
+              {m.sentWithAssistance && (
+                <p>
+                  {m.senderParticipantId === session.participantId
+                    ? 'Sent while someone was helping you.'
+                    : `Sent while someone was helping ${recipient.displayName}. That person could see this conversation.`}
+                </p>
               )}
             </li>
           ))}
@@ -179,6 +198,12 @@ export function MessagePanel({
             and the platform will not later claim it was received without
             a result from that service (Doc 20 §160/§161).
           */}
+          {assisted && (
+            <p>
+              Because someone is helping you right now, {recipient.displayName} will be told that this message was
+              sent while you had help.
+            </p>
+          )}
           <p>
             Confirming sends it for delivery. It does not mean it has arrived: you will see the delivery state
             afterwards, and if that state is unknown it stays unknown rather than becoming &ldquo;delivered&rdquo;.
