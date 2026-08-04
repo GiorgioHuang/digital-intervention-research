@@ -660,3 +660,13 @@
   code: [apps/web/src/App.tsx]
   tests: [apps/web/test/sign-in.test.tsx]
   status: implemented
+
+- implementation_id: IMP-WEB-SEND-HONESTY-001
+  module: ops
+  summary: The send confirmation now says that confirming is not delivery, and a draft containing an external link raises an inline reminder (PARTICIPANT_WORKSPACE A4.4/A4.5, Doc 20 §160/§161/§163). The dialog previously showed only recipient, version and content, so the one thing a person most needs before pressing send - that this hands the message to a delivery service rather than delivering it - was visible only afterwards in the delivery label, too late to inform the decision; it now also names the communication basis. Attachment and scan state from §160 are deliberately not added, because this implementation has no attachments and a line about scanning would assert a check that does not exist. The link reminder is inline rather than a dialog, since it is a reminder and not a decision, it never judges the other person, and it carries the "this is only a reminder" footnote. It offers three actions rather than the specified five - Not now, Change the message, and Get help block or report, which really navigates to Help and safety where blocking and reporting live rather than being a button that goes nowhere. Not now deliberately does not clear the text: the reassuring option must never be the destructive one, and the draft stays saved
+  trace_ids: [ATR-024, ATR-016]
+  adr_ids: [ADR-031]
+  docs: ["design/PARTICIPANT_WORKSPACE.md A4.4", "design/PARTICIPANT_WORKSPACE.md A4.5", "Doc 20 §160-163"]
+  code: [apps/web/src/components/MessagePanel.tsx, apps/web/src/components/MessagesScreen.tsx, apps/web/src/App.tsx]
+  tests: [apps/web/test/message-panel.test.tsx]
+  status: implemented

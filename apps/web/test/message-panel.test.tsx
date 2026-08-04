@@ -129,4 +129,72 @@ describe('MessagePanel (Doc 20 §158–161 send confirmation)', () => {
     // The other party's message shows content but no delivery state of ours.
     expect(list.textContent).toContain('That works for me');
   });
+
+  /**
+   * Doc 20 §160/§161. Confirming hands the message to the delivery
+   * service; it is not delivery. Saying so before the press is the point —
+   * afterwards is too late to inform the decision.
+   */
+  it('the send confirmation says that confirming is not delivery, and names the basis', async () => {
+    stubFetch();
+    render(
+      <MessagePanel
+        session={session}
+        threadId="th_1"
+        recipient={recipient}
+        basis="you and this person both agreed to connect"
+      />,
+    );
+    fireEvent.change(screen.getByLabelText('Your message'), { target: { value: 'Hello' } });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Save draft' }));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Review and send' }));
+    });
+    const dialog = screen.getByRole('alertdialog');
+    expect(dialog.textContent).toContain('It does not mean it has arrived');
+    expect(dialog.textContent).toContain('stays unknown');
+    expect(dialog.textContent).toContain('you and this person both agreed to connect');
+  });
+
+  /**
+   * §163: a reminder, not a decision — so it is inline, it never judges
+   * the other person, and the reassuring option must not be the
+   * destructive one.
+   */
+  it('a draft containing a link raises an inline reminder that keeps the draft intact', async () => {
+    stubFetch();
+    render(<MessagePanel session={session} threadId="th_1" recipient={recipient} onGetHelp={() => undefined} />);
+    fireEvent.change(screen.getByLabelText('Your message'), {
+      target: { value: 'Please look at http://example.com/prize' },
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Save draft' }));
+    });
+
+    expect(screen.getByRole('heading', { name: 'Have another look before you send' })).toBeTruthy();
+    expect(screen.getByText(/not a judgement about anyone/)).toBeTruthy();
+    // Blocking and reporting are reachable, not just mentioned.
+    expect(screen.getByRole('button', { name: 'Get help, block or report' })).toBeTruthy();
+
+    // "Not now" must not throw away what was written.
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Not now' }));
+    });
+    expect((screen.getByLabelText('Your message') as HTMLTextAreaElement).value).toContain(
+      'http://example.com/prize',
+    );
+    expect(screen.getByRole('status').textContent).toContain('still saved');
+  });
+
+  it('a draft without a link raises no reminder', async () => {
+    stubFetch();
+    render(<MessagePanel session={session} threadId="th_1" recipient={recipient} />);
+    fireEvent.change(screen.getByLabelText('Your message'), { target: { value: 'See you Thursday' } });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Save draft' }));
+    });
+    expect(screen.queryByRole('heading', { name: 'Have another look before you send' })).toBeNull();
+  });
 });

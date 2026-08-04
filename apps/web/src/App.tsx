@@ -209,7 +209,7 @@ export function App() {
           </section>
         )}
         {screen === 'consent' && <ConsentPanel session={session} />}
-        {screen === 'message' && <MessagesScreen session={session} />}
+        {screen === 'message' && <MessagesScreen session={session} onGetHelp={() => setScreen('help')} />}
         {screen === 'matching' && <MatchingPanel session={session} />}
         {screen === 'community' && <CommunityPanel session={session} />}
         {screen === 'help' && (

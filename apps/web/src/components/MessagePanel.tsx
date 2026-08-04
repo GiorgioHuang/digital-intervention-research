@@ -10,12 +10,19 @@ import { ErrorState } from './StateBlock.js';
  * invalidates the pending confirmation; a successful confirmation is
  * reported as Queued — never as delivered.
  */
+/**
+ * Deliberately broad: a warning shown once too often costs a glance,
+ * while one missed costs the thing it exists to prevent.
+ */
+const LINK_PATTERN = /(https?:\/\/|www\.|\b[a-z0-9-]+\.(com|net|org|co|io|cn|ru|xyz|top|link)\b)/i;
+
 export function MessagePanel({
   session,
   threadId,
   recipient,
   basis,
   closedReason,
+  onGetHelp,
 }: {
   session: Session;
   threadId: string;
@@ -24,6 +31,8 @@ export function MessagePanel({
   basis?: string;
   /** Set when the thread can no longer be written to, with the reason. */
   closedReason?: string;
+  /** Navigates to Help and safety, where blocking and reporting live. */
+  onGetHelp?: () => void;
 }) {
   const [text, setText] = useState('');
   const [actionError, setActionError] = useState<PresentedError | null>(null);
@@ -121,6 +130,40 @@ export function MessagePanel({
         </button>
         {edited && <span> You have changed the text — save the draft again before you review and send.</span>}
       </p>
+      {/*
+        Doc 20 §163: a reminder, not a decision, so it is inline rather
+        than a dialog — a dialog would make it a gate the person has to
+        get past, and the footnote would be a lie. It appears once a draft
+        exists and before the send confirmation, and it never judges the
+        other person.
+      */}
+      {draft !== null && !reviewing && LINK_PATTERN.test(draft.text) && (
+        <section aria-labelledby="link-warning-heading">
+          <h3 id="link-warning-heading">Have another look before you send</h3>
+          <p>
+            This message contains a link to somewhere outside the platform. People who want to trick others sometimes
+            use links to get passwords or money. If you are not sure, not sending is a perfectly good choice.
+          </p>
+          <p>
+            {/*
+              "Not now" must not throw the message away. The draft is
+              already saved and stays saved; the only thing this does is
+              say so, because the reassuring option should not be the
+              destructive one.
+            */}
+            <button onClick={() => setNotice('Nothing was sent. Your draft is still saved, and you can come back to it.')}>
+              Not now
+            </button>{' '}
+            <button onClick={() => setNotice('Your text is still in the box above. Change it, then save the draft again.')}>
+              Change the message
+            </button>{' '}
+            {onGetHelp !== undefined && <button onClick={onGetHelp}>Get help, block or report</button>}
+          </p>
+          <p>
+            <small>This is only a reminder. It is not a judgement about anyone.</small>
+          </p>
+        </section>
+      )}
       {reviewing && draft !== null && (
         <div role="alertdialog" aria-labelledby="send-confirm-heading">
           <h3 id="send-confirm-heading">Send confirmation</h3>
@@ -129,6 +172,17 @@ export function MessagePanel({
             <strong>{recipient.displayName}</strong>:
           </p>
           <blockquote>{draft.text}</blockquote>
+          {basis !== undefined && <p>You can write to each other because {basis}.</p>}
+          {/*
+            The single most important sentence in this dialog. Confirming
+            hands the message to the delivery service; it is not delivery,
+            and the platform will not later claim it was received without
+            a result from that service (Doc 20 §160/§161).
+          */}
+          <p>
+            Confirming sends it for delivery. It does not mean it has arrived: you will see the delivery state
+            afterwards, and if that state is unknown it stays unknown rather than becoming &ldquo;delivered&rdquo;.
+          </p>
           <button onClick={() => void confirmSend()}>Send message</button>{' '}
           <button onClick={() => setReviewing(false)}>Go back without sending</button>
         </div>
