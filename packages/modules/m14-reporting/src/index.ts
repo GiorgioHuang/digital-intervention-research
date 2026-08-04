@@ -14,7 +14,11 @@ export {
   listExportsToCarryOut,
   listMyExportRequests,
   listPendingExportRequests,
+  listReportVersionsAwaitingApproval,
+  listReportWork,
   type ExportToCarryOut,
+  type ReportVersionAwaitingApproval,
+  type ReportWorkItem,
   type MyExportRequest,
   type PendingExportRequest,
 } from './application/queries.js';

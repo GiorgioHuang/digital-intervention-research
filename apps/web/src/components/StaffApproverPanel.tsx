@@ -5,6 +5,7 @@ import { DatasetDefinitions } from './approver/DatasetDefinitions.js';
 import { DatasetLock } from './approver/DatasetLock.js';
 import { ExportDecisions } from './approver/ExportDecisions.js';
 import { ProtocolDecisions } from './approver/ProtocolDecisions.js';
+import { ReportDecisions } from './approver/ReportDecisions.js';
 
 /**
  * Approver workspace. One screen per decision type rather than one screen
@@ -19,7 +20,7 @@ import { ProtocolDecisions } from './approver/ProtocolDecisions.js';
  * (§1.4) instead of an identifier the approver has to trust they typed
  * correctly.
  */
-type Decision = 'protocol' | 'definition' | 'dataset' | 'export' | 'approval';
+type Decision = 'protocol' | 'definition' | 'dataset' | 'report' | 'export' | 'approval';
 
 const DECISIONS: { key: Decision; label: string }[] = [
   { key: 'protocol', label: 'Protocol versions' },
@@ -27,6 +28,9 @@ const DECISIONS: { key: Decision; label: string }[] = [
   // reach that queue, and the locking screen had never had a row in it.
   { key: 'definition', label: 'Dataset definitions' },
   { key: 'dataset', label: 'Dataset locks' },
+  // The reports beside the exports: nothing listed report versions,
+  // so none could ever be approved.
+  { key: 'report', label: 'Report versions' },
   { key: 'export', label: 'Exports' },
   { key: 'approval', label: 'Approval records' },
 ];
@@ -62,6 +66,7 @@ export function StaffApproverPanel({ session }: { session: StaffSession }) {
       {screen === 'protocol' && <ProtocolDecisions session={session} />}
       {screen === 'definition' && <DatasetDefinitions session={session} />}
       {screen === 'dataset' && <DatasetLock session={session} />}
+      {screen === 'report' && <ReportDecisions session={session} />}
       {screen === 'export' && <ExportDecisions session={session} />}
       {screen === 'approval' && <ApprovalRecords session={session} />}
     </section>

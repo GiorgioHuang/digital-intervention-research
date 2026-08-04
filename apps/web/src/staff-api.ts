@@ -129,6 +129,25 @@ export interface DatasetWorkItem {
   rowCount: number | null;
   updatedAt: string;
 }
+export interface ReportVersionAwaitingApprovalItem {
+  reportVersionId: string;
+  reportId: string;
+  reportTitle: string;
+  reportType: string;
+  versionNumber: number;
+  createdByActorId: string;
+  createdAt: string;
+}
+export interface ReportWorkItem {
+  reportId: string;
+  title: string;
+  reportType: string;
+  reportVersionId: string | null;
+  versionNumber: number | null;
+  versionState: string | null;
+  approvedByActorId: string | null;
+  updatedAt: string;
+}
 export interface ExportToCarryOutItem {
   exportRequestId: string;
   exportType: string;
@@ -225,6 +244,15 @@ export const staffApi = {
   listDefinitionsAwaitingApproval: (s: StaffSession) =>
     get<List<DefinitionAwaitingApprovalItem>>(s, '/v1/dataset-definitions/awaiting-approval'),
   listDatasetWork: (s: StaffSession) => get<List<DatasetWorkItem>>(s, '/v1/dataset-work'),
+  listReportVersionsAwaitingApproval: (s: StaffSession) =>
+    get<List<ReportVersionAwaitingApprovalItem>>(s, '/v1/report-versions/awaiting-approval'),
+  listReportWork: (s: StaffSession) => get<List<ReportWorkItem>>(s, '/v1/report-work'),
+  createResearchReport: (s: StaffSession, researchProjectId: string, title: string, reportType: string) =>
+    post<Id>(s, '/v1/research-reports', { researchProjectId, title, reportType }),
+  draftReportVersion: (s: StaffSession, reportId: string, text: string) =>
+    post<Id>(s, `/v1/research-reports/${reportId}/versions`, { content: { text } }),
+  approveReportVersion: (s: StaffSession, reportVersionId: string) =>
+    post<Id>(s, `/v1/report-versions/${reportVersionId}/approve`, { confirmed: true }),
   listPendingExports: (s: StaffSession) => get<List<PendingExportItem>>(s, '/v1/export-requests/pending'),
   listExportsToCarryOut: (s: StaffSession) =>
     get<List<ExportToCarryOutItem>>(s, '/v1/export-requests/to-carry-out'),

@@ -48,6 +48,8 @@ import {
   generateExportPackage,
   listExportsToCarryOut,
   listPendingExportRequests,
+  listReportVersionsAwaitingApproval,
+  listReportWork,
   recordExportDelivery,
   requestResearchExport,
 } from '@platform/m14-reporting';
@@ -156,6 +158,28 @@ export class StaffCommandController {
     const ctx = requireActor(req);
     const items = await listDefinitionsAwaitingApproval(this.deps.m12, ctx);
     return { data: items.map((i) => ({ type: 'DatasetDefinition', id: i.datasetDefinitionId, attributes: i })) };
+  }
+
+  /** Report versions waiting to be approved — nothing listed them, so none could be. */
+  @Get('report-versions/awaiting-approval')
+  async reportVersionsAwaitingApproval(@Req() req: Request) {
+    const ctx = requireActor(req);
+    const items = await listReportVersionsAwaitingApproval(this.deps.m14, ctx);
+    return { data: items.map((i) => ({ type: 'ReportVersion', id: i.reportVersionId, attributes: i })) };
+  }
+
+  /** Reports and their versions, for whoever writes them. */
+  @Get('report-work')
+  async reportWork(@Req() req: Request) {
+    const ctx = requireActor(req);
+    const items = await listReportWork(this.deps.m14, ctx);
+    return {
+      data: items.map((i) => ({
+        type: 'Report',
+        id: `${i.reportId}:${i.reportVersionId ?? 'none'}`,
+        attributes: i,
+      })),
+    };
   }
 
   /** The dataset work in front of whoever prepares data, and where it has got to. */

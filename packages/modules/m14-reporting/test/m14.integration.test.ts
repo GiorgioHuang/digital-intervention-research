@@ -22,6 +22,8 @@ import {
   listExportsToCarryOut,
   listMyExportRequests,
   listPendingExportRequests,
+  listReportVersionsAwaitingApproval,
+  listReportWork,
   recordExportDelivery,
   requestParticipantExport,
   requestResearchExport,
@@ -111,6 +113,48 @@ describe.skipIf(!dbAvailable)('M14 reporting and export (integration)', () => {
     await expect(
       approveReportVersion(m14, ctx(approverId), { reportVersionId, confirmed: true }),
     ).rejects.toMatchObject({ code: 'INVALID_STATE_TRANSITION' });
+  });
+
+  /**
+   * Nothing listed report versions, so none could ever be approved: the
+   * export half of this module had screens and the reports beside it did
+   * not. These queues are what both sides are driven from.
+   */
+  it('the report queues follow the chain, and name the author before the button', async () => {
+    const { reportId } = await createReport(m14, ctx(researcherId), {
+      researchProjectId: 'rp_m14', title: 'Queue visible', reportType: 'ResearchReport',
+    });
+    // A report with no version has nothing to approve, and the queue does
+    // not invent one.
+    const started = (await listReportWork(m14, ctx(researcherId))).find((r) => r.reportId === reportId);
+    expect(started?.versionState).toBeNull();
+
+    const { reportVersionId } = await draftReportVersion(m14, ctx(researcherId), {
+      reportId, content: { text: 'What this version says.' },
+    });
+    const waiting = (await listReportVersionsAwaitingApproval(m14, ctx(approverId))).find(
+      (v) => v.reportVersionId === reportVersionId,
+    );
+    // Approving one's own version is barred by the command and by a
+    // database CHECK; the approver learns that from the row.
+    expect(waiting?.createdByActorId).toBe(researcherId);
+    expect(waiting?.reportTitle).toBe('Queue visible');
+
+    await approveReportVersion(m14, ctx(approverId), { reportVersionId, confirmed: true });
+    // Approved versions leave the queue, which stays a list of work.
+    expect(
+      (await listReportVersionsAwaitingApproval(m14, ctx(approverId))).map((v) => v.reportVersionId),
+    ).not.toContain(reportVersionId);
+    // But stay visible to the writer, who otherwise could not tell
+    // whether to draft another — approved content cannot be edited.
+    const after = (await listReportWork(m14, ctx(researcherId))).find(
+      (r) => r.reportVersionId === reportVersionId,
+    );
+    expect(after?.versionState).toBe('Approved');
+    expect(after?.approvedByActorId).toBe(approverId);
+
+    // Read under the action that already permits the work.
+    await expect(listReportWork(m14, ctx(patAcc))).rejects.toMatchObject({ code: 'AUTHORISATION_DENIED' });
   });
 
   it('research export: approval-gated generation, MFA decision, truthful three-state delivery', async () => {

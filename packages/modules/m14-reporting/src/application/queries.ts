@@ -76,6 +76,100 @@ export async function listMyExportRequests(
   }));
 }
 
+export interface ReportVersionAwaitingApproval {
+  reportVersionId: string;
+  reportId: string;
+  reportTitle: string;
+  reportType: string;
+  versionNumber: number;
+  createdByActorId: string;
+  createdAt: string;
+}
+
+/**
+ * Report versions waiting to be approved.
+ *
+ * Nothing listed them, so nothing could be approved, so the report half
+ * of this module was writable by nobody and readable by nobody. The
+ * export half had screens; the reports it sits beside did not.
+ *
+ * The drafter is returned because approving one's own version is barred
+ * by the command and again by a database CHECK, and an approver should
+ * learn that from the row rather than from a refused submission.
+ */
+export async function listReportVersionsAwaitingApproval(
+  deps: M14Deps,
+  ctx: RequestContext,
+): Promise<ReportVersionAwaitingApproval[]> {
+  const decision = await deps.checkPermission(ctx, {
+    action: 'approval-queue.view',
+    resource: { type: 'ApprovalQueue', id: 'all', state: 'Active', protectedExistence: false },
+  });
+  assertAllowed(decision, false);
+  const res = await deps.pool.query(
+    `SELECT v.id, v.report_id, v.version_number, v.created_by_actor_id, v.created_at,
+            r.title, r.report_type
+       FROM reporting_submission.report_versions v
+       JOIN reporting_submission.reports r ON r.id = v.report_id
+      WHERE v.version_state = 'Draft'
+      ORDER BY v.created_at ASC`,
+  );
+  return res.rows.map((r) => ({
+    reportVersionId: r.id as string,
+    reportId: r.report_id as string,
+    reportTitle: r.title as string,
+    reportType: r.report_type as string,
+    versionNumber: r.version_number as number,
+    createdByActorId: r.created_by_actor_id as string,
+    createdAt: (r.created_at as Date).toISOString(),
+  }));
+}
+
+export interface ReportWorkItem {
+  reportId: string;
+  title: string;
+  reportType: string;
+  reportVersionId: string | null;
+  versionNumber: number | null;
+  versionState: string | null;
+  approvedByActorId: string | null;
+  updatedAt: string;
+}
+
+/**
+ * Reports and their versions, for whoever writes them.
+ *
+ * Read under `report.create`, the action that already permits the work.
+ * Approved versions stay in the list: a writer who cannot see that a
+ * version was approved has no way to tell whether to draft another, and
+ * approved content cannot be edited in place — the database refuses it.
+ */
+export async function listReportWork(deps: M14Deps, ctx: RequestContext): Promise<ReportWorkItem[]> {
+  const decision = await deps.checkPermission(ctx, {
+    action: 'report.create',
+    resource: { type: 'Report', id: 'queue', state: 'Any', protectedExistence: false },
+  });
+  assertAllowed(decision, false);
+  const res = await deps.pool.query(
+    `SELECT r.id AS report_id, r.title, r.report_type,
+            v.id AS version_id, v.version_number, v.version_state, v.approved_by_actor_id,
+            GREATEST(r.updated_at, COALESCE(v.updated_at, r.updated_at)) AS updated_at
+       FROM reporting_submission.reports r
+       LEFT JOIN reporting_submission.report_versions v ON v.report_id = r.id
+      ORDER BY updated_at DESC`,
+  );
+  return res.rows.map((r) => ({
+    reportId: r.report_id as string,
+    title: r.title as string,
+    reportType: r.report_type as string,
+    reportVersionId: (r.version_id as string | null) ?? null,
+    versionNumber: (r.version_number as number | null) ?? null,
+    versionState: (r.version_state as string | null) ?? null,
+    approvedByActorId: (r.approved_by_actor_id as string | null) ?? null,
+    updatedAt: (r.updated_at as Date).toISOString(),
+  }));
+}
+
 export interface ExportToCarryOut {
   exportRequestId: string;
   exportType: string;

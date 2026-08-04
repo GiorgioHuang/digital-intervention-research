@@ -3,6 +3,7 @@ import { staffActionError } from '../errors.js';
 import { staffApi, type StaffSession } from '../staff-api.js';
 import { DatasetWork } from './DatasetWork.js';
 import { ExportsToCarryOut } from './ExportsToCarryOut.js';
+import { ReportWork } from './ReportWork.js';
 
 /**
  * Researcher workspace (M04/M14 slice): project + protocol drafting and
@@ -132,6 +133,12 @@ export function StaffResearcherPanel({ session }: { session: StaffSession }) {
         the four before it could be performed by nobody.
       */}
       <DatasetWork session={session} />
+
+      {/*
+        The export half had screens; the reports beside it did not, so
+        nothing could ever reach the report approval queue.
+      */}
+      <ReportWork session={session} />
 
       {/*
         Approving used to be the end of the road: nothing listed an
