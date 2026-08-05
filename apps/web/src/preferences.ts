@@ -16,7 +16,12 @@
  * preference store, so a setting made here does not follow the person to
  * another device, and the screen has to say that rather than let "your
  * preferences" imply it.
+ *
+ * On a shared device the store changes to `sessionStorage` (see
+ * `device-mode.ts`), so a preference lasts the visit and not longer.
  */
+import { preferenceStore } from './device-mode.js';
+
 export type FontScale = 'standard' | 'lg' | 'xl' | 'xxl';
 export type Density = 'standard' | 'spacious';
 export type Contrast = 'standard' | 'high';
@@ -41,7 +46,7 @@ const KEY = 'hadi.display-preferences';
 /** Storage can be unavailable or full; a preference is never worth an exception. */
 function safeRead(): Partial<DisplayPreferences> {
   try {
-    const raw = window.localStorage.getItem(KEY);
+    const raw = preferenceStore()?.getItem(KEY) ?? null;
     return raw === null ? {} : (JSON.parse(raw) as Partial<DisplayPreferences>);
   } catch {
     return {};
@@ -75,7 +80,7 @@ export function applyPreferences(p: DisplayPreferences): void {
 export function savePreferences(p: DisplayPreferences): void {
   applyPreferences(p);
   try {
-    window.localStorage.setItem(KEY, JSON.stringify(p));
+    preferenceStore()?.setItem(KEY, JSON.stringify(p));
   } catch {
     // Applied for this session even if it cannot be remembered. The
     // screen says where preferences are kept, so a failure to store is

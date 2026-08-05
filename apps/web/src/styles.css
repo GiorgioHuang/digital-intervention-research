@@ -781,6 +781,83 @@ blockquote {
   max-width: var(--measure-narrow);
 }
 
+/* 只读给辅助技术的文本（倒计时的整半分钟播报，§E.11）。
+   不用 display:none / visibility:hidden——那两者会把内容从无障碍树里一起
+   拿掉，屏幕阅读器也就读不到了。 */
+.visually-hidden {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* 隐私屏（§D.6「遮住屏幕」）。
+   必须是不透明色块：`filter: blur()` 可被对屏幕拍照后增强还原，且低视力
+   使用者会把模糊当成渲染故障而不是自己按下的动作。 */
+.privacy-cover {
+  position: fixed;
+  inset: 0;
+  z-index: var(--layer-live);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-5);
+  background-color: var(--color-surface-inverse);
+}
+.privacy-cover button {
+  inline-size: 100%;
+  block-size: 100%;
+  color: var(--color-text-inverse);
+  background-color: transparent;
+  border: var(--border-emphasis) solid currentColor;
+}
+
+/* 会话超时警告（I14 / §E.11）。最高层：它宣告的是页面即将消失，
+   任何东西都不该盖在它上面。
+
+   §D.5 把「会话超时警告」列进粘性元素，同时规定粘性元素总高 ≤ 视口 25%。
+   量出来这两条互相矛盾：320×844 下这段话（标题 + 为什么 + 会丢什么 +
+   倒计时 + 两个按钮）占 665px，即 79%；xxl 下 1529px。要压进 211px 只能
+   删掉「你打了还没送出的内容会丢失」——而那正是这个对话框存在的理由，
+   为了迁就一个尺寸上限把唯一要紧的一句话删掉，方向就是反的。
+
+   所以它不做粘性，做对话框：25% 上限管的是与内容并存、常驻抢占空间的
+   框架元件；打断式警告在那一刻本身就是内容。定位在视口上沿并自带内部
+   滚动，字号放大到内容比视口还高时按钮仍然够得到——居中会把按钮同时
+   挤出上下两端。 */
+.session-warning {
+  position: fixed;
+  inset-block-start: var(--space-4);
+  inset-inline: var(--space-4);
+  /* margin-block: 0 是必需的，不是整理：固定定位的元素仍然吃外边距，
+     继承来的 18px 会把它整体下推，底边刚好掉出视口。 */
+  margin-block: 0;
+  margin-inline: auto;
+  max-inline-size: var(--measure-narrow);
+  /* 上下各留一个 --space-4 的边距，所以扣的是它的两倍。
+     用 --space-8 扣会少扣 8px（放大字号下间距令牌也跟着放大，两者不再
+     等价），对话框底边就会掉出视口 8px。 */
+  max-block-size: calc(100svh - var(--space-4) * 2);
+  /* 没有它，上限只管内容盒：内距与边框再加 62px，量出来的外框是 852px，
+     仍然比 844px 的视口高。 */
+  box-sizing: border-box;
+  overflow-y: auto;
+  z-index: var(--layer-live);
+  border: var(--border-emphasis) solid var(--color-border-strong);
+  border-radius: var(--radius-2);
+  padding: var(--space-4);
+  background-color: var(--color-surface-page);
+  box-shadow: var(--elevation-2);
+}
+/* 不加遮罩、也不声明 aria-modal：在它后面点一下就是「人还在」，
+   计时器因此重置、警告随即消失——这正是它要问的问题的答案。
+   遮罩会把这一下吞掉，反而逼人去读完一段其实不必读的话。 */
+
 /* 上下文横幅（当前身份，共享设备场景恒显） (§D.6) */
 .context-banner {
   background-color: var(--color-surface-inverse);
@@ -789,6 +866,33 @@ blockquote {
   position: sticky;
   inset-block-start: 0;
   z-index: var(--layer-header);
+}
+.context-banner p { margin-block: var(--space-1); }
+/* 标识可能很长且不含空格；让它在任意位置断行，而不是把横幅撑宽或撑高。
+   §D.5 的粘性高度上限是视口 25%，第一版横幅在 320px 下量到 304px（844
+   视口的 36%）——一条常驻的条子吃掉三分之一屏幕就不再是辅助而是障碍。 */
+.context-banner-identity { overflow-wrap: anywhere; }
+/* 两个按钮并排而不是各占一行：全局规则让按钮是块级的（§B.4 R2），在这里
+   用 flex 让它们并排，同时保留 44px 目标与目标间距。 */
+.context-banner-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--target-gap);
+}
+/* 半宽基准而不是 auto：两个标签的自然宽度加起来超过 320px 的可用宽度，
+   basis:auto 会让它们各占一行（量到 111px）。半宽让它们并排，标签在按钮
+   内折行——折行的标签仍是完整的词，堆叠的按钮却要多花 39px。 */
+.context-banner-actions button {
+  flex: 1 1 calc(50% - var(--target-gap));
+  min-inline-size: 0;
+}
+/* 放大字号后取消粘性（§D.5 的 25% 上限）。
+   量出来的事实（320×844，xxl）：粘性横幅占 382px，即视口的 45%。
+   选择放大字号的人正是屏幕空间最紧的人，把接近一半的视口钉死给一条常驻
+   横幅，方向就是反的。横幅仍在每一屏的最上方，只是会随页面滚走。 */
+:root[data-font-scale='xl'] .context-banner,
+:root[data-font-scale='xxl'] .context-banner {
+  position: static;
 }
 
 /* 表格：宽表放进 .scroll-x，不让页面横向滚动 (§B.3.2) */

@@ -14,7 +14,10 @@ import { MyResearchPart } from './components/MyResearchPart.js';
 import { WhoHasAccess } from './components/WhoHasAccess.js';
 import { WaitingForYou } from './components/WaitingForYou.js';
 import { SafetyPanel } from './components/SafetyPanel.js';
+import { SessionGuard } from './components/SessionGuard.js';
+import { SharedDeviceBar } from './components/SharedDeviceBar.js';
 import { api, PlatformApiError, type Session } from './api.js';
+import { endVisit, isSharedDevice, setSharedDevice } from './device-mode.js';
 import { applyPreferences, loadPreferences } from './preferences.js';
 
 /**
@@ -72,6 +75,22 @@ export function App() {
    * that stops being disclosed.
    */
   const [helper, setHelper] = useState<string | null>(null);
+  /**
+   * Shared-device mode (DESIGN_SYSTEM §D.6). Never detected — a guess
+   * about whether a tablet is communal is wrong often enough to matter and
+   * impossible to explain to the person it is wrong about — so it is a
+   * checkbox on the way in, and it shortens the idle limits, moves
+   * preferences to storage that dies with the tab, and puts identity, a
+   * screen cover and a way out on every screen.
+   */
+  const [shared, setShared] = useState(() => isSharedDevice());
+  /**
+   * Why the sign-in screen is being shown again. Someone who comes back to
+   * a tablet after a cup of tea should be told the session ended on a
+   * timer, not left to conclude they were thrown out for something they
+   * did.
+   */
+  const [endedByTimeout, setEndedByTimeout] = useState(false);
   const navRef = useRef<HTMLElement | null>(null);
 
   /*
@@ -114,6 +133,17 @@ export function App() {
     return (
       <main>
         <h1>Healthy Ageing Research Platform (development environment)</h1>
+        {/*
+          Neutral on purpose (§E.11): it says the clock ran out and nothing
+          about what was on the screen, because the reason this exists is
+          that the person may not be the one reading it now.
+        */}
+        {endedByTimeout && (
+          <p role="status">
+            You were signed out automatically because nothing had been touched for a while. Nothing is wrong. Sign in
+            again to carry on.
+          </p>
+        )}
         <p>
           Development sign-in stub: enter the identifiers issued for this synthetic environment. Both belong to the
           same person — the account identifier and the participant identifier are two names for one demo participant.
@@ -134,6 +164,7 @@ export function App() {
             const candidate = { actorId: form.actorId, participantId: form.participantId };
             setChecking(true);
             setSignInProblem('');
+            setEndedByTimeout(false);
             void api
               .listMyConsents(candidate)
               .then(() => setSession(candidate))
@@ -174,6 +205,33 @@ export function App() {
               onChange={(e) => setForm({ ...form, participantId: e.target.value })}
             />
           </p>
+          {/*
+            §D.6: switched on by hand, never detected. The consequences are
+            listed because "shared device" on its own does not tell anyone
+            what changes, and the one that costs them something — losing
+            their text size at the end of the visit — is the one they most
+            deserve to know before they tick it.
+          */}
+          <p>
+            <input
+              id="shared-device"
+              type="checkbox"
+              checked={shared}
+              onChange={(e) => {
+                setShared(e.target.checked);
+                setSharedDevice(e.target.checked);
+              }}
+            />{' '}
+            <label htmlFor="shared-device">This is a shared device</label>
+          </p>
+          <p>
+            <small>
+              Tick this if other people use this tablet or computer — at a community centre, for example. The screen
+              then signs itself out after five minutes rather than twenty, shows a way to cover the screen and sign
+              out on every page, and keeps nothing on the device after you close the browser, including your text
+              size.
+            </small>
+          </p>
           {signInProblem !== '' && <p role="alert">{signInProblem}</p>}
           <button type="submit" disabled={checking}>
             {checking ? 'Checking…' : 'Continue'}
@@ -194,6 +252,19 @@ export function App() {
       <a className="skip-link" href="#main-content">
         Skip to main content
       </a>
+      {shared && (
+        <SharedDeviceBar
+          identity={session.participantId}
+          onSwitchUser={() => {
+            // "Switch user" has to mean nothing of this visit is left, not
+            // just that the screen changed (§D.6).
+            endVisit();
+            setSession(null);
+            setScreen('home');
+            setEndedByTimeout(false);
+          }}
+        />
+      )}
       {/*
         Bottom bar on phones (design decision D-3), four destinations only
         (D-10 — see the width arithmetic above). Doc 20 §33 requires
@@ -219,6 +290,15 @@ export function App() {
         </ul>
       </nav>
       <main id="main-content">
+        <SessionGuard
+          shared={shared}
+          onSignOut={() => {
+            if (shared) endVisit();
+            setSession(null);
+            setScreen('home');
+            setEndedByTimeout(true);
+          }}
+        />
         <AccessTokenGate />
         <AssistedMode helper={helper} onChange={setHelper} />
         {screen === 'home' && (
@@ -329,6 +409,7 @@ export function App() {
               <p>
                 <button
                   onClick={() => {
+                    if (shared) endVisit();
                     setSession(null);
                     setScreen('home');
                   }}
