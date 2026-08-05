@@ -7,6 +7,14 @@
  * with confirmed testimony, and a supporter relationship, then prints the
  * identifiers needed by the dev-header sign-in stub.
  *
+ * It also walks the research chain end to end — evidence review and
+ * decision, dataset definition through to a locked version, analysis plan
+ * through to an approved finding, a report version, and an export carried
+ * through to delivered — and leaves one item waiting in each decision
+ * queue. Those screens were all empty in the deployed demo, which made
+ * the work look like nothing had been built; an empty queue also cannot
+ * show whether the chain behind it works.
+ *
  * Idempotent: if the demo organisation already exists it prints the
  * existing identifiers and changes nothing.
  *
@@ -44,6 +52,41 @@ import {
   publishSocialPost,
   recordMatchDecision,
 } from '@platform/m18-community-social';
+import {
+  approveEvidenceDecision,
+  approveEvidenceReview,
+  attachKnowledgeReference,
+  createEvidenceReview,
+  createKnowledgePlatformSimulator,
+  draftEvidenceDecision,
+  submitEvidenceReview,
+} from '@platform/m10-evidence';
+import {
+  approveDatasetDefinition,
+  completeQualityReview,
+  createDatasetDefinition,
+  generateDatasetVersion,
+  lockDatasetVersion,
+} from '@platform/m12-dataset';
+import {
+  approveAnalysisPlan,
+  approveInterpretation,
+  approveResearchFinding,
+  draftAnalysisPlan,
+  draftInterpretation,
+  draftResearchFinding,
+  runAnalysis,
+} from '@platform/m13-analysis';
+import {
+  approveReportVersion,
+  createReport,
+  decideExport,
+  draftReportVersion,
+  generateExportPackage,
+  recordExportDelivery,
+  requestParticipantExport,
+  requestResearchExport,
+} from '@platform/m14-reporting';
 import {
   changeVisibility,
   confirmTestimony,
@@ -150,6 +193,10 @@ async function main() {
   const checkPermission = permissions.evaluate.bind(permissions);
   const base = { pool, clock, checkPermission };
   const m03 = { pool, clock, permissions };
+  // The evidence module reaches the knowledge platform through its ACL;
+  // the simulator is what the deployed demo uses unless configured
+  // otherwise, and it resolves kp-ref-0001 and refuses kp-ref-9999.
+  const m10 = { ...base, knowledgePlatform: createKnowledgePlatformSimulator() };
 
   const { userAccountId: adminId } = await seedBootstrapAdministrator(pool, clock, { displayName: 'Admin Alex' });
   const { organisationId: orgId } = await createOrganisation(
@@ -297,6 +344,134 @@ async function main() {
     relatedActorId: supporterId,
     relationshipType: 'Friend',
     permittedActions: ['participant.view-shared'],
+  });
+
+  /*
+   * The research chain, end to end and then some left waiting.
+   *
+   * Every one of these screens was empty in the deployed demo until now,
+   * which made six increments of work look like nothing had been built —
+   * and an empty queue cannot show whether the chain works. Each chain is
+   * therefore walked to completion once, and left with one item waiting
+   * so the decision screens have something real in them.
+   *
+   * MFA is asserted where the platform requires it (dataset lock, export
+   * decision, finding approval). This is the dev-header stub, not real
+   * authentication (ADR-104) — it says what strength the request claims,
+   * which is exactly what the deployed demo does too.
+   */
+  const mfa = (id) => ctx(id, { authStrength: 'mfa' });
+
+  // Evidence: one review carried to approved, with a reference that
+  // resolved and one that did not, so the honest "not found" state is
+  // visible rather than hypothetical.
+  const { evidenceReviewId } = await createEvidenceReview(m10, ctx(researcherId), {
+    researchProjectId: 'rp_demo',
+    question: 'Does participant-controlled life story work improve connectedness?',
+  });
+  await attachKnowledgeReference(m10, ctx(researcherId), { evidenceReviewId, externalIdentifier: 'kp-ref-0001' });
+  await attachKnowledgeReference(m10, ctx(researcherId), { evidenceReviewId, externalIdentifier: 'kp-ref-9999' });
+  await submitEvidenceReview(m10, ctx(researcherId), evidenceReviewId);
+  await approveEvidenceReview(m10, ctx(evidenceReviewerId), evidenceReviewId, true);
+
+  const { evidenceDecisionId } = await draftEvidenceDecision(m10, ctx(researcherId), {
+    evidenceReviewId,
+    // The interesting outcome: a finding in its own right, not a failure.
+    outcome: 'Conflicting Evidence',
+    rationale: 'Two trials point opposite ways and neither is clearly the stronger design.',
+  });
+  await approveEvidenceDecision(m10, ctx(evidenceReviewerId), { evidenceDecisionId, confirmed: true });
+
+  // Left waiting for the evidence reviewer's queue.
+  const { evidenceReviewId: pendingReviewId } = await createEvidenceReview(m10, ctx(researcherId), {
+    researchProjectId: 'rp_demo',
+    question: 'Do supporter contributions change what participants write about themselves?',
+  });
+  await attachKnowledgeReference(m10, ctx(researcherId), {
+    evidenceReviewId: pendingReviewId,
+    externalIdentifier: 'kp-ref-0001',
+  });
+  await submitEvidenceReview(m10, ctx(researcherId), pendingReviewId);
+
+  // Dataset: definition through to a locked version, which is what the
+  // analysis chain needs to exist at all.
+  const { datasetDefinitionId } = await createDatasetDefinition(base, ctx(researcherId), {
+    researchProjectId: 'rp_demo',
+    name: 'pilot-feasibility',
+    variables: { enrolment_state: 'text', delivery_state_category: 'text' },
+  });
+  await approveDatasetDefinition(base, ctx(approverId), { datasetDefinitionId, confirmed: true });
+  const { datasetVersionId } = await generateDatasetVersion(base, ctx(researcherId), {
+    datasetDefinitionId,
+    sourceDescription: 'enrolment and delivery tables as of the demo freeze',
+    rowCount: 24,
+  });
+  await completeQualityReview(base, ctx(researcherId), datasetVersionId);
+  await lockDatasetVersion(base, mfa(approverId), { datasetVersionId, confirmed: true });
+
+  // Left waiting for the approver's dataset queue.
+  await createDatasetDefinition(base, ctx(researcherId), {
+    researchProjectId: 'rp_demo',
+    name: 'pilot-messaging',
+    variables: { thread_count: 'integer', delivery_state_category: 'text' },
+  });
+
+  // Analysis: plan, a run recorded against that locked version, an
+  // interpretation and a finding.
+  const { analysisPlanId } = await draftAnalysisPlan(base, ctx(researcherId), {
+    researchProjectId: 'rp_demo',
+    title: 'Feasibility descriptives',
+  });
+  await approveAnalysisPlan(base, ctx(approverId), { analysisPlanId, confirmed: true });
+  const { analysisRunId } = await runAnalysis(base, ctx(researcherId), {
+    analysisPlanId,
+    datasetVersionId,
+    outputs: { summary: '24 enrolments, delivery states even across categories' },
+    environment: { note: 'recorded by hand — this platform does not run analyses' },
+  });
+  const { interpretationRecordId } = await draftInterpretation(base, ctx(researcherId), {
+    analysisRunId,
+    interpretationText: 'Uptake was even across delivery categories; nothing suggests a site effect.',
+  });
+  await approveInterpretation(base, ctx(approverId), { interpretationRecordId, confirmed: true });
+  const { researchFindingId } = await draftResearchFinding(base, ctx(researcherId), {
+    interpretationRecordId,
+    findingText: 'The design is feasible at this scale, with the limitations recorded in the interpretation.',
+  });
+  await approveResearchFinding(base, mfa(approverId), { researchFindingId, confirmed: true });
+
+  // Reports: one approved, one left waiting.
+  const { reportId } = await createReport(base, ctx(researcherId), {
+    researchProjectId: 'rp_demo',
+    title: 'Pilot feasibility report',
+    reportType: 'ResearchReport',
+  });
+  const { reportVersionId } = await draftReportVersion(base, ctx(researcherId), {
+    reportId,
+    content: { text: 'Feasibility held at this scale. Conflicting evidence on connectedness is recorded separately.' },
+  });
+  await approveReportVersion(base, ctx(approverId), { reportVersionId, confirmed: true });
+  await draftReportVersion(base, ctx(researcherId), {
+    reportId,
+    content: { text: 'Second version, waiting for someone else to approve it.' },
+  });
+
+  // Exports: one research export carried through to delivered, and one
+  // request from a participant for a copy of their own information left
+  // waiting — the two kinds the decision screen keeps apart.
+  const { exportRequestId } = await requestResearchExport(base, ctx(researcherId), {
+    purpose: 'Independent statistical check',
+    recipient: 'stats-partner',
+    sources: [datasetVersionId],
+    deIdentification: 'Pseudonymised',
+  });
+  await decideExport(base, mfa(approverId), { exportRequestId, decision: 'Approved', confirmed: true });
+  await generateExportPackage(base, ctx(researcherId), { exportRequestId });
+  await recordExportDelivery(base, ctx(researcherId), { exportRequestId, state: 'Delivered' });
+  await requestParticipantExport(base, ctx(benAcc), {
+    participantId: benId,
+    purpose: 'A copy of my own information, requested by me',
+    confirmed: true,
   });
 
   console.log('\nDemo data created (all synthetic).');

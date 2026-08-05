@@ -860,3 +860,13 @@
   code: [packages/modules/m13-analysis/src/application/queries.ts, packages/modules/m13-analysis/src/index.ts, apps/api/src/staff-controllers.ts, apps/web/src/staff-api.ts, apps/web/src/components/AnalysisWork.tsx, apps/web/src/components/approver/AnalysisDecisions.tsx, apps/web/src/components/StaffApproverPanel.tsx, apps/web/src/components/StaffResearcherPanel.tsx]
   tests: [packages/modules/m13-analysis/test/m12-m13.integration.test.ts, apps/web/test/analysis-chain.test.tsx]
   status: implemented
+
+- implementation_id: IMP-SEED-RESEARCH-CHAIN-001
+  module: M14
+  summary: The demo seed now walks the research chain end to end and leaves each decision queue with something in it. Every researcher and approver screen built over the preceding increments was empty in the deployed environment, which made the work look like nothing had been built - and an empty queue cannot show whether the chain behind it works, which is exactly how an earlier defect in contribution review was found. The seed now carries an evidence review to approved with one reference that resolved and one that did not, so the honest not-found state is visible rather than hypothetical; writes an evidence decision whose outcome is Conflicting Evidence, the outcome most likely to be mishandled and therefore the one worth showing; takes a dataset definition through approval, generation and quality review to a locked version, which is what the analysis chain needs to exist at all; records an analysis run against that locked version and carries it through interpretation to an approved finding; approves one report version; and carries a research export through to Delivered. Alongside each completed chain it leaves one item waiting - a submitted evidence review, an unapproved dataset definition, a second report version, and a participant's request for a copy of their own information - so the decision screens hold real rows rather than empty states. MFA is asserted where the platform requires it, on the dataset lock, the export decision and the finding approval; this is the dev-header stub rather than real authentication, and it claims exactly what the deployed demo claims. Adds M14 as a workspace dependency of the seed package, with the lockfile updated so the frozen install in CI still resolves
+  trace_ids: [ATR-021, ATR-002]
+  adr_ids: [ADR-062, ADR-045]
+  docs: ["UI_INVENTORY.md C3", "UI_INVENTORY.md C14", "UI_INVENTORY.md C15", "Doc 19 section 2"]
+  code: [packages/synthetic-pilot/seed-demo.mjs, packages/synthetic-pilot/package.json, pnpm-lock.yaml]
+  tests: [packages/synthetic-pilot/test/synthetic-pilot.test.ts]
+  status: implemented

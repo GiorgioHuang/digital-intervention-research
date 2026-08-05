@@ -25,6 +25,7 @@
     "@platform/m10-evidence": "workspace:*",
     "@platform/m12-dataset": "workspace:*",
     "@platform/m13-analysis": "workspace:*",
+    "@platform/m14-reporting": "workspace:*",
     "@platform/m16-integration": "workspace:*",
     "@platform/m17-life-story": "workspace:*",
     "@platform/m18-community-social": "workspace:*",
