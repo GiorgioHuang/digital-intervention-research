@@ -5,6 +5,7 @@ import { AccessTokenGate } from './components/AccessTokenGate.js';
 import { AssistedMode } from './components/AssistedMode.js';
 import { CommunityPanel } from './components/CommunityPanel.js';
 import { ConsentPanel } from './components/ConsentPanel.js';
+import { DisplayPreferencesPanel } from './components/DisplayPreferencesPanel.js';
 import { MatchingPanel } from './components/MatchingPanel.js';
 import { MessagesScreen } from './components/MessagesScreen.js';
 import { MyDataCopy } from './components/MyDataCopy.js';
@@ -14,6 +15,7 @@ import { WhoHasAccess } from './components/WhoHasAccess.js';
 import { WaitingForYou } from './components/WaitingForYou.js';
 import { SafetyPanel } from './components/SafetyPanel.js';
 import { api, PlatformApiError, type Session } from './api.js';
+import { applyPreferences, loadPreferences } from './preferences.js';
 
 /**
  * Task-oriented participant Home (Doc 20 §16): a short list of clear
@@ -71,6 +73,17 @@ export function App() {
    */
   const [helper, setHelper] = useState<string | null>(null);
   const navRef = useRef<HTMLElement | null>(null);
+
+  /*
+   * The stylesheet has carried `data-font-scale`, `data-density` and
+   * `data-contrast` from the start and nothing ever set them, so four
+   * text sizes and three density tiers were defined and unreachable.
+   * Applied before anything renders, so a person who chose larger text
+   * does not first get a screenful of the size they rejected.
+   */
+  useEffect(() => {
+    applyPreferences(loadPreferences());
+  }, []);
 
   /**
    * The bottom bar is fixed, so `main` has to reserve exactly as much space
@@ -299,6 +312,7 @@ export function App() {
               not an emergency service.
             </p>
             <SafetyPanel session={session} />
+            <DisplayPreferencesPanel />
             {/*
               The only way out of a session was to reload the page. Someone
               signed in with identifiers that no longer work — after a demo

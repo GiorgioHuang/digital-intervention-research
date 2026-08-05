@@ -813,7 +813,52 @@ th { font-weight: var(--type-weight-medium); background-color: var(--color-surfa
   .context-banner { position: static; }
 }
 
+/* 最窄宽度：把导航条自身的左右内距让给标签。
+   量出来的事实（Chromium，root 18px，320px = §G 的 400% 放大目标）：
+   最宽的标签 "Messages"（当前项加粗）需要 71px，而每个槽位只拿到 68px
+   ——正好裁掉 3px。D-10 当时的算术略偏乐观。
+
+   三条路里选这一条：把 flex 基准抬到 4.1rem 会让 "Help" 掉到第二行独占
+   一整行；缩小字号是给年长使用者把字变小去迁就布局，方向就是反的；只有
+   收回导航条自己的左右内距不动字号、也不动触控间距——导航条是贴边的框架
+   元件，本来就不需要正文那样的外边距。收回 2×8px 后每槽得 72px。 */
+@media (max-width: 20rem) {
+  .nav-primary {
+    padding-inline: 0;
+  }
+}
+
+/* 放大字号后换行成 2+2，而不是 3+1。
+   量出来的事实（320px，root 18px × 1.5）：3.6rem 的基准在 xxl 下等于
+   97px，一行塞得下三个，于是最宽的 "Messages" 被裁掉 7px，而 "Help"
+   独占第二行 316px。把基准改成半宽，两行各两个，最宽标签有 158px 可用
+   ——够 104px 的实际需求，且仍是整词、仍不横滚。
+   放大字号是使用者为了看清才选的，在这种时候裁掉标签，等于在最需要它
+   的场合把字弄没了。 */
+:root[data-font-scale='xl'] .nav-primary li,
+:root[data-font-scale='xxl'] .nav-primary li {
+  flex: 1 1 calc(50% - var(--space-1));
+  min-inline-size: calc(50% - var(--space-1));
+}
+
 /* ---------- 13. 动效与 reduced-motion (§A.6) ---------- */
+/* 用户显式选择「减少动效」——与 OS 信号同效，但不依赖 OS 设置。
+   没有 data-motion='system' 的覆盖：标准态就是「听 OS 的」，写一个
+   显式的「标准」会悄悄推翻用户在系统里已经做过的设置。 */
+:root[data-motion='reduced'] {
+  --motion-duration-fast: 0ms;
+  --motion-duration-normal: 0ms;
+  --motion-duration-slow: 0ms;
+}
+:root[data-motion='reduced'] *,
+:root[data-motion='reduced'] *::before,
+:root[data-motion='reduced'] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
   :root {
     --motion-duration-fast: 0ms;

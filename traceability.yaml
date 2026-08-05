@@ -880,3 +880,13 @@
   code: [apps/web/src/styles.css, apps/web/src/components/StateBlock.tsx, apps/web/src/errors.ts]
   tests: [apps/web/test/error-presentation.test.tsx]
   status: implemented
+
+- implementation_id: IMP-WEB-DISPLAY-PREFERENCES-001
+  module: M18
+  summary: Reading and display preferences, and the measurement defect found while checking them. The stylesheet has carried data-font-scale, data-density and data-contrast on the root element from the start and nothing ever set them, so four text sizes and three density tiers were defined and unreachable - a capability nobody could invoke, which is the mirror of a control that does nothing. Adds a preferences panel offering only the four settings with real CSS behind them - text size, spacing, contrast and reduced movement - and a new data-motion hook so the last of those is a real setting rather than a label. Changes apply as they are made and there is no Save button, because the design asks for the effect to be visible without saving first and a Save button would imply the change had not happened. Standard removes the attribute rather than writing standard, so an operating-system setting for contrast or reduced motion is not quietly overridden, and where the system already asks for one the screen says so. Preferences live on this device only and the screen says that, since your preferences would otherwise imply they follow the person elsewhere. Nothing is described as a deficiency. Reading aloud, one step at a time, simpler wording and longer time limits are all in the design and none has any implementation, so none is offered - recording a choice nothing acts on is the same false claim as a consent scope no check reads. Checking the result at the smallest supported width found a real defect - at 320px the widest navigation label needs 71px and each slot gave 68, clipping by three pixels, so D-10's arithmetic was slightly optimistic. Fixed by reclaiming the navigation bar's own inline padding rather than by shrinking text, since making type smaller for older readers to fit a layout is the wrong direction, and at the two largest text sizes the bar now wraps two and two instead of three and one, which had clipped by seven pixels and left one label alone on a full row
+  trace_ids: [ATR-002]
+  adr_ids: [ADR-054]
+  docs: ["design/PARTICIPANT_WORKSPACE.md B13", "UI_INVENTORY.md B13", "design/DESIGN_DECISIONS.md D-10", "Doc 20 sections 103-104 and 286-287"]
+  code: [apps/web/src/preferences.ts, apps/web/src/components/DisplayPreferencesPanel.tsx, apps/web/src/styles.css, apps/web/src/App.tsx]
+  tests: [apps/web/test/display-preferences.test.tsx]
+  status: implemented
