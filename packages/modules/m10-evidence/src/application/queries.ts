@@ -46,6 +46,13 @@ export interface EvidenceReviewSummary {
   reviewState: string;
   submittedByActorId: string | null;
   approvedByActorId: string | null;
+  /**
+   * Why it was sent back, if it was. Without this the person whose review
+   * was returned sees only a state change and has to ask somebody what
+   * they are meant to fix - which makes a refusal a disappearance.
+   */
+  refusedByActorId: string | null;
+  refusedReason: string | null;
   references: EvidenceReference[];
   updatedAt: string;
 }
@@ -53,7 +60,8 @@ export interface EvidenceReviewSummary {
 async function loadReviews(deps: M10Deps, where: string, params: unknown[]): Promise<EvidenceReviewSummary[]> {
   const res = await deps.pool.query(
     `SELECT r.id, r.research_project_id, r.question, r.review_state,
-            r.submitted_by_actor_id, r.approved_by_actor_id, r.updated_at
+            r.submitted_by_actor_id, r.approved_by_actor_id,
+            r.refused_by_actor_id, r.refused_reason, r.updated_at
        FROM evidence.evidence_reviews r
       ${where}
       ORDER BY r.updated_at DESC`,
@@ -90,6 +98,8 @@ async function loadReviews(deps: M10Deps, where: string, params: unknown[]): Pro
     reviewState: r.review_state as string,
     submittedByActorId: (r.submitted_by_actor_id as string | null) ?? null,
     approvedByActorId: (r.approved_by_actor_id as string | null) ?? null,
+    refusedByActorId: (r.refused_by_actor_id as string | null) ?? null,
+    refusedReason: (r.refused_reason as string | null) ?? null,
     references: byReview.get(r.id as string) ?? [],
     updatedAt: (r.updated_at as Date).toISOString(),
   }));
@@ -155,6 +165,8 @@ export interface EvidenceDecisionSummary {
   approvalState: string;
   draftedByActorId: string;
   approvedByActorId: string | null;
+  refusedByActorId: string | null;
+  refusedReason: string | null;
   /** The immutable snapshot written when the decision was approved. */
   snapshotContentHash: string | null;
   updatedAt: string;
@@ -166,7 +178,8 @@ async function loadDecisions(
 ): Promise<EvidenceDecisionSummary[]> {
   const res = await deps.pool.query(
     `SELECT d.id, d.evidence_review_id, d.outcome, d.rationale, d.approval_state,
-            d.drafted_by_actor_id, d.approved_by_actor_id, d.updated_at,
+            d.drafted_by_actor_id, d.approved_by_actor_id,
+            d.refused_by_actor_id, d.refused_reason, d.updated_at,
             r.question, r.review_state, s.content_hash
        FROM evidence.evidence_decisions d
        JOIN evidence.evidence_reviews r ON r.id = d.evidence_review_id
@@ -184,6 +197,8 @@ async function loadDecisions(
     approvalState: r.approval_state as string,
     draftedByActorId: r.drafted_by_actor_id as string,
     approvedByActorId: (r.approved_by_actor_id as string | null) ?? null,
+    refusedByActorId: (r.refused_by_actor_id as string | null) ?? null,
+    refusedReason: (r.refused_reason as string | null) ?? null,
     snapshotContentHash: (r.content_hash as string | null) ?? null,
     updatedAt: (r.updated_at as Date).toISOString(),
   }));

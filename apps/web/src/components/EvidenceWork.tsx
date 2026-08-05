@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { RefusalNote } from './RefusalNote.js';
 import { staffActionError, staffLoadError } from '../errors.js';
 import { staffApi, type EvidenceReviewItem, type KnowledgeResourceItem, type StaffSession } from '../staff-api.js';
 
@@ -178,6 +179,7 @@ export function EvidenceWork({ session }: { session: StaffSession }) {
           <p>
             <strong>{r.question}</strong> — {REVIEW_WORDING[r.reviewState] ?? r.reviewState}
           </p>
+          <RefusalNote reason={r.refusedReason} byActorId={r.refusedByActorId} verb="Sent back" />
           {r.references.length === 0 ? (
             <p>Nothing attached yet. A review with nothing attached rests on nothing.</p>
           ) : (

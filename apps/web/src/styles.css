@@ -858,6 +858,16 @@ blockquote {
    计时器因此重置、警告随即消失——这正是它要问的问题的答案。
    遮罩会把这一下吞掉，反而逼人去读完一段其实不必读的话。 */
 
+/* 被拒绝的说明（§E.10：严重度靠位置＋文字＋语义色，不靠阴影）。
+   它不是错误——是另一个人做出的决定，而且这份工作还在。所以用警告族的
+   描边而不是危险族，也不加抬升。 */
+.refusal-note {
+  border-inline-start: var(--border-emphasis) solid var(--color-warning-border);
+  padding-inline-start: var(--space-4);
+  margin-block: var(--space-3);
+}
+.refusal-note blockquote { margin-block: var(--space-2); }
+
 /* 上下文横幅（当前身份，共享设备场景恒显） (§D.6) */
 .context-banner {
   background-color: var(--color-surface-inverse);

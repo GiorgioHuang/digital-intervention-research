@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { RefusalNote } from './RefusalNote.js';
 import { staffActionError, staffLoadError } from '../errors.js';
 import { staffApi, type EvidenceDecisionItem, type EvidenceReviewItem, type StaffSession } from '../staff-api.js';
 
@@ -161,6 +162,7 @@ export function EvidenceDecisionWork({ session }: { session: StaffSession }) {
             <strong>{OUTCOMES.find((o) => o.value === d.outcome)?.label ?? d.outcome}</strong> — {d.question}
           </p>
           <p>{APPROVAL_WORDING[d.approvalState] ?? d.approvalState}</p>
+          <RefusalNote reason={d.refusedReason} byActorId={d.refusedByActorId} verb="Not agreed" />
           <blockquote>{d.rationale}</blockquote>
           {d.snapshotContentHash !== null && (
             <p>

@@ -87,6 +87,19 @@ export interface ProtocolInReview {
   submittedByActorId: string | null;
   updatedAt: string;
 }
+/** A protocol version and what became of it, for whoever submitted it. */
+export interface ProtocolVersionItem {
+  protocolVersionId: string;
+  researchProjectId: string;
+  versionNumber: number;
+  versionState: string;
+  contentHash: string;
+  submittedByActorId: string | null;
+  approvedByActorId: string | null;
+  refusedByActorId: string | null;
+  refusedReason: string | null;
+  updatedAt: string;
+}
 export interface PendingApprovalItem {
   approvalRecordId: string;
   artefactType: string;
@@ -152,6 +165,8 @@ export interface EvidenceReviewItem {
   reviewState: string;
   submittedByActorId: string | null;
   approvedByActorId: string | null;
+  refusedByActorId: string | null;
+  refusedReason: string | null;
   references: EvidenceReferenceItem[];
   updatedAt: string;
 }
@@ -175,6 +190,8 @@ export interface AnalysisPlanItem {
   planState: string;
   draftedByActorId: string;
   approvedByActorId: string | null;
+  refusedByActorId: string | null;
+  refusedReason: string | null;
   updatedAt: string;
 }
 export interface AnalysisRunItem {
@@ -205,6 +222,8 @@ export interface FindingItem {
   findingState: string;
   draftedByActorId: string;
   approvedByActorId: string | null;
+  refusedByActorId: string | null;
+  refusedReason: string | null;
   updatedAt: string;
 }
 export interface AnalysisWorkPayload {
@@ -228,6 +247,8 @@ export interface EvidenceDecisionItem {
   approvalState: string;
   draftedByActorId: string;
   approvedByActorId: string | null;
+  refusedByActorId: string | null;
+  refusedReason: string | null;
   snapshotContentHash: string | null;
   updatedAt: string;
 }
@@ -351,6 +372,13 @@ export const staffApi = {
   // Work queues (role-gated read side; seeing a queue is not deciding it)
   listPendingTriage: (s: StaffSession) => get<List<TriageQueueItem>>(s, '/v1/safety-signals/pending-triage'),
   listProtocolVersionsInReview: (s: StaffSession) => get<List<ProtocolInReview>>(s, '/v1/protocol-versions/in-review'),
+  /**
+   * What became of the versions of one project. Nothing listed a
+   * researcher's own versions at all: a submission left the screen and its
+   * fate was learned by asking someone.
+   */
+  listProtocolVersions: (s: StaffSession, projectId: string) =>
+    get<List<ProtocolVersionItem>>(s, `/v1/research-projects/${projectId}/protocol-versions`),
   listPendingApprovals: (s: StaffSession) => get<List<PendingApprovalItem>>(s, '/v1/approvals/pending'),
   listLockableDatasetVersions: (s: StaffSession) => get<List<LockableVersion>>(s, '/v1/dataset-versions/lockable'),
   listDefinitionsAwaitingApproval: (s: StaffSession) =>

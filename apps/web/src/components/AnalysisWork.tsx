@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { RefusalNote } from './RefusalNote.js';
 import { staffActionError, staffLoadError } from '../errors.js';
 import { staffApi, type AnalysisWorkPayload, type DatasetWorkItem, type StaffSession } from '../staff-api.js';
 
@@ -261,6 +262,7 @@ export function AnalysisWork({ session }: { session: StaffSession }) {
           <p>
             <strong>{p.title}</strong> — {PLAN_WORDING[p.planState] ?? p.planState}
           </p>
+          <RefusalNote reason={p.refusedReason} byActorId={p.refusedByActorId} verb="Not approved" />
           {w.runs
             .filter((r) => r.analysisPlanId === p.analysisPlanId)
             .map((r) => (
@@ -281,6 +283,11 @@ export function AnalysisWork({ session }: { session: StaffSession }) {
                         .map((f) => (
                           <div key={f.researchFindingId}>
                             <p>Finding — {STEP_WORDING[f.findingState] ?? f.findingState}</p>
+                            <RefusalNote
+                              reason={f.refusedReason}
+                              byActorId={f.refusedByActorId}
+                              verb="Not approved"
+                            />
                             <blockquote>{f.findingText}</blockquote>
                           </div>
                         ))}

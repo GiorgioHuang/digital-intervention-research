@@ -9,4 +9,9 @@ export {
   type M04Deps,
 } from './application/commands.js';
 export { createProtocolVersionQuery } from './infrastructure/repository.js';
-export { listProtocolVersionsInReview, type ProtocolVersionInReview } from './application/queries.js';
+export {
+  listProtocolVersions,
+  listProtocolVersionsInReview,
+  type ProtocolVersionInReview,
+  type ProtocolVersionSummary,
+} from './application/queries.js';

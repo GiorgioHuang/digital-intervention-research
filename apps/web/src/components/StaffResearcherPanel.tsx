@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { staffActionError } from '../errors.js';
-import { staffApi, type StaffSession } from '../staff-api.js';
+import { staffActionError, staffLoadError } from '../errors.js';
+import { staffApi, type ProtocolVersionItem, type StaffSession } from '../staff-api.js';
 import { AnalysisWork } from './AnalysisWork.js';
 import { DatasetWork } from './DatasetWork.js';
 import { EvidenceDecisionWork } from './EvidenceDecisionWork.js';
 import { EvidenceWork } from './EvidenceWork.js';
 import { ExportsToCarryOut } from './ExportsToCarryOut.js';
+import { RefusalNote } from './RefusalNote.js';
 import { ReportWork } from './ReportWork.js';
 
 /**
@@ -13,6 +14,19 @@ import { ReportWork } from './ReportWork.js';
  * controlled export requests. There is deliberately NO identifiable
  * option for research exports — the platform cannot produce one.
  */
+/** Plain words for each state, so the list is readable without knowing
+ *  the state machine. */
+const VERSION_WORDING: Record<string, string> = {
+  Draft: 'Written. Not submitted yet.',
+  'In Review': 'Submitted. Waiting for someone else to decide.',
+  Approved: 'Approved. It can be activated.',
+  Active: 'Active — this is the version enrolments are bound to.',
+  Rejected: 'Not approved.',
+  Suspended: 'Suspended.',
+  Superseded: 'Replaced by a later version.',
+  Archived: 'Archived.',
+};
+
 export function StaffResearcherPanel({ session }: { session: StaffSession }) {
   const [project, setProject] = useState({ organisationId: '', title: '' });
   const [draft, setDraft] = useState({ projectId: '', title: '' });
@@ -23,7 +37,18 @@ export function StaffResearcherPanel({ session }: { session: StaffSession }) {
     sources: '',
     deIdentification: 'Pseudonymised' as 'Pseudonymised' | 'Anonymised',
   });
+  const [listProjectId, setListProjectId] = useState('');
+  const [versions, setVersions] = useState<ProtocolVersionItem[] | null>(null);
   const [announcement, setAnnouncement] = useState('');
+
+  const loadVersions = async () => {
+    try {
+      const res = await staffApi.listProtocolVersions(session, listProjectId);
+      setVersions(res.data.map((i) => i.attributes));
+    } catch (err) {
+      setAnnouncement(staffLoadError(err, 'the protocol versions'));
+    }
+  };
 
   const run = async (fn: () => Promise<{ data: { id: string } }>, done: (id: string) => string) => {
     try {
@@ -83,6 +108,35 @@ export function StaffResearcherPanel({ session }: { session: StaffSession }) {
           Submit for review
         </button>
       </p>
+
+      {/*
+        What became of the versions of this project. Nothing listed a
+        researcher's own protocol versions at all: a version was drafted,
+        submitted, and then left every screen — its fate learned by asking
+        someone. Once refusal existed that became a hole, since the reason
+        was being stored for a reader with no way to reach it.
+      */}
+      <h3>What has happened to the versions of a project</h3>
+      <p>
+        <label htmlFor="pv-list-proj">Project identifier</label>{' '}
+        <input id="pv-list-proj" value={listProjectId} onChange={(e) => setListProjectId(e.target.value)} />{' '}
+        <button disabled={listProjectId === ''} onClick={() => void loadVersions()}>
+          Show the versions
+        </button>
+      </p>
+      {versions !== null && versions.length === 0 && <p>That project has no protocol versions.</p>}
+      {(versions ?? []).map((v) => (
+        <article key={v.protocolVersionId} aria-label={`Protocol version ${v.versionNumber}`}>
+          <p>
+            <strong>Version {v.versionNumber}</strong> — {VERSION_WORDING[v.versionState] ?? v.versionState}
+            <br />
+            <small>
+              {v.protocolVersionId} · content hash <code>{v.contentHash.slice(0, 12)}…</code>
+            </small>
+          </p>
+          <RefusalNote reason={v.refusedReason} byActorId={v.refusedByActorId} verb="Not approved" />
+        </article>
+      ))}
 
       <h3>Request a controlled export</h3>
       <p>

@@ -7,6 +7,7 @@ import {
   rejectProtocolVersion,
   createProtocolVersion,
   createResearchProject,
+  listProtocolVersions,
   listProtocolVersionsInReview,
   submitProtocolVersion,
 } from '@platform/m04-research-design';
@@ -343,6 +344,13 @@ export class StaffCommandController {
    * authority exercised two ways - so there is no separate route guard,
    * only a required reason.
    */
+  @Get('research-projects/:projectId/protocol-versions')
+  async protocolVersions(@Req() req: Request, @Param('projectId') projectId: string) {
+    const ctx = requireActor(req);
+    const items = await listProtocolVersions(this.deps.m04, ctx, projectId);
+    return { data: items.map((i) => ({ type: 'ProtocolVersion', id: i.protocolVersionId, attributes: i })) };
+  }
+
   @Post('protocol-versions/:versionId/reject')
   async rejectProtocol(
     @Req() req: Request,

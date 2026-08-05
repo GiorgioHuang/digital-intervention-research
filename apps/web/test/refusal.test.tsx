@@ -3,6 +3,7 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { act } from 'react';
 import { ProtocolDecisions } from '../src/components/approver/ProtocolDecisions.js';
 import { EvidenceReviews } from '../src/components/approver/EvidenceReviews.js';
+import { EvidenceWork } from '../src/components/EvidenceWork.js';
 
 const session = { actorId: 'actor_approver', authStrength: 'mfa' as const };
 
@@ -134,5 +135,84 @@ describe('saying no', () => {
     const posted = calls.find((c) => c.method === 'POST');
     expect(posted?.path).toBe('/v1/evidence-reviews/er_1/return');
     expect(String(posted?.body?.['reason'])).toContain('Nothing is attached');
+  });
+});
+
+/**
+ * The reason was being stored for a reader who had no way to reach it:
+ * every screen showed the new state and none showed why. A state that
+ * says "Not approved" and stops there makes a refusal a disappearance
+ * with a label on it.
+ */
+describe('finding out why', () => {
+  beforeEach(() => {
+    (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+  });
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllGlobals();
+  });
+
+  it('shows the reason, names who decided, and says the work is not lost', async () => {
+    stubFetch({
+      '/v1/evidence-reviews/mine': {
+        data: [
+          {
+            type: 'EvidenceReview',
+            id: 'er_2',
+            attributes: {
+              evidenceReviewId: 'er_2',
+              researchProjectId: 'rp_1',
+              question: 'Does it help?',
+              reviewState: 'Returned for Revision',
+              submittedByActorId: 'actor_me',
+              approvedByActorId: null,
+              refusedByActorId: 'actor_reviewer',
+              refusedReason: 'Nothing is attached, so there is nothing to check it against.',
+              references: [],
+              updatedAt: '2026-08-01T09:14:00Z',
+            },
+          },
+        ],
+      },
+    });
+    await act(async () => {
+      render(<EvidenceWork session={{ actorId: 'actor_me', authStrength: 'password' }} />);
+    });
+    expect(screen.getByText(/Nothing is attached, so there is nothing to check it against/)).toBeTruthy();
+    // Named, because a decision recorded in someone's name and then shown
+    // anonymously is half an attribution, and the missing half is the one
+    // needed to reply.
+    expect(screen.getByText(/actor_reviewer/)).toBeTruthy();
+    expect(screen.getByText(/Nothing has been deleted/)).toBeTruthy();
+  });
+
+  it('says nothing at all when there is nothing to say', async () => {
+    stubFetch({
+      '/v1/evidence-reviews/mine': {
+        data: [
+          {
+            type: 'EvidenceReview',
+            id: 'er_3',
+            attributes: {
+              evidenceReviewId: 'er_3',
+              researchProjectId: 'rp_1',
+              question: 'Does it help?',
+              reviewState: 'Approved',
+              submittedByActorId: 'actor_me',
+              approvedByActorId: 'actor_reviewer',
+              refusedByActorId: null,
+              refusedReason: null,
+              references: [],
+              updatedAt: '2026-08-01T09:14:00Z',
+            },
+          },
+        ],
+      },
+    });
+    await act(async () => {
+      render(<EvidenceWork session={{ actorId: 'actor_me', authStrength: 'password' }} />);
+    });
+    expect(screen.queryByText(/Nothing has been deleted/)).toBeNull();
   });
 });

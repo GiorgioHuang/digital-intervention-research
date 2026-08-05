@@ -9,6 +9,10 @@ export interface AnalysisPlanSummary {
   planState: string;
   draftedByActorId: string;
   approvedByActorId: string | null;
+  /** Why it was refused, if it was — otherwise a refusal is a state change
+   *  nobody can act on. */
+  refusedByActorId: string | null;
+  refusedReason: string | null;
   updatedAt: string;
 }
 
@@ -43,6 +47,8 @@ export interface FindingSummary {
   findingState: string;
   draftedByActorId: string;
   approvedByActorId: string | null;
+  refusedByActorId: string | null;
+  refusedReason: string | null;
   updatedAt: string;
 }
 
@@ -55,7 +61,8 @@ export interface AnalysisWork {
 
 async function plans(deps: M13Deps, where: string): Promise<AnalysisPlanSummary[]> {
   const res = await deps.pool.query(
-    `SELECT id, research_project_id, title, plan_state, drafted_by_actor_id, approved_by_actor_id, updated_at
+    `SELECT id, research_project_id, title, plan_state, drafted_by_actor_id, approved_by_actor_id,
+            refused_by_actor_id, refused_reason, updated_at
        FROM analysis_finding.analysis_plans
       ${where}
       ORDER BY updated_at DESC`,
@@ -67,6 +74,8 @@ async function plans(deps: M13Deps, where: string): Promise<AnalysisPlanSummary[
     planState: r.plan_state as string,
     draftedByActorId: r.drafted_by_actor_id as string,
     approvedByActorId: (r.approved_by_actor_id as string | null) ?? null,
+    refusedByActorId: (r.refused_by_actor_id as string | null) ?? null,
+    refusedReason: (r.refused_reason as string | null) ?? null,
     updatedAt: (r.updated_at as Date).toISOString(),
   }));
 }
@@ -117,7 +126,8 @@ async function interpretations(deps: M13Deps, where: string): Promise<Interpreta
 async function findings(deps: M13Deps, where: string): Promise<FindingSummary[]> {
   const res = await deps.pool.query(
     `SELECT f.id, f.interpretation_record_id, f.finding_text, f.finding_state,
-            f.drafted_by_actor_id, f.approved_by_actor_id, f.updated_at, p.title
+            f.drafted_by_actor_id, f.approved_by_actor_id,
+            f.refused_by_actor_id, f.refused_reason, f.updated_at, p.title
        FROM analysis_finding.research_findings f
        JOIN analysis_finding.interpretation_records i ON i.id = f.interpretation_record_id
        JOIN analysis_finding.analysis_runs r ON r.id = i.analysis_run_id
@@ -133,6 +143,8 @@ async function findings(deps: M13Deps, where: string): Promise<FindingSummary[]>
     findingState: r.finding_state as string,
     draftedByActorId: r.drafted_by_actor_id as string,
     approvedByActorId: (r.approved_by_actor_id as string | null) ?? null,
+    refusedByActorId: (r.refused_by_actor_id as string | null) ?? null,
+    refusedReason: (r.refused_reason as string | null) ?? null,
     updatedAt: (r.updated_at as Date).toISOString(),
   }));
 }
