@@ -34,6 +34,21 @@ import {
 import { createParticipantQuery, registerParticipant } from '@platform/m02-participant';
 import { executeBreakGlass } from '@platform/m15-governance';
 import {
+  approveProtocolVersion,
+  createProtocolVersion,
+  createProtocolVersionQuery,
+  createResearchProject,
+  submitProtocolVersion,
+} from '@platform/m04-research-design';
+import {
+  activateEnrolment,
+  enrolParticipant,
+  inviteParticipant,
+  recordEligibilityDecision,
+  startConsentProcess,
+  startScreening,
+} from '@platform/m05-enrolment';
+import {
   approveRelationship,
   createPermissionService,
   proposeRelationship,
@@ -194,6 +209,16 @@ async function main() {
   const checkPermission = permissions.evaluate.bind(permissions);
   const base = { pool, clock, checkPermission };
   const m03 = { pool, clock, permissions };
+  // M05 reaches the permission service directly rather than through a
+  // bound checkPermission, and needs the participant and protocol query
+  // ports to refuse an invitation that cites a draft protocol.
+  const m05 = {
+    pool,
+    clock,
+    permissions,
+    participants: participantsQuery,
+    protocolVersions: createProtocolVersionQuery(pool),
+  };
   // The evidence module reaches the knowledge platform through its ACL;
   // the simulator is what the deployed demo uses unless configured
   // otherwise, and it resolves kp-ref-0001 and refuses kp-ref-9999.
@@ -362,6 +387,67 @@ async function main() {
    * which is exactly what the deployed demo does too.
    */
   const mfa = (id) => ctx(id, { authStrength: 'mfa' });
+
+  /*
+   * A real project and an approved protocol, then two enrolments.
+   *
+   * The coordinator's workspace is the first tab staff land on and the
+   * demo left it completely empty: no enrolment had ever been created, so
+   * the chain that the coordinator screen exists to walk had never been
+   * walked through the product at all. The protocol decision queue was
+   * empty for the same reason.
+   *
+   * Separation of duties is real here and not decoration - the researcher
+   * drafts and submits, the approver approves, and they are different
+   * people (ADR-051, enforced again by a database CHECK).
+   */
+  const { researchProjectId } = await createResearchProject(base, ctx(researcherId), {
+    organisationId: orgId,
+    title: 'Life story and connectedness in later life',
+  });
+  const { protocolId, protocolVersionId } = await createProtocolVersion(base, ctx(researcherId), {
+    researchProjectId,
+    title: 'Pilot protocol',
+    content: { summary: 'Participant-controlled life story work, with supporter contributions.' },
+  });
+  await submitProtocolVersion(base, ctx(researcherId), protocolVersionId);
+  await approveProtocolVersion(base, mfa(approverId), protocolVersionId, true);
+
+  // A second version left in review, so the protocol decision queue holds
+  // something the approver can actually decide.
+  const { protocolVersionId: pendingProtocolVersionId } = await createProtocolVersion(base, ctx(researcherId), {
+    researchProjectId,
+    protocolId,
+    content: { summary: 'Adds a second assessment point at twelve weeks.' },
+  });
+  await submitProtocolVersion(base, ctx(researcherId), pendingProtocolVersionId);
+
+  // Ann's enrolment walked the whole way, so the states after the first
+  // are not hypothetical.
+  const { enrolmentId: annEnrolment } = await inviteParticipant(m05, ctx(coordId), {
+    participantId: annId,
+    researchProjectId,
+    protocolVersionId,
+  });
+  await startScreening(m05, ctx(coordId), annEnrolment);
+  await recordEligibilityDecision(m05, ctx(coordId), {
+    enrolmentId: annEnrolment,
+    decision: 'Eligible',
+    reason: 'Within the age range and able to consent for herself.',
+    confirmed: true,
+  });
+  await startConsentProcess(m05, ctx(coordId), annEnrolment);
+  await enrolParticipant(m05, ctx(coordId), annEnrolment);
+  await activateEnrolment(m05, ctx(coordId), annEnrolment);
+
+  // Ben's left mid-chain at the one point where the platform is waiting
+  // for a person rather than for a step: the eligibility decision.
+  const { enrolmentId: benEnrolment } = await inviteParticipant(m05, ctx(coordId), {
+    participantId: benId,
+    researchProjectId,
+    protocolVersionId,
+  });
+  await startScreening(m05, ctx(coordId), benEnrolment);
 
   // Evidence: one review carried to approved, with a reference that
   // resolved and one that did not, so the honest "not found" state is

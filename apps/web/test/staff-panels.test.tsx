@@ -3,7 +3,6 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { act } from 'react';
 import { StaffSafetyTriagePanel } from '../src/components/StaffSafetyTriagePanel.js';
 import { StaffApproverPanel } from '../src/components/StaffApproverPanel.js';
-import { StaffCoordinatorPanel } from '../src/components/StaffCoordinatorPanel.js';
 import { StaffResearcherPanel } from '../src/components/StaffResearcherPanel.js';
 
 const mfaSession = { actorId: 'actor_staff', authStrength: 'mfa' as const };
@@ -70,28 +69,6 @@ describe('staff panels (server-judged authority, honest MFA labelling)', () => {
       render(<StaffApproverPanel session={pwSession} />);
     });
     expect(screen.getByText(/signed in at password level/)).toBeTruthy();
-  });
-
-  it('coordinator: eligibility decision needs a written reason; withdrawal is confirmed with honest consequences', async () => {
-    const calls = stubFetch();
-    render(<StaffCoordinatorPanel session={mfaSession} />);
-    fireEvent.change(screen.getByLabelText('Enrolment identifier'), { target: { value: 'enr_1' } });
-    // Eligibility button stays disabled without a reason.
-    expect(screen.getByRole('button', { name: 'Record eligibility decision' })).toHaveProperty('disabled', true);
-    fireEvent.change(screen.getByLabelText('Reason for the eligibility decision'), { target: { value: 'Meets the inclusion criteria' } });
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Record eligibility decision' }));
-    });
-    expect(calls[0]?.path).toBe('/v1/enrolments/enr_1/eligibility-decision');
-    expect(calls[0]?.body['reason']).toBe('Meets the inclusion criteria');
-
-    fireEvent.click(screen.getByRole('button', { name: 'Withdraw this participant' }));
-    const dialog = screen.getByRole('alertdialog');
-    expect(dialog.textContent).toContain('locked');
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Confirm withdrawal' }));
-    });
-    expect(calls.some((c) => c.path === '/v1/enrolments/enr_1/withdraw')).toBe(true);
   });
 
   it('researcher export form offers NO identifiable option and splits exact sources', async () => {

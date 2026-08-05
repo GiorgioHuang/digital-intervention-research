@@ -3,16 +3,52 @@ import { staffActionError, staffLoadError } from '../errors.js';
 import { staffApi, type EnrolmentItem, type StaffSession } from '../staff-api.js';
 
 /**
- * Enrolment coordination (M05): the chain is explicit — invite against an
- * approved protocol version, screening, a HUMAN eligibility decision with
- * a written reason, consent, enrol, activate. Withdrawal is confirmed and
- * states its consequence honestly.
+ * Enrolment coordination (M05): invite against an approved protocol
+ * version, screening, a HUMAN eligibility decision with a written reason,
+ * consent, enrol, activate. Withdrawal is confirmed and states its
+ * consequence honestly.
+ *
+ * The panel used to offer all four steps and the eligibility decision as
+ * always-enabled buttons beside a box you typed an enrolment identifier
+ * into, with no indication anywhere of what state that enrolment was in.
+ * Only one of those buttons could ever succeed, and which one was
+ * unknowable from the screen: pressing "Activate" on an invitation
+ * produced a refusal that was correct and useless. Offering a control
+ * that cannot work is the same defect as offering one that does nothing,
+ * and it is the way people learn to treat refusals as ordinary.
+ *
+ * So the work is driven from the list, where the state lives. Each
+ * enrolment offers exactly the step its state allows and says what that
+ * step is; the rest of the chain is shown as text so the sequence stays
+ * legible rather than disappearing.
  */
+const CHAIN: { state: string; next: string; label: string; step: 'start-screening' | 'start-consent' | 'enrol' | 'activate' }[] = [
+  { state: 'Invited', next: 'Screening', label: 'Start screening', step: 'start-screening' },
+  { state: 'Eligible', next: 'Consenting', label: 'Start the consent conversation', step: 'start-consent' },
+  { state: 'Consenting', next: 'Enrolled', label: 'Enrol', step: 'enrol' },
+  { state: 'Enrolled', next: 'Active', label: 'Activate', step: 'activate' },
+];
+
+/** What each state means in words, so the list is readable by someone who
+ *  does not already know the state machine. */
+const STATE_WORDING: Record<string, string> = {
+  Invited: 'invited — nothing has happened yet',
+  Screening: 'being screened — waiting for an eligibility decision from a person',
+  Eligible: 'found eligible — the consent conversation has not started',
+  Consenting: 'in the consent conversation',
+  Enrolled: 'enrolled — not yet taking part',
+  Active: 'taking part',
+  Discontinued: 'discontinued after being found not eligible',
+  Withdrawn: 'withdrawn',
+  Paused: 'paused',
+};
+
 export function StaffCoordinatorPanel({ session }: { session: StaffSession }) {
   const [invite, setInvite] = useState({ participantId: '', projectId: '', protocolVersionId: '' });
-  const [enrolmentId, setEnrolmentId] = useState('');
-  const [eligibility, setEligibility] = useState({ decision: 'Eligible' as 'Eligible' | 'Ineligible', reason: '' });
-  const [confirmingWithdraw, setConfirmingWithdraw] = useState(false);
+  const [eligibility, setEligibility] = useState<{ id: string; decision: 'Eligible' | 'Ineligible'; reason: string } | null>(
+    null,
+  );
+  const [withdrawing, setWithdrawing] = useState<EnrolmentItem | null>(null);
   const [listProjectId, setListProjectId] = useState('');
   const [enrolments, setEnrolments] = useState<EnrolmentItem[] | null>(null);
   const [announcement, setAnnouncement] = useState('');
@@ -27,10 +63,16 @@ export function StaffCoordinatorPanel({ session }: { session: StaffSession }) {
     }
   };
 
+  /**
+   * Every action reloads the list. Without it the row keeps showing the
+   * state it had before the step, and the next button to press is the one
+   * that has just stopped being valid.
+   */
   const run = async (fn: () => Promise<unknown>, done: string) => {
     try {
       await fn();
       setAnnouncement(done);
+      if (enrolments !== null) await loadEnrolments();
     } catch (err) {
       setAnnouncement(staffActionError(err, 'That enrolment step'));
     }
@@ -59,10 +101,10 @@ export function StaffCoordinatorPanel({ session }: { session: StaffSession }) {
           <button
             disabled={invite.participantId === '' || invite.projectId === '' || invite.protocolVersionId === ''}
             onClick={() =>
-              void run(async () => {
-                const res = await staffApi.invite(session, invite.participantId, invite.projectId, invite.protocolVersionId);
-                setEnrolmentId(res.data.id);
-              }, 'Invitation created.')
+              void run(
+                () => staffApi.invite(session, invite.participantId, invite.projectId, invite.protocolVersionId),
+                'Invitation created.',
+              )
             }
           >
             Create invitation
@@ -71,108 +113,137 @@ export function StaffCoordinatorPanel({ session }: { session: StaffSession }) {
       </section>
 
       <section aria-labelledby="list-heading">
-        <h3 id="list-heading">Enrolment list</h3>
+        <h3 id="list-heading">Enrolments</h3>
+        <p>
+          Each enrolment shows where it has got to and offers the one step that comes next. The steps are in a fixed
+          order and cannot be taken out of it, so anything not offered here is not being withheld — it is not this
+          enrolment&apos;s turn for it.
+        </p>
         <p>
           <label htmlFor="list-proj">Filter by project (optional)</label>{' '}
           <input id="list-proj" value={listProjectId} onChange={(e) => setListProjectId(e.target.value)} />{' '}
-          <button onClick={() => void loadEnrolments()}>View enrolment list</button>
+          <button onClick={() => void loadEnrolments()}>View enrolments</button>
         </p>
-        {enrolments !== null && (
-          <ul style={{ listStyle: 'none', padding: 0 }}>
-            {enrolments.length === 0 && <li>No enrolments match.</li>}
-            {enrolments.map((e) => (
-              <li key={e.enrolmentId}>
-                {e.enrolmentId} (participant {e.participantId}, project {e.researchProjectId}, state: {e.enrolmentState}){' '}
-                <button onClick={() => setEnrolmentId(e.enrolmentId)}>Select</button>
-              </li>
-            ))}
-          </ul>
-        )}
+        {enrolments !== null && enrolments.length === 0 && <p>No enrolments match.</p>}
+        {(enrolments ?? []).map((e) => {
+          const stage = CHAIN.find((c) => c.state === e.enrolmentState);
+          const decidable = e.enrolmentState === 'Screening';
+          const withdrawable = !['Withdrawn', 'Discontinued'].includes(e.enrolmentState);
+          return (
+            <article key={e.enrolmentId} aria-label={`Enrolment ${e.enrolmentId}`}>
+              <h4>{e.enrolmentId}</h4>
+              <p>
+                Participant {e.participantId}, project {e.researchProjectId}.
+                <br />
+                Where it has got to: <strong>{STATE_WORDING[e.enrolmentState] ?? e.enrolmentState}</strong>
+              </p>
+
+              {stage !== undefined && (
+                <p>
+                  <button onClick={() => void run(() => staffApi.enrolmentStep(session, e.enrolmentId, stage.step), `Done: ${stage.label}`)}>
+                    {stage.label}
+                  </button>{' '}
+                  <small>This moves it to &ldquo;{stage.next}&rdquo;.</small>
+                </p>
+              )}
+
+              {/*
+                The one step in the chain that is not a step: a person
+                decides this and it is recorded in their name. It is only
+                offered while the enrolment is being screened, because that
+                is the only state the command accepts it from.
+              */}
+              {decidable && (
+                <div>
+                  <p>
+                    You make the eligibility decision and it is recorded in your name — it is not a score produced by
+                    the system. A reason is required, and &ldquo;not eligible&rdquo; ends this enrolment.
+                  </p>
+                  <p>
+                    <label htmlFor={`elig-dec-${e.enrolmentId}`}>Eligibility decision</label>
+                    <select
+                      id={`elig-dec-${e.enrolmentId}`}
+                      value={eligibility?.id === e.enrolmentId ? eligibility.decision : 'Eligible'}
+                      onChange={(ev) =>
+                        setEligibility({
+                          id: e.enrolmentId,
+                          decision: ev.target.value as 'Eligible' | 'Ineligible',
+                          reason: eligibility?.id === e.enrolmentId ? eligibility.reason : '',
+                        })
+                      }
+                    >
+                      <option value="Eligible">Eligible</option>
+                      <option value="Ineligible">Not eligible</option>
+                    </select>
+                  </p>
+                  <p>
+                    <label htmlFor={`elig-why-${e.enrolmentId}`}>Reason (required)</label>
+                    <input
+                      id={`elig-why-${e.enrolmentId}`}
+                      value={eligibility?.id === e.enrolmentId ? eligibility.reason : ''}
+                      onChange={(ev) =>
+                        setEligibility({
+                          id: e.enrolmentId,
+                          decision: eligibility?.id === e.enrolmentId ? eligibility.decision : 'Eligible',
+                          reason: ev.target.value,
+                        })
+                      }
+                    />
+                  </p>
+                  <p>
+                    <button
+                      disabled={eligibility?.id !== e.enrolmentId || eligibility.reason.trim() === ''}
+                      onClick={() =>
+                        void run(
+                          () =>
+                            staffApi.eligibilityDecision(
+                              session,
+                              e.enrolmentId,
+                              eligibility!.decision,
+                              eligibility!.reason.trim(),
+                            ),
+                          'Eligibility decision recorded in your name.',
+                        )
+                      }
+                    >
+                      Record eligibility decision
+                    </button>
+                  </p>
+                </div>
+              )}
+
+              {withdrawable && (
+                <p>
+                  <button onClick={() => setWithdrawing(e)}>Withdraw this participant</button>
+                </p>
+              )}
+            </article>
+          );
+        })}
       </section>
 
-      <section aria-labelledby="chain-heading">
-        <h3 id="chain-heading">Enrolment steps</h3>
-        <p>
-          <label htmlFor="enr-id">Enrolment identifier</label>{' '}
-          <input id="enr-id" value={enrolmentId} onChange={(e) => setEnrolmentId(e.target.value)} />
-        </p>
-        <p>
-          {(
-            [
-              ['start-screening', 'Start screening'],
-              ['start-consent', 'Start consent'],
-              ['enrol', 'Enrol'],
-              ['activate', 'Activate'],
-            ] as const
-          ).map(([step, label]) => (
-            <span key={step}>
-              <button
-                disabled={enrolmentId === ''}
-                onClick={() => void run(() => staffApi.enrolmentStep(session, enrolmentId, step), `Done: ${label}`)}
-              >
-                {label}
-              </button>{' '}
-            </span>
-          ))}
-        </p>
-
-        <h4>Eligibility decision (a human responsibility)</h4>
-        <p>You make the eligibility decision and it is recorded in your name — it is not a score produced by the system. A reason is required.</p>
-        <p>
-          <select
-            aria-label="Eligibility decision"
-            value={eligibility.decision}
-            onChange={(e) => setEligibility({ ...eligibility, decision: e.target.value as 'Eligible' | 'Ineligible' })}
-          >
-            <option value="Eligible">Eligible</option>
-            <option value="Ineligible">Not eligible</option>
-          </select>{' '}
-          <input
-            aria-label="Reason for the eligibility decision"
-            placeholder="Reason (required)"
-            value={eligibility.reason}
-            onChange={(e) => setEligibility({ ...eligibility, reason: e.target.value })}
-          />{' '}
+      {withdrawing !== null && (
+        <div role="alertdialog" aria-labelledby="wd-confirm">
+          <p id="wd-confirm">
+            Withdraw {withdrawing.participantId} from {withdrawing.researchProjectId}? Withdrawal stops further data
+            collection and propagates to related records; research datasets that are already locked are not
+            rewritten.
+          </p>
           <button
-            disabled={enrolmentId === '' || eligibility.reason === ''}
-            onClick={() =>
+            onClick={() => {
+              const target = withdrawing;
+              setWithdrawing(null);
               void run(
-                () => staffApi.eligibilityDecision(session, enrolmentId, eligibility.decision, eligibility.reason),
-                'Eligibility decision recorded in your name.',
-              )
-            }
+                () => staffApi.withdrawEnrolment(session, target.enrolmentId, 'participant-request'),
+                'Withdrawal recorded and propagation started.',
+              );
+            }}
           >
-            Record eligibility decision
-          </button>
-        </p>
-
-        <h4>Withdrawal</h4>
-        <p>
-          <button disabled={enrolmentId === ''} onClick={() => setConfirmingWithdraw(true)}>
-            Withdraw this participant
-          </button>
-        </p>
-        {confirmingWithdraw && (
-          <div role="alertdialog" aria-labelledby="wd-confirm">
-            <p id="wd-confirm">
-              Withdraw this participant? Withdrawal stops further data collection and propagates to related records; research
-              datasets that are already locked are not rewritten.
-            </p>
-            <button
-              onClick={() => {
-                setConfirmingWithdraw(false);
-                void run(
-                  () => staffApi.withdrawEnrolment(session, enrolmentId, 'participant-request'),
-                  'Withdrawal recorded and propagation started.',
-                );
-              }}
-            >
-              Confirm withdrawal
-            </button>{' '}
-            <button onClick={() => setConfirmingWithdraw(false)}>Back</button>
-          </div>
-        )}
-      </section>
+            Confirm withdrawal
+          </button>{' '}
+          <button onClick={() => setWithdrawing(null)}>Back</button>
+        </div>
+      )}
 
       <p aria-live="polite" role="status">
         {announcement}
