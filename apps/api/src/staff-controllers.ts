@@ -84,6 +84,8 @@ import {
   draftAnalysisPlan,
   draftInterpretation,
   draftResearchFinding,
+  listAnalysisApprovals,
+  listAnalysisWork,
   runAnalysis,
 } from '@platform/m13-analysis';
 import { API_DEPS, type ApiDeps } from './controllers.js';
@@ -192,6 +194,24 @@ export class StaffCommandController {
         attributes: i,
       })),
     };
+  }
+
+  /**
+   * The analysis chain as it stands. Every step had a command and none
+   * had a screen, so the chain could only be followed by someone driving
+   * the API directly.
+   */
+  @Get('analysis-work')
+  async analysisWork(@Req() req: Request) {
+    const ctx = requireActor(req);
+    return { data: await listAnalysisWork(this.deps.m13, ctx) };
+  }
+
+  /** What the approver has waiting across the analysis chain. */
+  @Get('analysis-approvals')
+  async analysisApprovals(@Req() req: Request) {
+    const ctx = requireActor(req);
+    return { data: await listAnalysisApprovals(this.deps.m13, ctx) };
   }
 
   /**

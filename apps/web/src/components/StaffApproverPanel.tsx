@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { StaffSession } from '../staff-api.js';
+import { AnalysisDecisions } from './approver/AnalysisDecisions.js';
 import { ApprovalRecords } from './approver/ApprovalRecords.js';
 import { DatasetDefinitions } from './approver/DatasetDefinitions.js';
 import { DatasetLock } from './approver/DatasetLock.js';
@@ -22,7 +23,7 @@ import { ReportDecisions } from './approver/ReportDecisions.js';
  * (§1.4) instead of an identifier the approver has to trust they typed
  * correctly.
  */
-type Decision = 'protocol' | 'definition' | 'dataset' | 'evidence' | 'evidence-decision' | 'report' | 'export' | 'approval';
+type Decision = 'protocol' | 'definition' | 'dataset' | 'evidence' | 'evidence-decision' | 'report' | 'analysis' | 'export' | 'approval';
 
 const DECISIONS: { key: Decision; label: string }[] = [
   { key: 'protocol', label: 'Protocol versions' },
@@ -37,6 +38,8 @@ const DECISIONS: { key: Decision; label: string }[] = [
   { key: 'evidence', label: 'Evidence reviews' },
   { key: 'evidence-decision', label: 'Evidence decisions' },
   { key: 'report', label: 'Report versions' },
+  // Plan, interpretation and finding: three approvals nothing listed.
+  { key: 'analysis', label: 'Analysis' },
   { key: 'export', label: 'Exports' },
   { key: 'approval', label: 'Approval records' },
 ];
@@ -75,6 +78,7 @@ export function StaffApproverPanel({ session }: { session: StaffSession }) {
       {screen === 'evidence' && <EvidenceReviews session={session} />}
       {screen === 'evidence-decision' && <EvidenceDecisions session={session} />}
       {screen === 'report' && <ReportDecisions session={session} />}
+      {screen === 'analysis' && <AnalysisDecisions session={session} />}
       {screen === 'export' && <ExportDecisions session={session} />}
       {screen === 'approval' && <ApprovalRecords session={session} />}
     </section>

@@ -155,6 +155,56 @@ export interface EvidenceReviewItem {
   references: EvidenceReferenceItem[];
   updatedAt: string;
 }
+export interface AnalysisPlanItem {
+  analysisPlanId: string;
+  researchProjectId: string;
+  title: string;
+  planState: string;
+  draftedByActorId: string;
+  approvedByActorId: string | null;
+  updatedAt: string;
+}
+export interface AnalysisRunItem {
+  analysisRunId: string;
+  analysisPlanId: string;
+  planTitle: string;
+  datasetVersionId: string;
+  datasetManifestHash: string;
+  runState: string;
+  startedByActorId: string;
+  createdAt: string;
+}
+export interface InterpretationItem {
+  interpretationRecordId: string;
+  analysisRunId: string;
+  planTitle: string;
+  interpretationText: string;
+  interpretationState: string;
+  draftedByActorId: string;
+  approvedByActorId: string | null;
+  updatedAt: string;
+}
+export interface FindingItem {
+  researchFindingId: string;
+  interpretationRecordId: string;
+  planTitle: string;
+  findingText: string;
+  findingState: string;
+  draftedByActorId: string;
+  approvedByActorId: string | null;
+  updatedAt: string;
+}
+export interface AnalysisWorkPayload {
+  plans: AnalysisPlanItem[];
+  runs: AnalysisRunItem[];
+  interpretations: InterpretationItem[];
+  findings: FindingItem[];
+}
+export interface AnalysisApprovalsPayload {
+  plans: AnalysisPlanItem[];
+  interpretations: InterpretationItem[];
+  findings: FindingItem[];
+}
 export interface EvidenceDecisionItem {
   evidenceDecisionId: string;
   evidenceReviewId: string;
@@ -305,6 +355,31 @@ export const staffApi = {
   approveEvidenceReview: (s: StaffSession, reviewId: string) =>
     post<Id>(s, `/v1/evidence-reviews/${reviewId}/approve`, { confirmed: true }),
   listDecisionWork: (s: StaffSession) => get<List<EvidenceDecisionItem>>(s, '/v1/evidence-decisions/mine'),
+  listAnalysisWork: (s: StaffSession) => get<{ data: AnalysisWorkPayload }>(s, '/v1/analysis-work'),
+  listAnalysisApprovals: (s: StaffSession) => get<{ data: AnalysisApprovalsPayload }>(s, '/v1/analysis-approvals'),
+  draftAnalysisPlan: (s: StaffSession, researchProjectId: string, title: string) =>
+    post<Id>(s, '/v1/analysis-plans', { researchProjectId, title }),
+  approveAnalysisPlan: (s: StaffSession, planId: string) =>
+    post<Id>(s, `/v1/analysis-plans/${planId}/approve`, { confirmed: true }),
+  /**
+   * Records that an analysis was run and what it produced. The platform
+   * does not perform the analysis, so the wording never says it did.
+   */
+  runAnalysis: (s: StaffSession, analysisPlanId: string, datasetVersionId: string, outputs: string) =>
+    post<Id>(s, '/v1/analysis-runs', {
+      analysisPlanId,
+      datasetVersionId,
+      outputs: { summary: outputs },
+      environment: {},
+    }),
+  draftInterpretation: (s: StaffSession, runId: string, interpretationText: string) =>
+    post<Id>(s, `/v1/analysis-runs/${runId}/interpretations`, { interpretationText }),
+  approveInterpretation: (s: StaffSession, interpretationId: string) =>
+    post<Id>(s, `/v1/interpretations/${interpretationId}/approve`, { confirmed: true }),
+  draftResearchFinding: (s: StaffSession, interpretationId: string, findingText: string) =>
+    post<Id>(s, `/v1/interpretations/${interpretationId}/findings`, { findingText }),
+  approveResearchFinding: (s: StaffSession, findingId: string) =>
+    post<Id>(s, `/v1/findings/${findingId}/approve`, { confirmed: true }),
   listDecisionsAwaitingApproval: (s: StaffSession) =>
     get<List<EvidenceDecisionItem>>(s, '/v1/evidence-decisions/awaiting-approval'),
   draftEvidenceDecision: (s: StaffSession, evidenceReviewId: string, outcome: string, rationale: string) =>

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { staffActionError } from '../errors.js';
 import { staffApi, type StaffSession } from '../staff-api.js';
+import { AnalysisWork } from './AnalysisWork.js';
 import { DatasetWork } from './DatasetWork.js';
 import { EvidenceDecisionWork } from './EvidenceDecisionWork.js';
 import { EvidenceWork } from './EvidenceWork.js';
@@ -143,6 +144,12 @@ export function StaffResearcherPanel({ session }: { session: StaffSession }) {
         the four before it could be performed by nobody.
       */}
       <DatasetWork session={session} />
+
+      {/*
+        Every step of the analysis chain had a command and none had a
+        screen, so it could only be followed by driving the API directly.
+      */}
+      <AnalysisWork session={session} />
 
       {/*
         The export half had screens; the reports beside it did not, so

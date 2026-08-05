@@ -27,6 +27,8 @@ import {
   approveInterpretation,
   approveResearchFinding,
   draftAnalysisPlan,
+  listAnalysisApprovals,
+  listAnalysisWork,
   draftInterpretation,
   draftResearchFinding,
   runAnalysis,
@@ -158,6 +160,37 @@ describe.skipIf(!dbAvailable)('M12 dataset lock + M13 analysis chain (integratio
     const v = await pool.query(`SELECT manifest, version_state FROM dataset_quality.dataset_versions WHERE id = $1`, [versionId]);
     expect(v.rows[0].manifest.datasetDefinitionId).toBe(definitionId);
     expect(v.rows[0].version_state).toBe('Generated');
+  });
+
+  /**
+   * Every step of this chain had a command and none had a screen, so it
+   * could only be followed by someone driving the API directly. These
+   * queues are what both sides are now driven from.
+   */
+  it('the analysis queues follow the chain and carry the dataset the run was made against', async () => {
+    const { analysisPlanId } = await draftAnalysisPlan(m13, ctx(researcherId), {
+      researchProjectId: 'rp_pilot',
+      title: 'Queue visible',
+    });
+    const drafted = (await listAnalysisWork(m13, ctx(researcherId))).plans.find(
+      (p) => p.analysisPlanId === analysisPlanId,
+    );
+    expect(drafted?.planState).toBe('Draft');
+
+    // A draft plan is in the approver's queue; approved ones leave it.
+    const waiting = await listAnalysisApprovals(m13, ctx(approverId));
+    expect(waiting.plans.map((p) => p.analysisPlanId)).toContain(analysisPlanId);
+    // Runs are never in an approval queue: nobody approves a run.
+    expect(Object.keys(waiting)).not.toContain('runs');
+
+    await approveAnalysisPlan(m13, ctx(approverId), { analysisPlanId, confirmed: true });
+    expect(
+      (await listAnalysisApprovals(m13, ctx(approverId))).plans.map((p) => p.analysisPlanId),
+    ).not.toContain(analysisPlanId);
+
+    // Read under the action that already permits the work; an approver
+    // does not hold analysis-plan.draft.
+    await expect(listAnalysisWork(m13, ctx(approverId))).rejects.toMatchObject({ code: 'AUTHORISATION_DENIED' });
   });
 
   it('NEGATIVE analysis before lock refused; NEGATIVE automation cannot lock; human+MFA locks; locked version immutable', async () => {
