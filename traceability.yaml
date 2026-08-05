@@ -870,3 +870,13 @@
   code: [packages/synthetic-pilot/seed-demo.mjs, packages/synthetic-pilot/package.json, pnpm-lock.yaml]
   tests: [packages/synthetic-pilot/test/synthetic-pilot.test.ts]
   status: implemented
+
+- implementation_id: IMP-DOC-INVENTORY-AUDIT-001
+  module: M18
+  summary: Corrects the UI inventory where it understated the repository, the mirror of the C14 and C17 overclaims fixed earlier in this sweep. Five of the nine design-system rows read as undefined and two more as partial, while apps/web/src/styles.css already carries 192 semantic tokens across 839 lines - thirteen colour families in four sets for light, dark, prefers-contrast and forced-colors with measured contrast ratios written beside each foreground, a modular type scale, density-derived spacing, shape, focus, motion, elevation and stacking order, and icon tokens. Marking finished work as missing sends a design agent to rebuild what exists and misrepresents the state of the repository, which is a documentation defect of the same kind as claiming a screen works when its queue can never fill. The shared-state and error rows were stale in the same direction - StateBlock has provided loading, empty and error components in use across the platform, holding the rule that nothing yet and not loaded yet are different facts that must read differently, and errors.ts has translated server codes into a four-part structure at three severities mapped onto the warning, danger and Safety families, with the raw code kept in a details element because it helps support and nobody else. What genuinely remains is recorded rather than glossed - the icon set itself as opposed to its tokens, skeleton and offline states which the application cannot honestly claim since it has no offline capability, shared-device privacy and session timeout, and a general version-conflict component. The priority list is rewritten to match - P0 is no longer building the base but using it, and P1 is substantially complete
+  trace_ids: [ATR-002]
+  adr_ids: [ADR-061, ADR-062]
+  docs: ["UI_INVENTORY.md A1-A9", "UI_INVENTORY.md I11", "UI_INVENTORY.md I13", "design/DESIGN_SYSTEM.md"]
+  code: [apps/web/src/styles.css, apps/web/src/components/StateBlock.tsx, apps/web/src/errors.ts]
+  tests: [apps/web/test/error-presentation.test.tsx]
+  status: implemented
