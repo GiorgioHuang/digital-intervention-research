@@ -46,6 +46,7 @@ export function CommunityPanel({ session }: { session: Session }) {
   const [feedLoading, setFeedLoading] = useState(false);
   const [feedError, setFeedError] = useState<PresentedError | null>(null);
   const [actionError, setActionError] = useState<PresentedError | null>(null);
+  const [reporting, setReporting] = useState<{ postId: string; category: string; description: string } | null>(null);
 
   const loadSpaces = useCallback(async () => {
     setSpacesLoading(true);
@@ -157,6 +158,20 @@ export function CommunityPanel({ session }: { session: Session }) {
   };
 
   const spaceName = (spaceId: string) => spaces?.find((s) => s.spaceId === spaceId)?.name ?? spaceId;
+  const sendReport = async () => {
+    if (reporting === null) return;
+    setActionError(null);
+    try {
+      await api.reportPost(session, reporting.postId, reporting.category, reporting.description.trim());
+      setReporting(null);
+      // Says what will happen next, and does not promise a reply or a
+      // particular outcome, because neither is guaranteed.
+      setAnnouncement('Your report has been sent. A person will read it. The post stays where it is until someone decides.');
+    } catch (err) {
+      setActionError(presentError(err));
+    }
+  };
+
   const drafts = myPosts.filter((p) => p.postState === 'Draft');
 
   return (
@@ -242,6 +257,22 @@ export function CommunityPanel({ session }: { session: Session }) {
                       {new Date(p.publishedAt).toLocaleString()}
                     </small>
                   </p>
+                  {/*
+                    Reporting from where the thing is (decision D-4's main
+                    path). Without it a report could only be made on the
+                    Help screen by typing somebody's identifier, and no
+                    report could name a post at all — so the moderation
+                    decisions that act on content had nothing to act on.
+                    Your own post is not reportable; withdrawing your own
+                    writing is a different thing and this is not it.
+                  */}
+                  {p.authorParticipantId !== session.participantId && (
+                    <p>
+                      <button onClick={() => setReporting({ postId: p.postId, category: 'unkind', description: '' })}>
+                        Report this post
+                      </button>
+                    </p>
+                  )}
                 </li>
               ))}
             </ul>
@@ -299,6 +330,44 @@ export function CommunityPanel({ session }: { session: Session }) {
             </div>
           )}
         </section>
+      )}
+
+      {reporting !== null && (
+        <div role="alertdialog" aria-labelledby="report-post-heading">
+          <h4 id="report-post-heading">Report this post</h4>
+          <p>
+            A person reads every report. Nothing is decided automatically. You are not told who else has reported
+            anything, and the person you are reporting is never told that it was you.
+          </p>
+          <p>
+            <label htmlFor="report-post-category">What is wrong with it</label>
+            <select
+              id="report-post-category"
+              value={reporting.category}
+              onChange={(e) => setReporting({ ...reporting, category: e.target.value })}
+            >
+              <option value="unkind">Unkind or hurtful</option>
+              <option value="personal-information">It shares someone's private information</option>
+              <option value="not-about-this-community">It does not belong in this community</option>
+              <option value="something-else">Something else</option>
+            </select>
+          </p>
+          <p>
+            <label htmlFor="report-post-description">In your own words (required)</label>
+          </p>
+          <textarea
+            id="report-post-description"
+            rows={3}
+            value={reporting.description}
+            onChange={(e) => setReporting({ ...reporting, description: e.target.value })}
+          />
+          <p>
+            <button disabled={reporting.description.trim() === ''} onClick={() => void sendReport()}>
+              Send this report
+            </button>{' '}
+            <button onClick={() => setReporting(null)}>Go back</button>
+          </p>
+        </div>
       )}
 
       {actionError !== null && <ErrorState error={actionError} />}

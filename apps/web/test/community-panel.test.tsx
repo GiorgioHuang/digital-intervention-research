@@ -171,4 +171,51 @@ describe('CommunityPanel (optional community, versioned rules, chronological fee
     const publish = calls.find((c) => c.method === 'POST' && c.path === '/v1/social-posts/sp_d1/publish');
     expect(publish?.body).toMatchObject({ participantId: 'pt_a', confirmed: true });
   });
+
+  /**
+   * Reporting from where the thing is (decision D-4's main path). Before
+   * this the only way to report was the Help screen, typing someone's
+   * identifier — and no report could name a post at all, so the
+   * moderation decisions that act on content had nothing to act on.
+   */
+  it('a post can be reported from where it is, and the report names the post rather than a person', async () => {
+    const calls = stubFetch({ joined: true });
+    await act(async () => {
+      render(<CommunityPanel session={session} />);
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Open "Gardening Corner"' }));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Report this post' }));
+    });
+    // Says what happens and what does not, before it is sent.
+    expect(screen.getByText(/A person reads every report/)).toBeTruthy();
+    expect(screen.getByText(/never told that it was you/)).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Send this report' })).toHaveProperty('disabled', true);
+    fireEvent.change(screen.getByLabelText(/In your own words/), {
+      target: { value: 'It names my neighbour and is not about gardening' },
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Send this report' }));
+    });
+    const posted = calls.find((c) => c.method === 'POST' && c.path === '/v1/reports');
+    expect(posted?.body).toMatchObject({ reportedContentId: 'sp_9' });
+    // Who is being reported is not sent: the server takes the author from
+    // the post, so a report cannot open a case against someone the
+    // reporter names.
+    expect(posted?.body?.['reportedActorId']).toBe('');
+    expect(screen.getByText(/The post stays where it is until someone decides/)).toBeTruthy();
+  });
+
+  it('your own post is not reportable — withdrawing your own writing is a different thing', async () => {
+    stubFetch({ joined: true });
+    await act(async () => {
+      render(<CommunityPanel session={{ ...session, participantId: 'pt_b' }} />);
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Open "Gardening Corner"' }));
+    });
+    expect(screen.queryByRole('button', { name: 'Report this post' })).toBeNull();
+  });
 });

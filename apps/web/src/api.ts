@@ -333,6 +333,21 @@ export const api = {
       category,
       description,
     }),
+  /**
+   * Reporting a post rather than a person (decision D-4's main path). Who
+   * is being reported is not sent: the server takes the author from the
+   * post, so a report cannot open a case against somebody the reporter
+   * names. It also means the feed never has to carry an identifier for
+   * the author, which is the handle D-12 keeps off the screen.
+   */
+  reportPost: (s: Session, postId: string, category: string, description: string) =>
+    post<{ data: { id: string; meta: { moderationCaseId: string } } }>(s, '/v1/reports', {
+      reporterId: s.participantId,
+      reportedActorId: '',
+      reportedContentId: postId,
+      category,
+      description,
+    }),
   createBlock: (s: Session, blockedActorId: string, confirmed: boolean) =>
     post<{ data: { id: string } }>(s, '/v1/blocks', { blockerId: s.participantId, blockedActorId, confirmed }),
   listMyBlocks: (s: Session) =>

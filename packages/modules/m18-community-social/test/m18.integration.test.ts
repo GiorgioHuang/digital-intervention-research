@@ -26,6 +26,7 @@ import {
   draftSocialPost,
   joinCommunity,
   listCommunityFeed,
+  listOpenModerationCases,
   publishSocialPost,
   recordModerationDecision,
   listMyBlocks,
@@ -331,6 +332,125 @@ describe.skipIf(!dbAvailable)('M18 block/report/moderation/community (integratio
     expect(feed[0]?.authorDisplayName).toBe('A community member');
     expect(feed[0]?.authorDisplayName).not.toContain(patId);
   });
+  /**
+   * Until this was fixed, every content decision was a lie of the worst
+   * kind available here: "Remove content" closed the case as Actioned,
+   * told the moderator it was done, and left the post in the community
+   * feed. post_state carried Hidden, Removed and Restored in its CHECK
+   * constraint and nothing ever wrote any of them.
+   */
+  it('hiding reported content takes it out of the feed, and restoring puts it back', async () => {
+    const { spaceId, ruleVersionId } = await createCommunitySpace(
+      m18,
+      createRequestContext({ actor: { type: 'user', id: adminId }, organisationId: orgId }),
+      { name: 'Moderated Corner', rulesText: 'Be kind.' },
+    );
+    // Granted here rather than leaned on from an earlier test: this one
+    // is about moderation, and it should not fail because the order of
+    // the file changed.
+    await recordConsentDecision(m03, ctx(patAccountId), {
+      participantId: patId,
+      scope: 'community-participation',
+      decision: 'Granted',
+      templateVersion: 'ct_v1',
+    });
+    await joinCommunity(m18, ctx(patAccountId), { spaceId, participantId: patId, ruleVersionId });
+    const { postId } = await draftSocialPost(m18, ctx(patAccountId), {
+      spaceId,
+      participantId: patId,
+      contentText: 'Something someone objected to',
+    });
+    await publishSocialPost(m18, ctx(patAccountId), { postId, participantId: patId, confirmed: true });
+    expect(
+      (await listCommunityFeed(m18, ctx(patAccountId), { spaceId, participantId: patId })).some((f) => f.postId === postId),
+    ).toBe(true);
+
+    const { moderationCaseId } = await submitUserReport(m18, ctx(supporterId), {
+      reporterId: supporterId,
+      reportedActorId: patAccountId,
+      reportedContentId: postId,
+      category: 'harassment',
+      description: 'this post',
+    });
+    await recordModerationDecision(m18, ctx(moderatorId), {
+      moderationCaseId,
+      decision: 'Hide',
+      reason: 'Breaches the space rules',
+      confirmed: true,
+    });
+    const hidden = await pool.query(`SELECT post_state FROM community_social.social_posts WHERE id = $1`, [postId]);
+    expect(hidden.rows[0].post_state).toBe('Hidden');
+    expect(
+      (await listCommunityFeed(m18, ctx(patAccountId), { spaceId, participantId: patId })).some((f) => f.postId === postId),
+    ).toBe(false);
+
+    // Reopened so a second decision is allowed on the same case.
+    await pool.query(`UPDATE community_social.moderation_cases SET case_state = 'Reopened' WHERE id = $1`, [
+      moderationCaseId,
+    ]);
+    await recordModerationDecision(m18, ctx(moderatorId), {
+      moderationCaseId,
+      decision: 'Restore',
+      reason: 'Reconsidered on appeal',
+      confirmed: true,
+    });
+    expect(
+      (await listCommunityFeed(m18, ctx(patAccountId), { spaceId, participantId: patId })).some((f) => f.postId === postId),
+    ).toBe(true);
+  });
+
+  /**
+   * Without this, "Remove content" on a case about behaviour succeeds,
+   * reports that the content was removed, and removes nothing.
+   */
+  it('NEGATIVE a content decision on a case that names no content is refused', async () => {
+    const { moderationCaseId } = await submitUserReport(m18, ctx(supporterId), {
+      reporterId: supporterId,
+      reportedActorId: patAccountId,
+      category: 'harassment',
+      description: 'how they spoke to me',
+    });
+    await expect(
+      recordModerationDecision(m18, ctx(moderatorId), {
+        moderationCaseId,
+        decision: 'Remove',
+        reason: 'x',
+        confirmed: true,
+      }),
+    ).rejects.toMatchObject({ code: 'VALIDATION_ERROR' });
+    const untouched = await pool.query(`SELECT case_state FROM community_social.moderation_cases WHERE id = $1`, [
+      moderationCaseId,
+    ]);
+    expect(untouched.rows[0].case_state).toBe('Reported');
+  });
+
+  /**
+   * Escalating used to close the case as Actioned, so "pass this on" and
+   * "this is dealt with" were the same button: the case left the queue and
+   * nobody was passed anything.
+   */
+  it('escalating leaves the case open rather than closing it as actioned', async () => {
+    const { moderationCaseId } = await submitUserReport(m18, ctx(supporterId), {
+      reporterId: supporterId,
+      reportedActorId: patAccountId,
+      category: 'safety',
+      description: 'beyond me',
+    });
+    await recordModerationDecision(m18, ctx(moderatorId), {
+      moderationCaseId,
+      decision: 'Escalate',
+      reason: 'This needs the safety team',
+      confirmed: true,
+    });
+    const after = await pool.query(`SELECT case_state FROM community_social.moderation_cases WHERE id = $1`, [
+      moderationCaseId,
+    ]);
+    expect(after.rows[0].case_state).toBe('Action Required');
+    expect(
+      (await listOpenModerationCases(m18, ctx(moderatorId))).some((c) => c.moderationCaseId === moderationCaseId),
+    ).toBe(true);
+  });
+
 });
 
 describe.skipIf(dbAvailable)('M18 integration (skipped)', () => {

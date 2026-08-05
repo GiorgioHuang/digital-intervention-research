@@ -166,6 +166,7 @@ export interface OpenModerationCase {
   caseState: string;
   reportCategory: string | null;
   reportDescription: string | null;
+  reportedContentId: string | null;
   createdAt: string;
 }
 
@@ -184,7 +185,8 @@ export async function listOpenModerationCases(
   });
   assertAllowed(decision, false);
   const res = await deps.pool.query(
-    `SELECT c.id, c.subject_actor_id, c.case_state, r.category, r.description, c.created_at
+    `SELECT c.id, c.subject_actor_id, c.case_state, r.category, r.description,
+            r.reported_content_id, c.created_at
        FROM community_social.moderation_cases c
        LEFT JOIN community_social.user_reports r ON r.id = c.user_report_id
       WHERE c.case_state IN ('Reported', 'Awaiting Triage', 'In Review', 'Action Required', 'Reopened')
@@ -196,6 +198,10 @@ export async function listOpenModerationCases(
     caseState: r.case_state as string,
     reportCategory: (r.category as string | null) ?? null,
     reportDescription: (r.description as string | null) ?? null,
+    // Whether the case names a piece of content decides which decisions
+    // can act, so the queue has to carry it rather than leave a moderator
+    // to find out by being refused.
+    reportedContentId: (r.reported_content_id as string | null) ?? null,
     createdAt: (r.created_at as Date).toISOString(),
   }));
 }

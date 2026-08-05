@@ -265,6 +265,9 @@ export interface ModerationCaseItem {
   caseState: string;
   reportCategory: string | null;
   reportDescription: string | null;
+  /** Null when the case is about behaviour rather than a piece of content;
+   *  the decisions that act on content are not offered for those. */
+  reportedContentId: string | null;
 }
 export interface AdministeredParticipant {
   participantId: string;

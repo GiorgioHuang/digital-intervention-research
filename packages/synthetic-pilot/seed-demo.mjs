@@ -66,6 +66,7 @@ import {
   generateMatchCandidate,
   joinCommunity,
   publishSocialPost,
+  submitUserReport,
   recordMatchDecision,
 } from '@platform/m18-community-social';
 import {
@@ -298,6 +299,32 @@ async function main() {
     const { postId } = await draftSocialPost(base, ctx(acc), { spaceId, participantId: pid, contentText: text });
     await publishSocialPost(base, ctx(acc), { postId, participantId: pid, confirmed: true });
   }
+
+  // A reported post, left open, so the moderator's queue holds a case that
+  // names real content. Content decisions act on the post's state and the
+  // feed already shows published posts only, so this is the case that
+  // proves hiding actually hides - which it did not until now.
+  const { postId: reportedPostId } = await draftSocialPost(base, ctx(benAcc), {
+    spaceId,
+    participantId: benId,
+    contentText: 'Ann never waters the shared beds. Someone should say something to her.',
+  });
+  await publishSocialPost(base, ctx(benAcc), { postId: reportedPostId, participantId: benId, confirmed: true });
+  await submitUserReport(base, ctx(annAcc), {
+    reporterId: annAcc,
+    reportedActorId: benAcc,
+    reportedContentId: reportedPostId,
+    category: 'personal-remarks',
+    description: 'This names me and is not about gardening.',
+  });
+  // A second case about behaviour rather than content, so the queue shows
+  // both kinds and the difference in what can be decided is visible.
+  await submitUserReport(base, ctx(benAcc), {
+    reporterId: benAcc,
+    reportedActorId: annAcc,
+    category: 'unwanted-contact',
+    description: 'Messages after I asked them to stop.',
+  });
 
   // Matching -> mutual acceptance -> connection -> a confirmed message, so
   // the Messages screen has a real thread. Delivery stays in its honest

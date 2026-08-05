@@ -162,6 +162,23 @@ export async function submitUserReport(
   });
   assertAllowed(decision, false);
 
+  /*
+   * When the report names a post, who is being reported comes from the
+   * post and not from the caller. A reporter naming both could name
+   * somebody else's post and a third person as its author, and the case
+   * would then be opened against the wrong person on the reporter's say-so
+   * - authority named by the request is not authority.
+   */
+  let reportedActorId = input.reportedActorId;
+  if (input.reportedContentId !== undefined) {
+    const post = await deps.pool.query(
+      `SELECT author_participant_id FROM community_social.social_posts WHERE id = $1`,
+      [input.reportedContentId],
+    );
+    const author = post.rows[0]?.author_participant_id as string | undefined;
+    if (author !== undefined) reportedActorId = author;
+  }
+
   const reportId = newId('rep');
   const moderationCaseId = newId('mc');
   const now = deps.clock.now();
@@ -170,11 +187,11 @@ export async function submitUserReport(
       `INSERT INTO community_social.user_reports
          (id, reporter_actor_id, reported_actor_id, reported_content_id, category, description)
        VALUES ($1, $2, $3, $4, $5, $6)`,
-      [reportId, input.reporterId, input.reportedActorId, input.reportedContentId ?? null, input.category, input.description],
+      [reportId, input.reporterId, reportedActorId, input.reportedContentId ?? null, input.category, input.description],
     );
     await client.query(
       `INSERT INTO community_social.moderation_cases (id, user_report_id, subject_actor_id) VALUES ($1, $2, $3)`,
-      [moderationCaseId, reportId, input.reportedActorId],
+      [moderationCaseId, reportId, reportedActorId],
     );
     // Payloads exclude reporter identity (Doc 15 §61).
     await appendToOutbox(client, ctx, {
@@ -198,6 +215,27 @@ export async function submitUserReport(
   return { reportId, moderationCaseId };
 }
 
+/**
+ * What each decision actually does to the platform.
+ *
+ * `Hide`, `Remove` and `Restore` move the reported post's state, and the
+ * community feed already shows only `Published` posts, so those three are
+ * enforced. `Dismiss` closes the case, which is its whole effect.
+ *
+ * Everything else in the vocabulary - Warn, Restrict, Suspend, Disconnect,
+ * Ban - records a decision that nothing in this platform acts on: there is
+ * no account restriction mechanism, nothing reads
+ * `community_social.moderation_decisions`, and no warning is ever sent.
+ * They stay recordable because a moderator may have done one of them
+ * outside the platform and the record of that is worth keeping, but no
+ * caller may present them as things the platform carries out.
+ */
+const CONTENT_DECISIONS: Record<string, string> = {
+  Hide: 'Hidden',
+  Remove: 'Removed',
+  Restore: 'Published',
+};
+
 /** Human, confirmed, immutable ModerationDecision; AI/automation refused. */
 export async function recordModerationDecision(
   deps: M18Deps,
@@ -219,17 +257,71 @@ export async function recordModerationDecision(
   });
   assertAllowed(decision, input.confirmed);
 
+  /*
+   * A content decision has to have content. Without this check "Remove
+   * content" on a case about somebody's behaviour succeeds, reports that
+   * the content was removed, and removes nothing.
+   */
+  const targetState = CONTENT_DECISIONS[input.decision];
+  let reportedContentId: string | null = null;
+  if (targetState !== undefined) {
+    const target = await deps.pool.query(
+      `SELECT r.reported_content_id
+         FROM community_social.moderation_cases c
+         LEFT JOIN community_social.user_reports r ON r.id = c.user_report_id
+        WHERE c.id = $1`,
+      [input.moderationCaseId],
+    );
+    reportedContentId = (target.rows[0]?.reported_content_id as string | null) ?? null;
+    if (reportedContentId === null) {
+      throw new PlatformError(
+        'VALIDATION_ERROR',
+        `${input.decision} acts on a piece of content, and this case does not name any`,
+      );
+    }
+  }
+
   const moderationDecisionId = newId('md');
   const now = deps.clock.now();
   await withTransaction(deps.pool, async (client) => {
+    /*
+     * Escalating is not deciding. It used to close the case as Actioned,
+     * so "pass this on to someone else" and "this is dealt with" were the
+     * same button - the case left the queue and nobody was passed
+     * anything. It now stays open and in the queue. Nothing notifies
+     * anyone, because no route from moderation to safety exists yet
+     * (UI_INVENTORY E6), and no caller may say otherwise.
+     */
     const res = await client.query(
       `UPDATE community_social.moderation_cases
-          SET case_state = CASE WHEN $2 = 'Dismiss' THEN 'Dismissed' ELSE 'Actioned' END,
+          SET case_state = CASE
+                             WHEN $2 = 'Dismiss' THEN 'Dismissed'
+                             WHEN $2 = 'Escalate' THEN 'Action Required'
+                             ELSE 'Actioned'
+                           END,
               record_version = record_version + 1, updated_at = $3
         WHERE id = $1 AND case_state IN ('Reported', 'Awaiting Triage', 'In Review', 'Action Required', 'Reopened')`,
       [input.moderationCaseId, input.decision, now],
     );
     if (res.rowCount !== 1) throw new PlatformError('INVALID_STATE_TRANSITION', 'Case state does not allow a decision');
+
+    if (targetState !== undefined && reportedContentId !== null) {
+      const content = await client.query(
+        `UPDATE community_social.social_posts
+            SET post_state = $2, record_version = record_version + 1, updated_at = $3
+          WHERE id = $1`,
+        [reportedContentId, targetState, now],
+      );
+      // The feed shows only Published posts, so a decision that failed to
+      // land here would leave the post in the community while the case
+      // said it had been dealt with.
+      if (content.rowCount !== 1) {
+        throw new PlatformError(
+          'VALIDATION_ERROR',
+          'The content this case names is not a community post, so it cannot be hidden, removed or restored',
+        );
+      }
+    }
     await client.query(
       `INSERT INTO community_social.moderation_decisions (id, moderation_case_id, decision, reason, decided_by_actor_id)
        VALUES ($1, $2, $3, $4, $5)`,
