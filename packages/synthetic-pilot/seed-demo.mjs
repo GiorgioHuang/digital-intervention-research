@@ -32,6 +32,7 @@ import {
   seedBootstrapAdministrator,
 } from '@platform/m01-identity-org';
 import { createParticipantQuery, registerParticipant } from '@platform/m02-participant';
+import { executeBreakGlass } from '@platform/m15-governance';
 import {
   approveRelationship,
   createPermissionService,
@@ -471,6 +472,18 @@ async function main() {
   await requestParticipantExport(base, ctx(benAcc), {
     participantId: benId,
     purpose: 'A copy of my own information, requested by me',
+    confirmed: true,
+  });
+
+  // One emergency-access record left awaiting its review, so the privacy
+  // reviewer's queue holds something real. The bootstrap administrator is
+  // the only role that may record one and the privacy reviewer is the
+  // only role that may review one, which is the separation the rule
+  // depends on - they cannot be the same person by role alone.
+  await executeBreakGlass(base, mfa(adminId), {
+    reason: 'Participant Ann rang the safety line saying she could not reach her own consent page.',
+    scope: 'Read the consent projection for Ann directly in the database.',
+    expiresAt: new Date(clock.now().getTime() + 4 * 60 * 60 * 1000),
     confirmed: true,
   });
 

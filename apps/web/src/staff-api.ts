@@ -155,6 +155,19 @@ export interface EvidenceReviewItem {
   references: EvidenceReferenceItem[];
   updatedAt: string;
 }
+/**
+ * A recorded emergency-access declaration awaiting its retrospective
+ * review. The platform does not grant the access — see BreakGlassPanel —
+ * so this is a record of what someone says they did and why.
+ */
+export interface BreakGlassRecordItem {
+  breakGlassId: string;
+  executedByActorId: string;
+  reason: string;
+  scope: string;
+  expiresAt: string;
+  createdAt: string;
+}
 export interface AnalysisPlanItem {
   analysisPlanId: string;
   researchProjectId: string;
@@ -354,6 +367,17 @@ export const staffApi = {
     post<Id>(s, `/v1/evidence-reviews/${reviewId}/submit`, {}),
   approveEvidenceReview: (s: StaffSession, reviewId: string) =>
     post<Id>(s, `/v1/evidence-reviews/${reviewId}/approve`, { confirmed: true }),
+  listBreakGlassPendingReview: (s: StaffSession) =>
+    get<List<BreakGlassRecordItem>>(s, '/v1/break-glass/pending-review'),
+  /**
+   * Named "record" and not "get access": the platform stores the
+   * declaration and does not widen anyone's permissions on the strength
+   * of it.
+   */
+  recordBreakGlass: (s: StaffSession, reason: string, scope: string, expiresAt: string) =>
+    post<Id>(s, '/v1/break-glass', { reason, scope, expiresAt, confirmed: true }),
+  reviewBreakGlass: (s: StaffSession, breakGlassId: string, outcome: 'Justified' | 'Not Justified' | 'Needs Follow-Up') =>
+    post<Id>(s, `/v1/break-glass/${breakGlassId}/review`, { outcome, confirmed: true }),
   listDecisionWork: (s: StaffSession) => get<List<EvidenceDecisionItem>>(s, '/v1/evidence-decisions/mine'),
   listAnalysisWork: (s: StaffSession) => get<{ data: AnalysisWorkPayload }>(s, '/v1/analysis-work'),
   listAnalysisApprovals: (s: StaffSession) => get<{ data: AnalysisApprovalsPayload }>(s, '/v1/analysis-approvals'),

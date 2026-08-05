@@ -920,6 +920,9 @@ importers:
       '@platform/m14-reporting':
         specifier: workspace:*
         version: link:../modules/m14-reporting
+      '@platform/m15-governance':
+        specifier: workspace:*
+        version: link:../modules/m15-governance
       '@platform/m16-integration':
         specifier: workspace:*
         version: link:../modules/m16-integration
