@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { staffActionError } from '../errors.js';
 import { staffApi, type StaffSession } from '../staff-api.js';
 import { DatasetWork } from './DatasetWork.js';
+import { EvidenceWork } from './EvidenceWork.js';
 import { ExportsToCarryOut } from './ExportsToCarryOut.js';
 import { ReportWork } from './ReportWork.js';
 
@@ -127,6 +128,12 @@ export function StaffResearcherPanel({ session }: { session: StaffSession }) {
           Submit export request
         </button>
       </p>
+
+      {/*
+        Searching the knowledge platform worked and attaching a reference
+        worked; nothing listed a review, so the chain had no middle.
+      */}
+      <EvidenceWork session={session} />
 
       {/*
         The dataset chain: only its last step (locking) had a screen, so

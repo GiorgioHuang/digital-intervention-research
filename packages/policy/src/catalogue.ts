@@ -86,7 +86,12 @@ export const POLICY_V1: PolicyConfiguration = {
       'report.approve', 'export.approve',
       'approval-queue.view',
     ],
-    EvidenceReviewer: ['evidence-review.approve', 'evidence-decision.draft', 'evidence-decision.approve'],
+    EvidenceReviewer: [
+      'evidence-review.view-queue',
+      'evidence-review.approve',
+      'evidence-decision.draft',
+      'evidence-decision.approve',
+    ],
     SafetyReviewer: ['safety-signal.record', 'safety-signal.triage', 'safety-event.create', 'safety-event.review', 'triage-queue.view'],
     Participant: [
       // Participant self-service actions are owner-permitted on own resources.
@@ -208,6 +213,15 @@ export const POLICY_V1: PolicyConfiguration = {
     'evidence.reference': {},
     'evidence-review.create': {},
     'evidence-review.submit': {},
+    /**
+     * Seeing the evidence review queue. Separate from the approval it
+     * leads to, because that one is confirmationRequired and a read
+     * forced to claim confirmation is a read pretending to be a command —
+     * the same split already made for `export.view-own`. Not folded into
+     * `approval-queue.view` either: that would hand an evidence reviewer
+     * the protocol, dataset and export queues as well.
+     */
+    'evidence-review.view-queue': {},
     'evidence-review.approve': { confirmationRequired: true },
     'evidence-decision.draft': {},
     'evidence-decision.approve': { confirmationRequired: true },

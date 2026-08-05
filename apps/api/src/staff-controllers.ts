@@ -35,6 +35,8 @@ import {
   attachKnowledgeReference,
   createEvidenceReview,
   draftEvidenceDecision,
+  listEvidenceWork,
+  listReviewsAwaitingApproval,
   searchKnowledgeEvidence,
   submitEvidenceReview,
   type EvidenceDecisionOutcome,
@@ -850,6 +852,26 @@ export class StaffCommandController {
     // a 503 DEPENDENCY_UNAVAILABLE, never an empty "no evidence" answer.
     const items = await searchKnowledgeEvidence(this.deps.m10, ctx, q ?? '');
     return { data: items.map((r) => ({ type: 'KnowledgeResource', id: r.externalIdentifier, attributes: r })) };
+  }
+
+  /**
+   * Evidence reviews being built, with their references. Nothing listed
+   * them, so a review could only be added to by someone tracking
+   * identifiers outside the product.
+   */
+  @Get('evidence-reviews/mine')
+  async evidenceWork(@Req() req: Request) {
+    const ctx = requireActor(req);
+    const items = await listEvidenceWork(this.deps.m10, ctx);
+    return { data: items.map((i) => ({ type: 'EvidenceReview', id: i.evidenceReviewId, attributes: i })) };
+  }
+
+  /** Evidence reviews submitted and waiting for a reviewer. */
+  @Get('evidence-reviews/awaiting-approval')
+  async reviewsAwaitingApproval(@Req() req: Request) {
+    const ctx = requireActor(req);
+    const items = await listReviewsAwaitingApproval(this.deps.m10, ctx);
+    return { data: items.map((i) => ({ type: 'EvidenceReview', id: i.evidenceReviewId, attributes: i })) };
   }
 
   @Post('evidence-reviews')

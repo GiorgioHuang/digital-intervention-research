@@ -26,6 +26,8 @@ import {
   approveEvidenceReview,
   attachKnowledgeReference,
   createEvidenceReview,
+  listEvidenceWork,
+  listReviewsAwaitingApproval,
   createKnowledgePlatformSimulator,
   draftEvidenceDecision,
   submitEvidenceReview,
@@ -117,6 +119,65 @@ describe.skipIf(!dbAvailable)('M06 intervention portfolio + M10 evidence chain (
     const ref = await pool.query(`SELECT resolution_state, retrieved_at FROM evidence.knowledge_references WHERE id = $1`, [knowledgeReferenceId]);
     expect(ref.rows[0].resolution_state).toBe('Resolution Failed');
     expect(ref.rows[0].retrieved_at).toBeNull();
+  });
+
+  /**
+   * Searching worked and attaching a reference worked; nothing listed a
+   * review, so the chain had no middle and the reviewer's queue at the
+   * end had nothing anyone could reach.
+   */
+  it('the evidence queues carry what a review rests on, including what could not be found', async () => {
+    const { evidenceReviewId } = await createEvidenceReview(m10, ctx(researcherId), {
+      researchProjectId: 'rp_evidence',
+      question: 'Queue visible?',
+    });
+    await attachKnowledgeReference(m10, ctx(researcherId), {
+      evidenceReviewId,
+      externalIdentifier: 'kp-ref-0001',
+    });
+    await attachKnowledgeReference(m10, ctx(researcherId), {
+      evidenceReviewId,
+      externalIdentifier: 'kp-ref-9999',
+    });
+
+    const work = (await listEvidenceWork(m10, ctx(researcherId))).find(
+      (r) => r.evidenceReviewId === evidenceReviewId,
+    );
+    expect(work?.reviewState).toBe('Draft');
+    // A failed lookup travels with its state attached. Without it the
+    // screen would render the raw identifier as though it were a
+    // citation, which is the failure this module exists to prevent.
+    const failed = work?.references.find((k) => k.externalIdentifier === 'kp-ref-9999');
+    expect(failed?.resolutionState).toBe('Resolution Failed');
+    expect(failed?.sourceSystem).toBe('unknown');
+    expect(failed?.retrievedAt).toBeNull();
+    const found = work?.references.find((k) => k.externalIdentifier === 'kp-ref-0001');
+    expect(found?.resolutionState).toBe('Resolved');
+    expect(found?.externalVersion).toBe('v3');
+
+    // A draft is not in the reviewer's queue; submitting puts it there.
+    expect(
+      (await listReviewsAwaitingApproval(m10, ctx(reviewerId))).map((r) => r.evidenceReviewId),
+    ).not.toContain(evidenceReviewId);
+    await submitEvidenceReview(m10, ctx(researcherId), evidenceReviewId);
+    const waiting = (await listReviewsAwaitingApproval(m10, ctx(reviewerId))).find(
+      (r) => r.evidenceReviewId === evidenceReviewId,
+    );
+    // Approving one's own submission is barred by a database CHECK as
+    // well as by the command; the reviewer learns that from the row.
+    expect(waiting?.submittedByActorId).toBe(researcherId);
+    expect(waiting?.references).toHaveLength(2);
+
+    await approveEvidenceReview(m10, ctx(reviewerId), evidenceReviewId, true);
+    expect(
+      (await listReviewsAwaitingApproval(m10, ctx(reviewerId))).map((r) => r.evidenceReviewId),
+    ).not.toContain(evidenceReviewId);
+
+    // Each queue is read under the action that already permits its work.
+    await expect(listEvidenceWork(m10, ctx(reviewerId))).rejects.toMatchObject({ code: 'AUTHORISATION_DENIED' });
+    await expect(listReviewsAwaitingApproval(m10, ctx(researcherId))).rejects.toMatchObject({
+      code: 'AUTHORISATION_DENIED',
+    });
   });
 
   it('NEGATIVE canonical outcomes: the database rejects non-canonical decision outcomes', async () => {

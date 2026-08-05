@@ -129,6 +129,32 @@ export interface DatasetWorkItem {
   rowCount: number | null;
   updatedAt: string;
 }
+export interface KnowledgeResourceItem {
+  externalIdentifier: string;
+  title: string;
+  sourceSystem: string;
+  externalVersion: string;
+  summary: string;
+}
+export interface EvidenceReferenceItem {
+  knowledgeReferenceId: string;
+  externalIdentifier: string;
+  title: string;
+  sourceSystem: string;
+  externalVersion: string | null;
+  resolutionState: string;
+  retrievedAt: string | null;
+}
+export interface EvidenceReviewItem {
+  evidenceReviewId: string;
+  researchProjectId: string;
+  question: string;
+  reviewState: string;
+  submittedByActorId: string | null;
+  approvedByActorId: string | null;
+  references: EvidenceReferenceItem[];
+  updatedAt: string;
+}
 export interface ReportVersionAwaitingApprovalItem {
   reportVersionId: string;
   reportId: string;
@@ -247,6 +273,24 @@ export const staffApi = {
   listReportVersionsAwaitingApproval: (s: StaffSession) =>
     get<List<ReportVersionAwaitingApprovalItem>>(s, '/v1/report-versions/awaiting-approval'),
   listReportWork: (s: StaffSession) => get<List<ReportWorkItem>>(s, '/v1/report-work'),
+  /**
+   * Live read-through to the knowledge platform. An upstream failure is a
+   * 503, never an empty "no evidence" answer — the screen must not turn
+   * "we could not ask" into "there is nothing".
+   */
+  searchEvidence: (s: StaffSession, q: string) =>
+    get<List<KnowledgeResourceItem>>(s, `/v1/evidence/search?q=${encodeURIComponent(q)}`),
+  listEvidenceWork: (s: StaffSession) => get<List<EvidenceReviewItem>>(s, '/v1/evidence-reviews/mine'),
+  listReviewsAwaitingApproval: (s: StaffSession) =>
+    get<List<EvidenceReviewItem>>(s, '/v1/evidence-reviews/awaiting-approval'),
+  createEvidenceReview: (s: StaffSession, researchProjectId: string, question: string) =>
+    post<Id>(s, '/v1/evidence-reviews', { researchProjectId, question }),
+  attachEvidenceReference: (s: StaffSession, reviewId: string, externalIdentifier: string) =>
+    post<Id>(s, `/v1/evidence-reviews/${reviewId}/references`, { externalIdentifier }),
+  submitEvidenceReview: (s: StaffSession, reviewId: string) =>
+    post<Id>(s, `/v1/evidence-reviews/${reviewId}/submit`, {}),
+  approveEvidenceReview: (s: StaffSession, reviewId: string) =>
+    post<Id>(s, `/v1/evidence-reviews/${reviewId}/approve`, { confirmed: true }),
   createResearchReport: (s: StaffSession, researchProjectId: string, title: string, reportType: string) =>
     post<Id>(s, '/v1/research-reports', { researchProjectId, title, reportType }),
   draftReportVersion: (s: StaffSession, reportId: string, text: string) =>
