@@ -4,6 +4,7 @@ import { PlatformError } from '@platform/kernel';
 import {
   activateProtocolVersion,
   approveProtocolVersion,
+  rejectProtocolVersion,
   createProtocolVersion,
   createResearchProject,
   listProtocolVersionsInReview,
@@ -31,7 +32,9 @@ import {
 import { listSignalsAwaitingTriage, triageSafetySignal } from '@platform/m09-safety';
 import {
   approveEvidenceDecision,
+  rejectEvidenceDecision,
   approveEvidenceReview,
+  returnEvidenceReviewForRevision,
   attachKnowledgeReference,
   createEvidenceReview,
   draftEvidenceDecision,
@@ -79,8 +82,10 @@ import {
 } from '@platform/m12-dataset';
 import {
   approveAnalysisPlan,
+  rejectAnalysisPlan,
   approveInterpretation,
   approveResearchFinding,
+  rejectResearchFinding,
   draftAnalysisPlan,
   draftInterpretation,
   draftResearchFinding,
@@ -331,6 +336,25 @@ export class StaffCommandController {
     const ctx = requireActor(req);
     await approveProtocolVersion(this.deps.m04, ctx, versionId, body.confirmed === true);
     return { data: { type: 'ProtocolVersion', id: versionId, meta: { state: 'Approved' } } };
+  }
+
+  /**
+   * Refusing carries the same permission as approving - they are one
+   * authority exercised two ways - so there is no separate route guard,
+   * only a required reason.
+   */
+  @Post('protocol-versions/:versionId/reject')
+  async rejectProtocol(
+    @Req() req: Request,
+    @Param('versionId') versionId: string,
+    @Body() body: { reason: string; confirmed: boolean },
+  ) {
+    const ctx = requireActor(req);
+    await rejectProtocolVersion(this.deps.m04, ctx, versionId, {
+      reason: body.reason ?? '',
+      confirmed: body.confirmed === true,
+    });
+    return { data: { type: 'ProtocolVersion', id: versionId, meta: { state: 'Rejected' } } };
   }
 
   @Post('protocol-versions/:versionId/activate')
@@ -781,6 +805,21 @@ export class StaffCommandController {
     return { data: { type: 'AnalysisPlan', id: analysisPlanId, meta: { state: 'Approved' } } };
   }
 
+  @Post('analysis-plans/:planId/reject')
+  async rejectPlan(
+    @Req() req: Request,
+    @Param('planId') analysisPlanId: string,
+    @Body() body: { reason: string; confirmed: boolean },
+  ) {
+    const ctx = requireActor(req);
+    await rejectAnalysisPlan(this.deps.m13, ctx, {
+      analysisPlanId,
+      reason: body.reason ?? '',
+      confirmed: body.confirmed === true,
+    });
+    return { data: { type: 'AnalysisPlan', id: analysisPlanId, meta: { state: 'Rejected' } } };
+  }
+
   @Post('analysis-runs')
   async run(
     @Req() req: Request,
@@ -850,6 +889,21 @@ export class StaffCommandController {
     if (body.withLimitations !== undefined) input.withLimitations = body.withLimitations;
     await approveResearchFinding(this.deps.m13, ctx, input);
     return { data: { type: 'ResearchFinding', id: researchFindingId, meta: { state: 'Approved' } } };
+  }
+
+  @Post('findings/:findingId/reject')
+  async rejectFinding(
+    @Req() req: Request,
+    @Param('findingId') researchFindingId: string,
+    @Body() body: { reason: string; confirmed: boolean },
+  ) {
+    const ctx = requireActor(req);
+    await rejectResearchFinding(this.deps.m13, ctx, {
+      researchFindingId,
+      reason: body.reason ?? '',
+      confirmed: body.confirmed === true,
+    });
+    return { data: { type: 'ResearchFinding', id: researchFindingId, meta: { state: 'Rejected' } } };
   }
 
   // ── M18 community administration ───────────────────────────────────────
@@ -954,6 +1008,21 @@ export class StaffCommandController {
     return { data: { type: 'EvidenceReview', id: reviewId, meta: { state: 'Approved' } } };
   }
 
+  @Post('evidence-reviews/:reviewId/return')
+  async returnEvidenceReview(
+    @Req() req: Request,
+    @Param('reviewId') evidenceReviewId: string,
+    @Body() body: { reason: string; confirmed: boolean },
+  ) {
+    const ctx = requireActor(req);
+    await returnEvidenceReviewForRevision(this.deps.m10, ctx, {
+      evidenceReviewId,
+      reason: body.reason ?? '',
+      confirmed: body.confirmed === true,
+    });
+    return { data: { type: 'EvidenceReview', id: evidenceReviewId, meta: { state: 'Returned for Revision' } } };
+  }
+
   @Post('evidence-decisions')
   async draftEvidenceDecision(
     @Req() req: Request,
@@ -962,6 +1031,21 @@ export class StaffCommandController {
     const ctx = requireActor(req);
     const result = await draftEvidenceDecision(this.deps.m10, ctx, body);
     return { data: { type: 'EvidenceDecision', id: result.evidenceDecisionId, meta: { state: 'Draft' } } };
+  }
+
+  @Post('evidence-decisions/:decisionId/reject')
+  async rejectEvidenceDecisionRoute(
+    @Req() req: Request,
+    @Param('decisionId') evidenceDecisionId: string,
+    @Body() body: { reason: string; confirmed: boolean },
+  ) {
+    const ctx = requireActor(req);
+    await rejectEvidenceDecision(this.deps.m10, ctx, {
+      evidenceDecisionId,
+      reason: body.reason ?? '',
+      confirmed: body.confirmed === true,
+    });
+    return { data: { type: 'EvidenceDecision', id: evidenceDecisionId, meta: { state: 'Rejected' } } };
   }
 
   @Post('evidence-decisions/:decisionId/approve')

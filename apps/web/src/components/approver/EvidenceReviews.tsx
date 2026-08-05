@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { staffApi, type EvidenceReviewItem, type StaffSession } from '../../staff-api.js';
-import { ConfirmDecision, ExactVersionBlock, SeparationOfDutiesLine, useDecision, useQueue } from './shared.js';
+import { ConfirmDecision, ExactVersionBlock, RefuseControl, SeparationOfDutiesLine, useDecision, useQueue } from './shared.js';
 
 /**
  * Approving an evidence review.
@@ -104,6 +104,28 @@ export function EvidenceReviews({ session }: { session: StaffSession }) {
                 Approve this review
               </button>
             </p>
+            {/*
+              The other half of a decision. Until this existed the only way
+              to clear this queue was to approve everything in it, and a
+              reviewer who judged a review inadequate could do nothing at
+              all — which is a screen that asks for a judgement and accepts
+              only one answer.
+            */}
+            <RefuseControl
+              idPrefix={r.evidenceReviewId}
+              label="Send this review back"
+              help="It goes back to whoever submitted it, with your reason. It is not approved and it is not thrown away."
+              disabled={own}
+              onRefuse={(reason) =>
+                decision.setPending({
+                  label: 'Send this review back',
+                  artefact,
+                  consequence:
+                    'The review returns to its submitter for revision, carrying your reason. Nothing about it is deleted, and it can be submitted again.',
+                  run: () => staffApi.returnEvidenceReview(session, r.evidenceReviewId, reason),
+                })
+              }
+            />
           </article>
         );
       })}

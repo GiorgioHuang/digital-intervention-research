@@ -22,6 +22,7 @@ import { createPermissionService, recordConsentDecision, type M03Deps } from '@p
 import {
   activateProtocolVersion,
   approveProtocolVersion,
+  rejectProtocolVersion,
   createProtocolVersion,
   createProtocolVersionQuery,
   createResearchProject,
@@ -162,6 +163,46 @@ describe.skipIf(!dbAvailable)('P3 research core: project -> protocol -> enrolmen
         true,
       ),
     ).rejects.toMatchObject({ code: 'AUTHORISATION_DENIED' });
+  });
+
+  /**
+   * 'Rejected' has been in the version_state CHECK from the start and no
+   * code path could write it, so the protocol approval screen offered one
+   * outcome and called it a decision.
+   */
+  it('a protocol version can be refused, with a reason, and cannot then be approved', async () => {
+    const approverCtx = createRequestContext({
+      actor: { type: 'user', id: approverId },
+      organisationId: orgId,
+      researchProjectId: projectId,
+      authStrength: 'mfa',
+    });
+    const { protocolVersionId: refusable } = await createProtocolVersion(
+      m04,
+      ctx(researcherId, { organisationId: orgId, researchProjectId: projectId }),
+      { researchProjectId: projectId, title: 'A version that should not pass', content: { summary: 'Not this one' } },
+    );
+    await submitProtocolVersion(m04, ctx(researcherId, { organisationId: orgId, researchProjectId: projectId }), refusable);
+
+    await expect(
+      rejectProtocolVersion(m04, approverCtx, refusable, { reason: '   ', confirmed: true }),
+    ).rejects.toMatchObject({ code: 'VALIDATION_ERROR' });
+
+    await rejectProtocolVersion(m04, approverCtx, refusable, {
+      reason: 'The consent wording does not match the scopes the platform enforces.',
+      confirmed: true,
+    });
+    const row = await pool.query(
+      `SELECT version_state, refused_by_actor_id, refused_reason FROM research_design.protocol_versions WHERE id = $1`,
+      [refusable],
+    );
+    expect(row.rows[0].version_state).toBe('Rejected');
+    expect(row.rows[0].refused_by_actor_id).toBe(approverId);
+    expect(row.rows[0].refused_reason).toContain('does not match the scopes');
+
+    await expect(approveProtocolVersion(m04, approverCtx, refusable, true)).rejects.toMatchObject({
+      code: 'INVALID_STATE_TRANSITION',
+    });
   });
 
   it('approver (mfa) approves and activates; approved content becomes immutable at the DB layer', async () => {

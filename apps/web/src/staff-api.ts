@@ -316,6 +316,13 @@ export const staffApi = {
     post<Id>(s, `/v1/protocol-versions/${versionId}/submit`, {}),
 
   // Approver actions (all confirmed; server enforces MFA where required)
+  /**
+   * Refusing is the same authority as approving, exercised the other way,
+   * so it goes to the same permission and always carries a reason - the
+   * person whose work is refused has to be able to find out why.
+   */
+  rejectProtocolVersion: (s: StaffSession, versionId: string, reason: string) =>
+    post<Id>(s, `/v1/protocol-versions/${versionId}/reject`, { reason, confirmed: true }),
   approveProtocolVersion: (s: StaffSession, versionId: string) =>
     post<Id>(s, `/v1/protocol-versions/${versionId}/approve`, { confirmed: true }),
   activateProtocolVersion: (s: StaffSession, versionId: string) =>
@@ -368,6 +375,8 @@ export const staffApi = {
     post<Id>(s, `/v1/evidence-reviews/${reviewId}/references`, { externalIdentifier }),
   submitEvidenceReview: (s: StaffSession, reviewId: string) =>
     post<Id>(s, `/v1/evidence-reviews/${reviewId}/submit`, {}),
+  returnEvidenceReview: (s: StaffSession, reviewId: string, reason: string) =>
+    post<Id>(s, `/v1/evidence-reviews/${reviewId}/return`, { reason, confirmed: true }),
   approveEvidenceReview: (s: StaffSession, reviewId: string) =>
     post<Id>(s, `/v1/evidence-reviews/${reviewId}/approve`, { confirmed: true }),
   listBreakGlassPendingReview: (s: StaffSession) =>
@@ -386,6 +395,8 @@ export const staffApi = {
   listAnalysisApprovals: (s: StaffSession) => get<{ data: AnalysisApprovalsPayload }>(s, '/v1/analysis-approvals'),
   draftAnalysisPlan: (s: StaffSession, researchProjectId: string, title: string) =>
     post<Id>(s, '/v1/analysis-plans', { researchProjectId, title }),
+  rejectAnalysisPlan: (s: StaffSession, planId: string, reason: string) =>
+    post<Id>(s, `/v1/analysis-plans/${planId}/reject`, { reason, confirmed: true }),
   approveAnalysisPlan: (s: StaffSession, planId: string) =>
     post<Id>(s, `/v1/analysis-plans/${planId}/approve`, { confirmed: true }),
   /**
@@ -405,12 +416,16 @@ export const staffApi = {
     post<Id>(s, `/v1/interpretations/${interpretationId}/approve`, { confirmed: true }),
   draftResearchFinding: (s: StaffSession, interpretationId: string, findingText: string) =>
     post<Id>(s, `/v1/interpretations/${interpretationId}/findings`, { findingText }),
+  rejectResearchFinding: (s: StaffSession, findingId: string, reason: string) =>
+    post<Id>(s, `/v1/findings/${findingId}/reject`, { reason, confirmed: true }),
   approveResearchFinding: (s: StaffSession, findingId: string) =>
     post<Id>(s, `/v1/findings/${findingId}/approve`, { confirmed: true }),
   listDecisionsAwaitingApproval: (s: StaffSession) =>
     get<List<EvidenceDecisionItem>>(s, '/v1/evidence-decisions/awaiting-approval'),
   draftEvidenceDecision: (s: StaffSession, evidenceReviewId: string, outcome: string, rationale: string) =>
     post<Id>(s, '/v1/evidence-decisions', { evidenceReviewId, outcome, rationale }),
+  rejectEvidenceDecision: (s: StaffSession, decisionId: string, reason: string) =>
+    post<Id>(s, `/v1/evidence-decisions/${decisionId}/reject`, { reason, confirmed: true }),
   approveEvidenceDecision: (s: StaffSession, decisionId: string) =>
     post<Id>(s, `/v1/evidence-decisions/${decisionId}/approve`, { confirmed: true }),
   createResearchReport: (s: StaffSession, researchProjectId: string, title: string, reportType: string) =>

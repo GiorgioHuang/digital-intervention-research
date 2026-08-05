@@ -84,6 +84,52 @@ export async function approveAnalysisPlan(
 }
 
 /**
+ * Refusing an analysis plan. 'Rejected' was in the plan_state CHECK from
+ * the start with nothing able to write it, so the approver's only move was
+ * to approve. Refusing is the same authority and the same separation of
+ * duties, and takes a reason so the drafter can find out why.
+ */
+export async function rejectAnalysisPlan(
+  deps: M13Deps,
+  ctx: RequestContext,
+  input: { analysisPlanId: string; reason: string; confirmed: boolean },
+): Promise<void> {
+  if (ctx.actor?.type !== 'user') {
+    throw new PlatformError('AUTHORISATION_DENIED', 'AnalysisPlan decisions require an authenticated human');
+  }
+  const decision = await deps.checkPermission(ctx, {
+    action: 'analysis-plan.approve',
+    resource: { type: 'AnalysisPlan', id: input.analysisPlanId, state: 'Draft', protectedExistence: false },
+    confirmed: input.confirmed,
+  });
+  assertAllowed(decision, input.confirmed);
+  if (input.reason.trim() === '') {
+    throw new PlatformError('VALIDATION_ERROR', 'Refusing an analysis plan needs a reason');
+  }
+  const now = deps.clock.now();
+  await withTransaction(deps.pool, async (client) => {
+    const res = await client.query(
+      `UPDATE analysis_finding.analysis_plans
+          SET plan_state = 'Rejected', refused_by_actor_id = $2, refused_reason = $4, refused_at = $3,
+              record_version = record_version + 1, updated_at = $3
+        WHERE id = $1 AND plan_state IN ('Draft', 'In Review') AND drafted_by_actor_id <> $2`,
+      [input.analysisPlanId, ctx.actor!.id, now, input.reason.trim()],
+    );
+    if (res.rowCount !== 1) {
+      throw new PlatformError('INVALID_STATE_TRANSITION', 'Plan not refusable, or the drafter tried to refuse their own');
+    }
+    await appendToOutbox(client, ctx, {
+      eventCategory: 'Domain',
+      eventType: 'AnalysisPlanRejected',
+      sourceModule: 'M13',
+      aggregateType: 'AnalysisPlan',
+      aggregateId: input.analysisPlanId,
+      occurredAt: now,
+    });
+  });
+}
+
+/**
  * AnalysisRun binds an APPROVED AnalysisPlan to an exact LOCKED
  * DatasetVersion (ADR-045/046) and captures the execution environment.
  * The run's outputs are AnalysisOutput — never automatically a Finding.
@@ -272,6 +318,60 @@ export async function approveResearchFinding(
     await appendToOutbox(client, ctx, {
       eventCategory: 'Domain',
       eventType: 'ResearchFindingApproved',
+      sourceModule: 'M13',
+      aggregateType: 'ResearchFinding',
+      aggregateId: input.researchFindingId,
+      occurredAt: now,
+    });
+    await recordAuditEvent(client, ctx, {
+      action: 'finding.approve',
+      targetType: 'ResearchFinding',
+      targetId: input.researchFindingId,
+      occurredAt: now,
+      result: 'Succeeded',
+      source: 'M13',
+      policyVersion: decision.policyVersion,
+    });
+  });
+}
+
+/**
+ * Refusing a research finding. The strongest artefact in the chain had no
+ * way to be told no: everything upstream - locked dataset, recorded run,
+ * approved interpretation - led to a screen with one button on it.
+ */
+export async function rejectResearchFinding(
+  deps: M13Deps,
+  ctx: RequestContext,
+  input: { researchFindingId: string; reason: string; confirmed: boolean },
+): Promise<void> {
+  if (ctx.actor?.type !== 'user') {
+    throw new PlatformError('AUTHORISATION_DENIED', 'Finding decisions require an authenticated human');
+  }
+  const decision = await deps.checkPermission(ctx, {
+    action: 'finding.approve',
+    resource: { type: 'ResearchFinding', id: input.researchFindingId, state: 'Draft', protectedExistence: false },
+    confirmed: input.confirmed,
+  });
+  assertAllowed(decision, input.confirmed);
+  if (input.reason.trim() === '') {
+    throw new PlatformError('VALIDATION_ERROR', 'Refusing a finding needs a reason');
+  }
+  const now = deps.clock.now();
+  await withTransaction(deps.pool, async (client) => {
+    const res = await client.query(
+      `UPDATE analysis_finding.research_findings
+          SET finding_state = 'Rejected', refused_by_actor_id = $2, refused_reason = $4, refused_at = $3,
+              record_version = record_version + 1, updated_at = $3
+        WHERE id = $1 AND finding_state IN ('Draft', 'In Review') AND drafted_by_actor_id <> $2`,
+      [input.researchFindingId, ctx.actor!.id, now, input.reason.trim()],
+    );
+    if (res.rowCount !== 1) {
+      throw new PlatformError('INVALID_STATE_TRANSITION', 'Finding not refusable, or the drafter tried to refuse their own');
+    }
+    await appendToOutbox(client, ctx, {
+      eventCategory: 'Domain',
+      eventType: 'ResearchFindingRejected',
       sourceModule: 'M13',
       aggregateType: 'ResearchFinding',
       aggregateId: input.researchFindingId,

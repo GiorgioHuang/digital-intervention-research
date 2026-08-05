@@ -117,6 +117,50 @@ export function AuthStrengthNote({
   );
 }
 
+/**
+ * Refusing, with the reason beside the button.
+ *
+ * Every approval screen in the platform offered exactly one outcome until
+ * now, which meant the only way to clear a queue was to approve everything
+ * in it. The reason is required and is stored on the artefact, because the
+ * person whose work is refused has to be able to find out why, and because
+ * a refusal nobody can read is only a disappearance.
+ */
+export function RefuseControl({
+  idPrefix,
+  label,
+  help,
+  disabled,
+  onRefuse,
+}: {
+  idPrefix: string;
+  label: string;
+  help: string;
+  disabled: boolean;
+  onRefuse: (reason: string) => void;
+}) {
+  const [reason, setReason] = useState('');
+  return (
+    <div>
+      <p>
+        <label htmlFor={`${idPrefix}-refuse-reason`}>Why you are not accepting it (required)</label>
+        <textarea
+          id={`${idPrefix}-refuse-reason`}
+          rows={2}
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+        />
+      </p>
+      <p>
+        <button disabled={disabled || reason.trim() === ''} onClick={() => onRefuse(reason.trim())}>
+          {label}
+        </button>{' '}
+        <small>{help}</small>
+      </p>
+    </div>
+  );
+}
+
 export interface PendingDecision {
   /** Sentence naming the action, shown in the confirmation. */
   label: string;

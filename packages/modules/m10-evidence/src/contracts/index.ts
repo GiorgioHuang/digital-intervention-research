@@ -23,8 +23,10 @@ export const M10_EVENTS = {
   KnowledgeReferenceCreated: 'KnowledgeReferenceCreated',
   EvidenceReviewSubmittedForReview: 'EvidenceReviewSubmittedForReview',
   EvidenceReviewCompleted: 'EvidenceReviewCompleted',
+  EvidenceReviewReturnedForRevision: 'EvidenceReviewReturnedForRevision',
   EvidenceDecisionCreated: 'EvidenceDecisionCreated',
   EvidenceDecisionApproved: 'EvidenceDecisionApproved',
+  EvidenceDecisionRejected: 'EvidenceDecisionRejected',
   EvidenceSnapshotCreated: 'EvidenceSnapshotCreated',
 } as const;
 

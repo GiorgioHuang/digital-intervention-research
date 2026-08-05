@@ -4,6 +4,7 @@ import {
   AuthStrengthNote,
   ConfirmDecision,
   ExactVersionBlock,
+  RefuseControl,
   SeparationOfDutiesLine,
   useDecision,
   useQueue,
@@ -114,6 +115,29 @@ export function ProtocolDecisions({ session }: { session: StaffSession }) {
                 Activate this protocol version
               </button>
             </p>
+            <RefuseControl
+              idPrefix={p.protocolVersionId}
+              label="Refuse this version"
+              help="The version is refused, with your reason on the record. Nothing is deleted; a new version can be drafted."
+              disabled={own}
+              onRefuse={(reason) =>
+                decision.setPending({
+                  label: 'Refuse protocol version',
+                  artefact: {
+                    typeLabel: 'Protocol version',
+                    id: p.protocolVersionId,
+                    versionNumber: p.versionNumber,
+                    hashLabel: 'Content hash',
+                    hash: p.contentHash,
+                  },
+                  consequence:
+                    'The version is refused and cannot be approved or activated. Your reason is stored with it so whoever submitted it can see why.',
+                  marker: marker(p),
+                  recheck: recheck(p.protocolVersionId),
+                  run: () => staffApi.rejectProtocolVersion(session, p.protocolVersionId, reason),
+                })
+              }
+            />
           </article>
         );
       })}

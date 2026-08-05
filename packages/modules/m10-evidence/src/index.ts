@@ -4,8 +4,10 @@ export {
   attachKnowledgeReference,
   submitEvidenceReview,
   approveEvidenceReview,
+  returnEvidenceReviewForRevision,
   draftEvidenceDecision,
   approveEvidenceDecision,
+  rejectEvidenceDecision,
   type M10Deps,
 } from './application/commands.js';
 export {

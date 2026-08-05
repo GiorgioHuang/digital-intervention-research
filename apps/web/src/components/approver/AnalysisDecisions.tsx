@@ -1,7 +1,14 @@
 import { useEffect, useState } from 'react';
 import { staffLoadError } from '../../errors.js';
 import { staffApi, type AnalysisApprovalsPayload, type StaffSession } from '../../staff-api.js';
-import { AuthStrengthNote, ConfirmDecision, ExactVersionBlock, SeparationOfDutiesLine, useDecision } from './shared.js';
+import {
+  AuthStrengthNote,
+  ConfirmDecision,
+  ExactVersionBlock,
+  RefuseControl,
+  SeparationOfDutiesLine,
+  useDecision,
+} from './shared.js';
 
 /**
  * The three approvals along the analysis chain: plan, interpretation,
@@ -84,6 +91,21 @@ export function AnalysisDecisions({ session }: { session: StaffSession }) {
                 Approve this plan
               </button>
             </p>
+            <RefuseControl
+              idPrefix={p.analysisPlanId}
+              label="Refuse this plan"
+              help="No run can be recorded under a refused plan. Your reason is stored with it."
+              disabled={own}
+              onRefuse={(reason) =>
+                decision.setPending({
+                  label: 'Refuse analysis plan',
+                  artefact,
+                  consequence:
+                    'The plan is refused, so no run may be recorded under it. Your reason is stored with it and a new plan can be drafted.',
+                  run: () => staffApi.rejectAnalysisPlan(session, p.analysisPlanId, reason),
+                })
+              }
+            />
           </article>
         );
       })}
@@ -161,6 +183,21 @@ export function AnalysisDecisions({ session }: { session: StaffSession }) {
                 Approve this finding
               </button>
             </p>
+            <RefuseControl
+              idPrefix={f.researchFindingId}
+              label="Refuse this finding"
+              help="The finding is not a finding of the research. The interpretation and the run beneath it are untouched."
+              disabled={own}
+              onRefuse={(reason) =>
+                decision.setPending({
+                  label: 'Refuse research finding',
+                  artefact,
+                  consequence:
+                    'The finding is refused and does not become a finding of the research. The interpretation and run it rests on are unchanged, and your reason is stored with it.',
+                  run: () => staffApi.rejectResearchFinding(session, f.researchFindingId, reason),
+                })
+              }
+            />
           </article>
         );
       })}

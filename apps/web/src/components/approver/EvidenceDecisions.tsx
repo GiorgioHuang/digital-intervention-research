@@ -1,6 +1,13 @@
 import { useEffect } from 'react';
 import { staffApi, type EvidenceDecisionItem, type StaffSession } from '../../staff-api.js';
-import { ConfirmDecision, ExactVersionBlock, SeparationOfDutiesLine, useDecision, useQueue } from './shared.js';
+import {
+  ConfirmDecision,
+  ExactVersionBlock,
+  RefuseControl,
+  SeparationOfDutiesLine,
+  useDecision,
+  useQueue,
+} from './shared.js';
 
 /**
  * Agreeing an evidence decision.
@@ -89,6 +96,21 @@ export function EvidenceDecisions({ session }: { session: StaffSession }) {
                 Agree this decision
               </button>
             </p>
+            <RefuseControl
+              idPrefix={d.evidenceDecisionId}
+              label="Do not agree with this decision"
+              help="No snapshot is written. A snapshot is the record of what an agreed decision rested on, and this one is not agreed."
+              disabled={own}
+              onRefuse={(reason) =>
+                decision.setPending({
+                  label: 'Refuse evidence decision',
+                  artefact,
+                  consequence:
+                    'The decision is refused and no snapshot is written, so nothing here can be cited afterwards as agreed. Your reason is stored with it.',
+                  run: () => staffApi.rejectEvidenceDecision(session, d.evidenceDecisionId, reason),
+                })
+              }
+            />
           </article>
         );
       })}

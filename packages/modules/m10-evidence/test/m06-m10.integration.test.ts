@@ -24,6 +24,8 @@ import {
 import {
   approveEvidenceDecision,
   approveEvidenceReview,
+  returnEvidenceReviewForRevision,
+  rejectEvidenceDecision,
   attachKnowledgeReference,
   createEvidenceReview,
   listDecisionWork,
@@ -111,6 +113,49 @@ describe.skipIf(!dbAvailable)('M06 intervention portfolio + M10 evidence chain (
     await approveEvidenceReview(m10, ctx(reviewerId), reviewId, true);
     const review = await pool.query(`SELECT review_state FROM evidence.evidence_reviews WHERE id = $1`, [reviewId]);
     expect(review.rows[0].review_state).toBe('Approved');
+  });
+
+  /**
+   * Approving was the only exit this queue had. 'Returned for Revision'
+   * was in the review_state CHECK from the start and nothing could write
+   * it, so a reviewer who judged a review inadequate could do nothing but
+   * leave it sitting there - and the only way to clear a queue was to
+   * approve everything in it.
+   */
+  it('a review can be sent back, with a reason, by someone other than its submitter', async () => {
+    const { evidenceReviewId } = await createEvidenceReview(m10, ctx(researcherId), {
+      researchProjectId: 'rp_evidence',
+      question: 'Is there anything behind this at all?',
+    });
+    await submitEvidenceReview(m10, ctx(researcherId), evidenceReviewId);
+
+    await expect(
+      returnEvidenceReviewForRevision(m10, ctx(reviewerId), { evidenceReviewId, reason: '   ', confirmed: true }),
+    ).rejects.toMatchObject({ code: 'VALIDATION_ERROR' });
+    // The submitter cannot send back their own. Here the permission check
+    // refuses first, because a researcher holds no approval permission at
+    // all; the WHERE clause on submitted_by_actor_id is the second line,
+    // for anyone who does hold it.
+    await expect(
+      returnEvidenceReviewForRevision(m10, ctx(researcherId), {
+        evidenceReviewId,
+        reason: 'on reflection',
+        confirmed: true,
+      }),
+    ).rejects.toMatchObject({ code: 'AUTHORISATION_DENIED' });
+
+    await returnEvidenceReviewForRevision(m10, ctx(reviewerId), {
+      evidenceReviewId,
+      reason: 'Nothing is attached, so there is nothing to check it against.',
+      confirmed: true,
+    });
+    const row = await pool.query(
+      `SELECT review_state, refused_by_actor_id, refused_reason FROM evidence.evidence_reviews WHERE id = $1`,
+      [evidenceReviewId],
+    );
+    expect(row.rows[0].review_state).toBe('Returned for Revision');
+    expect(row.rows[0].refused_by_actor_id).toBe(reviewerId);
+    expect(row.rows[0].refused_reason).toContain('nothing to check it against');
   });
 
   it('unresolvable reference is recorded as Resolution Failed, never invented', async () => {
@@ -255,6 +300,38 @@ describe.skipIf(!dbAvailable)('M06 intervention portfolio + M10 evidence chain (
     await expect(
       pool.query(`DELETE FROM evidence.evidence_snapshots WHERE id = $1`, [snapshotId]),
     ).rejects.toThrow(/immutable/);
+  });
+
+  /**
+   * A snapshot is the immutable record of what an agreed decision rested
+   * on. A refused decision rests on nothing anyone may cite afterwards, so
+   * refusing must not write one.
+   */
+  it('refusing an evidence decision writes no snapshot', async () => {
+    const { evidenceDecisionId } = await draftEvidenceDecision(m10, ctx(researcherId), {
+      evidenceReviewId: reviewId,
+      outcome: 'Insufficient Evidence',
+      rationale: 'Two small studies and nothing else.',
+    });
+    await expect(
+      rejectEvidenceDecision(m10, ctx(reviewerId), { evidenceDecisionId, reason: ' ', confirmed: true }),
+    ).rejects.toMatchObject({ code: 'VALIDATION_ERROR' });
+    await rejectEvidenceDecision(m10, ctx(reviewerId), {
+      evidenceDecisionId,
+      reason: 'The rationale does not follow from the references attached.',
+      confirmed: true,
+    });
+    const row = await pool.query(
+      `SELECT approval_state, refused_by_actor_id, refused_reason FROM evidence.evidence_decisions WHERE id = $1`,
+      [evidenceDecisionId],
+    );
+    expect(row.rows[0].approval_state).toBe('Rejected');
+    expect(row.rows[0].refused_reason).toContain('does not follow from the references');
+    const snaps = await pool.query(
+      `SELECT count(*)::int AS n FROM evidence.evidence_snapshots WHERE evidence_decision_id = $1`,
+      [evidenceDecisionId],
+    );
+    expect(snaps.rows[0].n).toBe(0);
   });
 
   it('NEGATIVE self-approval: drafter cannot approve their own EvidenceDecision', async () => {

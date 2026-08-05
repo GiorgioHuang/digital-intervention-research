@@ -24,6 +24,8 @@ import {
 } from '@platform/m12-dataset';
 import {
   approveAnalysisPlan,
+  rejectAnalysisPlan,
+  rejectResearchFinding,
   approveInterpretation,
   approveResearchFinding,
   draftAnalysisPlan,
@@ -269,10 +271,87 @@ describe.skipIf(!dbAvailable)('M12 dataset lock + M13 analysis chain (integratio
     expect(lineage.rows[0].dataset_version_id).toBe(versionId);
     expect(lineage.rows[0].analysis_plan_id).toBe(planId);
   });
+  /**
+   * 'Rejected' has been in plan_state and finding_state from the start and
+   * nothing could write either, so both of these screens offered one
+   * outcome and called it a decision.
+   */
+  it('an analysis plan can be refused, with a reason, by someone other than its drafter', async () => {
+    const { analysisPlanId: planId } = await draftAnalysisPlan(m13, ctx(researcherId), {
+      researchProjectId: 'rp_analysis',
+      title: 'A plan nobody should approve',
+    });
+    await expect(
+      rejectAnalysisPlan(m13, ctx(approverId), { analysisPlanId: planId, reason: '  ', confirmed: true }),
+    ).rejects.toMatchObject({ code: 'VALIDATION_ERROR' });
+    await rejectAnalysisPlan(m13, ctx(approverId), {
+      analysisPlanId: planId,
+      reason: 'The outcome measure does not match the protocol.',
+      confirmed: true,
+    });
+    const row = await pool.query(
+      `SELECT plan_state, refused_by_actor_id, refused_reason FROM analysis_finding.analysis_plans WHERE id = $1`,
+      [planId],
+    );
+    expect(row.rows[0].plan_state).toBe('Rejected');
+    expect(row.rows[0].refused_by_actor_id).toBe(approverId);
+    expect(row.rows[0].refused_reason).toContain('does not match the protocol');
+  });
+
+  it('a research finding can be refused, and the interpretation beneath it is untouched', async () => {
+    const { researchFindingId } = await draftResearchFinding(m13, ctx(researcherId), {
+      interpretationRecordId: interpretationId,
+      findingText: 'A claim the evidence does not carry',
+    });
+    // Refusing is the same authority as approving, so it sits in the same
+    // strong-authentication tier - a refusal is not the cheap half of the
+    // decision.
+    await expect(
+      rejectResearchFinding(m13, ctx(approverId), {
+        researchFindingId,
+        reason: 'password only',
+        confirmed: true,
+      }),
+    ).rejects.toMatchObject({ code: 'STEP_UP_AUTHENTICATION_REQUIRED' });
+    await rejectResearchFinding(m13, mfa(approverId), {
+      researchFindingId,
+      reason: 'The interpretation does not support a claim this strong.',
+      confirmed: true,
+    });
+    const finding = await pool.query(
+      `SELECT finding_state, refused_reason FROM analysis_finding.research_findings WHERE id = $1`,
+      [researchFindingId],
+    );
+    expect(finding.rows[0].finding_state).toBe('Rejected');
+    expect(finding.rows[0].refused_reason).toContain('does not support a claim this strong');
+    // Refusing the finding says nothing about the interpretation it rests
+    // on, and must not quietly change it.
+    const interp = await pool.query(
+      `SELECT interpretation_state FROM analysis_finding.interpretation_records WHERE id = $1`,
+      [interpretationId],
+    );
+    expect(interp.rows[0].interpretation_state).toBe('Approved');
+  });
+
+  it('NEGATIVE a refused plan cannot then be approved', async () => {
+    const { analysisPlanId: planId } = await draftAnalysisPlan(m13, ctx(researcherId), {
+      researchProjectId: 'rp_analysis',
+      title: 'Refused then approved?',
+    });
+    await rejectAnalysisPlan(m13, ctx(approverId), {
+      analysisPlanId: planId,
+      reason: 'Not this one.',
+      confirmed: true,
+    });
+    await expect(
+      approveAnalysisPlan(m13, ctx(approverId), { analysisPlanId: planId, confirmed: true }),
+    ).rejects.toMatchObject({ code: 'INVALID_STATE_TRANSITION' });
+  });
 });
 
 describe.skipIf(dbAvailable)('M12+M13 integration (skipped)', () => {
   it('skipped because no PostgreSQL is reachable', () => {
     expect(dbAvailable).toBe(false);
   });
+
 });

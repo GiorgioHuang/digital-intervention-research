@@ -4,6 +4,7 @@ export {
   createProtocolVersion,
   submitProtocolVersion,
   approveProtocolVersion,
+  rejectProtocolVersion,
   activateProtocolVersion,
   type M04Deps,
 } from './application/commands.js';

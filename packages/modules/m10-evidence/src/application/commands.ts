@@ -198,6 +198,105 @@ export async function approveEvidenceReview(
   });
 }
 
+/**
+ * Sending an evidence review back.
+ *
+ * The approval command was the only exit this queue had, so a reviewer who
+ * judged a review inadequate could do nothing but leave it sitting there -
+ * and the only way to clear a queue was to approve everything in it. The
+ * state existed in the schema from the start ('Returned for Revision') and
+ * nothing could write it.
+ *
+ * Refusing is the same authority as approving, so it takes the same
+ * permission and the same separation of duties: you cannot send back what
+ * you submitted. It takes a reason because the person whose work is sent
+ * back has to be able to find out why.
+ */
+export async function returnEvidenceReviewForRevision(
+  deps: M10Deps,
+  ctx: RequestContext,
+  input: { evidenceReviewId: string; reason: string; confirmed: boolean },
+): Promise<void> {
+  if (ctx.actor?.type !== 'user') {
+    throw new PlatformError('AUTHORISATION_DENIED', 'Evidence decisions require an authenticated human');
+  }
+  const decision = await deps.checkPermission(ctx, {
+    action: 'evidence-review.approve',
+    resource: { type: 'EvidenceReview', id: input.evidenceReviewId, state: 'In Review', protectedExistence: false },
+    confirmed: input.confirmed,
+  });
+  assertAllowed(decision, input.confirmed);
+  if (input.reason.trim() === '') {
+    throw new PlatformError('VALIDATION_ERROR', 'Sending a review back needs a reason');
+  }
+  const now = deps.clock.now();
+  await withTransaction(deps.pool, async (client) => {
+    const res = await client.query(
+      `UPDATE evidence.evidence_reviews
+          SET review_state = 'Returned for Revision', refused_by_actor_id = $2, refused_reason = $3,
+              refused_at = $4, record_version = record_version + 1, updated_at = $4
+        WHERE id = $1 AND review_state = 'In Review' AND submitted_by_actor_id <> $2`,
+      [input.evidenceReviewId, ctx.actor!.id, input.reason.trim(), now],
+    );
+    if (res.rowCount !== 1) {
+      throw new PlatformError('INVALID_STATE_TRANSITION', 'Review not in In Review, or the submitter tried to send back their own');
+    }
+    await appendToOutbox(client, ctx, {
+      eventCategory: 'Domain',
+      eventType: M10_EVENTS.EvidenceReviewReturnedForRevision,
+      sourceModule: 'M10',
+      aggregateType: 'EvidenceReview',
+      aggregateId: input.evidenceReviewId,
+      occurredAt: now,
+    });
+  });
+}
+
+/**
+ * Refusing an evidence decision. No snapshot is written: a snapshot is the
+ * immutable record of what an approved decision rested on, and a refused
+ * decision rests on nothing that anyone may cite afterwards.
+ */
+export async function rejectEvidenceDecision(
+  deps: M10Deps,
+  ctx: RequestContext,
+  input: { evidenceDecisionId: string; reason: string; confirmed: boolean },
+): Promise<void> {
+  if (ctx.actor?.type !== 'user') {
+    throw new PlatformError('AUTHORISATION_DENIED', 'Evidence decisions require an authenticated human');
+  }
+  const decision = await deps.checkPermission(ctx, {
+    action: 'evidence-decision.approve',
+    resource: { type: 'EvidenceDecision', id: input.evidenceDecisionId, state: 'Draft', protectedExistence: false },
+    confirmed: input.confirmed,
+  });
+  assertAllowed(decision, input.confirmed);
+  if (input.reason.trim() === '') {
+    throw new PlatformError('VALIDATION_ERROR', 'Refusing a decision needs a reason');
+  }
+  const now = deps.clock.now();
+  await withTransaction(deps.pool, async (client) => {
+    const res = await client.query(
+      `UPDATE evidence.evidence_decisions
+          SET approval_state = 'Rejected', refused_by_actor_id = $2, refused_reason = $3,
+              refused_at = $4, record_version = record_version + 1, updated_at = $4
+        WHERE id = $1 AND approval_state IN ('Draft', 'In Review') AND drafted_by_actor_id <> $2`,
+      [input.evidenceDecisionId, ctx.actor!.id, input.reason.trim(), now],
+    );
+    if (res.rowCount !== 1) {
+      throw new PlatformError('INVALID_STATE_TRANSITION', 'Decision not refusable, or the drafter tried to refuse their own');
+    }
+    await appendToOutbox(client, ctx, {
+      eventCategory: 'Domain',
+      eventType: M10_EVENTS.EvidenceDecisionRejected,
+      sourceModule: 'M10',
+      aggregateType: 'EvidenceDecision',
+      aggregateId: input.evidenceDecisionId,
+      occurredAt: now,
+    });
+  });
+}
+
 export async function draftEvidenceDecision(
   deps: M10Deps,
   ctx: RequestContext,

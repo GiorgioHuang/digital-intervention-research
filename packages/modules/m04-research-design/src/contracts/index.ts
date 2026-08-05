@@ -20,6 +20,7 @@ export const M04_EVENTS = {
   ProtocolVersionDrafted: 'ProtocolVersionDrafted',
   ProtocolVersionSubmittedForReview: 'ProtocolVersionSubmittedForReview',
   ProtocolVersionApproved: 'ProtocolVersionApproved',
+  ProtocolVersionRejected: 'ProtocolVersionRejected',
   ProtocolVersionActivated: 'ProtocolVersionActivated',
   ProtocolVersionSuperseded: 'ProtocolVersionSuperseded',
 } as const;

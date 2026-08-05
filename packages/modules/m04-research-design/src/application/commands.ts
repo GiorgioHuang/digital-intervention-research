@@ -266,6 +266,47 @@ export function approveProtocolVersion(
   });
 }
 
+/**
+ * Refusing a protocol version.
+ *
+ * 'Rejected' has been in the version_state CHECK from the start and no
+ * code path could write it, so the approval screen offered one outcome and
+ * called it a decision. Refusing carries the same permission as approving,
+ * because they are the same authority exercised two ways, and the same
+ * separation of duties; it takes a reason because the researcher whose
+ * version is refused has to be able to find out why.
+ */
+export async function rejectProtocolVersion(
+  deps: M04Deps,
+  ctx: RequestContext,
+  versionId: string,
+  input: { reason: string; confirmed: boolean },
+): Promise<void> {
+  if (input.reason.trim() === '') {
+    throw new PlatformError('VALIDATION_ERROR', 'Refusing a protocol version needs a reason');
+  }
+  const version = await loadVersion(deps, versionId);
+  if (version.submittedBy !== null && version.submittedBy === ctx.actor?.id) {
+    throw new PlatformError('AUTHORISATION_DENIED', 'You cannot refuse a version you submitted');
+  }
+  return transitionVersion(deps, ctx, {
+    versionId,
+    action: 'protocol.approve',
+    fromStates: ['In Review'],
+    toState: 'Rejected',
+    eventType: M04_EVENTS.ProtocolVersionRejected,
+    confirmed: input.confirmed,
+    extraSql: async (client, now) => {
+      await client.query(
+        `UPDATE research_design.protocol_versions
+            SET refused_by_actor_id = $2, refused_reason = $3, refused_at = $4
+          WHERE id = $1`,
+        [versionId, ctx.actor!.id, input.reason.trim(), now],
+      );
+    },
+  });
+}
+
 /** Activation supersedes any previously Active version in the same transaction. */
 export async function activateProtocolVersion(
   deps: M04Deps,
