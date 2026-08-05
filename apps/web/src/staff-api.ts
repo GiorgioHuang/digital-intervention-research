@@ -155,6 +155,19 @@ export interface EvidenceReviewItem {
   references: EvidenceReferenceItem[];
   updatedAt: string;
 }
+export interface EvidenceDecisionItem {
+  evidenceDecisionId: string;
+  evidenceReviewId: string;
+  question: string;
+  reviewState: string;
+  outcome: string;
+  rationale: string;
+  approvalState: string;
+  draftedByActorId: string;
+  approvedByActorId: string | null;
+  snapshotContentHash: string | null;
+  updatedAt: string;
+}
 export interface ReportVersionAwaitingApprovalItem {
   reportVersionId: string;
   reportId: string;
@@ -291,6 +304,13 @@ export const staffApi = {
     post<Id>(s, `/v1/evidence-reviews/${reviewId}/submit`, {}),
   approveEvidenceReview: (s: StaffSession, reviewId: string) =>
     post<Id>(s, `/v1/evidence-reviews/${reviewId}/approve`, { confirmed: true }),
+  listDecisionWork: (s: StaffSession) => get<List<EvidenceDecisionItem>>(s, '/v1/evidence-decisions/mine'),
+  listDecisionsAwaitingApproval: (s: StaffSession) =>
+    get<List<EvidenceDecisionItem>>(s, '/v1/evidence-decisions/awaiting-approval'),
+  draftEvidenceDecision: (s: StaffSession, evidenceReviewId: string, outcome: string, rationale: string) =>
+    post<Id>(s, '/v1/evidence-decisions', { evidenceReviewId, outcome, rationale }),
+  approveEvidenceDecision: (s: StaffSession, decisionId: string) =>
+    post<Id>(s, `/v1/evidence-decisions/${decisionId}/approve`, { confirmed: true }),
   createResearchReport: (s: StaffSession, researchProjectId: string, title: string, reportType: string) =>
     post<Id>(s, '/v1/research-reports', { researchProjectId, title, reportType }),
   draftReportVersion: (s: StaffSession, reportId: string, text: string) =>

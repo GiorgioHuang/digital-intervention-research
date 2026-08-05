@@ -143,3 +143,87 @@ export async function listReviewsAwaitingApproval(
   assertAllowed(decision, false);
   return loadReviews(deps, `WHERE r.review_state = 'In Review'`, []);
 }
+
+export interface EvidenceDecisionSummary {
+  evidenceDecisionId: string;
+  evidenceReviewId: string;
+  question: string;
+  /** The review's own state — a decision may be drafted before it is approved. */
+  reviewState: string;
+  outcome: string;
+  rationale: string;
+  approvalState: string;
+  draftedByActorId: string;
+  approvedByActorId: string | null;
+  /** The immutable snapshot written when the decision was approved. */
+  snapshotContentHash: string | null;
+  updatedAt: string;
+}
+
+async function loadDecisions(
+  deps: M10Deps,
+  where: string,
+): Promise<EvidenceDecisionSummary[]> {
+  const res = await deps.pool.query(
+    `SELECT d.id, d.evidence_review_id, d.outcome, d.rationale, d.approval_state,
+            d.drafted_by_actor_id, d.approved_by_actor_id, d.updated_at,
+            r.question, r.review_state, s.content_hash
+       FROM evidence.evidence_decisions d
+       JOIN evidence.evidence_reviews r ON r.id = d.evidence_review_id
+       LEFT JOIN evidence.evidence_snapshots s ON s.evidence_decision_id = d.id
+      ${where}
+      ORDER BY d.updated_at DESC`,
+  );
+  return res.rows.map((r) => ({
+    evidenceDecisionId: r.id as string,
+    evidenceReviewId: r.evidence_review_id as string,
+    question: r.question as string,
+    reviewState: r.review_state as string,
+    outcome: r.outcome as string,
+    rationale: r.rationale as string,
+    approvalState: r.approval_state as string,
+    draftedByActorId: r.drafted_by_actor_id as string,
+    approvedByActorId: (r.approved_by_actor_id as string | null) ?? null,
+    snapshotContentHash: (r.content_hash as string | null) ?? null,
+    updatedAt: (r.updated_at as Date).toISOString(),
+  }));
+}
+
+/**
+ * Evidence decisions and the reviews they are drawn from.
+ *
+ * The review's own state travels with each decision on purpose. Nothing
+ * stops a decision being drafted from a review nobody has approved, and
+ * a screen that hid that would let a decision look settled when the
+ * evidence under it had not been checked by anyone.
+ *
+ * Read under `evidence-decision.draft`, the action that already permits
+ * writing one.
+ */
+export async function listDecisionWork(deps: M10Deps, ctx: RequestContext): Promise<EvidenceDecisionSummary[]> {
+  const decision = await deps.checkPermission(ctx, {
+    action: 'evidence-decision.draft',
+    resource: { type: 'EvidenceDecision', id: 'queue', state: 'Any', protectedExistence: false },
+  });
+  assertAllowed(decision, false);
+  return loadDecisions(deps, '');
+}
+
+/**
+ * Evidence decisions waiting for a second person.
+ *
+ * Read under `evidence-decision.view-queue` rather than the approval
+ * action, which is confirmationRequired — a read forced to claim a
+ * confirmation it never made is a read pretending to be a command.
+ */
+export async function listDecisionsAwaitingApproval(
+  deps: M10Deps,
+  ctx: RequestContext,
+): Promise<EvidenceDecisionSummary[]> {
+  const decision = await deps.checkPermission(ctx, {
+    action: 'evidence-decision.view-queue',
+    resource: { type: 'EvidenceDecision', id: 'queue', state: 'Draft', protectedExistence: false },
+  });
+  assertAllowed(decision, false);
+  return loadDecisions(deps, `WHERE d.approval_state IN ('Draft', 'In Review')`);
+}

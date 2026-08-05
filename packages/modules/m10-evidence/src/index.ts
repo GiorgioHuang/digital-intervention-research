@@ -9,9 +9,12 @@ export {
   type M10Deps,
 } from './application/commands.js';
 export {
+  listDecisionWork,
+  listDecisionsAwaitingApproval,
   listEvidenceWork,
   listReviewsAwaitingApproval,
   searchKnowledgeEvidence,
+  type EvidenceDecisionSummary,
   type EvidenceReference,
   type EvidenceReviewSummary,
   type M10QueryDeps,

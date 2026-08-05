@@ -90,6 +90,7 @@ export const POLICY_V1: PolicyConfiguration = {
       'evidence-review.view-queue',
       'evidence-review.approve',
       'evidence-decision.draft',
+      'evidence-decision.view-queue',
       'evidence-decision.approve',
     ],
     SafetyReviewer: ['safety-signal.record', 'safety-signal.triage', 'safety-event.create', 'safety-event.review', 'triage-queue.view'],
@@ -224,6 +225,8 @@ export const POLICY_V1: PolicyConfiguration = {
     'evidence-review.view-queue': {},
     'evidence-review.approve': { confirmationRequired: true },
     'evidence-decision.draft': {},
+    /** Seeing the decision queue; the approval it leads to is confirmationRequired. */
+    'evidence-decision.view-queue': {},
     'evidence-decision.approve': { confirmationRequired: true },
     'evidence-snapshot.create': {},
     'participant.register': {},

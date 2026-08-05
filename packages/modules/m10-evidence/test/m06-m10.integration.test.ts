@@ -26,6 +26,8 @@ import {
   approveEvidenceReview,
   attachKnowledgeReference,
   createEvidenceReview,
+  listDecisionWork,
+  listDecisionsAwaitingApproval,
   listEvidenceWork,
   listReviewsAwaitingApproval,
   createKnowledgePlatformSimulator,
@@ -178,6 +180,49 @@ describe.skipIf(!dbAvailable)('M06 intervention portfolio + M10 evidence chain (
     await expect(listReviewsAwaitingApproval(m10, ctx(researcherId))).rejects.toMatchObject({
       code: 'AUTHORISATION_DENIED',
     });
+  });
+
+  /**
+   * A decision may be written from a review nobody has approved. The
+   * command permits it, so the queue reports the review's own state
+   * rather than the screen inventing a rule the server does not have.
+   */
+  it('the decision queues carry the review state and the snapshot hash', async () => {
+    const { evidenceReviewId } = await createEvidenceReview(m10, ctx(researcherId), {
+      researchProjectId: 'rp_evidence',
+      question: 'Conflicting outcome visible?',
+    });
+    const { evidenceDecisionId } = await draftEvidenceDecision(m10, ctx(researcherId), {
+      evidenceReviewId,
+      // Conflicting evidence is a first-class outcome, not a failure to
+      // reach one.
+      outcome: 'Conflicting Evidence',
+      rationale: 'Two trials point opposite ways and neither is clearly stronger.',
+    });
+
+    const drafted = (await listDecisionWork(m10, ctx(researcherId))).find(
+      (d) => d.evidenceDecisionId === evidenceDecisionId,
+    );
+    expect(drafted?.outcome).toBe('Conflicting Evidence');
+    expect(drafted?.reviewState).toBe('Draft');
+    expect(drafted?.snapshotContentHash).toBeNull();
+
+    const waiting = (await listDecisionsAwaitingApproval(m10, ctx(reviewerId))).find(
+      (d) => d.evidenceDecisionId === evidenceDecisionId,
+    );
+    expect(waiting?.draftedByActorId).toBe(researcherId);
+
+    await approveEvidenceDecision(m10, ctx(reviewerId), { evidenceDecisionId, confirmed: true });
+    // Agreed decisions leave the queue and carry the snapshot that later
+    // work cites.
+    expect(
+      (await listDecisionsAwaitingApproval(m10, ctx(reviewerId))).map((d) => d.evidenceDecisionId),
+    ).not.toContain(evidenceDecisionId);
+    const agreed = (await listDecisionWork(m10, ctx(researcherId))).find(
+      (d) => d.evidenceDecisionId === evidenceDecisionId,
+    );
+    expect(agreed?.approvalState).toBe('Approved');
+    expect(agreed?.snapshotContentHash).toMatch(/^[0-9a-f]{64}$/);
   });
 
   it('NEGATIVE canonical outcomes: the database rejects non-canonical decision outcomes', async () => {

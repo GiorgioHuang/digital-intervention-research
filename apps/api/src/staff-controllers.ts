@@ -35,6 +35,8 @@ import {
   attachKnowledgeReference,
   createEvidenceReview,
   draftEvidenceDecision,
+  listDecisionWork,
+  listDecisionsAwaitingApproval,
   listEvidenceWork,
   listReviewsAwaitingApproval,
   searchKnowledgeEvidence,
@@ -146,12 +148,6 @@ export class StaffCommandController {
   }
 
   /**
-   * Exports already agreed to, which still have to be carried out.
-   * Approving used to be the end of the road: nothing listed an approved
-   * request, so the package was never put together and the delivery
-   * never recorded.
-   */
-  /**
    * Dataset definitions waiting to be approved. Without this the chain
    * stopped at its first step and the lock queue could never fill.
    */
@@ -198,6 +194,12 @@ export class StaffCommandController {
     };
   }
 
+  /**
+   * Exports already agreed to, which still have to be carried out.
+   * Approving used to be the end of the road: nothing listed an approved
+   * request, so the package was never put together and the delivery
+   * never recorded.
+   */
   @Get('export-requests/to-carry-out')
   async exportsToCarryOut(@Req() req: Request) {
     const ctx = requireActor(req);
@@ -872,6 +874,22 @@ export class StaffCommandController {
     const ctx = requireActor(req);
     const items = await listReviewsAwaitingApproval(this.deps.m10, ctx);
     return { data: items.map((i) => ({ type: 'EvidenceReview', id: i.evidenceReviewId, attributes: i })) };
+  }
+
+  /** Evidence decisions and the reviews they are drawn from. */
+  @Get('evidence-decisions/mine')
+  async decisionWork(@Req() req: Request) {
+    const ctx = requireActor(req);
+    const items = await listDecisionWork(this.deps.m10, ctx);
+    return { data: items.map((i) => ({ type: 'EvidenceDecision', id: i.evidenceDecisionId, attributes: i })) };
+  }
+
+  /** Evidence decisions waiting for a second person. */
+  @Get('evidence-decisions/awaiting-approval')
+  async decisionsAwaitingApproval(@Req() req: Request) {
+    const ctx = requireActor(req);
+    const items = await listDecisionsAwaitingApproval(this.deps.m10, ctx);
+    return { data: items.map((i) => ({ type: 'EvidenceDecision', id: i.evidenceDecisionId, attributes: i })) };
   }
 
   @Post('evidence-reviews')

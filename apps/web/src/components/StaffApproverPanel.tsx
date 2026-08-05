@@ -3,6 +3,7 @@ import type { StaffSession } from '../staff-api.js';
 import { ApprovalRecords } from './approver/ApprovalRecords.js';
 import { DatasetDefinitions } from './approver/DatasetDefinitions.js';
 import { DatasetLock } from './approver/DatasetLock.js';
+import { EvidenceDecisions } from './approver/EvidenceDecisions.js';
 import { EvidenceReviews } from './approver/EvidenceReviews.js';
 import { ExportDecisions } from './approver/ExportDecisions.js';
 import { ProtocolDecisions } from './approver/ProtocolDecisions.js';
@@ -21,7 +22,7 @@ import { ReportDecisions } from './approver/ReportDecisions.js';
  * (§1.4) instead of an identifier the approver has to trust they typed
  * correctly.
  */
-type Decision = 'protocol' | 'definition' | 'dataset' | 'evidence' | 'report' | 'export' | 'approval';
+type Decision = 'protocol' | 'definition' | 'dataset' | 'evidence' | 'evidence-decision' | 'report' | 'export' | 'approval';
 
 const DECISIONS: { key: Decision; label: string }[] = [
   { key: 'protocol', label: 'Protocol versions' },
@@ -34,6 +35,7 @@ const DECISIONS: { key: Decision; label: string }[] = [
   // Nothing listed submitted evidence reviews, so none could be
   // approved: search worked, and the end of the chain did not.
   { key: 'evidence', label: 'Evidence reviews' },
+  { key: 'evidence-decision', label: 'Evidence decisions' },
   { key: 'report', label: 'Report versions' },
   { key: 'export', label: 'Exports' },
   { key: 'approval', label: 'Approval records' },
@@ -71,6 +73,7 @@ export function StaffApproverPanel({ session }: { session: StaffSession }) {
       {screen === 'definition' && <DatasetDefinitions session={session} />}
       {screen === 'dataset' && <DatasetLock session={session} />}
       {screen === 'evidence' && <EvidenceReviews session={session} />}
+      {screen === 'evidence-decision' && <EvidenceDecisions session={session} />}
       {screen === 'report' && <ReportDecisions session={session} />}
       {screen === 'export' && <ExportDecisions session={session} />}
       {screen === 'approval' && <ApprovalRecords session={session} />}
