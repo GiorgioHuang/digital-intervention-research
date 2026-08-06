@@ -73,7 +73,22 @@ export async function listConnections(
 export interface ThreadSummary {
   threadId: string;
   otherParticipantId: string;
-  otherDisplayName: string;
+  /**
+   * Null when this module cannot honestly name the other side.
+   *
+   * The far side of a relationship thread is a supporter, who has a user
+   * account and no participant record, so looking them up in the
+   * participant directory misses and falls through to the placeholder
+   * below. That placeholder was written for a stranger in a community
+   * space and is wrong twice over here: a supporter is not a community
+   * member, and the placeholder is identical for everybody on purpose —
+   * so a participant with two approved supporters would get two rows they
+   * could not tell apart, for the one kind of conversation where knowing
+   * who is writing is the entire point. Account names belong to M01, and
+   * the composition root is where the two are allowed to meet, so this
+   * query says it does not know rather than guessing.
+   */
+  otherDisplayName: string | null;
   basisType: string;
   threadState: string;
   createdAt: string;
@@ -99,8 +114,16 @@ export async function listThreads(
     threadState: r.thread_state as string,
     createdAt: (r.created_at as Date).toISOString(),
   }));
-  const name = await nameOf(deps, rows.map((r) => r.otherParticipantId));
-  return rows.map((r) => ({ ...r, otherDisplayName: name(r.otherParticipantId) }));
+  // Only the rows whose other side is actually a participant are looked up
+  // here. Passing a supporter's account identifier into the participant
+  // directory does not fail — it misses, and a miss becomes "A community
+  // member", which reads as an answer.
+  const peers = rows.filter((r) => r.basisType !== 'AuthorisedRelationship');
+  const name = await nameOf(deps, peers.map((r) => r.otherParticipantId));
+  return rows.map((r) => ({
+    ...r,
+    otherDisplayName: r.basisType === 'AuthorisedRelationship' ? null : name(r.otherParticipantId),
+  }));
 }
 
 export interface ThreadMessage {
@@ -461,6 +484,11 @@ export async function listThreadsForActor(deps: M18Deps, ctx: RequestContext): P
     threadState: r.thread_state as string,
     createdAt: (r.created_at as Date).toISOString(),
   }));
-  const name = await nameOf(deps, rows.map((r) => r.otherParticipantId));
-  return rows.map((r) => ({ ...r, otherDisplayName: name(r.otherParticipantId) }));
+  // The far side here is a participant, so the directory is the right one
+  // to ask — but the community placeholder is not the right answer when it
+  // misses. A supporter is not in a community with the person they
+  // support; they were approved by that person by name, and a row saying
+  // "a community member" describes a relationship neither of them has.
+  const names = await deps.participants.findDisplayNames(rows.map((r) => r.otherParticipantId));
+  return rows.map((r) => ({ ...r, otherDisplayName: names.get(r.otherParticipantId) ?? null }));
 }

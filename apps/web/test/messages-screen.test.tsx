@@ -99,6 +99,34 @@ describe('MessagesScreen (API-driven lists replace manual identifiers)', () => {
     expect(screen.getByText(/The reason this conversation was possible has ended/)).toBeTruthy();
   });
 
+  /**
+   * A name the server could not resolve is said to be missing, not
+   * papered over. Every unnamed person on this list used to become "A
+   * community member" — a description written for an unidentifiable
+   * stranger in a community space, and identical for everybody on
+   * purpose. Applied to an approved supporter it was wrong twice: they
+   * are not a community member, and a participant with two supporters got
+   * two rows they could not tell apart.
+   */
+  it('says a name is missing rather than describing someone it cannot name', async () => {
+    cleanup();
+    vi.unstubAllGlobals();
+    stubFetchWith({
+      ...THREAD,
+      threadId: 'th_3',
+      otherDisplayName: null as unknown as string,
+      basisType: 'AuthorisedRelationship',
+    });
+    await act(async () => {
+      render(<MessagesScreen session={session} />);
+    });
+    expect(screen.getByRole('button', { name: /Conversation with Someone whose name is missing/ })).toBeTruthy();
+    expect(document.body.textContent).not.toContain('A community member');
+    // The basis is still stated: the participant approved this person, and
+    // that is why the conversation exists at all.
+    expect(screen.getByText(/you approved this person as a supporter/)).toBeTruthy();
+  });
+
   it('a new conversation starts from an Active connection, not from a typed identifier', async () => {
     const calls = stubFetch();
     await act(async () => {

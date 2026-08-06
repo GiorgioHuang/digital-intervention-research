@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { accessTokenHeader, PlatformApiError, raiseApiError, type ApiError } from './api.js';
 import { staffActionError } from './errors.js';
+import { nameOrGap } from './names.js';
 import { AccessTokenGate } from './components/AccessTokenGate.js';
 
 interface SupporterSession {
@@ -77,7 +78,8 @@ const STATE_LABELS: Record<string, string> = {
 interface SupporterThread {
   threadId: string;
   otherParticipantId: string;
-  otherDisplayName: string;
+  /** Null when the server could not name them. Said, not filled in. */
+  otherDisplayName: string | null;
   basisType: string;
   threadState: string;
 }
@@ -290,8 +292,8 @@ export function SupporterApp({ onExit }: { onExit: () => void }) {
           <p>Nobody you support has opened a conversation with you.</p>
         )}
         {(threads ?? []).map((t) => (
-          <article key={t.threadId} aria-label={`Conversation with ${t.otherDisplayName}`}>
-            <h3>{t.otherDisplayName}</h3>
+          <article key={t.threadId} aria-label={`Conversation with ${nameOrGap(t.otherDisplayName)}`}>
+            <h3>{nameOrGap(t.otherDisplayName)}</h3>
             <p>
               {t.threadState === 'Active'
                 ? 'Open.'
@@ -314,7 +316,7 @@ export function SupporterApp({ onExit }: { onExit: () => void }) {
             </p>
             {(messages[t.threadId] ?? []).map((m) => (
               <p key={m.messageId}>
-                <strong>{m.senderParticipantId === session.actorId ? 'You' : t.otherDisplayName}:</strong>{' '}
+                <strong>{m.senderParticipantId === session.actorId ? 'You' : nameOrGap(t.otherDisplayName)}:</strong>{' '}
                 {m.contentText}
                 <br />
                 <small>{m.lifecycleState === 'Draft' ? 'Not sent yet — only you can see this' : m.deliveryState}</small>

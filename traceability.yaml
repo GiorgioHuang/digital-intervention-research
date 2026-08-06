@@ -990,3 +990,13 @@
   code: [packages/policy/src/catalogue.ts, packages/modules/m18-community-social/src/application/messaging-commands.ts, packages/modules/m18-community-social/src/application/queries.ts, apps/api/src/controllers.ts, apps/web/src/api.ts, apps/web/src/components/WhoHasAccess.tsx, apps/web/src/components/ProposeRelationship.tsx, apps/web/src/SupporterApp.tsx, packages/synthetic-pilot/seed-demo.mjs]
   tests: [packages/modules/m18-community-social/test/messaging.integration.test.ts, apps/web/test/propose-relationship.test.tsx]
   status: implemented
+
+- implementation_id: IMP-M18-THREAD-NAMING-001
+  module: M18
+  summary: A participant's own approved supporter stopped being described to them as "A community member". The far side of a relationship thread is an account and not a participant, so looking it up in the participant register did not fail - it missed, and the miss came back as the placeholder written for an unidentifiable stranger in a community space. That was wrong twice over. A supporter is not a community member, and the placeholder is deliberately identical for everybody so it cannot be used to tell two people apart, which meant a participant with two approved supporters got two rows they could not distinguish, on the one kind of conversation where knowing who is writing is the entire point. listThreads now declines to name what it cannot name and returns null for those rows, and the name is resolved at the composition root from M01 account names, exactly as the relationship list has always done it - account names belong to M01 and the composition root is where the two are allowed to meet. The supporter's own list drops the placeholder for the same reason, since a supporter is not in a community with the person they support. Where a name genuinely cannot be resolved the screen says it is missing rather than filling the gap with a description - worse to read and better to trust, because somebody who sees it knows the record is incomplete instead of believing a stranger has written to them
+  trace_ids: [ATR-002, ATR-013]
+  adr_ids: [ADR-031]
+  docs: ["UI_INVENTORY.md B3", "design/DESIGN_DECISIONS.md D-12", "design/DESIGN_DECISIONS.md D-30"]
+  code: [packages/modules/m18-community-social/src/application/queries.ts, apps/api/src/controllers.ts, apps/web/src/names.ts, apps/web/src/api.ts, apps/web/src/components/MessagesScreen.tsx, apps/web/src/SupporterApp.tsx]
+  tests: [packages/modules/m18-community-social/test/messaging.integration.test.ts, apps/api/test/api.e2e.test.ts, apps/web/test/messages-screen.test.tsx]
+  status: implemented

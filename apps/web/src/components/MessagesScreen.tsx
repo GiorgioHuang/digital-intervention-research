@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api, type ConnectionSummary, type Session, type ThreadSummary } from '../api.js';
 import { presentError, type PresentedError } from '../errors.js';
+import { nameOrGap } from '../names.js';
 import { ErrorState, LoadingState } from './StateBlock.js';
 import { MessagePanel } from './MessagePanel.js';
 
@@ -110,7 +111,7 @@ export function MessagesScreen({
         <MessagePanel
           session={session}
           threadId={active.threadId}
-          recipient={{ participantId: active.otherParticipantId, displayName: active.otherDisplayName }}
+          recipient={{ participantId: active.otherParticipantId, displayName: nameOrGap(active.otherDisplayName) }}
           basis={BASIS_WORDING[active.basisType] ?? active.basisType}
           {...(onGetHelp === undefined ? {} : { onGetHelp })}
           assisted={assistedBy != null}
@@ -144,7 +145,8 @@ export function MessagesScreen({
             {threads.map((t) => (
               <li key={t.threadId} style={{ marginBlock: '0.5rem' }}>
                 <button onClick={() => setActive(t)}>
-                  Conversation with {t.otherDisplayName} ({t.threadState === 'Active' ? 'ongoing' : t.threadState})
+                  Conversation with {nameOrGap(t.otherDisplayName)} (
+                  {t.threadState === 'Active' ? 'ongoing' : t.threadState})
                 </button>
                 <p>Why you can write to each other: {BASIS_WORDING[t.basisType] ?? t.basisType}.</p>
                 {t.threadState !== 'Active' && (

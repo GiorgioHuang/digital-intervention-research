@@ -32,6 +32,7 @@ import {
   createMessageDraft,
   createThread,
   generateMatchCandidate,
+  listThreads,
   recordDeliveryState,
   recordMatchDecision,
   reviseMessageDraft,
@@ -370,6 +371,54 @@ describe.skipIf(!dbAvailable)('M18/M16 messaging pipeline (integration)', () => 
         contentText: 'one more thing',
       }),
     ).rejects.toBeDefined();
+  });
+
+  /**
+   * The supporter thread appeared in the participant's list named "A
+   * community member".
+   *
+   * The other side of a relationship thread is an account, not a
+   * participant, so the participant directory missed and the miss came
+   * back as the placeholder written for an unidentifiable stranger in a
+   * community space. It is wrong twice: a supporter is not a community
+   * member, and the placeholder is deliberately identical for everybody,
+   * so two approved supporters would produce two rows the participant
+   * could not tell apart — on the one conversation where knowing who is
+   * writing is the entire point.
+   *
+   * The query now declines to name what it cannot name. The name itself
+   * is resolved above this module, where account names live.
+   */
+  it('does not describe an approved supporter as a community member', async () => {
+    const { relationshipId } = await proposeRelationship(m03, ctx(coordId), {
+      participantId: aId,
+      relatedActorId: supporterActorId,
+      relationshipType: 'FamilyMember',
+      permittedActions: ['relationship.message'],
+    });
+    await approveRelationship(m03, ctx(aAcc), { relationshipId, expectedVersion: 1, confirmed: true });
+    const { threadId: relThread } = await createRelationshipThread(m18, ctx(aAcc), {
+      relationshipId,
+      creatorId: aId,
+    });
+
+    const mine = await listThreads(m18, ctx(aAcc), aId);
+    const supporterRow = mine.find((t) => t.threadId === relThread);
+    expect(supporterRow?.basisType).toBe('AuthorisedRelationship');
+    expect(supporterRow?.otherDisplayName).toBeNull();
+
+    // The peer rows are unaffected: their other side really is a
+    // participant, and that lookup was never the broken one. This is the
+    // Ann-Ben thread the formation test above built, so it is asserted by
+    // name rather than by "not null" — an undefined row would satisfy the
+    // weaker form and prove nothing.
+    const peerRow = mine.find((t) => t.basisType === 'ActiveConnection');
+    expect(peerRow?.otherDisplayName).toBe('Ben');
+
+    // And the supporter's own list still names the participant, because
+    // there the directory being asked is the right one.
+    const inbox = await listThreadsForActor(m18, ctx(supporterActorId));
+    expect(inbox.find((t) => t.threadId === relThread)?.otherDisplayName).toBe('Ann');
   });
 
 });

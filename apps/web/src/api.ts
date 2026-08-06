@@ -114,7 +114,9 @@ export interface ConnectionSummary {
 export interface ThreadSummary {
   threadId: string;
   otherParticipantId: string;
-  otherDisplayName: string;
+  /** Null when the server could not resolve who the other side is. The
+   *  screen says so rather than filling the gap with a description. */
+  otherDisplayName: string | null;
   basisType: string;
   threadState: string;
   createdAt: string;

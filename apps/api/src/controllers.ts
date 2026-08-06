@@ -734,11 +734,31 @@ export class CommandController {
     return { data: items.map((c) => ({ type: 'Connection', id: c.connectionId, attributes: c })) };
   }
 
+  /**
+   * The supporter's name is resolved here, for the same reason the
+   * relationship list resolves it here: the other side of a relationship
+   * thread has a user account and no participant record, so M18 leaves it
+   * unnamed rather than looking a supporter up in the participant
+   * directory and printing the miss as "A community member". A participant
+   * who approved somebody by name is entitled to see that name on the
+   * conversation it produced.
+   */
   @Get('participants/:participantId/conversation-threads')
   async listThreads(@Req() req: Request, @Param('participantId') participantId: string) {
     const ctx = requireActor(req);
     const items = await listThreads(this.deps.m18, ctx, participantId);
-    return { data: items.map((t) => ({ type: 'ConversationThread', id: t.threadId, attributes: t })) };
+    const unnamed = items.filter((t) => t.otherDisplayName === null);
+    const names = await this.deps.accountNames.findDisplayNames(unnamed.map((t) => t.otherParticipantId));
+    return {
+      data: items.map((t) => ({
+        type: 'ConversationThread',
+        id: t.threadId,
+        attributes: {
+          ...t,
+          otherDisplayName: t.otherDisplayName ?? names.get(t.otherParticipantId) ?? null,
+        },
+      })),
+    };
   }
 
   @Get('conversation-threads/:threadId/messages')

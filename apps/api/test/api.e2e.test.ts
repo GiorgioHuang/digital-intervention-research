@@ -850,9 +850,38 @@ describe.skipIf(!dbAvailable)('HTTP API (e2e)', () => {
     const connBody = (await conns.json()) as { data: { id: string; attributes: { otherParticipantId: string } }[] };
     expect(connBody.data.some((c) => c.id === connId && c.attributes.otherParticipantId === otherId)).toBe(true);
 
+    /*
+     * A supporter thread alongside the peer one, because the two sides are
+     * named from different directories and only one of them is the
+     * participant register.
+     *
+     * The far side of a relationship thread is an account. Looking it up
+     * among participants did not fail, it missed, and the miss came back
+     * as the placeholder written for an unidentifiable stranger in a
+     * community space: an approved supporter shown to the participant as
+     * "A community member". That placeholder is identical for everybody by
+     * design, so two supporters would have produced two rows nobody could
+     * tell apart, on the one conversation where knowing who is writing is
+     * the entire point.
+     */
+    const relThreadId = `th_e2e_rel_${Date.now()}`;
+    await pool.query(
+      `INSERT INTO community_social.conversation_threads (id, basis_type, basis_reference, participant_a_id, participant_b_id)
+       VALUES ($1, 'AuthorisedRelationship', $2, $3, $4)`,
+      [relThreadId, `rel_e2e_${Date.now()}`, patId, strangerAcc],
+    );
+
     const threads = await call(`/v1/participants/${patId}/conversation-threads`, patAcc);
     expect(threads.status).toBe(200);
-    expect(((await threads.json()) as { data: { id: string }[] }).data.some((t) => t.id === threadId)).toBe(true);
+    const threadBody = (await threads.json()) as {
+      data: { id: string; attributes: { otherDisplayName: string | null } }[];
+    };
+    expect(threadBody.data.some((t) => t.id === threadId)).toBe(true);
+    // The account's own name, resolved at the composition root. The peer
+    // rows in this fixture are unresolvable identifiers and still show the
+    // placeholder, which is where it belongs and the reason the assertion
+    // here is on this row rather than on the whole payload.
+    expect(threadBody.data.find((t) => t.id === relThreadId)?.attributes.otherDisplayName).toBe('Sly');
 
     // Candidate listing shows the explanation but never the other
     // participant's identity (identity only after mutual acceptance).
