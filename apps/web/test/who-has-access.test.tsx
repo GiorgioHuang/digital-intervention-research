@@ -63,7 +63,11 @@ describe('who has access to me', () => {
     expect(screen.getByText('Sam Okafor')).toBeTruthy();
     // The dotted action key never reaches the participant.
     expect(screen.queryByText('participant.view-shared')).toBeNull();
-    expect(screen.getByText(/agreed to share with supporters/)).toBeTruthy();
+    // The permission is recorded and nothing acts on it, so the screen
+    // says that rather than describing access the participant does not
+    // have and could not revoke (D-39).
+    expect(screen.getByText(/nothing on this platform acts on it/)).toBeTruthy();
+    expect(screen.getByText(/no way here to share something with a supporter yet/)).toBeTruthy();
     // No claim that anyone is checking their details: nothing does.
     expect(screen.getByText(/Waiting for you to decide\./)).toBeTruthy();
     expect(screen.queryByText(/still being checked/)).toBeNull();

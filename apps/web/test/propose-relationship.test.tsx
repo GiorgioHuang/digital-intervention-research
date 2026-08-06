@@ -77,8 +77,33 @@ describe('proposing a supporter', () => {
   it('says each permission also needs the participant to have consented', () => {
     stubFetch();
     render(<ProposeRelationship session={session} />);
-    expect(screen.getByText(/Without that consent this permits nothing/)).toBeTruthy();
+    expect(screen.getByText(/Also needs supporter-contribution consent/)).toBeTruthy();
     expect(screen.getByText(/the participant decides what is accepted/)).toBeTruthy();
+  });
+
+  /**
+   * `participant.view-shared` is read by no code anywhere: no query is
+   * gated on it, no screen would show it, and a participant has no way to
+   * mark anything as shared. It was ticked by default, so the shortest
+   * path through this screen recorded an access right that does not
+   * exist — and the participant then approved it believing they had
+   * shared their information (D-39).
+   */
+  it('says the sharing permission does nothing, and does not tick it by default', async () => {
+    stubFetch();
+    render(<ProposeRelationship session={session} />);
+    const box = screen.getByLabelText('See what the participant chooses to share') as HTMLInputElement;
+    expect(box.checked).toBe(false);
+    expect(screen.getByText(/NOT IN USE/)).toBeTruthy();
+    expect(screen.getByText(/grants no access at all/)).toBeTruthy();
+
+    // Choosing only that one is called out where the choice is made.
+    fireEvent.change(screen.getByLabelText('Participant identifier'), { target: { value: 'pt_a' } });
+    fireEvent.change(screen.getByLabelText("The supporter's account identifier"), { target: { value: 'actor_s' } });
+    await act(async () => {
+      fireEvent.click(box);
+    });
+    expect(screen.getByText(/Everything you have chosen is a permission nothing acts on/)).toBeTruthy();
   });
 
   it('will not propose a relationship that permits nothing', async () => {
@@ -86,9 +111,7 @@ describe('proposing a supporter', () => {
     render(<ProposeRelationship session={session} />);
     fireEvent.change(screen.getByLabelText('Participant identifier'), { target: { value: 'pt_a' } });
     fireEvent.change(screen.getByLabelText("The supporter's account identifier"), { target: { value: 'actor_s' } });
-    await act(async () => {
-      fireEvent.click(screen.getByLabelText('See what the participant chooses to share'));
-    });
+    // Nothing is ticked to begin with, so this is already the empty case.
     expect(screen.getByRole('button', { name: 'Propose this relationship' })).toHaveProperty('disabled', true);
     expect(screen.getByText(/would be a record with no effect/)).toBeTruthy();
   });
@@ -111,7 +134,7 @@ describe('proposing a supporter', () => {
       participantId: 'pt_a',
       relatedActorId: 'actor_s',
       relationshipType: 'FamilyMember',
-      permittedActions: ['participant.view-shared', 'life-story.contribute'],
+      permittedActions: ['life-story.contribute'],
     });
     expect(screen.getByText(/waits for the participant to approve it/)).toBeTruthy();
   });

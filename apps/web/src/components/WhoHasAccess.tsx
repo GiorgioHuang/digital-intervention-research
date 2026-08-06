@@ -20,13 +20,23 @@ import { EmptyState, ErrorState, LoadingState } from './StateBlock.js';
  */
 
 /**
- * Exactly the two actions a relationship can carry today, said plainly.
- * Anything else is shown as its own key rather than guessed at — a
- * confident-sounding description of an access right nobody has checked is
- * worse than an unfamiliar word.
+ * The actions a relationship can carry, said plainly. Anything else is
+ * shown as its own key rather than guessed at — a confident-sounding
+ * description of an access right nobody has checked is worse than an
+ * unfamiliar word.
+ *
+ * One of them is not an access right at all. `participant.view-shared` is
+ * read by no code anywhere: no query is gated on it, no screen shows a
+ * supporter anything, and there is no way for a participant to mark
+ * something as shared in the first place. It used to be described here as
+ * seeing the parts of your information you agreed to share — which would
+ * have a participant believe they had shared their life with somebody
+ * when nothing of the kind had happened, and believe that revoking it
+ * took something away (D-39).
  */
 const ACTION_WORDING: Record<string, string> = {
-  'participant.view-shared': 'See the parts of your information you have agreed to share with supporters',
+  'participant.view-shared':
+    'Recorded as “may see what you share” — but nothing on this platform acts on it. Nobody can see anything of yours through it, and there is no way here to share something with a supporter yet.',
   'life-story.contribute': 'Offer something for your life story — which only you can accept',
   // Granted separately from the others on purpose: letting someone read
   // what you share is not the same as letting them write to you (D-29).

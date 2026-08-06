@@ -18,24 +18,37 @@ import { staffApi, type StaffSession } from '../staff-api.js';
  * until they do the person named here can do nothing at all. A coordinator
  * who believed otherwise would tell a family member they now have access.
  *
- * And the list of what the relationship may permit contains exactly the
- * actions that a relationship actually gates. Every other dotted action in
- * the platform is decided by role or by ownership and would not consult
- * this list, so offering a longer menu here would record permissions that
+ * And the list of what the relationship may permit contains only actions
+ * a relationship is consulted for. Every other dotted action in the
+ * platform is decided by role or by ownership and would not consult this
+ * list, so offering a longer menu here would record permissions that
  * nothing reads — a supporter told they may do something they cannot, or a
  * participant believing they limited something they did not.
+ *
+ * One entry on the list is in exactly that position today, and saying so
+ * is the only honest thing to do with it. `participant.view-shared` is
+ * checked by no code anywhere: no query is gated on it, no screen shows a
+ * supporter anything a participant has shared, and there is no control by
+ * which a participant could share an item in the first place. Ticking it
+ * grants nothing. It was the box ticked by default, which meant the usual
+ * way to bring a supporter in was to record a permission that does not
+ * work and let the participant approve it believing they had shared their
+ * information. It is still offered — the intent is worth recording and
+ * relationships already carry it — but nothing on this screen, or on the
+ * participant's, may describe it as access (D-39).
  *
  * Messaging is on the list as its own line rather than folded into seeing
  * (D-29): a participant who wanted a niece to read their life story and
  * nothing more would otherwise have granted her a channel into their inbox
  * by accident.
  */
-const PERMITTED_ACTIONS = [
+const PERMITTED_ACTIONS: { action: string; label: string; detail: string; inert?: boolean }[] = [
   {
     action: 'participant.view-shared',
     label: 'See what the participant chooses to share',
     detail:
-      'Also needs the participant to have given supporter-involvement consent. Without that consent this permits nothing.',
+      'NOT IN USE. Nothing in this platform reads this permission: no screen shows a supporter anything, and a participant has no way to mark something as shared. Ticking it records an intention and grants no access at all. Do not tell anyone it does.',
+    inert: true,
   },
   {
     action: 'relationship.message',
@@ -71,7 +84,10 @@ export function ProposeRelationship({ session }: { session: StaffSession }) {
     relatedActorId: '',
     relationshipType: 'FamilyMember',
   });
-  const [actions, setActions] = useState<string[]>(['participant.view-shared']);
+  // Nothing is ticked to begin with. The default was the one permission
+  // that does nothing, so the shortest path through this screen recorded
+  // an access right the participant would then approve believing it real.
+  const [actions, setActions] = useState<string[]>([]);
   const [announcement, setAnnouncement] = useState('');
 
   const toggle = (action: string) =>
@@ -163,6 +179,18 @@ export function ProposeRelationship({ session }: { session: StaffSession }) {
           permissions that nothing reads.
         </small>
       </p>
+      {/*
+        Said at the moment of choosing, not in a footnote: a coordinator
+        who ticks only the inert permission is about to hand the
+        participant a decision that reads as sharing and is not.
+      */}
+      {actions.length > 0 && actions.every((a) => PERMITTED_ACTIONS.find((p) => p.action === a)?.inert === true) && (
+        <p role="note">
+          <strong>Everything you have chosen is a permission nothing acts on.</strong> If you propose this, the
+          participant will be asked to approve a relationship that lets this person do nothing at all — and it will
+          read to them as though they had shared their information.
+        </p>
+      )}
       <p>
         <button
           disabled={form.participantId.trim() === '' || form.relatedActorId.trim() === '' || actions.length === 0}

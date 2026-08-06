@@ -54,9 +54,18 @@ const RELATIONSHIP_STATE_LABELS: Record<string, string> = {
   Rejected: 'They said no to this.',
 };
 
+/**
+ * `participant.view-shared` is read by no code anywhere — no query is
+ * gated on it and there is no screen that would show it — so a supporter
+ * told they can "see what they have chosen to share" would go looking for
+ * something that does not exist, and could reasonably conclude the
+ * participant had chosen to share nothing with them (D-39).
+ */
 const SUPPORTER_ACTION_LABELS: Record<string, string> = {
-  'participant.view-shared': 'See what they have chosen to share with supporters',
+  'participant.view-shared':
+    'Recorded as “may see what they share” — there is nothing here to see. This platform has no such screen yet, and it is not that they shared nothing.',
   'life-story.contribute': 'Offer something for their life story, which only they can accept',
+  'relationship.message': 'Write to them, and read what they write back',
 };
 
 const STATE_LABELS: Record<string, string> = {
