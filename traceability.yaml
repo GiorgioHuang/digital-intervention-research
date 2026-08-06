@@ -1110,3 +1110,13 @@
   code: [apps/web/src/errors.ts]
   tests: [apps/web/test/error-presentation.test.tsx]
   status: implemented
+
+- implementation_id: IMP-DEPLOY-SMOKE-RETRY-001
+  module: OPS
+  summary: The deployment smoke test stopped failing for a reason other than the thing it tests. A deploy failed reporting that the access-token gate was not enforcing, expecting 401 and getting 500. The logs established that the secret was attached, that the revision was serving all traffic, that liveness and the web shell both answered 200, that migrations were clean, and that the commit in question had changed only a frontend file and documentation - the gate code was byte-identical to the previous deploy, which had passed the same check. A re-run passed. The 500 came from an instance still starting, where the middleware that answers 401 does not exist yet, which is reachable because the service runs with no minimum instances. The defect worth fixing was not that one failure but that this check had no retry at all while the liveness check above it retries six times. A check that fails for a reason other than what it tests is worse than no check, because it teaches whoever is watching to press re-run, and that is how a genuine gate failure gets waved through one day. Only the ambiguous answers are retried now - a connection failure or any 5xx. A gate that had failed open answers 200, 403 or 404, which is stable and not a 5xx, and that fails immediately rather than being given six more chances to look transient; a gate that is genuinely broken keeps answering 500 and still fails when the attempts run out. All four cases were verified against a stub before landing, including cold-start-then-401 passing and a 200 failing at once
+  trace_ids: [ATR-005]
+  adr_ids: [ADR-104]
+  docs: ["design/DESIGN_DECISIONS.md D-45"]
+  code: [.github/workflows/deploy.yml]
+  tests: [packages/database/test/deploy-smoke.test.ts]
+  status: implemented

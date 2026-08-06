@@ -172,8 +172,28 @@ jobs:
             || { echo "::error::web app not served (HTTP $SHELL_CODE)"; exit 1; }
           echo "web shell: HTTP $SHELL_CODE, root element present"
 
-          GATED=$(curl -s -o /dev/null -w '%{http_code}' --max-time 30 \
-            -H 'x-actor-id: smoke' "$URL/v1/participants/smoke/community-spaces" || echo 000)
+          # Same cold-start allowance as the liveness check above, and for
+          # the same reason: this request can land on a second instance
+          # that is still starting, which answers 500 before the app's
+          # middleware exists to answer 401. A deploy that fails for a
+          # reason other than the thing it is testing is worse than no
+          # check — it teaches whoever is watching to press re-run, which
+          # is exactly how a genuine "gate is not enforcing" gets waved
+          # through one day.
+          #
+          # ONLY the ambiguous answers are retried. A gate that had failed
+          # open would answer 200, 403 or 404 — stable and not 5xx — and
+          # that must fail immediately rather than being given six more
+          # chances to look transient. A gate that is genuinely broken
+          # keeps answering 500 and still fails when the attempts run out.
+          for i in 1 2 3 4 5 6; do
+            GATED=$(curl -s -o /dev/null -w '%{http_code}' --max-time 30 \
+              -H 'x-actor-id: smoke' "$URL/v1/participants/smoke/community-spaces" || echo 000)
+            case "$GATED" in
+              000|5??) echo "  gate attempt $i: HTTP $GATED — instance may still be starting; retrying"; sleep 10 ;;
+              *) break ;;
+            esac
+          done
           echo "ungated /v1: HTTP $GATED"
           if gcloud secrets describe HADI_ACCESS_TOKEN --project "${{ vars.GCP_PROJECT_ID }}" >/dev/null 2>&1; then
             [ "$GATED" = "401" ] || { echo "::error::access-token gate is NOT enforcing (expected 401, got $GATED)"; exit 1; }
