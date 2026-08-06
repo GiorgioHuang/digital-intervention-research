@@ -11,6 +11,7 @@ import {
   listRelationshipsForActor,
   proposeRelationship,
   recordConsentDecision,
+  requireReConsent,
   revokeRelationship,
   withdrawConsent,
   type M03Deps,
@@ -166,6 +167,32 @@ export class CommandController {
       { participantId, scope: body.scope, templateVersion: body.templateVersion, confirmed: body.confirmed === true },
     );
     return { data: { type: 'ConsentDecision', id: result.consentDecisionId } };
+  }
+
+  /**
+   * Telling a participant the terms changed. Staff-side and confirmed:
+   * this is the one thing about somebody's consent that another person
+   * does, and it takes access away until they answer.
+   */
+  @Post('participants/:participantId/consents/require-reconsent')
+  async requireReConsent(
+    @Req() req: Request,
+    @Param('participantId') participantId: string,
+    @Body() body: { scope: string; newTemplateVersion: string; whatChanged: string; confirmed: boolean },
+  ) {
+    const ctx = requireActor(req);
+    const result = await requireReConsent(
+      { pool: this.deps.pool, clock: this.deps.clock, permissions: this.deps.permissions },
+      ctx,
+      {
+        participantId,
+        scope: body.scope,
+        newTemplateVersion: body.newTemplateVersion,
+        whatChanged: body.whatChanged,
+        confirmed: body.confirmed === true,
+      },
+    );
+    return { data: { type: 'ConsentDecision', id: result.consentDecisionId, meta: { decision: 'ReConsentRequired' } } };
   }
 
   @Post('conversation-threads')

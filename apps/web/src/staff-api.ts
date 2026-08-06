@@ -370,6 +370,24 @@ export const staffApi = {
     }),
 
   // M09 safety events: created and then unreachable until now
+  /**
+   * Telling a participant the terms changed. Confirmed, because it stops
+   * what the scope permits at the moment it is recorded.
+   */
+  requireReConsent: (
+    s: StaffSession,
+    participantId: string,
+    scope: string,
+    newTemplateVersion: string,
+    whatChanged: string,
+  ) =>
+    post<Id>(s, `/v1/participants/${participantId}/consents/require-reconsent`, {
+      scope,
+      newTemplateVersion,
+      whatChanged,
+      confirmed: true,
+    }),
+
   listSafetyEvents: (s: StaffSession) => get<List<SafetyEventItem>>(s, '/v1/safety-events'),
 
   /**

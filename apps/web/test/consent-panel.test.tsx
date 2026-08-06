@@ -156,4 +156,37 @@ describe('ConsentPanel (Doc 20 consent UX rules)', () => {
     expect(posted[0]?.path).toContain('/consents/withdraw');
     expect(posted[0]?.body['confirmed']).toBe(true);
   });
+
+  /**
+   * `ReConsentRequired` was a permitted consent decision the permission
+   * engine acted on and nothing could ever write, so a consent text could
+   * be revised and this screen would go on saying "Granted" at somebody
+   * whose agreement no longer covered the wording in force.
+   *
+   * The screen has to say three things: it has already stopped, here is
+   * what changed, and declining costs you nothing else.
+   */
+  it('says what changed, and that the access has already stopped', async () => {
+    stubFetch({
+      data: [
+        {
+          id: 'community-participation',
+          attributes: {
+            scope: 'community-participation', decision: 'ReConsentRequired',
+            decidedAt: '2026-08-06T00:00:00Z', templateVersion: 'ct_v2', restrictions: [], expiresAt: null,
+            decisionNote: 'The section on who can see your posts was rewritten.',
+          },
+        },
+      ],
+    });
+    await act(async () => {
+      render(<ConsentPanel session={session} />);
+    });
+    expect(screen.getByText(/your agreement to it no longer stands/i)).toBeTruthy();
+    expect(screen.getByText(/who can see your posts was rewritten/)).toBeTruthy();
+    expect(screen.getByText(/has already stopped, not in a while/i)).toBeTruthy();
+    expect(screen.getByText(/Declining leaves things stopped and takes nothing else away/i)).toBeTruthy();
+    // Not shown as a bare state code.
+    expect(document.body.textContent).not.toContain('ReConsentRequired');
+  });
 });

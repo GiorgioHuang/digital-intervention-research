@@ -173,6 +173,8 @@ export interface ConsentState {
   templateVersion: string;
   restrictions: string[];
   expiresAt: string | null;
+  /** What changed, when the participant is being asked to agree again. */
+  decisionNote: string | null;
 }
 
 export interface MyEnrolment {

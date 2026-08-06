@@ -85,6 +85,9 @@ export const POLICY_V1: PolicyConfiguration = {
       'approval.decide',
       'report.approve', 'export.approve',
       'approval-queue.view',
+      // The approver is who knows the consent text has changed, because
+      // they are who approved the version that changed it.
+      'consent.require-reconsent',
     ],
     EvidenceReviewer: [
       'evidence-review.view-queue',
@@ -297,6 +300,17 @@ export const POLICY_V1: PolicyConfiguration = {
     'export.view-own': { ownerPermitted: true, ownerOnly: true },
 
     'consent.record': { ownerPermitted: true, ownerOnly: true },
+    /**
+     * Telling a participant the terms changed and their agreement no
+     * longer covers the new wording.
+     *
+     * Deliberately NOT ownerPermitted: this is the one thing about a
+     * participant's consent that somebody else does, and it is the
+     * opposite of granting — it takes the access away until they answer.
+     * Confirmed, because pressing it stops things the participant is
+     * relying on at that moment.
+     */
+    'consent.require-reconsent': { confirmationRequired: true },
     'consent.withdraw': { ownerPermitted: true, ownerOnly: true, confirmationRequired: true },
     /**
      * A supporter reading the relationships they are named in. Scoped by

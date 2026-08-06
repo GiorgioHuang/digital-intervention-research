@@ -2,6 +2,7 @@ export * from './contracts/index.js';
 export { createPermissionService, type PermissionServiceDeps } from './application/permission-service.js';
 export {
   recordConsentDecision,
+  requireReConsent,
   withdrawConsent,
   proposeRelationship,
   approveRelationship,

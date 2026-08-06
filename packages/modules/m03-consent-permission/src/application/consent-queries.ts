@@ -128,13 +128,19 @@ export async function listRelationshipsForActor(
 
 export interface ConsentStateView {
   scope: string;
-  /** Granted | Declined | Restricted | Deferred | Withdrawn. */
+  /** Granted | Declined | Restricted | Deferred | Withdrawn | ReConsentRequired. */
   decision: string;
   decidedAt: string;
   /** The consent text version this decision was made under. */
   templateVersion: string;
   restrictions: string[];
   expiresAt: string | null;
+  /**
+   * What changed, when somebody other than the participant wrote this row.
+   * Only a demand to agree again carries one — an ordinary decision needs
+   * no explanation, because the participant made it themselves.
+   */
+  decisionNote: string | null;
 }
 
 /**
@@ -171,7 +177,8 @@ export async function listOwnConsents(
   });
   assertAllowed(decision, false);
   const res = await deps.pool.query(
-    `SELECT consent_scope, decision, consent_template_version, updated_at, restrictions, expires_at
+    `SELECT consent_scope, decision, consent_template_version, updated_at, restrictions, expires_at,
+            decision_note
        FROM consent_permission.consent_current
       WHERE participant_id = $1
       ORDER BY consent_scope ASC`,
@@ -184,5 +191,6 @@ export async function listOwnConsents(
     templateVersion: r.consent_template_version as string,
     restrictions: (r.restrictions ?? []) as string[],
     expiresAt: r.expires_at === null ? null : (r.expires_at as Date).toISOString(),
+    decisionNote: (r.decision_note as string | null) ?? null,
   }));
 }

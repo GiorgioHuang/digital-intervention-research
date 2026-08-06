@@ -66,6 +66,8 @@ const DECISION_LABELS: Record<string, string> = {
   Withdrawn: 'Withdrawn',
   Restricted: 'Granted with limits',
   Deferred: 'Not decided yet',
+  ReConsentRequired: 'Waiting for you to agree again',
+  Superseded: 'Replaced by a later decision',
 };
 
 export function ConsentPanel({ session }: { session: Session }) {
@@ -133,6 +135,33 @@ export function ConsentPanel({ session }: { session: Session }) {
               <p>
                 <strong>What this controls:</strong> {governs}
               </p>
+              {/*
+                The consent tables have permitted 'ReConsentRequired' since
+                they were written, the permission engine reads it and stops
+                everything the scope gates, and nothing could ever set it —
+                so a consent text could be revised and every participant
+                carried on under an agreement to wording that no longer
+                existed, while this screen said "Granted" at them.
+                Now that it can happen, it is said at the top of the entry
+                and in the present tense: this has already stopped, it is
+                not about to.
+              */}
+              {state?.decision === 'ReConsentRequired' && (
+                <div role="note" style={{ border: '2px solid currentColor', padding: '0.75rem' }}>
+                  <p>
+                    <strong>The wording of this changed, so your agreement to it no longer stands.</strong> Until you
+                    agree to the new wording, {governs.charAt(0).toLowerCase() + governs.slice(1)} — that has already
+                    stopped, not in a while.
+                  </p>
+                  <p>
+                    <strong>What changed:</strong> {state.decisionNote ?? 'Nobody wrote down what changed.'}
+                  </p>
+                  <p>
+                    You do not have to agree. Declining leaves things stopped and takes nothing else away — not your
+                    other choices, and not your place in the study.
+                  </p>
+                </div>
+              )}
               {/*
                 Stated as a fact on the page, not as a live announcement:
                 it is the standing position, not the result of an action.

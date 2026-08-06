@@ -16,6 +16,7 @@ import {
   approveRelationship,
   proposeRelationship,
   recordConsentDecision,
+  requireReConsent,
   revokeRelationship,
   withdrawConsent,
   type M03Deps,
@@ -466,6 +467,114 @@ describe.skipIf(!dbAvailable)('M01+M03 identity, consent and permission (integra
     await expect(listRelationshipsForActor(m03, ctxFor(researcherId))).rejects.toMatchObject({
       code: 'AUTHORISATION_DENIED',
     });
+  });
+
+  /**
+   * `ReConsentRequired` has been a permitted consent decision since the
+   * tables were written. The permission engine reads it and refuses
+   * everything the scope gates, and `assert.ts` carries a message for the
+   * outcome — a complete, working mechanism for "the terms you agreed to
+   * have changed" that nothing in the platform could trigger. A consent
+   * text could be revised and every participant would carry on under an
+   * agreement to wording that no longer existed.
+   */
+  it('the terms can change: access stops until the participant agrees again', async () => {
+    const approverId = (
+      await createUserAccount(m01, ctxFor(adminId, { organisationId: orgId }), {
+        displayName: 'Ada Approver',
+        organisationId: orgId,
+      })
+    ).userAccountId;
+    await assignRole(m01, ctxFor(adminId, { organisationId: orgId }), {
+      userAccountId: approverId,
+      role: 'ResearchApprover',
+      organisationId: orgId,
+      confirmed: true,
+    });
+
+    const scope = 'community-participation';
+    await recordConsentDecision(m03, ctxFor(participantId), {
+      participantId,
+      scope,
+      decision: 'Granted',
+      templateVersion: 'ct_v1',
+    });
+
+    // Not the participant's own action, and not something a researcher
+    // can do either: it is the one thing about somebody's consent that
+    // another person does, and it takes access away.
+    await expect(
+      requireReConsent(m03, ctxFor(researcherId), {
+        participantId,
+        scope,
+        newTemplateVersion: 'ct_v2',
+        whatChanged: 'x',
+        confirmed: true,
+      }),
+    ).rejects.toMatchObject({ code: 'AUTHORISATION_DENIED' });
+
+    const approverCtx = ctxFor(approverId, { organisationId: orgId });
+
+    // A demand nobody can read is only an obstruction.
+    await expect(
+      requireReConsent(m03, approverCtx, {
+        participantId, scope, newTemplateVersion: 'ct_v2', whatChanged: '   ', confirmed: true,
+      }),
+    ).rejects.toMatchObject({ code: 'VALIDATION_ERROR' });
+
+    // The same version would stop their access and give them nothing new
+    // to read.
+    await expect(
+      requireReConsent(m03, approverCtx, {
+        participantId, scope, newTemplateVersion: 'ct_v1', whatChanged: 'nothing really', confirmed: true,
+      }),
+    ).rejects.toMatchObject({ code: 'RESOURCE_STATE_BLOCKED' });
+
+    // There must be an agreement to supersede: asking again where there
+    // is none changes nothing while telling the approver they acted.
+    await expect(
+      requireReConsent(m03, approverCtx, {
+        participantId, scope: 'open-matching', newTemplateVersion: 'ct_v2', whatChanged: 'reworded', confirmed: true,
+      }),
+    ).rejects.toMatchObject({ code: 'RESOURCE_STATE_BLOCKED' });
+
+    await requireReConsent(m03, approverCtx, {
+      participantId,
+      scope,
+      newTemplateVersion: 'ct_v2',
+      whatChanged: 'The section on who can see your posts was rewritten.',
+      confirmed: true,
+    });
+
+    // The engine's own outcome, reachable at last — and the participant
+    // is told what changed rather than only that something did.
+    const decision = await m03.permissions.evaluate(ctxFor(participantId), {
+      action: 'community.join',
+      resource: {
+        type: 'CommunitySpace', id: 'cs_x', state: 'Active', protectedExistence: false,
+        ownerParticipantId: participantId,
+      },
+    });
+    expect(decision.outcome).toBe('ReConsentRequired');
+    const view = (await listOwnConsents(m03, ctxFor(participantId), participantId)).find((c) => c.scope === scope);
+    expect(view?.decision).toBe('ReConsentRequired');
+    expect(view?.decisionNote).toContain('who can see your posts');
+    expect(view?.templateVersion).toBe('ct_v2');
+
+    // Agreeing again restores it, and the note goes with the answer.
+    await recordConsentDecision(m03, ctxFor(participantId), {
+      participantId, scope, decision: 'Granted', templateVersion: 'ct_v2',
+    });
+    const after = await m03.permissions.evaluate(ctxFor(participantId), {
+      action: 'community.join',
+      resource: {
+        type: 'CommunitySpace', id: 'cs_x', state: 'Active', protectedExistence: false,
+        ownerParticipantId: participantId,
+      },
+    });
+    expect(after.outcome).not.toBe('ReConsentRequired');
+    const settled = (await listOwnConsents(m03, ctxFor(participantId), participantId)).find((c) => c.scope === scope);
+    expect(settled?.decisionNote).toBeNull();
   });
 });
 

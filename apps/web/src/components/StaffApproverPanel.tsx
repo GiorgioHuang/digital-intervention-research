@@ -8,6 +8,7 @@ import { EvidenceDecisions } from './approver/EvidenceDecisions.js';
 import { EvidenceReviews } from './approver/EvidenceReviews.js';
 import { ExportDecisions } from './approver/ExportDecisions.js';
 import { ProtocolDecisions } from './approver/ProtocolDecisions.js';
+import { ReConsent } from './approver/ReConsent.js';
 import { ReportDecisions } from './approver/ReportDecisions.js';
 
 /**
@@ -23,7 +24,7 @@ import { ReportDecisions } from './approver/ReportDecisions.js';
  * (§1.4) instead of an identifier the approver has to trust they typed
  * correctly.
  */
-type Decision = 'protocol' | 'definition' | 'dataset' | 'evidence' | 'evidence-decision' | 'report' | 'analysis' | 'export' | 'approval';
+type Decision = 'protocol' | 'definition' | 'dataset' | 'evidence' | 'evidence-decision' | 'report' | 'analysis' | 'export' | 'approval' | 'reconsent';
 
 const DECISIONS: { key: Decision; label: string }[] = [
   { key: 'protocol', label: 'Protocol versions' },
@@ -42,6 +43,10 @@ const DECISIONS: { key: Decision; label: string }[] = [
   { key: 'analysis', label: 'Analysis' },
   { key: 'export', label: 'Exports' },
   { key: 'approval', label: 'Approval records' },
+  // Approving a version that changes the consent text is the moment
+  // somebody has to say so. ReConsentRequired was a permitted consent
+  // decision the engine acted on and nothing could ever write.
+  { key: 'reconsent', label: 'Consent text changed' },
 ];
 
 export function StaffApproverPanel({ session }: { session: StaffSession }) {
@@ -81,6 +86,7 @@ export function StaffApproverPanel({ session }: { session: StaffSession }) {
       {screen === 'analysis' && <AnalysisDecisions session={session} />}
       {screen === 'export' && <ExportDecisions session={session} />}
       {screen === 'approval' && <ApprovalRecords session={session} />}
+      {screen === 'reconsent' && <ReConsent session={session} />}
     </section>
   );
 }
