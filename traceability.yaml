@@ -1140,3 +1140,13 @@
   code: [apps/web/src/api.ts, apps/web/src/components/MyLifeStory.tsx]
   tests: [apps/web/test/my-life-story.test.tsx]
   status: implemented
+
+- implementation_id: IMP-M17-WITHDRAW-REACHABLE-001
+  module: M17
+  summary: A participant can take an entry out of their own life story. withdrawItem had a command and a route and no caller anywhere, while the screen already carried the sentence describing what a withdrawn entry is - you withdrew this, it is private and nobody else can reach it, it is kept here for you - a state nobody could reach, written in the present tense. The wording that matters most is what withdrawal is not. To many people withdraw reads as delete, and somebody who wanted an entry gone would otherwise believe it was gone. What actually happens is that the entry becomes private, every active sharing grant on it is revoked in the same transaction, and it can no longer be changed - but the content is kept, its author can still read it, and every version they wrote remains. That is said before the button rather than discovered afterwards. It also says that withdrawing does not unsay a confirmation - somebody who confirmed those words as their own has that record left standing, because withdrawing an entry is not retracting the statement that it was theirs. An already withdrawn entry offers neither change nor withdrawal, since the command refuses both. The visibility control stays unbuilt on purpose - D-39 established that sharing with a supporter does not exist in this platform at all, with no code reading participant.view-shared and not one row ever written to access_grants, so a visibility picker would be a control recording a decision nothing acts on
+  trace_ids: [ATR-007]
+  adr_ids: [ADR-023, ADR-042]
+  docs: ["UI_INVENTORY.md B12", "design/DESIGN_DECISIONS.md D-39", "design/DESIGN_DECISIONS.md D-48"]
+  code: [apps/web/src/api.ts, apps/web/src/components/MyLifeStory.tsx]
+  tests: [apps/web/test/my-life-story.test.tsx]
+  status: implemented

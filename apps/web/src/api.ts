@@ -287,6 +287,13 @@ export const api = {
    */
   reviseLifeStoryItem: (s: Session, itemId: string, contentText: string) =>
     post(s, `/v1/life-story/items/${itemId}/revise`, { contentText, sourceType: 'ParticipantAuthored' }),
+  /**
+   * Withdrawing an entry. Confirmed, because it is the participant
+   * reaching into their own record and closing something — and because
+   * the command refuses it unconfirmed.
+   */
+  withdrawLifeStoryItem: (s: Session, itemId: string) =>
+    post(s, `/v1/life-story/items/${itemId}/withdraw`, { confirmed: true }),
   confirmTestimony: (s: Session, itemId: string, versionId: string) =>
     post(s, `/v1/life-story/items/${itemId}/confirm-testimony`, { versionId, confirmed: true }),
   listContributionsAwaitingReview: (s: Session) =>

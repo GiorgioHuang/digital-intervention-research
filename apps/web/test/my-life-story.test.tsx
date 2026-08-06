@@ -217,4 +217,60 @@ describe('a participant reading their own life story', () => {
     });
     expect(screen.queryByRole('button', { name: 'Change what this says' })).toBeNull();
   });
+
+  /**
+   * `withdrawItem` had a route and no caller, while this screen already
+   * carried the sentence describing what a withdrawn entry is — "You
+   * withdrew this. It is private and nobody else can reach it; it is
+   * kept here for you." A state nobody could reach, described in the
+   * present tense.
+   *
+   * The word "withdraw" reads to many people as "delete". Somebody who
+   * wanted it gone needs to know before they press that it is not.
+   */
+  it('withdrawing says what it does and, plainly, that it is not deletion', async () => {
+    const calls = stubFetch({ data: [item()], meta: { archiveId: 'ar_1' } });
+    await act(async () => {
+      render(<MyLifeStory session={session} />);
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Take this out of my story' }));
+    });
+    // Nothing sent until it is confirmed.
+    expect(calls.filter((c) => c.method === 'POST').length).toBe(0);
+    expect(screen.getByText(/It is not\s+deleted/)).toBeTruthy();
+    expect(screen.getByText(/You can still read it here, and every version you wrote is kept/)).toBeTruthy();
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Yes, take it out' }));
+    });
+    const post = calls.find((c) => c.path.includes('/withdraw'));
+    expect(post?.body['confirmed']).toBe(true);
+  });
+
+  /**
+   * Withdrawing does not unsay a confirmation. The record of what
+   * somebody stood behind stays as it was, and they are told that rather
+   * than left to wonder.
+   */
+  it('says a confirmed entry stays confirmed after withdrawal', async () => {
+    stubFetch({ data: [item({ testimonyState: 'ParticipantTestimony' })], meta: { archiveId: 'ar_1' } });
+    await act(async () => {
+      render(<MyLifeStory session={session} />);
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Take this out of my story' }));
+    });
+    expect(screen.getByText(/withdrawing does not unsay it/i)).toBeTruthy();
+  });
+
+  it('an already withdrawn entry offers neither change nor withdrawal', async () => {
+    stubFetch({ data: [item({ itemState: 'Withdrawn' })], meta: { archiveId: 'ar_1' } });
+    await act(async () => {
+      render(<MyLifeStory session={session} />);
+    });
+    expect(screen.queryByRole('button', { name: 'Take this out of my story' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Change what this says' })).toBeNull();
+    // And the entry is still readable by its author, as the screen says.
+    expect(screen.getByText(/I grew roses/)).toBeTruthy();
+  });
 });

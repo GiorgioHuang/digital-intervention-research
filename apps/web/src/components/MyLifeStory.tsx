@@ -63,6 +63,16 @@ export function MyLifeStory({ session }: { session: Session }) {
    * life is a strange thing for a life story to enforce.
    */
   const [revising, setRevising] = useState<{ itemId: string; text: string } | null>(null);
+  /**
+   * Taking an entry out of the story.
+   *
+   * `withdrawItem` had a route and no caller, while this screen already
+   * carried the sentence describing what a withdrawn entry is — "You
+   * withdrew this. It is private and nobody else can reach it; it is
+   * kept here for you." A state nobody could reach, described in the
+   * present tense.
+   */
+  const [withdrawing, setWithdrawing] = useState<MyLifeStoryItem | null>(null);
   const [announcement, setAnnouncement] = useState('');
 
   const load = async () => {
@@ -111,6 +121,18 @@ export function MyLifeStory({ session }: { session: Session }) {
           ? 'Saved as a new version. It is not confirmed as your own words yet — the earlier confirmation stands for the earlier words.'
           : 'Saved as a new version. Nothing you wrote before was overwritten.',
       );
+      await load();
+    } catch (err) {
+      setActionError(presentError(err));
+    }
+  };
+
+  const withdraw = async (item: MyLifeStoryItem) => {
+    try {
+      await api.withdrawLifeStoryItem(session, item.itemId);
+      setActionError(null);
+      setWithdrawing(null);
+      setAnnouncement('Withdrawn. It is private now, and it is still here for you to read.');
       await load();
     } catch (err) {
       setActionError(presentError(err));
@@ -255,6 +277,41 @@ export function MyLifeStory({ session }: { session: Session }) {
                   Save this version
                 </button>{' '}
                 <button onClick={() => setRevising(null)}>Leave it as it was</button>
+              </p>
+            </div>
+          )}
+
+          {item.itemState !== 'Withdrawn' && revising === null && (
+            <p>
+              <button onClick={() => setWithdrawing(item)}>Take this out of my story</button>
+            </p>
+          )}
+
+          {withdrawing?.itemId === item.itemId && (
+            <div role="alertdialog" aria-labelledby={`withdraw-${item.itemId}`}>
+              <h3 id={`withdraw-${item.itemId}`}>Take &ldquo;{item.title}&rdquo; out of your story?</h3>
+              {/*
+                What it does and, just as importantly, what it does not.
+                "Withdraw" reads to many people as "delete", and somebody
+                who wanted it gone would otherwise think it was.
+              */}
+              <p>
+                It becomes private, and anyone you had shared it with can no longer reach it. <strong>It is not
+                deleted.</strong> You can still read it here, and every version you wrote is kept.
+              </p>
+              <p>
+                You will not be able to change it afterwards, and it cannot be put back into the story from this
+                screen.
+              </p>
+              {item.testimonyState === 'ParticipantTestimony' && (
+                <p>
+                  You confirmed this as your own words. That confirmation stays on the record — withdrawing does not
+                  unsay it.
+                </p>
+              )}
+              <p>
+                <button onClick={() => void withdraw(item)}>Yes, take it out</button>{' '}
+                <button onClick={() => setWithdrawing(null)}>Leave it as it is</button>
               </p>
             </div>
           )}
