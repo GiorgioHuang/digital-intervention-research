@@ -1100,3 +1100,13 @@
   code: [packages/modules/m13-analysis/src/application/commands.ts, apps/api/src/staff-controllers.ts, apps/web/src/staff-api.ts, apps/web/src/components/AnalysisWork.tsx]
   tests: [packages/synthetic-pilot/test/synthetic-pilot.test.ts, apps/web/test/analysis-chain.test.tsx]
   status: implemented
+
+- implementation_id: IMP-WEB-REFUSAL-WORDING-001
+  module: WEB
+  summary: The everyday refusals of matching and messaging can be read by the person they happen to. Comparing every error code the modules actually raise against the participant-facing wording table showed twenty-eight of thirty-six codes with no wording at all, and a large group of those are the ordinary refusals a participant meets in normal use - a suggestion that ran out, a mutual acceptance already turned into a connection, a conversation that can no longer be written in because the connection ended, a draft that changed in another window. All of them fell through to the fallback, which says we could not determine the cause and do not know whether it took effect. That fallback is honest where the platform genuinely does not know, and becomes its own kind of untruth where it does - it turns a normal explainable event into an apparent malfunction and invites the person to retry something that will refuse them again. Fifteen codes now answer the four questions the design requires - what happened, what survived, what did not happen, and what to do next - and none of them explains a refusal by describing what the other party did. An invalidated mutual acceptance can mean the other person withdrew or that a block was put in place, and neither is ours to disclose, so the wording says only that something has changed; a test asserts those words never appear. One entry was written wrongly first and corrected - MATCHING_NOT_ACTIVE was worded as pointing at the consent screen, but it checks whether the matching preference is switched on under Meet new people, while the consent scope governs whether somebody may switch it on at all and refuses earlier and differently when missing
+  trace_ids: [ATR-002, ATR-013]
+  adr_ids: [ADR-050]
+  docs: ["design/DESIGN_DECISIONS.md D-44"]
+  code: [apps/web/src/errors.ts]
+  tests: [apps/web/test/error-presentation.test.tsx]
+  status: implemented

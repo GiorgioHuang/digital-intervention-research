@@ -146,4 +146,58 @@ describe('error presentation', () => {
     expect(screen.getByRole('status').textContent).toContain('Loading');
     expect(screen.getByText('No communities are open yet')).toBeTruthy();
   });
+
+  /**
+   * The everyday refusals of matching and messaging had no wording at
+   * all, so every one of them fell through to the fallback: "we could
+   * not determine the cause, and we do not know whether it took effect".
+   * The platform knows exactly what happened in each — a suggestion that
+   * ran out, a connection that ended, a draft that changed in another
+   * window — and saying otherwise turns a normal event into an apparent
+   * malfunction, then invites the person to retry something that will
+   * refuse them again.
+   */
+  it('the ordinary refusals of matching and messaging have words', () => {
+    const cases = [
+      'MATCHING_NOT_ACTIVE',
+      'MATCH_CANDIDATE_EXPIRED',
+      'MATCH_DECISION_CONFLICT',
+      'MATCH_DECISION_NOT_OWNED',
+      'MUTUAL_ACCEPTANCE_EXPIRED',
+      'MUTUAL_ACCEPTANCE_ALREADY_CONSUMED',
+      'MUTUAL_ACCEPTANCE_INVALIDATED',
+      'COMMUNICATION_BASIS_EXPIRED',
+      'CONVERSATION_THREAD_NOT_USABLE',
+      'THREAD_PARTICIPANT_MISMATCH',
+      'MESSAGE_NOT_DRAFT',
+      'MESSAGE_ALREADY_QUEUED',
+      'SEND_CONFIRMATION_MISMATCH',
+      'RESOURCE_STATE_BLOCKED',
+      'CONFIRMATION_REQUIRED',
+    ];
+    for (const code of cases) {
+      const p = presentError(new PlatformApiError({ code, message: 'x', requestId: 'r', retryable: false }, 409));
+      expect(p.reason, code).not.toContain('could not determine');
+      // Every one says what did not happen, which is the part a person
+      // acts on.
+      expect(p.reassurance.length, code).toBeGreaterThan(0);
+      expect(p.nextStep.length, code).toBeGreaterThan(0);
+      // The code is never the message.
+      expect(p.title, code).not.toContain(code);
+    }
+  });
+
+  /**
+   * Nothing here may explain a refusal by describing what the other
+   * person did. An invalidated acceptance can mean they withdrew or that
+   * a block was put in place, and neither is ours to disclose.
+   */
+  it('does not explain a refusal by disclosing the other person', () => {
+    const p = presentError(
+      new PlatformApiError({ code: 'MUTUAL_ACCEPTANCE_INVALIDATED', message: 'x', requestId: 'r', retryable: false }, 409),
+    );
+    for (const word of ['blocked', 'withdrew', 'declined', 'refused you']) {
+      expect(`${p.reason ?? ''} ${p.nextStep}`.toLowerCase()).not.toContain(word);
+    }
+  });
 });
