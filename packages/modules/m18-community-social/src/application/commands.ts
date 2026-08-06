@@ -432,6 +432,66 @@ export async function joinCommunity(
   return { membershipId };
 }
 
+/**
+ * Leaving a community.
+ *
+ * Joining was reachable and leaving was not: `membership_state` carried
+ * 'Ended' from the start and no code path could write it, so "taking part
+ * is entirely optional" was true exactly once. The feed and the posting
+ * command both already require an Active membership, so ending one takes
+ * effect immediately - the enforcement was there and only the way out was
+ * missing.
+ *
+ * Under `community.leave`, which carries NO consent precondition. Joining
+ * is gated on community-participation consent; gating the exit the same
+ * way would trap someone inside a community by the very act of
+ * withdrawing the consent that put them there.
+ *
+ * Ownership comes from the membership row, not from the caller: the
+ * participant identifier in the request is a claim, and a claim is not
+ * authority (the lesson of D-13).
+ */
+export async function leaveCommunity(
+  deps: M18Deps,
+  ctx: RequestContext,
+  input: { spaceId: string; participantId: string; confirmed: boolean },
+): Promise<void> {
+  const decision = await deps.checkPermission(ctx, {
+    action: 'community.leave',
+    resource: {
+      type: 'CommunityMembership',
+      id: input.spaceId,
+      state: 'Active',
+      protectedExistence: false,
+      ownerParticipantId: input.participantId,
+    },
+    confirmed: input.confirmed,
+  });
+  assertAllowed(decision, input.confirmed);
+
+  const now = deps.clock.now();
+  await withTransaction(deps.pool, async (client) => {
+    const res = await client.query(
+      `UPDATE community_social.community_memberships
+          SET membership_state = 'Ended', updated_at = $3
+        WHERE space_id = $1 AND participant_id = $2 AND membership_state = 'Active'
+        RETURNING id`,
+      [input.spaceId, input.participantId, now],
+    );
+    if (res.rowCount !== 1) {
+      throw new PlatformError('INVALID_STATE_TRANSITION', 'There is no active membership of that community to end');
+    }
+    await appendToOutbox(client, ctx, {
+      eventCategory: 'Domain',
+      eventType: M18_EVENTS.CommunityMembershipEnded,
+      sourceModule: 'M18',
+      aggregateType: 'CommunityMembership',
+      aggregateId: res.rows[0].id as string,
+      occurredAt: now,
+    });
+  });
+}
+
 /** Draft + explicit confirmed publication ("Publish to [Community]"). */
 export async function draftSocialPost(
   deps: M18Deps,

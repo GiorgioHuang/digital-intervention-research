@@ -9,6 +9,7 @@ const MATCHING_EVENTS = {
   MatchDecisionRecorded: 'MatchDecisionRecorded',
   MutualAcceptanceRecorded: 'MutualAcceptanceRecorded',
   ConnectionActivated: 'ConnectionActivated',
+  ConnectionEnded: 'ConnectionEnded',
 } as const;
 
 /** ADR-125 pending: effective period is configuration, not architecture. */
@@ -313,6 +314,98 @@ export async function activateConnection(
     });
   });
   return { connectionId };
+}
+
+/**
+ * Ending a connection.
+ *
+ * 'Disconnected' was in the connection_state CHECK from the start and no
+ * code path could write it, so two people could become connected and had
+ * no way to stop being connected. The only exit was to block, and blocking
+ * is a safety act that says something about the other person - so an
+ * ordinary parting had to be dressed up as an accusation. That is a
+ * pressure the platform should not put on anyone.
+ *
+ * Either party may end it, alone. Requiring both to agree would mean the
+ * one who wants out stays in until the other consents, which is the
+ * opposite of what a way out is for. The other person is not told by the
+ * platform, because a notice saying "X has disconnected from you" is an
+ * announcement about somebody's decision to withdraw, and withdrawing
+ * quietly is part of what makes it safe to do.
+ *
+ * Threads resting on this connection are closed in the same transaction.
+ * The message commands already refuse when the basis is not Active, so
+ * leaving the threads Active would mean a list that says "ongoing" beside
+ * a conversation that refuses every send. 'Expired' is the state whose
+ * wording already says exactly what happened: the reason this conversation
+ * was possible has ended.
+ *
+ * Who may end it comes from the connection row, never from the request.
+ */
+export async function endConnection(
+  deps: M18Deps,
+  ctx: RequestContext,
+  input: { connectionId: string; participantId: string; confirmed: boolean },
+): Promise<void> {
+  const res = await deps.pool.query(
+    `SELECT participant_a_id, participant_b_id, connection_state
+       FROM community_social.connections WHERE id = $1`,
+    [input.connectionId],
+  );
+  const row = res.rows[0];
+  if (row === undefined) throw new PlatformError('RESOURCE_NOT_FOUND', 'Connection not found');
+  if (input.participantId !== row.participant_a_id && input.participantId !== row.participant_b_id) {
+    throw new PlatformError('AUTHORISATION_DENIED', 'Not a party to this connection');
+  }
+  const decision = await deps.checkPermission(ctx, {
+    action: 'connection.end',
+    resource: {
+      type: 'Connection',
+      id: input.connectionId,
+      state: row.connection_state,
+      protectedExistence: true,
+      ownerParticipantId: input.participantId,
+    },
+    confirmed: input.confirmed,
+  });
+  assertAllowed(decision, input.confirmed);
+
+  const now = deps.clock.now();
+  await withTransaction(deps.pool, async (client) => {
+    const ended = await client.query(
+      `UPDATE community_social.connections
+          SET connection_state = 'Disconnected', record_version = record_version + 1, updated_at = $2
+        WHERE id = $1 AND connection_state = 'Active'`,
+      [input.connectionId, now],
+    );
+    if (ended.rowCount !== 1) {
+      throw new PlatformError('INVALID_STATE_TRANSITION', 'That connection is not active');
+    }
+    await client.query(
+      `UPDATE community_social.conversation_threads
+          SET thread_state = 'Expired', updated_at = $2
+        WHERE basis_type = 'ActiveConnection' AND basis_reference = $1 AND thread_state = 'Active'`,
+      [input.connectionId, now],
+    );
+    await appendToOutbox(client, ctx, {
+      eventCategory: 'Domain',
+      eventType: MATCHING_EVENTS.ConnectionEnded,
+      sourceModule: 'M18',
+      aggregateType: 'Connection',
+      aggregateId: input.connectionId,
+      occurredAt: now,
+    });
+    await recordAuditEvent(client, ctx, {
+      action: 'connection.end',
+      targetType: 'Connection',
+      targetId: input.connectionId,
+      participantId: input.participantId,
+      occurredAt: now,
+      result: 'Succeeded',
+      source: 'M18',
+      policyVersion: decision.policyVersion,
+    });
+  });
 }
 
 /** ConnectionRequest is deferred and feature-disabled for the first Pilot (ADR-029). */

@@ -47,6 +47,7 @@ export function CommunityPanel({ session }: { session: Session }) {
   const [feedError, setFeedError] = useState<PresentedError | null>(null);
   const [actionError, setActionError] = useState<PresentedError | null>(null);
   const [reporting, setReporting] = useState<{ postId: string; category: string; description: string } | null>(null);
+  const [leaving, setLeaving] = useState<CommunitySpaceSummary | null>(null);
 
   const loadSpaces = useCallback(async () => {
     setSpacesLoading(true);
@@ -158,6 +159,24 @@ export function CommunityPanel({ session }: { session: Session }) {
   };
 
   const spaceName = (spaceId: string) => spaces?.find((s) => s.spaceId === spaceId)?.name ?? spaceId;
+  const leave = async () => {
+    if (leaving === null) return;
+    setActionError(null);
+    try {
+      await api.leaveCommunity(session, leaving.spaceId);
+      const name = leaving.name;
+      setLeaving(null);
+      // If the feed for that community was open, it must close: staying on
+      // a feed you are no longer a member of would show posts the platform
+      // has just stopped letting you see.
+      if (openSpace !== null && openSpace.spaceId === leaving.spaceId) setOpenSpace(null);
+      await loadSpaces();
+      setAnnouncement(`You have left ${name}. What you posted there is still there; you are not.`);
+    } catch (err) {
+      setActionError(presentError(err));
+    }
+  };
+
   const sendReport = async () => {
     if (reporting === null) return;
     setActionError(null);
@@ -213,7 +232,14 @@ export function CommunityPanel({ session }: { session: Session }) {
                   {s.membershipState === 'Active' ? <span>(you are a member)</span> : <span>(not joined)</span>}
                 </p>
                 {s.membershipState === 'Active' ? (
-                  <button onClick={() => void openFeed(s)}>Open "{s.name}"</button>
+                  <>
+                    <button onClick={() => void openFeed(s)}>Open "{s.name}"</button>{' '}
+                    {/*
+                      Joining was reachable and leaving was not, so "taking
+                      part is entirely optional" was true exactly once.
+                    */}
+                    <button onClick={() => setLeaving(s)}>Leave "{s.name}"</button>
+                  </>
                 ) : (
                   <button onClick={() => setJoining(s)}>Read the rules and join</button>
                 )}
@@ -221,6 +247,27 @@ export function CommunityPanel({ session }: { session: Session }) {
             ))}
           </ul>
         )}
+        {leaving !== null && (
+          <div role="alertdialog" aria-labelledby="leave-confirm-heading">
+            <p id="leave-confirm-heading">Leave "{leaving.name}"?</p>
+            {/*
+              What actually happens, said before the button. Leaving stops
+              the feed and stops posting; it does not delete what was
+              already written, and pretending otherwise would be the
+              opposite mistake from the one this fixes.
+            */}
+            <p>
+              You will stop seeing this community's posts and will not be able to post to it. What you have already
+              posted stays where it is — leaving does not delete it. You can join again later; you will be asked to
+              read the rules again.
+            </p>
+            <p>
+              <button onClick={() => void leave()}>Yes, leave this community</button>{' '}
+              <button onClick={() => setLeaving(null)}>Go back</button>
+            </p>
+          </div>
+        )}
+
         {joining !== null && (
           <div role="alertdialog" aria-labelledby="join-confirm-heading">
             <p id="join-confirm-heading">

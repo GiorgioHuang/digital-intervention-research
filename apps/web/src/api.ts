@@ -382,6 +382,12 @@ export const api = {
       `/v1/match-candidates/${candidateId}/decision`,
       { participantId: s.participantId, expectedCandidateVersion, decision, confirmed },
     ),
+  /** Ending a connection. This is not blocking, and the screen says so. */
+  endConnection: (s: Session, connectionId: string) =>
+    post<{ data: { id: string } }>(s, `/v1/connections/${connectionId}/end`, {
+      participantId: s.participantId,
+      confirmed: true,
+    }),
   activateConnection: (s: Session, mutualAcceptanceId: string, confirmed: boolean) =>
     post<{ data: { id: string } }>(s, `/v1/mutual-acceptances/${mutualAcceptanceId}/activate-connection`, {
       participantId: s.participantId,
@@ -427,6 +433,16 @@ export const api = {
       s,
       `/v1/participants/${s.participantId}/social-posts`,
     ),
+  /**
+   * Leaving. Not gated on the consent that joining requires: withdrawing
+   * community-participation consent must not trap someone inside the
+   * community that consent put them in.
+   */
+  leaveCommunity: (s: Session, spaceId: string) =>
+    post<{ data: { id: string } }>(s, `/v1/community-spaces/${spaceId}/leave`, {
+      participantId: s.participantId,
+      confirmed: true,
+    }),
   joinCommunity: (s: Session, spaceId: string, ruleVersionId: string) =>
     post<{ data: { id: string } }>(s, `/v1/community-spaces/${spaceId}/join`, {
       participantId: s.participantId,

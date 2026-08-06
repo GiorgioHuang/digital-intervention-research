@@ -7,6 +7,8 @@ export const M18_EVENTS = {
   CommunitySpaceCreated: 'CommunitySpaceCreated',
   CommunityRuleVersionPublished: 'CommunityRuleVersionPublished',
   CommunityMembershipActivated: 'CommunityMembershipActivated',
+  CommunityMembershipEnded: 'CommunityMembershipEnded',
+  ConnectionEnded: 'ConnectionEnded',
   SocialPostDrafted: 'SocialPostDrafted',
   SocialPostPublished: 'SocialPostPublished',
 } as const;

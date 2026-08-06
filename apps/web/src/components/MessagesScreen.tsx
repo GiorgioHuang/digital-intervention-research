@@ -47,6 +47,7 @@ export function MessagesScreen({
   const [actionError, setActionError] = useState<PresentedError | null>(null);
   const [connections, setConnections] = useState<ConnectionSummary[] | null>(null);
   const [active, setActive] = useState<ThreadSummary | null>(null);
+  const [ending, setEnding] = useState<ConnectionSummary | null>(null);
   const [announcement, setAnnouncement] = useState('');
 
   // Read on arrival: making someone press a button to see whether they
@@ -61,6 +62,23 @@ export function MessagesScreen({
       setThreads(t.data.map((x) => x.attributes));
       setConnections(c.data.map((x) => x.attributes));
       setAnnouncement('The lists have been updated.');
+    } catch (err) {
+      setActionError(presentError(err));
+    }
+  };
+
+  const endThisConnection = async () => {
+    if (ending === null) return;
+    setActionError(null);
+    try {
+      await api.endConnection(session, ending.connectionId);
+      const name = ending.otherDisplayName;
+      setEnding(null);
+      // The open conversation, if it is this one, has just stopped being
+      // usable; leaving it open would offer a send that now fails.
+      setActive(null);
+      await load();
+      setAnnouncement(`You are no longer connected to ${name}. What you both wrote is still there to read.`);
     } catch (err) {
       setActionError(presentError(err));
     }
@@ -137,6 +155,30 @@ export function MessagesScreen({
           </ul>
         </section>
       )}
+      {ending !== null && (
+        <div role="alertdialog" aria-labelledby="end-connection-heading">
+          <p id="end-connection-heading">End your connection with {ending.otherDisplayName}?</p>
+          {/*
+            The distinction that matters. Blocking says something about the
+            other person and belongs to the safety screen; this says only
+            that the two of you are no longer connected.
+          */}
+          <p>
+            This is not the same as blocking. Blocking is for when someone is troubling you, and it lives under Help
+            and safety. This just ends the connection.
+          </p>
+          <p>
+            You will not be able to write to each other, and your conversations will show that nothing more can be
+            sent. Nothing you have already written is deleted, and you can both still read it.{' '}
+            {ending.otherDisplayName} is not told that you did this.
+          </p>
+          <p>
+            <button onClick={() => void endThisConnection()}>Yes, end this connection</button>{' '}
+            <button onClick={() => setEnding(null)}>Go back</button>
+          </p>
+        </div>
+      )}
+
       {connections !== null && (
         <section aria-labelledby="connections-heading">
           <h2 id="connections-heading">My connections</h2>
@@ -151,7 +193,15 @@ export function MessagesScreen({
               <li key={c.connectionId} style={{ marginBlock: '0.5rem' }}>
                 {c.otherDisplayName} ({c.connectionState === 'Active' ? 'connected' : c.connectionState}){' '}
                 {c.connectionState === 'Active' && (
-                  <button onClick={() => void startThread(c)}>Start a conversation</button>
+                  <>
+                    <button onClick={() => void startThread(c)}>Start a conversation</button>{' '}
+                    {/*
+                      Until this existed the only way out of a connection
+                      was to block, so an ordinary parting had to be dressed
+                      up as an accusation.
+                    */}
+                    <button onClick={() => setEnding(c)}>End this connection</button>
+                  </>
                 )}
               </li>
             ))}

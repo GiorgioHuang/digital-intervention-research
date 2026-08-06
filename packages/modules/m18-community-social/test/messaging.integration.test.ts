@@ -16,6 +16,7 @@ import { createPermissionService, recordConsentDecision, type M03Deps } from '@p
 import { createProviderSimulator, handleProviderCallback, signCallback } from '@platform/m16-integration';
 import {
   activateConnection,
+  endConnection,
   activateMatchPreference,
   confirmSend,
   createBlockQuery,
@@ -217,6 +218,56 @@ describe.skipIf(!dbAvailable)('M18/M16 messaging pipeline (integration)', () => 
       expect(r.p).not.toContain('Hello Ben');
     }
   });
+
+  /**
+   * 'Disconnected' was in the connection_state CHECK from the start and
+   * nothing could write it, so two people could become connected and had
+   * no way to stop being connected. The only exit was to block, and
+   * blocking is a safety act that says something about the other person -
+   * so an ordinary parting had to be dressed up as an accusation.
+   */
+  it('either party can end a connection alone, and the threads on it stop being usable', async () => {
+    const conn = await pool.query(
+      `SELECT id FROM community_social.connections WHERE participant_a_id = $1 OR participant_b_id = $1`,
+      [aId],
+    );
+    const connectionId = conn.rows[0].id as string;
+
+    // Not a party to it - refused before any state is read.
+    await expect(
+      endConnection(m18, ctx(aAcc), { connectionId, participantId: 'pt_stranger', confirmed: true }),
+    ).rejects.toMatchObject({ code: 'AUTHORISATION_DENIED' });
+
+    // The party who wants out does not need the other one's agreement.
+    await endConnection(m18, ctx(bAcc), { connectionId, participantId: bId, confirmed: true });
+    const after = await pool.query(`SELECT connection_state FROM community_social.connections WHERE id = $1`, [
+      connectionId,
+    ]);
+    expect(after.rows[0].connection_state).toBe('Disconnected');
+
+    // The thread is marked so the list tells the truth: the message
+    // commands already refuse when the basis is gone, and a thread left
+    // Active would read as ongoing beside a send that always fails.
+    const thread = await pool.query(`SELECT thread_state FROM community_social.conversation_threads WHERE id = $1`, [
+      threadId,
+    ]);
+    expect(thread.rows[0].thread_state).toBe('Expired');
+    await expect(
+      createMessageDraft(m18, ctx(aAcc), { threadId, senderParticipantId: aId, contentText: 'still there?' }),
+    ).rejects.toBeDefined();
+
+    // What was already written is not deleted; ending is not erasure.
+    const kept = await pool.query(
+      `SELECT count(*)::int AS n FROM community_social.messages WHERE thread_id = $1`,
+      [threadId],
+    );
+    expect(kept.rows[0].n).toBeGreaterThan(0);
+
+    await expect(
+      endConnection(m18, ctx(bAcc), { connectionId, participantId: bId, confirmed: true }),
+    ).rejects.toMatchObject({ code: 'INVALID_STATE_TRANSITION' });
+  });
+
 });
 
 describe.skipIf(dbAvailable)('messaging integration (skipped)', () => {

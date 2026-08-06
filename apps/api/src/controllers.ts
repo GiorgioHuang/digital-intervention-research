@@ -52,6 +52,7 @@ import {
 } from '@platform/m17-life-story';
 import {
   activateConnection,
+  endConnection,
   activateMatchPreference,
   confirmSend,
   createBlock,
@@ -59,6 +60,7 @@ import {
   createThread,
   draftSocialPost,
   joinCommunity,
+  leaveCommunity,
   listCommunityFeed,
   listCommunitySpaces,
   listConnections,
@@ -770,6 +772,23 @@ export class CommandController {
     return { data: items.map((p) => ({ type: 'SocialPost', id: p.postId, attributes: p })) };
   }
 
+  @Post('connections/:connectionId/end')
+  async endConnection(
+    @Req() req: Request,
+    @Param('connectionId') connectionId: string,
+    @Body() body: { participantId: string; confirmed: boolean },
+  ) {
+    const ctx = requireActor(req);
+    // Either party alone. Requiring both to agree would leave the person
+    // who wants out in until the other consents.
+    await endConnection(this.deps.m18, ctx, {
+      connectionId,
+      participantId: body.participantId,
+      confirmed: body.confirmed === true,
+    });
+    return { data: { type: 'Connection', id: connectionId, meta: { state: 'Disconnected' } } };
+  }
+
   @Post('community-spaces/:spaceId/join')
   async joinCommunity(
     @Req() req: Request,
@@ -785,6 +804,24 @@ export class CommandController {
       ruleVersionId: body.ruleVersionId,
     });
     return { data: { type: 'CommunityMembership', id: result.membershipId, meta: { state: 'Active' } } };
+  }
+
+  @Post('community-spaces/:spaceId/leave')
+  async leaveCommunity(
+    @Req() req: Request,
+    @Param('spaceId') spaceId: string,
+    @Body() body: { participantId: string; confirmed: boolean },
+  ) {
+    const ctx = requireActor(req);
+    // Deliberately NOT gated on the community-participation consent that
+    // joining requires: withdrawing that consent must not trap someone
+    // inside the community it was the consent for.
+    await leaveCommunity(this.deps.m18, ctx, {
+      spaceId,
+      participantId: body.participantId,
+      confirmed: body.confirmed === true,
+    });
+    return { data: { type: 'CommunityMembership', id: spaceId, meta: { state: 'Ended' } } };
   }
 
   @Post('social-posts')

@@ -25,6 +25,7 @@ import {
   createCommunitySpace,
   draftSocialPost,
   joinCommunity,
+  leaveCommunity,
   listCommunityFeed,
   listOpenModerationCases,
   publishSocialPost,
@@ -449,6 +450,75 @@ describe.skipIf(!dbAvailable)('M18 block/report/moderation/community (integratio
     expect(
       (await listOpenModerationCases(m18, ctx(moderatorId))).some((c) => c.moderationCaseId === moderationCaseId),
     ).toBe(true);
+  });
+
+
+  /**
+   * 'Ended' was in the membership_state CHECK from the start and nothing
+   * could write it, so "taking part in a community is entirely optional"
+   * was true exactly once. The feed and the posting command already
+   * required an Active membership, so the enforcement was there and only
+   * the way out was missing.
+   */
+  it('a participant can leave a community, and leaving takes effect at once', async () => {
+    const { spaceId, ruleVersionId } = await createCommunitySpace(
+      m18,
+      createRequestContext({ actor: { type: 'user', id: adminId }, organisationId: orgId }),
+      { name: 'Leavable Corner', rulesText: 'Be kind.' },
+    );
+    await joinCommunity(m18, ctx(patAccountId), { spaceId, participantId: patId, ruleVersionId });
+    const { postId } = await draftSocialPost(m18, ctx(patAccountId), {
+      spaceId,
+      participantId: patId,
+      contentText: 'Still here for now',
+    });
+    await publishSocialPost(m18, ctx(patAccountId), { postId, participantId: patId, confirmed: true });
+
+    await leaveCommunity(m18, ctx(patAccountId), { spaceId, participantId: patId, confirmed: true });
+
+    // The feed is a member-only read, so it is refused immediately.
+    await expect(
+      listCommunityFeed(m18, ctx(patAccountId), { spaceId, participantId: patId }),
+    ).rejects.toBeDefined();
+    // What was already posted is not deleted - leaving is not erasure.
+    const post = await pool.query(`SELECT post_state FROM community_social.social_posts WHERE id = $1`, [postId]);
+    expect(post.rows[0].post_state).toBe('Published');
+    // And leaving twice is refused rather than silently succeeding.
+    await expect(
+      leaveCommunity(m18, ctx(patAccountId), { spaceId, participantId: patId, confirmed: true }),
+    ).rejects.toMatchObject({ code: 'INVALID_STATE_TRANSITION' });
+  });
+
+  /**
+   * The way out must not depend on the permission that let you in. Joining
+   * is gated on community-participation consent; if leaving were gated the
+   * same way, withdrawing that consent would trap someone inside the
+   * community it was the consent for.
+   */
+  it('leaving still works after the consent that allowed joining is withdrawn', async () => {
+    const { spaceId, ruleVersionId } = await createCommunitySpace(
+      m18,
+      createRequestContext({ actor: { type: 'user', id: adminId }, organisationId: orgId }),
+      { name: 'Trap Corner', rulesText: 'Be kind.' },
+    );
+    await joinCommunity(m18, ctx(patAccountId), { spaceId, participantId: patId, ruleVersionId });
+    await recordConsentDecision(m03, ctx(patAccountId), {
+      participantId: patId,
+      scope: 'community-participation',
+      decision: 'Withdrawn',
+      templateVersion: 'ct_v1',
+    });
+    // Joining is now refused, as it should be...
+    await expect(
+      joinCommunity(m18, ctx(patAccountId), { spaceId, participantId: patId, ruleVersionId }),
+    ).rejects.toMatchObject({ code: 'AUTHORISATION_DENIED' });
+    // ...and leaving is not.
+    await leaveCommunity(m18, ctx(patAccountId), { spaceId, participantId: patId, confirmed: true });
+    const row = await pool.query(
+      `SELECT membership_state FROM community_social.community_memberships WHERE space_id = $1 AND participant_id = $2`,
+      [spaceId, patId],
+    );
+    expect(row.rows[0].membership_state).toBe('Ended');
   });
 
 });

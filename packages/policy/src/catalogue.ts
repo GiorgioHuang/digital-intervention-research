@@ -119,11 +119,13 @@ export const POLICY_V1: PolicyConfiguration = {
       'block.revoke',
       'report.submit',
       'community.join',
+      'community.leave',
       'post.draft',
       'post.publish',
       'matching.activate',
       'match.decide',
       'connection.activate',
+      'connection.end',
       'thread.create',
       'message.draft',
       'message.confirm-send',
@@ -316,6 +318,14 @@ export const POLICY_V1: PolicyConfiguration = {
     'matching.generate': {},
     'match.decide': { ownerPermitted: true, ownerOnly: true, confirmationRequired: true },
     'connection.activate': { ownerPermitted: true, confirmationRequired: true },
+    /*
+     * Ending a connection is not blocking. Blocking is a safety act that
+     * says something about the other person; ending a connection says only
+     * that this pairing is over. Until this existed the only way out of a
+     * connection was to block, so an ordinary parting had to be dressed up
+     * as an accusation.
+     */
+    'connection.end': { ownerPermitted: true, ownerOnly: true, confirmationRequired: true },
 
     'thread.create': { ownerPermitted: true, ownerOnly: true, interaction: true },
     'message.draft': { ownerPermitted: true, ownerOnly: true },
@@ -340,6 +350,14 @@ export const POLICY_V1: PolicyConfiguration = {
     'moderation.decide': { confirmationRequired: true },
     'community.create': {},
     'community.join': { ownerPermitted: true, ownerOnly: true, consentScopes: ['community-participation'] },
+    /*
+     * Leaving carries NO consent precondition, deliberately. Joining is
+     * gated on community-participation consent; if leaving were gated the
+     * same way, withdrawing that consent would trap the person inside the
+     * community it was the consent for. The way out must never depend on
+     * the permission that let you in.
+     */
+    'community.leave': { ownerPermitted: true, ownerOnly: true, confirmationRequired: true },
     'post.draft': { ownerPermitted: true, ownerOnly: true },
     'post.publish': { ownerPermitted: true, ownerOnly: true, confirmationRequired: true },
 
