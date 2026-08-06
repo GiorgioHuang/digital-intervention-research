@@ -438,6 +438,16 @@ export const POLICY_V1: PolicyConfiguration = {
     'finding.draft': {},
     'finding.approve': { confirmationRequired: true, minimumAuthStrength: 'mfa' },
 
+    /**
+     * Present for completeness and checked by no code, on purpose.
+     * `recordSafetySignal` runs no permission check at all: a person
+     * raising a concern about somebody's safety is never turned away for
+     * want of a role, and a participant, a supporter and a member of
+     * staff can all raise one. What the command does check is the
+     * provenance claim — a machine source requires a service-account
+     * actor — because that is a statement about who observed the thing,
+     * not permission to say it.
+     */
     'safety-signal.record': {},
     'safety-signal.triage': { confirmationRequired: true },
     'safety-event.create': { minimumAuthStrength: 'mfa', confirmationRequired: true },

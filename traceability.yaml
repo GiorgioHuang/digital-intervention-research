@@ -1120,3 +1120,13 @@
   code: [.github/workflows/deploy.yml]
   tests: [packages/database/test/deploy-smoke.test.ts]
   status: implemented
+
+- implementation_id: IMP-M09-SIGNAL-PROVENANCE-001
+  module: M09
+  summary: A safety signal can no longer claim a provenance its author is not entitled to. The HTTP boundary carried a comment saying HTTP callers raise human-sourced signals only while AI, Rule and Integration sources originate inside the platform under ADR-039, and a TypeScript union saying the same. Both are erased at runtime and this API validates no request body at all - there is no ValidationPipe and no DTO - so any authenticated caller could submit sourceType AI and have it written as such, emitted to the outbox as AISafetySignalRaised from source module M11, and displayed to the safety reviewer as source AI. That label is not decoration. The whole of ADR-039 rests on knowing which signals came from a machine, since automation may raise one and may never confirm an event, and a reviewer weighs a machine's flag differently from a person's account. Nothing in the platform raises an AI signal at all today because M11 has no commands, so the only way such a record could exist was for somebody to forge it. The rule is enforced in the command now, where every caller passes rather than described at a boundary that cannot hold it - a machine provenance requires a service-account actor and a human provenance requires a human, and the reverse is refused too because a machine posing as a person is worse than the other way round. The same change documents something that reads like an oversight and is not - recordSafetySignal runs no permission check whatsoever and must keep running none, because somebody raising a concern about another person's safety is never turned away for want of a role. A test pins both sides - forgery is refused, and somebody holding no role at all can still raise a concern
+  trace_ids: [ATR-017]
+  adr_ids: [ADR-039]
+  docs: ["design/DESIGN_DECISIONS.md D-46"]
+  code: [packages/modules/m09-safety/src/application/commands.ts, packages/policy/src/catalogue.ts, apps/api/src/controllers.ts]
+  tests: [packages/modules/m11-ai/test/m09-m11.integration.test.ts]
+  status: implemented

@@ -340,8 +340,15 @@ export class CommandController {
     },
   ) {
     const ctx = requireActor(req);
-    // HTTP callers raise human-sourced signals only; AI/Rule/Integration
-    // sources originate inside the platform (ADR-039).
+    /*
+     * HTTP callers raise human-sourced signals only; AI/Rule/Integration
+     * sources originate inside the platform (ADR-039). That was asserted
+     * here in a comment and in a TypeScript union, both of which are
+     * erased at runtime while nothing validates a request body — so any
+     * authenticated caller could plant a signal the reviewer would read
+     * as machine-raised. The rule is enforced in the command now, where
+     * every caller passes, rather than described at the boundary.
+     */
     const result = await recordSafetySignal(this.deps.m09, ctx, {
       sourceType: body.sourceType,
       category: body.category,

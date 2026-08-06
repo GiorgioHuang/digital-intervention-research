@@ -90,6 +90,63 @@ describe.skipIf(!dbAvailable)('M09 safety + M11 AI governance (integration)', ()
     expect(evt.rows[0].event_type).toBe('AISafetySignalRaised');
   });
 
+  /**
+   * The provenance label is what ADR-039 rests on: automation may raise
+   * a signal and may never confirm an event, and a reviewer weighs a
+   * machine's flag differently from a person's account. It was asserted
+   * at the HTTP boundary in a comment and a TypeScript union — both
+   * erased at runtime, with nothing validating a request body — so any
+   * authenticated caller could plant a signal that the triage screen
+   * would show as `source: AI`. Nothing in the platform raises an AI
+   * signal at all today, so the only way one could exist was for
+   * somebody to forge it.
+   */
+  it('a person cannot record a signal as though a machine had raised it', async () => {
+    for (const sourceType of ['AI', 'Rule', 'Integration', 'Assessment'] as const) {
+      await expect(
+        recordSafetySignal(m09, ctx(reviewerId), {
+          sourceType,
+          category: 'forged-provenance',
+          severity: 'High',
+          description: 'Claiming to be the platform.',
+        }),
+        sourceType,
+      ).rejects.toMatchObject({ code: 'VALIDATION_ERROR' });
+    }
+  });
+
+  it('a machine cannot record a signal as though a person had raised it', async () => {
+    await expect(
+      recordSafetySignal(m09, aiCtx(), {
+        sourceType: 'Staff',
+        category: 'forged-provenance',
+        severity: 'High',
+        description: 'Claiming to be a person.',
+      }),
+    ).rejects.toMatchObject({ code: 'VALIDATION_ERROR' });
+  });
+
+  /**
+   * The door that must stay open. Raising a concern about somebody's
+   * safety is never refused for want of a role — `recordSafetySignal`
+   * runs no permission check on purpose, and this pins that so a later
+   * tidy-up cannot quietly close it.
+   */
+  it('somebody with no role at all can still raise a concern', async () => {
+    const { userAccountId: nobody } = await createUserAccount(
+      m01,
+      createRequestContext({ actor: { type: 'user', id: adminId }, organisationId: orgId }),
+      { displayName: 'No Roles' },
+    );
+    const { safetySignalId } = await recordSafetySignal(m09, ctx(nobody), {
+      sourceType: 'Participant',
+      category: 'worried-about-someone',
+      severity: 'Moderate',
+      description: 'They have not been out in days.',
+    });
+    expect(safetySignalId).toBeDefined();
+  });
+
   it('NEGATIVE automation cannot confirm a SafetyEvent (ATR-017)', async () => {
     await expect(
       triageSafetySignal(m09, aiCtx(), {

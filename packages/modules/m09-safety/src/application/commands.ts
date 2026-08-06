@@ -24,6 +24,31 @@ export interface M09Deps {
  * reporting must never be blocked by role gaps (fail open for signals,
  * fail closed for events).
  */
+/**
+ * Who may claim to be the source of a safety signal.
+ *
+ * The HTTP boundary carried a comment saying "HTTP callers raise
+ * human-sourced signals only; AI/Rule/Integration sources originate
+ * inside the platform (ADR-039)", and a TypeScript union that says the
+ * same. Types are erased at runtime and nothing validates a request
+ * body, so the rule was a statement of intent that any authenticated
+ * caller could ignore: a signal claiming `sourceType: 'AI'` would be
+ * written as such, emitted as `AISafetySignalRaised` from source module
+ * M11, and shown to the safety reviewer as `source: AI`.
+ *
+ * That label is not decoration. The whole of ADR-039 rests on knowing
+ * which signals came from a machine — automation may raise one and may
+ * never confirm an event — and a reviewer weighs a machine's flag
+ * differently from a person's account. Today nothing in the platform
+ * raises an AI signal at all (M11 has no commands), so the only way one
+ * could exist was for somebody to forge it.
+ *
+ * The rule is real here instead: a machine provenance requires a
+ * service-account actor, and a human provenance requires a human. The
+ * boundary's comment is now true.
+ */
+const MACHINE_SOURCES = ['Assessment', 'AI', 'Rule', 'Integration'] as const;
+
 export async function recordSafetySignal(
   deps: M09Deps,
   ctx: RequestContext,
@@ -35,6 +60,31 @@ export async function recordSafetySignal(
   },
 ): Promise<{ safetySignalId: string }> {
   if (ctx.actor === undefined) throw new PlatformError('AUTHENTICATION_REQUIRED', 'No actor');
+  /*
+   * Deliberately NO permission check, and it must stay that way: a
+   * person raising a concern about somebody's safety is never refused
+   * for want of a role. `safety-signal.record` sits in the catalogue
+   * against SafetyReviewer and is checked nowhere, which reads like an
+   * oversight and is not one — a participant, a supporter and a member
+   * of staff can all raise one, and a platform that turned somebody away
+   * at this moment would be the worst version of itself.
+   *
+   * What IS checked is the provenance claim, because that is a statement
+   * about who observed the thing rather than permission to say it.
+   */
+  const machine = (MACHINE_SOURCES as readonly string[]).includes(input.sourceType);
+  if (machine && ctx.actor.type !== 'service-account') {
+    throw new PlatformError(
+      'VALIDATION_ERROR',
+      'Only the platform itself can raise a machine-sourced signal; record it under who you are',
+    );
+  }
+  if (!machine && ctx.actor.type === 'service-account') {
+    throw new PlatformError(
+      'VALIDATION_ERROR',
+      'A service account cannot record a signal as though a person had raised it',
+    );
+  }
   const safetySignalId = newId('ss');
   const now = deps.clock.now();
   await withTransaction(deps.pool, async (client) => {
