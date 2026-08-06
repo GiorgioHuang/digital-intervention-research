@@ -1070,3 +1070,13 @@
   code: [apps/web/src/components/ProposeRelationship.tsx, apps/web/src/components/WhoHasAccess.tsx, apps/web/src/SupporterApp.tsx]
   tests: [apps/web/test/propose-relationship.test.tsx, apps/web/test/who-has-access.test.tsx]
   status: implemented
+
+- implementation_id: IMP-M04-PROJECTS-QUESTIONS-001
+  module: M04
+  summary: A research project can be found again after it is created, and it can say what it is asking. project.view was granted to the researcher and checked by no code, and nothing anywhere listed a project - one was created, its identifier appeared once in the message announcing it, and every screen downstream then asked the researcher to type that identifier back in from memory, so the head of the research chain was the only part of it with no list. research_questions had a table from the day M04 was written, with a text column and a state, and nothing ever inserted a row, while question.create was granted and checked nowhere; a project was a title and nothing else, and the sentence saying what the study is for had nowhere to live even though the screen inventory called this screen projects and research questions. The listing is scoped to the caller's organisation from the request context and never from an argument, because a listing that accepts an organisation identifier is a way of asking which organisations exist; a role scoped to that organisation is refused by the permission engine before the query's own guard is reached, and the guard stays for a holder whose grant is not scoped. Two things the screen refuses to do. It shows no lifecycle - project_state and project_phase carry seventeen values between them and nothing writes either, so every project holds the column defaults and printing them would put a study's position on screen as though somebody had set it. And it says a research question is documentation rather than a setting - nothing in the platform reads one and nothing should, because its reader is a person; saying so keeps it distinct from a control that records a decision nothing acts on, which is a different thing and would not be built
+  trace_ids: [ATR-004, ATR-013]
+  adr_ids: [ADR-051]
+  docs: ["UI_INVENTORY.md C2", "UI_INVENTORY.md C7", "design/DESIGN_DECISIONS.md D-40", "design/DESIGN_DECISIONS.md D-41"]
+  code: [packages/modules/m04-research-design/src/application/commands.ts, packages/modules/m04-research-design/src/application/queries.ts, apps/api/src/staff-controllers.ts, apps/web/src/staff-api.ts, apps/web/src/components/ResearchProjects.tsx, apps/web/src/components/StaffResearcherPanel.tsx, packages/synthetic-pilot/seed-demo.mjs]
+  tests: [packages/modules/m05-enrolment/test/m05.integration.test.ts, apps/web/test/research-projects.test.tsx]
+  status: implemented

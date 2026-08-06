@@ -43,6 +43,7 @@ import {
   approveProtocolVersion,
   createProtocolVersion,
   createProtocolVersionQuery,
+  createResearchQuestion,
   createResearchProject,
   submitProtocolVersion,
 } from '@platform/m04-research-design';
@@ -471,6 +472,14 @@ async function main() {
     organisationId: orgId,
     title: 'Life story and connectedness in later life',
   });
+  // The question the study is asking. `research_questions` had a table
+  // from the day M04 was written and nothing ever inserted a row, so a
+  // project in the demo was a title and nothing else.
+  await createResearchQuestion(base, ctx(researcherId), {
+    researchProjectId,
+    questionText: 'Does participant-controlled life story work, with a supporter, reduce loneliness in later life?',
+  });
+
   const { protocolId, protocolVersionId } = await createProtocolVersion(base, ctx(researcherId), {
     researchProjectId,
     title: 'Pilot protocol',

@@ -7,8 +7,10 @@ import {
   rejectProtocolVersion,
   createProtocolVersion,
   createResearchProject,
+  createResearchQuestion,
   listProtocolVersions,
   listProtocolVersionsInReview,
+  listResearchProjects,
   submitProtocolVersion,
 } from '@platform/m04-research-design';
 import { listParticipantsForOrganisation } from '@platform/m02-participant';
@@ -496,6 +498,39 @@ export class StaffCommandController {
     if (body.reasonCategory !== undefined) input.reasonCategory = body.reasonCategory;
     await withdrawParticipant(this.deps.m05, ctx, input);
     return { data: { type: 'Enrolment', id: enrolmentId, meta: { state: 'Withdrawn' } } };
+  }
+
+  // --- M04 projects and questions ---------------------------------------
+
+  /**
+   * The projects in this organisation and the questions they ask.
+   *
+   * `project.view` was granted to the researcher and checked nowhere, and
+   * nothing listed a project: one was created, its identifier was shown
+   * once in an announcement, and every screen downstream then asked for
+   * that identifier back from memory.
+   */
+  @Get('research-projects')
+  async researchProjects(@Req() req: Request) {
+    const ctx = requireActor(req);
+    const items = await listResearchProjects(this.deps.m04, ctx);
+    return { data: items.map((p) => ({ type: 'ResearchProject', id: p.researchProjectId, attributes: p })) };
+  }
+
+  /** The question a study asks. Documentation, read by people — nothing
+   *  in the platform acts on it, and the screen says so. */
+  @Post('research-projects/:researchProjectId/questions')
+  async addResearchQuestion(
+    @Req() req: Request,
+    @Param('researchProjectId') researchProjectId: string,
+    @Body() body: { questionText: string },
+  ) {
+    const ctx = requireActor(req);
+    const result = await createResearchQuestion(this.deps.m04, ctx, {
+      researchProjectId,
+      questionText: body.questionText ?? '',
+    });
+    return { data: { type: 'ResearchQuestion', id: result.researchQuestionId } };
   }
 
   // --- M01 accounts and roles -------------------------------------------

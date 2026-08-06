@@ -120,6 +120,22 @@ export interface SafetyEventItem {
   description: string;
   timeline: SafetyTimelineEntry[];
 }
+export interface ResearchQuestionItem {
+  researchQuestionId: string;
+  questionText: string;
+  questionState: string;
+  createdAt: string;
+}
+
+export interface ResearchProjectItem {
+  researchProjectId: string;
+  organisationId: string;
+  title: string;
+  createdByActorId: string;
+  createdAt: string;
+  questions: ResearchQuestionItem[];
+}
+
 export interface RoleAssignmentItem {
   roleAssignmentId: string;
   role: string;
@@ -432,6 +448,10 @@ export const staffApi = {
       whatChanged,
       confirmed: true,
     }),
+
+  listResearchProjects: (s: StaffSession) => get<List<ResearchProjectItem>>(s, '/v1/research-projects'),
+  addResearchQuestion: (s: StaffSession, researchProjectId: string, questionText: string) =>
+    post<Id>(s, `/v1/research-projects/${researchProjectId}/questions`, { questionText }),
 
   listOrganisationAccounts: (s: StaffSession) => get<List<AccountItem>>(s, '/v1/user-accounts'),
   /** Version-bound: a role that changed underneath is refused, not merged. */

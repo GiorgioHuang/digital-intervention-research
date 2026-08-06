@@ -1,6 +1,7 @@
 export * from './contracts/index.js';
 export {
   createResearchProject,
+  createResearchQuestion,
   createProtocolVersion,
   submitProtocolVersion,
   approveProtocolVersion,
@@ -12,6 +13,9 @@ export { createProtocolVersionQuery } from './infrastructure/repository.js';
 export {
   listProtocolVersions,
   listProtocolVersionsInReview,
+  listResearchProjects,
   type ProtocolVersionInReview,
   type ProtocolVersionSummary,
+  type ResearchProjectView,
+  type ResearchQuestionView,
 } from './application/queries.js';

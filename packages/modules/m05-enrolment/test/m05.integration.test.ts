@@ -26,6 +26,8 @@ import {
   createProtocolVersion,
   createProtocolVersionQuery,
   createResearchProject,
+  createResearchQuestion,
+  listResearchProjects,
   submitProtocolVersion,
   type M04Deps,
 } from '@platform/m04-research-design';
@@ -412,6 +414,58 @@ describe.skipIf(!dbAvailable)('P3 research core: project -> protocol -> enrolmen
     // study are different jobs, and SystemAdministrator holds the first.
     await expect(
       listParticipantsForOrganisation(m02, ctx(adminId, { organisationId: orgId, purposeCode: 'platform-administration' })),
+    ).rejects.toMatchObject({ code: 'AUTHORISATION_DENIED' });
+  });
+
+  /**
+   * `project.view` was granted to the researcher and checked by no code,
+   * and nothing anywhere listed a project: one was created, its
+   * identifier was shown once in an announcement, and every screen
+   * downstream then asked for that identifier back from memory. The head
+   * of the research chain was the only part of it with no list.
+   *
+   * `research_questions` had a table from the day M04 was written and
+   * nothing ever inserted a row, so a project was a title and nothing
+   * else.
+   */
+  it('projects can be listed with the questions they ask, scoped to the organisation', async () => {
+    const researcherCtx = ctx(researcherId, { organisationId: orgId });
+    const { researchProjectId } = await createResearchProject(m04, researcherCtx, {
+      organisationId: orgId,
+      title: 'Loneliness and life story work',
+    });
+    await createResearchQuestion(m04, researcherCtx, {
+      researchProjectId,
+      questionText: 'Does participant-controlled life story work reduce loneliness?',
+    });
+    // A question that says nothing is not a question.
+    await expect(
+      createResearchQuestion(m04, researcherCtx, { researchProjectId, questionText: '   ' }),
+    ).rejects.toMatchObject({ code: 'VALIDATION_ERROR' });
+
+    const projects = await listResearchProjects(m04, researcherCtx);
+    const mine = projects.find((p) => p.researchProjectId === researchProjectId);
+    expect(mine?.title).toBe('Loneliness and life story work');
+    expect(mine?.questions.map((q) => q.questionText)).toEqual([
+      'Does participant-controlled life story work reduce loneliness?',
+    ]);
+
+    /*
+     * The organisation comes from the context and never from an argument:
+     * a listing that takes one is a way of asking which organisations
+     * exist. Without a context this researcher is refused by the
+     * permission engine before the query's own guard is reached, because
+     * their role is scoped to the organisation — the guard behind it
+     * still matters for a holder whose grant is not scoped, which is why
+     * it stays.
+     */
+    await expect(listResearchProjects(m04, ctx(researcherId))).rejects.toMatchObject({
+      code: 'AUTHORISATION_DENIED',
+    });
+
+    // Held by the researcher, not by everyone with a staff login.
+    await expect(
+      listResearchProjects(m04, ctx(coordinatorId, { organisationId: orgId })),
     ).rejects.toMatchObject({ code: 'AUTHORISATION_DENIED' });
   });
 });

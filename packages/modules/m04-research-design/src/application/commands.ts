@@ -76,6 +76,71 @@ export async function createResearchProject(
   return { researchProjectId };
 }
 
+/**
+ * The question a study is asking, written down.
+ *
+ * `research_questions` has had a table since M04 was written, with a text
+ * column and a state, and no code has ever inserted a row. `question.create`
+ * was granted to the researcher and checked nowhere. So a research project
+ * was a title and nothing else — the one sentence saying what the study is
+ * for had no place to live, while the inventory listed the screen as
+ * "projects and research questions".
+ *
+ * Nothing in the platform acts on a question and nothing should: it is
+ * documentation, read by people. That is a different thing from a control
+ * that records a decision nothing reads, and the screen says which of the
+ * two this is.
+ */
+export async function createResearchQuestion(
+  deps: M04Deps,
+  ctx: RequestContext,
+  input: { researchProjectId: string; questionText: string },
+): Promise<{ researchQuestionId: string }> {
+  const decision = await deps.checkPermission(ctx, {
+    action: 'question.create',
+    resource: {
+      type: 'ResearchQuestion',
+      id: 'new',
+      state: 'Draft',
+      protectedExistence: false,
+      researchProjectId: input.researchProjectId,
+    },
+  });
+  assertAllowed(decision, false);
+
+  const text = input.questionText.trim();
+  if (text === '') {
+    throw new PlatformError('VALIDATION_ERROR', 'A research question needs to say something');
+  }
+  const project = await deps.pool.query(
+    `SELECT id FROM research_design.research_projects WHERE id = $1`,
+    [input.researchProjectId],
+  );
+  if (project.rows[0] === undefined) {
+    throw new PlatformError('RESOURCE_NOT_FOUND', 'Research project not found');
+  }
+
+  const researchQuestionId = newId('rq');
+  const now = deps.clock.now();
+  await withTransaction(deps.pool, async (client) => {
+    await client.query(
+      `INSERT INTO research_design.research_questions (id, research_project_id, question_text)
+       VALUES ($1, $2, $3)`,
+      [researchQuestionId, input.researchProjectId, text],
+    );
+    await recordAuditEvent(client, ctx, {
+      action: 'question.create',
+      targetType: 'ResearchQuestion',
+      targetId: researchQuestionId,
+      occurredAt: now,
+      result: 'Succeeded',
+      source: 'M04',
+      policyVersion: decision.policyVersion,
+    });
+  });
+  return { researchQuestionId };
+}
+
 export async function createProtocolVersion(
   deps: M04Deps,
   ctx: RequestContext,

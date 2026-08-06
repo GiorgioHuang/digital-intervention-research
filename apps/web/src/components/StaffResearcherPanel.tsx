@@ -3,6 +3,7 @@ import { staffActionError, staffLoadError } from '../errors.js';
 import { staffApi, type ProtocolVersionItem, type StaffSession } from '../staff-api.js';
 import { AnalysisWork } from './AnalysisWork.js';
 import { Interventions } from './Interventions.js';
+import { ResearchProjects } from './ResearchProjects.js';
 import { DatasetWork } from './DatasetWork.js';
 import { EvidenceDecisionWork } from './EvidenceDecisionWork.js';
 import { EvidenceWork } from './EvidenceWork.js';
@@ -199,6 +200,13 @@ export function StaffResearcherPanel({ session }: { session: StaffSession }) {
         the four before it could be performed by nobody.
       */}
       <DatasetWork session={session} />
+
+      {/*
+        The head of the chain, which had no list: a project's identifier
+        appeared once in the message announcing it and nowhere else,
+        while every screen below asks for that identifier back.
+      */}
+      <ResearchProjects session={session} />
 
       {/*
         The module the platform is named after: six commands, no callers
