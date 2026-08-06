@@ -71,6 +71,7 @@ import {
   decideApproval,
   executeBreakGlass,
   liftGovernanceHold,
+  listAuditEvents,
   listBreakGlassPendingReview,
   listPendingApprovals,
   placeGovernanceHold,
@@ -251,6 +252,53 @@ export class StaffCommandController {
     const ctx = requireActor(req);
     const items = await listBreakGlassPendingReview(this.deps.m15, ctx);
     return { data: items.map((i) => ({ type: 'BreakGlassRecord', id: i.breakGlassId, attributes: i })) };
+  }
+
+  /**
+   * The one way to read the audit trail.
+   *
+   * Sixty-one call sites write to it and nothing read one, while
+   * `audit.view` sat granted to three roles and checked by no code — the
+   * platform's whole accountability record was append-only and
+   * unreadable.
+   *
+   * The reason is a query parameter because it is recorded with the read.
+   * Reading the audit is itself an audited action (Doc 15 §21): a trail
+   * whose readers leave no trace is the one record a misuser has no
+   * reason to avoid.
+   */
+  @Get('audit-events')
+  async auditEvents(
+    @Req() req: Request,
+    @Query('accessReason') accessReason: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+    @Query('actorId') actorId?: string,
+    @Query('action') action?: string,
+    @Query('targetType') targetType?: string,
+    @Query('targetId') targetId?: string,
+    @Query('participantId') participantId?: string,
+    @Query('limit') limit?: string,
+  ) {
+    const ctx = requireActor(req);
+    const items = await listAuditEvents(this.deps.m15, ctx, {
+      accessReason: accessReason ?? '',
+      ...(from === undefined ? {} : { from }),
+      ...(to === undefined ? {} : { to }),
+      ...(actorId === undefined ? {} : { actorId }),
+      ...(action === undefined ? {} : { action }),
+      ...(targetType === undefined ? {} : { targetType }),
+      ...(targetId === undefined ? {} : { targetId }),
+      ...(participantId === undefined ? {} : { participantId }),
+      ...(limit === undefined ? {} : { limit: Number(limit) }),
+    });
+    return {
+      data: items.map((i) => ({ type: 'AuditEvent', id: i.auditEventId, attributes: i })),
+      // Said rather than left to be inferred from a round number: a full
+      // page is the likeliest place for somebody to conclude they have
+      // seen everything there is.
+      meta: { returned: items.length },
+    };
   }
 
   @Get('enrolments')

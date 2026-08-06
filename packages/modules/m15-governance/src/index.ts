@@ -11,6 +11,9 @@ export {
 export {
   listPendingApprovals,
   listBreakGlassPendingReview,
+  listAuditEvents,
   type PendingApproval,
   type PendingBreakGlassReview,
+  type AuditEventRow,
+  type AuditQuery,
 } from './application/queries.js';

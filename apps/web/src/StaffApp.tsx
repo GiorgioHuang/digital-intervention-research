@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { StaffSession } from './staff-api.js';
 import { AccessTokenGate } from './components/AccessTokenGate.js';
+import { AuditAccess } from './components/AuditAccess.js';
 import { StaffAdminPanel } from './components/StaffAdminPanel.js';
 import { StaffApproverPanel } from './components/StaffApproverPanel.js';
 import { StaffCoordinatorPanel } from './components/StaffCoordinatorPanel.js';
@@ -9,7 +10,7 @@ import { StaffResearcherPanel } from './components/StaffResearcherPanel.js';
 import { StaffModeratorPanel } from './components/StaffModeratorPanel.js';
 import { StaffSafetyTriagePanel } from './components/StaffSafetyTriagePanel.js';
 
-type StaffScreen = 'coordinator' | 'researcher' | 'approver' | 'safety' | 'moderation' | 'governance' | 'admin';
+type StaffScreen = 'coordinator' | 'researcher' | 'approver' | 'safety' | 'moderation' | 'governance' | 'audit' | 'admin';
 const SCREENS: { key: StaffScreen; label: string }[] = [
   { key: 'coordinator', label: 'Enrolment' },
   { key: 'researcher', label: 'Research' },
@@ -17,6 +18,7 @@ const SCREENS: { key: StaffScreen; label: string }[] = [
   { key: 'safety', label: 'Safety triage' },
   { key: 'moderation', label: 'Moderation' },
   { key: 'governance', label: 'Emergency access' },
+  { key: 'audit', label: 'Audit' },
   { key: 'admin', label: 'Administration' },
 ];
 
@@ -117,6 +119,7 @@ export function StaffApp({ onExit }: { onExit: () => void }) {
         {screen === 'safety' && <StaffSafetyTriagePanel session={session} />}
         {screen === 'moderation' && <StaffModeratorPanel session={session} />}
         {screen === 'governance' && <StaffGovernancePanel session={session} />}
+        {screen === 'audit' && <AuditAccess session={session} />}
         {screen === 'admin' && <StaffAdminPanel session={session} />}
       </main>
     </div>

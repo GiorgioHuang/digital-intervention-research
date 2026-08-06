@@ -17,6 +17,13 @@ export interface AuditEventInput {
   source: string;
   activeRole?: string;
   dataClassification?: string;
+  /**
+   * Only for a read of the audit trail itself: the reason the reader gave,
+   * and what they asked for. Every other call site leaves both unset,
+   * because a command has no reader and no query.
+   */
+  accessReason?: string;
+  queryFilters?: Record<string, string | number>;
 }
 
 /**
@@ -41,8 +48,9 @@ export async function recordAuditEvent(
         target_type, target_id, resource_version, purpose_code,
         organisation_id, research_project_id, participant_id, occurred_at,
         result, policy_decision, policy_decision_reason, policy_version,
-        source, correlation_id, causation_id, trace_id, data_classification)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23)`,
+        source, correlation_id, causation_id, trace_id, data_classification,
+        access_reason, query_filters)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25)`,
     [
       id,
       ctx.actor.type,
@@ -67,6 +75,8 @@ export async function recordAuditEvent(
       ctx.causationId ?? null,
       ctx.traceId,
       input.dataClassification ?? null,
+      input.accessReason ?? null,
+      input.queryFilters === undefined ? null : JSON.stringify(input.queryFilters),
     ],
   );
   return id;

@@ -120,6 +120,37 @@ export interface SafetyEventItem {
   description: string;
   timeline: SafetyTimelineEntry[];
 }
+/** One line of the platform's accountability record. */
+export interface AuditEventItem {
+  auditEventId: string;
+  occurredAt: string;
+  actorType: string;
+  actorId: string;
+  activeRole: string | null;
+  authStrength: string | null;
+  action: string;
+  targetType: string;
+  targetId: string;
+  result: string;
+  policyDecision: string | null;
+  policyDecisionReason: string | null;
+  policyVersion: string | null;
+  source: string;
+  participantId: string | null;
+  accessReason: string | null;
+}
+
+export interface AuditFilters {
+  accessReason: string;
+  from?: string;
+  to?: string;
+  actorId?: string;
+  action?: string;
+  targetType?: string;
+  targetId?: string;
+  participantId?: string;
+}
+
 export interface PendingApprovalItem {
   approvalRecordId: string;
   artefactType: string;
@@ -340,6 +371,17 @@ export const staffApi = {
 
   // M09 safety events: created and then unreachable until now
   listSafetyEvents: (s: StaffSession) => get<List<SafetyEventItem>>(s, '/v1/safety-events'),
+
+  /**
+   * Reading the audit trail. The reason travels with the query because it
+   * is recorded with it — this is the one read in the product that writes
+   * something, and it writes before it returns anything.
+   */
+  listAuditEvents: (s: StaffSession, filters: AuditFilters) => {
+    const q = new URLSearchParams();
+    for (const [k, v] of Object.entries(filters)) if (v !== undefined && v !== '') q.set(k, v);
+    return get<List<AuditEventItem> & { meta?: { returned: number } }>(s, `/v1/audit-events?${q.toString()}`);
+  },
   recordSafetyAction: (
     s: StaffSession,
     eventId: string,

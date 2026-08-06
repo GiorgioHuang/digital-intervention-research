@@ -17,6 +17,7 @@ import {
   executeBreakGlass,
   liftGovernanceHold,
   placeGovernanceHold,
+  listAuditEvents,
   requestApproval,
   reviewBreakGlass,
   type M15Deps,
@@ -179,6 +180,54 @@ describe.skipIf(!dbAvailable)('M15 governance (integration)', () => {
       [breakGlassId],
     );
     expect(row.rows[0]).toMatchObject({ review_state: 'Reviewed', review_outcome: 'Justified' });
+  });
+
+  /**
+   * Sixty-one call sites wrote audit events and nothing read one, while
+   * `audit.view` sat granted to three roles and checked by no code. The
+   * platform's whole accountability record was append-only and
+   * unreadable — the recording was complete, correct and fail-closed, and
+   * no human being could ever see it.
+   */
+  it('the audit trail can be read, only with a reason, and reading it is itself recorded', async () => {
+    // A researcher holds no audit.view: it is granted to system and
+    // organisation administrators and to privacy reviewers.
+    await expect(
+      listAuditEvents(m15, ctx(researcherId), { accessReason: 'curious' }),
+    ).rejects.toMatchObject({ code: 'AUTHORISATION_DENIED' });
+
+    // The reason is not decoration. Without one there is no read.
+    await expect(
+      listAuditEvents(m15, ctx(privacyId), { accessReason: '   ' }),
+    ).rejects.toMatchObject({ code: 'VALIDATION_ERROR' });
+
+    const rows = await listAuditEvents(m15, ctx(privacyId), {
+      accessReason: 'Reviewing break-glass 42',
+      targetType: 'BreakGlassRecord',
+    });
+    // The break-glass execution earlier in this suite is in here, which is
+    // the point: the record of the strongest thing anyone can do was
+    // being written into a store no one could open.
+    expect(rows.some((r) => r.action === 'break-glass.execute')).toBe(true);
+
+    /*
+     * And the read itself was written before the rows came back, with the
+     * reason and the filters. A trail whose readers leave no trace is the
+     * one record a misuser has no reason to avoid.
+     */
+    const own = await pool.query(
+      `SELECT access_reason, query_filters, actor_id FROM governance_audit.audit_events
+        WHERE action = 'audit.view' ORDER BY occurred_at DESC LIMIT 1`,
+    );
+    expect(own.rows[0]).toMatchObject({ actor_id: privacyId, access_reason: 'Reviewing break-glass 42' });
+    expect(own.rows[0].query_filters).toMatchObject({ targetType: 'BreakGlassRecord' });
+
+    // A refused read leaves nothing behind, because nothing writes a
+    // refusal anywhere in this store. The screen says so; this pins it.
+    const denied = await pool.query(
+      `SELECT count(*)::int AS n FROM governance_audit.audit_events WHERE result IN ('Allowed', 'Denied')`,
+    );
+    expect(denied.rows[0].n).toBe(0);
   });
 });
 
