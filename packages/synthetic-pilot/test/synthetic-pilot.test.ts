@@ -213,6 +213,28 @@ describe.skipIf(!dbAvailable)('Synthetic Pilot: one governed research cycle end 
 
     const { analysisPlanId } = await draftAnalysisPlan(m13, rctx, { researchProjectId: projectId, title: 'Feasibility' });
     await approveAnalysisPlan(m13, ctx(approverId), { analysisPlanId, confirmed: true });
+    /*
+     * The outcome was hardcoded to 'Completed' in the command, so every
+     * run on record claimed a clean completion whatever had happened: an
+     * analysis that fell over could only be written down as though it
+     * had gone perfectly.
+     */
+    const failed = await runAnalysis(m13, rctx, {
+      analysisPlanId, datasetVersionId: versionId, outputs: { error: 'convergence failure' },
+      environment: { seed: 7 }, runState: 'Failed',
+    });
+    const failedRow = await pool.query(
+      `SELECT run_state FROM analysis_finding.analysis_runs WHERE id = $1`, [failed.analysisRunId],
+    );
+    expect(failedRow.rows[0].run_state).toBe('Failed');
+    // A failed run analysed nothing, so the version it ran against is
+    // still locked rather than being marked analysed because somebody
+    // tried.
+    const afterFailure = await pool.query(
+      `SELECT version_state FROM dataset_quality.dataset_versions WHERE id = $1`, [versionId],
+    );
+    expect(afterFailure.rows[0].version_state).toBe('Locked');
+
     const { analysisRunId } = await runAnalysis(m13, rctx, { analysisPlanId, datasetVersionId: versionId, outputs: { completion: 1.0 }, environment: { seed: 7 } });
     const { interpretationRecordId } = await draftInterpretation(m13, rctx, { analysisRunId, interpretationText: 'Both synthetic participants completed the pathway.' });
     await approveInterpretation(m13, ctx(approverId), { interpretationRecordId, confirmed: true });

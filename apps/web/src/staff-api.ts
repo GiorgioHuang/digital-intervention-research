@@ -667,12 +667,19 @@ export const staffApi = {
    * Records that an analysis was run and what it produced. The platform
    * does not perform the analysis, so the wording never says it did.
    */
-  runAnalysis: (s: StaffSession, analysisPlanId: string, datasetVersionId: string, outputs: string) =>
+  runAnalysis: (
+    s: StaffSession,
+    analysisPlanId: string,
+    datasetVersionId: string,
+    outputs: string,
+    runState: 'Completed' | 'Completed with Warnings' | 'Failed',
+  ) =>
     post<Id>(s, '/v1/analysis-runs', {
       analysisPlanId,
       datasetVersionId,
       outputs: { summary: outputs },
       environment: {},
+      runState,
     }),
   draftInterpretation: (s: StaffSession, runId: string, interpretationText: string) =>
     post<Id>(s, `/v1/analysis-runs/${runId}/interpretations`, { interpretationText }),

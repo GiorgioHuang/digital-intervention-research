@@ -1090,3 +1090,13 @@
   code: [packages/modules/m07-delivery/src/application/queries.ts, packages/modules/m06-intervention-portfolio/src/application/queries.ts, apps/api/src/staff-controllers.ts, apps/api/src/controllers.ts, apps/api/src/app.module.ts, apps/web/src/staff-api.ts, apps/web/src/components/DeliveryRecord.tsx, apps/web/src/components/Interventions.tsx, apps/web/src/components/StaffCoordinatorPanel.tsx, packages/synthetic-pilot/seed-demo.mjs]
   tests: [packages/synthetic-pilot/test/synthetic-pilot.test.ts, apps/web/test/delivery-record.test.tsx]
   status: implemented
+
+- implementation_id: IMP-M13-RUN-OUTCOME-001
+  module: M13
+  summary: An analysis run can say what actually happened to it. The insert hardcoded run_state to Completed, and the platform performs no analysis at all - a person runs it elsewhere and records what happened, which the screen has always said plainly - so every run on record claimed a clean completion whatever had occurred. An analysis that fell over could only be written down as though it had gone perfectly, and an interpretation drawn from it carried no hint otherwise. The person recording now chooses among the three outcomes somebody can honestly report after the fact - it ran and produced what was expected, it ran with warnings a reader should weigh, or it failed. A failed run no longer moves the dataset version to Analysed, because nothing was analysed and marking it so would misdescribe that data to everyone downstream; the domain event distinguishes the two as well. Queued, Running and Cancelled stay unreachable on purpose and the screen says why - nothing here queues, runs or cancels anything, so a record in one of those states would describe a machine that does not exist. The outcome also travels with each option in the picker for choosing which run to interpret, where every run previously read identically and choosing one told you nothing about whether it had worked
+  trace_ids: [ATR-004, ATR-013]
+  adr_ids: [ADR-045, ADR-046]
+  docs: ["UI_INVENTORY.md C16", "design/DESIGN_DECISIONS.md D-43"]
+  code: [packages/modules/m13-analysis/src/application/commands.ts, apps/api/src/staff-controllers.ts, apps/web/src/staff-api.ts, apps/web/src/components/AnalysisWork.tsx]
+  tests: [packages/synthetic-pilot/test/synthetic-pilot.test.ts, apps/web/test/analysis-chain.test.tsx]
+  status: implemented

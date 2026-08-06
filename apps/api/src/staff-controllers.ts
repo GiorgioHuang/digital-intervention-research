@@ -1080,6 +1080,9 @@ export class StaffCommandController {
       datasetVersionId: string;
       outputs: Record<string, unknown>;
       environment: Record<string, unknown>;
+      /** What actually happened. Hardcoded to 'Completed' until now, so
+       *  every run on record claimed a clean completion. */
+      runState?: 'Completed' | 'Completed with Warnings' | 'Failed';
     },
   ) {
     const ctx = requireActor(req);

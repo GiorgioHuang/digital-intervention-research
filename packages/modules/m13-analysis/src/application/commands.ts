@@ -133,11 +133,30 @@ export async function rejectAnalysisPlan(
  * AnalysisRun binds an APPROVED AnalysisPlan to an exact LOCKED
  * DatasetVersion (ADR-045/046) and captures the execution environment.
  * The run's outputs are AnalysisOutput — never automatically a Finding.
+ *
+ * The outcome is the caller's to state, and it was hardcoded to
+ * 'Completed'. The platform performs no analysis — a person runs it
+ * elsewhere and records what happened — so every run in the database
+ * claimed a clean completion whatever had actually occurred. An analysis
+ * that fell over, or that finished with warnings a reader would need to
+ * weigh, could only be written down as though it had gone perfectly, and
+ * an interpretation drawn from it would carry no hint otherwise.
+ *
+ * The three outcomes here are the ones a person can honestly report
+ * after the fact. 'Queued', 'Running' and 'Cancelled' stay unreachable
+ * on purpose: nothing here queues, runs or cancels anything, so a record
+ * in one of those states would describe a machine that does not exist.
  */
 export async function runAnalysis(
   deps: M13Deps,
   ctx: RequestContext,
-  input: { analysisPlanId: string; datasetVersionId: string; outputs: Record<string, unknown>; environment: Record<string, unknown> },
+  input: {
+    analysisPlanId: string;
+    datasetVersionId: string;
+    outputs: Record<string, unknown>;
+    environment: Record<string, unknown>;
+    runState?: 'Completed' | 'Completed with Warnings' | 'Failed';
+  },
 ): Promise<{ analysisRunId: string }> {
   const decision = await deps.checkPermission(ctx, {
     action: 'analysis.run',
@@ -165,17 +184,33 @@ export async function runAnalysis(
     await client.query(
       `INSERT INTO analysis_finding.analysis_runs
          (id, analysis_plan_id, dataset_version_id, run_state, outputs, environment, started_by_actor_id)
-       VALUES ($1, $2, $3, 'Completed', $4, $5, $6)`,
-      [analysisRunId, input.analysisPlanId, input.datasetVersionId, JSON.stringify(input.outputs), JSON.stringify(input.environment), ctx.actor!.id],
+       VALUES ($1, $2, $3, $7, $4, $5, $6)`,
+      [
+        analysisRunId,
+        input.analysisPlanId,
+        input.datasetVersionId,
+        JSON.stringify(input.outputs),
+        JSON.stringify(input.environment),
+        ctx.actor!.id,
+        input.runState ?? 'Completed',
+      ],
     );
-    await client.query(
-      `UPDATE dataset_quality.dataset_versions SET version_state = 'Analysed', record_version = record_version + 1, updated_at = $2
-        WHERE id = $1 AND version_state = 'Locked'`,
-      [input.datasetVersionId, now],
-    );
+    /*
+     * Only a run that produced something moves the dataset on. A failed
+     * run has analysed nothing, and marking the version 'Analysed'
+     * because somebody tried would misdescribe the dataset to everyone
+     * downstream.
+     */
+    if (input.runState !== 'Failed') {
+      await client.query(
+        `UPDATE dataset_quality.dataset_versions SET version_state = 'Analysed', record_version = record_version + 1, updated_at = $2
+          WHERE id = $1 AND version_state = 'Locked'`,
+        [input.datasetVersionId, now],
+      );
+    }
     await appendToOutbox(client, ctx, {
       eventCategory: 'Domain',
-      eventType: 'AnalysisRunCompleted',
+      eventType: input.runState === 'Failed' ? 'AnalysisRunFailed' : 'AnalysisRunCompleted',
       sourceModule: 'M13',
       aggregateType: 'AnalysisRun',
       aggregateId: analysisRunId,

@@ -149,6 +149,25 @@ describe('the analysis chain', () => {
     expect(screen.getByText(/No interpretation has been approved yet/)).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Write this finding' })).toHaveProperty('disabled', true);
   });
+  /**
+   * The outcome was hardcoded to 'Completed' in the command, so every run
+   * on record claimed a clean completion whatever had happened. An
+   * analysis that fell over could only be written down as though it had
+   * gone perfectly, and an interpretation drawn from it carried no hint
+   * otherwise.
+   */
+  it('a run can say it failed, and says what that leaves behind', async () => {
+    await open();
+    // The states that would describe a machine this platform does not
+    // have are not offered, and the screen says why.
+    expect(screen.getByText(/would describe a machine that does not exist/i)).toBeTruthy();
+    await act(async () => {
+      fireEvent.change(screen.getByLabelText('How it went'), { target: { value: 'Failed' } });
+    });
+    expect(screen.getByText(/leaves the dataset version as it was — locked, not analysed/i)).toBeTruthy();
+    // The prompt changes with it: a failed run has no output to describe.
+    expect(screen.getByLabelText('What went wrong')).toBeTruthy();
+  });
 });
 
 describe('approving along the analysis chain', () => {
@@ -243,4 +262,5 @@ describe('approving along the analysis chain', () => {
     await openTab(approver, { data: { plans: [], interpretations: [], findings: [] } });
     expect(screen.getByText('Nothing along the analysis chain is waiting to be approved.')).toBeTruthy();
   });
+
 });

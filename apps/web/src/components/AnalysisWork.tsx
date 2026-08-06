@@ -44,6 +44,24 @@ const STEP_WORDING: Record<string, string> = {
   Archived: 'Archived.',
 };
 
+/**
+ * What a run says about itself, in words.
+ *
+ * The state was hardcoded to 'Completed' in the command, so every run on
+ * record claimed a clean completion whatever had happened — and anybody
+ * choosing one to interpret, or reading an interpretation later, had no
+ * way to tell a smooth run from one that fell over.
+ */
+const RUN_OUTCOME: Record<string, string> = {
+  Completed: 'ran and produced what was expected',
+  'Completed with Warnings': 'ran, with warnings',
+  Failed: 'failed',
+  Queued: 'queued — nothing here queues anything, so this should not exist',
+  Running: 'running — nothing here runs anything, so this should not exist',
+  Cancelled: 'cancelled — nothing here cancels anything, so this should not exist',
+  Superseded: 'superseded by a later run',
+};
+
 const EMPTY: AnalysisWorkPayload = { plans: [], runs: [], interpretations: [], findings: [] };
 
 export function AnalysisWork({ session }: { session: StaffSession }) {
@@ -53,7 +71,12 @@ export function AnalysisWork({ session }: { session: StaffSession }) {
   const [actionError, setActionError] = useState('');
   const [announcement, setAnnouncement] = useState('');
   const [planForm, setPlanForm] = useState({ projectId: '', title: '' });
-  const [runForm, setRunForm] = useState({ planId: '', versionId: '', outputs: '' });
+  const [runForm, setRunForm] = useState({
+    planId: '',
+    versionId: '',
+    outputs: '',
+    runState: 'Completed' as 'Completed' | 'Completed with Warnings' | 'Failed',
+  });
   const [interpForm, setInterpForm] = useState({ runId: '', text: '' });
   const [findingForm, setFindingForm] = useState({ interpretationId: '', text: '' });
 
@@ -151,8 +174,45 @@ export function AnalysisWork({ session }: { session: StaffSession }) {
         </select>
         {lockedVersions.length === 0 && ' No dataset version has been locked yet.'}
       </p>
+      {/*
+        The outcome was hardcoded to 'Completed' in the command, so every
+        run on record claimed a clean completion whatever had happened.
+        An analysis that fell over could only be written down as though
+        it had gone perfectly, and an interpretation drawn from it
+        carried no hint otherwise.
+      */}
       <p>
-        <label htmlFor="ar-outputs">What the analysis produced</label>
+        <label htmlFor="ar-state">How it went</label>{' '}
+        <select
+          id="ar-state"
+          value={runForm.runState}
+          onChange={(e) =>
+            setRunForm({ ...runForm, runState: e.target.value as typeof runForm.runState })
+          }
+        >
+          <option value="Completed">It ran and produced what was expected</option>
+          <option value="Completed with Warnings">It ran, with warnings a reader should weigh</option>
+          <option value="Failed">It failed</option>
+        </select>
+      </p>
+      {runForm.runState === 'Failed' && (
+        <p role="note">
+          A failed run leaves the dataset version as it was — locked, not analysed — because nothing was analysed.
+          Record what went wrong below; it is worth having, and an interpretation written on top of it will show
+          anyone reading that this is what it rests on.
+        </p>
+      )}
+      <p>
+        <small>
+          There is no &ldquo;queued&rdquo;, &ldquo;running&rdquo; or &ldquo;cancelled&rdquo; here. Nothing on this
+          platform queues, runs or cancels an analysis — you run it elsewhere and write down what happened — so a
+          record in one of those states would describe a machine that does not exist.
+        </small>
+      </p>
+      <p>
+        <label htmlFor="ar-outputs">
+          {runForm.runState === 'Failed' ? 'What went wrong' : 'What the analysis produced'}
+        </label>
       </p>
       <textarea
         id="ar-outputs"
@@ -165,8 +225,17 @@ export function AnalysisWork({ session }: { session: StaffSession }) {
           disabled={runForm.planId === '' || runForm.versionId === '' || runForm.outputs === ''}
           onClick={() =>
             void run(
-              () => staffApi.runAnalysis(session, runForm.planId, runForm.versionId, runForm.outputs),
-              'Recorded as run against that exact dataset version.',
+              () =>
+                staffApi.runAnalysis(
+                  session,
+                  runForm.planId,
+                  runForm.versionId,
+                  runForm.outputs,
+                  runForm.runState,
+                ),
+              runForm.runState === 'Failed'
+                ? 'Recorded as a failure against that exact dataset version. The version is still locked, not analysed.'
+                : 'Recorded as run against that exact dataset version.',
             )
           }
         >
@@ -179,9 +248,14 @@ export function AnalysisWork({ session }: { session: StaffSession }) {
         <label htmlFor="ir-run">Run</label>{' '}
         <select id="ir-run" value={interpForm.runId} onChange={(e) => setInterpForm({ ...interpForm, runId: e.target.value })}>
           <option value="">Choose a run</option>
+          {/*
+            The outcome travels with the option. Every run used to read
+            the same because the state was hardcoded, so choosing one to
+            interpret told you nothing about whether it had worked.
+          */}
           {w.runs.map((r) => (
             <option key={r.analysisRunId} value={r.analysisRunId}>
-              {r.planTitle} · {r.analysisRunId}
+              {r.planTitle} · {RUN_OUTCOME[r.runState] ?? r.runState} · {r.analysisRunId}
             </option>
           ))}
         </select>
@@ -269,6 +343,8 @@ export function AnalysisWork({ session }: { session: StaffSession }) {
               <div key={r.analysisRunId}>
                 <p>
                   Run against dataset version {r.datasetVersionId} — <code>{r.datasetManifestHash}</code>
+                  <br />
+                  <strong>{RUN_OUTCOME[r.runState] ?? r.runState}</strong>
                 </p>
                 {w.interpretations
                   .filter((i) => i.analysisRunId === r.analysisRunId)
