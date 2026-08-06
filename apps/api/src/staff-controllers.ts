@@ -25,6 +25,7 @@ import {
   withdrawParticipant,
 } from '@platform/m05-enrolment';
 import { listOrganisationAccounts, revokeRole } from '@platform/m01-identity-org';
+import { listInterventionSessions, recordInterventionSession } from '@platform/m07-delivery';
 import {
   activateInterventionVersion,
   approveInterventionVersion,
@@ -33,6 +34,7 @@ import {
   createInterventionVersion,
   submitInterventionVersion,
   listInterventions,
+  listInterventionConfigurations,
 } from '@platform/m06-intervention-portfolio';
 import {
   listSafetyEvents,
@@ -531,6 +533,60 @@ export class StaffCommandController {
       questionText: body.questionText ?? '',
     });
     return { data: { type: 'ResearchQuestion', id: result.researchQuestionId } };
+  }
+
+  // --- M07 delivery -----------------------------------------------------
+
+  /**
+   * Which intervention version a project is running, and what was
+   * actually delivered under it.
+   *
+   * M07 held one command and nothing else — no query, no route, no
+   * screen. An intervention could be approved and put into use and
+   * nobody could record that a participant had received it. Delivery was
+   * the part of a delivery platform with no way in.
+   */
+  @Get('intervention-configurations')
+  async interventionConfigurations(@Req() req: Request, @Query('researchProjectId') researchProjectId?: string) {
+    const ctx = requireActor(req);
+    const items = await listInterventionConfigurations(this.deps.m06, ctx, researchProjectId);
+    return {
+      data: items.map((c) => ({
+        type: 'InterventionConfiguration',
+        id: c.interventionConfigurationId,
+        attributes: c,
+      })),
+    };
+  }
+
+  @Get('enrolments/:enrolmentId/intervention-sessions')
+  async interventionSessions(@Req() req: Request, @Param('enrolmentId') enrolmentId: string) {
+    const ctx = requireActor(req);
+    const items = await listInterventionSessions(this.deps.m07, ctx, enrolmentId);
+    return {
+      data: items.map((s) => ({ type: 'InterventionSession', id: s.interventionSessionId, attributes: s })),
+    };
+  }
+
+  /** Recording what actually happened. Never what was meant to happen. */
+  @Post('intervention-sessions')
+  async recordSession(
+    @Req() req: Request,
+    @Body() body: {
+      enrolmentId: string;
+      interventionConfigurationId: string;
+      exposureState:
+        | 'Offered' | 'Viewed' | 'Started' | 'Partially Received' | 'Completed'
+        | 'Skipped' | 'Declined' | 'Failed' | 'Interrupted';
+    },
+  ) {
+    const ctx = requireActor(req);
+    const result = await recordInterventionSession(this.deps.m07, ctx, {
+      enrolmentId: body.enrolmentId,
+      interventionConfigurationId: body.interventionConfigurationId,
+      exposureState: body.exposureState,
+    });
+    return { data: { type: 'InterventionSession', id: result.interventionSessionId } };
   }
 
   // --- M01 accounts and roles -------------------------------------------

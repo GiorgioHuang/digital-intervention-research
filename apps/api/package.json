@@ -21,6 +21,7 @@
     "@platform/m04-research-design": "workspace:*",
     "@platform/m05-enrolment": "workspace:*",
     "@platform/m06-intervention-portfolio": "workspace:*",
+    "@platform/m07-delivery": "workspace:*",
     "@platform/m09-safety": "workspace:*",
     "@platform/m10-evidence": "workspace:*",
     "@platform/m12-dataset": "workspace:*",

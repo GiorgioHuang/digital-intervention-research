@@ -120,6 +120,28 @@ export interface SafetyEventItem {
   description: string;
   timeline: SafetyTimelineEntry[];
 }
+export interface InterventionConfigurationItem {
+  interventionConfigurationId: string;
+  researchProjectId: string;
+  protocolVersionId: string;
+  interventionVersionId: string;
+  interventionCode: string;
+  interventionName: string;
+  versionNumber: number;
+  versionState: string;
+  configurationState: string;
+  createdAt: string;
+}
+
+export interface InterventionSessionItem {
+  interventionSessionId: string;
+  enrolmentId: string;
+  interventionConfigurationId: string;
+  exposureState: string;
+  deliveredByActorId: string;
+  occurredAt: string;
+}
+
 export interface ResearchQuestionItem {
   researchQuestionId: string;
   questionText: string;
@@ -448,6 +470,31 @@ export const staffApi = {
       whatChanged,
       confirmed: true,
     }),
+
+  listInterventionConfigurations: (s: StaffSession, researchProjectId?: string) =>
+    get<List<InterventionConfigurationItem>>(
+      s,
+      `/v1/intervention-configurations${researchProjectId === undefined || researchProjectId === '' ? '' : `?researchProjectId=${encodeURIComponent(researchProjectId)}`}`,
+    ),
+  createInterventionConfiguration: (
+    s: StaffSession,
+    researchProjectId: string,
+    protocolVersionId: string,
+    interventionVersionId: string,
+  ) =>
+    post<Id>(s, '/v1/intervention-configurations', {
+      researchProjectId,
+      protocolVersionId,
+      interventionVersionId,
+    }),
+  listInterventionSessions: (s: StaffSession, enrolmentId: string) =>
+    get<List<InterventionSessionItem>>(s, `/v1/enrolments/${enrolmentId}/intervention-sessions`),
+  recordInterventionSession: (
+    s: StaffSession,
+    enrolmentId: string,
+    interventionConfigurationId: string,
+    exposureState: string,
+  ) => post<Id>(s, '/v1/intervention-sessions', { enrolmentId, interventionConfigurationId, exposureState }),
 
   listResearchProjects: (s: StaffSession) => get<List<ResearchProjectItem>>(s, '/v1/research-projects'),
   addResearchQuestion: (s: StaffSession, researchProjectId: string, questionText: string) =>

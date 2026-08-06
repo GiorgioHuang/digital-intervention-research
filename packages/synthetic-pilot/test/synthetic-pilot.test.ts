@@ -15,7 +15,7 @@ import { createPermissionService, recordConsentDecision, withdrawConsent, type M
 import { activateProtocolVersion, approveProtocolVersion, createProtocolVersion, createProtocolVersionQuery, createResearchProject, submitProtocolVersion, type M04Deps } from '@platform/m04-research-design';
 import { activateEnrolment, enrolParticipant, inviteParticipant, recordEligibilityDecision, startConsentProcess, startScreening, withdrawParticipant, type M05Deps } from '@platform/m05-enrolment';
 import { activateInterventionVersion, approveInterventionVersion, createIntervention, createInterventionConfiguration, createInterventionVersion, submitInterventionVersion, type M06Deps } from '@platform/m06-intervention-portfolio';
-import { recordInterventionSession, type M07Deps } from '@platform/m07-delivery';
+import { listInterventionSessions, recordInterventionSession, type M07Deps } from '@platform/m07-delivery';
 import { recordAssessment, type M08Deps } from '@platform/m08-assessment';
 import { approveEvidenceDecision, attachKnowledgeReference, createEvidenceReview, createKnowledgePlatformSimulator, draftEvidenceDecision, submitEvidenceReview, approveEvidenceReview, type M10Deps } from '@platform/m10-evidence';
 import { approveDatasetDefinition, completeQualityReview, createDatasetDefinition, generateDatasetVersion, lockDatasetVersion, type M12Deps } from '@platform/m12-dataset';
@@ -164,6 +164,37 @@ describe.skipIf(!dbAvailable)('Synthetic Pilot: one governed research cycle end 
     expect(msg.rows[0].delivery_state).toBe('Delivered');
 
     await recordInterventionSession(m07, ctx(coordId), { enrolmentId: annEnrolment, interventionConfigurationId: configurationId, exposureState: 'Completed' });
+
+    /*
+     * M07 held one command and nothing else — no query, no route, no
+     * screen. An intervention could be approved and put into use and
+     * nobody could record that a participant had received it, or read
+     * back what had been recorded. Delivery was the part of a delivery
+     * platform with no way in.
+     */
+    await recordInterventionSession(m07, ctx(coordId), {
+      enrolmentId: annEnrolment, interventionConfigurationId: configurationId, exposureState: 'Partially Received',
+    });
+    const delivered = await listInterventionSessions(m07, ctx(coordId), annEnrolment);
+    expect(delivered.map((d) => d.exposureState)).toContain('Partially Received');
+    expect(delivered.every((d) => d.deliveredByActorId === coordId)).toBe(true);
+
+    /*
+     * And why the screen shows the exposure and never session_state: the
+     * column defaults to 'Completed' and no code has ever written it, so
+     * the row that says only part of it reached her also claims the
+     * session completed. Printing both would contradict itself on one
+     * line.
+     */
+    const raw = await pool.query(
+      `SELECT exposure_state, session_state FROM intervention_delivery.intervention_sessions
+        WHERE enrolment_id = $1 AND exposure_state = 'Partially Received'`,
+      [annEnrolment],
+    );
+    expect(raw.rows[0]).toMatchObject({ exposure_state: 'Partially Received', session_state: 'Completed' });
+
+    // Reading is gated: a participant holds no session.record.
+    await expect(listInterventionSessions(m07, ctx(annAcc), annEnrolment)).rejects.toBeDefined();
     await recordAssessment(m08, ctx(coordId), {
       enrolmentId: annEnrolment, instrument: 'end-of-pilot-experience', instrumentVersion: 'v1',
       recordState: 'Completed', responses: { meaningfulness: 4, burden: 1 },

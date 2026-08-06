@@ -1,6 +1,11 @@
 import { useEffect, useState } from 'react';
 import { staffActionError, staffLoadError } from '../errors.js';
-import { staffApi, type InterventionItem, type StaffSession } from '../staff-api.js';
+import {
+  staffApi,
+  type InterventionConfigurationItem,
+  type InterventionItem,
+  type StaffSession,
+} from '../staff-api.js';
 
 /**
  * The intervention portfolio (M06).
@@ -33,6 +38,8 @@ const VERSION_STATE_WORDING: Record<string, string> = {
 
 export function Interventions({ session }: { session: StaffSession }) {
   const [items, setItems] = useState<InterventionItem[] | null>(null);
+  const [configurations, setConfigurations] = useState<InterventionConfigurationItem[] | null>(null);
+  const [binding, setBinding] = useState({ researchProjectId: '', protocolVersionId: '', interventionVersionId: '' });
   const [error, setError] = useState('');
   const [announcement, setAnnouncement] = useState('');
   const [draft, setDraft] = useState({ interventionCode: '', name: '' });
@@ -40,8 +47,12 @@ export function Interventions({ session }: { session: StaffSession }) {
 
   const load = async () => {
     try {
-      const res = await staffApi.listInterventions(session);
+      const [res, cfg] = await Promise.all([
+        staffApi.listInterventions(session),
+        staffApi.listInterventionConfigurations(session),
+      ]);
       setItems(res.data.map((i) => i.attributes));
+      setConfigurations(cfg.data.map((c) => c.attributes));
       setError('');
     } catch (err) {
       setError(staffLoadError(err, 'the intervention portfolio'));
@@ -191,6 +202,100 @@ export function Interventions({ session }: { session: StaffSession }) {
           </p>
         </article>
       ))}
+      {/*
+        Deliberately not built until now (D-41): the command existed with
+        a route and no caller, and nothing read a configuration, so a
+        screen for it would have been a control recording a decision
+        nothing acts on. Recording a delivered session reads one — a
+        session has to name the exact configuration a participant was
+        exposed to — which is the condition that decision set for itself.
+      */}
+      <h3>Which intervention a project is running</h3>
+      <p>
+        A configuration binds one exact protocol version to one exact intervention version for one project. It is
+        what a delivery record points at, so a session can say precisely what somebody was exposed to rather than
+        naming an intervention whose content has since moved on.
+      </p>
+      <p>
+        <small>
+          Only an approved or active intervention version can be bound; a draft is refused. Nothing here switches
+          anything on — the platform delivers nothing on its own, and a configuration is a statement of what a study
+          is running, not an instruction to run it.
+        </small>
+      </p>
+      {(configurations ?? []).length === 0 && configurations !== null && (
+        <p>No configurations yet, so there is nothing a delivery record could point at.</p>
+      )}
+      <ul>
+        {(configurations ?? []).map((c) => (
+          <li key={c.interventionConfigurationId}>
+            <strong>
+              {c.interventionCode} v{c.versionNumber}
+            </strong>{' '}
+            — {c.interventionName}
+            <br />
+            <small>
+              project {c.researchProjectId} · protocol version {c.protocolVersionId} ·{' '}
+              <code>{c.interventionConfigurationId}</code>
+            </small>
+          </li>
+        ))}
+      </ul>
+      <p>
+        <label htmlFor="cfg-project">Project identifier</label>{' '}
+        <input
+          id="cfg-project"
+          value={binding.researchProjectId}
+          onChange={(e) => setBinding({ ...binding, researchProjectId: e.target.value })}
+        />{' '}
+        <label htmlFor="cfg-protocol">Protocol version identifier</label>{' '}
+        <input
+          id="cfg-protocol"
+          value={binding.protocolVersionId}
+          onChange={(e) => setBinding({ ...binding, protocolVersionId: e.target.value })}
+        />
+      </p>
+      <p>
+        <label htmlFor="cfg-version">Intervention version</label>{' '}
+        <select
+          id="cfg-version"
+          value={binding.interventionVersionId}
+          onChange={(e) => setBinding({ ...binding, interventionVersionId: e.target.value })}
+        >
+          <option value="">Choose…</option>
+          {(items ?? []).flatMap((i) =>
+            i.versions
+              .filter((v) => v.versionState === 'Approved' || v.versionState === 'Active')
+              .map((v) => (
+                <option key={v.interventionVersionId} value={v.interventionVersionId}>
+                  {i.interventionCode} v{v.versionNumber} ({v.versionState === 'Active' ? 'in use' : 'approved'})
+                </option>
+              )),
+          )}
+        </select>{' '}
+        <button
+          disabled={
+            binding.researchProjectId.trim() === '' ||
+            binding.protocolVersionId.trim() === '' ||
+            binding.interventionVersionId === ''
+          }
+          onClick={() =>
+            void run(
+              () =>
+                staffApi.createInterventionConfiguration(
+                  session,
+                  binding.researchProjectId.trim(),
+                  binding.protocolVersionId.trim(),
+                  binding.interventionVersionId,
+                ),
+              'Bound. A delivery record can now point at it.',
+            )
+          }
+        >
+          Bind this version to that project
+        </button>
+      </p>
+
       <p aria-live="polite" role="status">
         {announcement}
       </p>

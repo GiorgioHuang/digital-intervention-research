@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { staffActionError, staffLoadError } from '../errors.js';
 import { staffApi, type EnrolmentItem, type StaffSession } from '../staff-api.js';
+import { DeliveryRecord } from './DeliveryRecord.js';
 import { ProposeRelationship } from './ProposeRelationship.js';
 
 /**
@@ -218,6 +219,17 @@ export function StaffCoordinatorPanel({ session }: { session: StaffSession }) {
                     </button>
                   </p>
                 </div>
+              )}
+
+              {/*
+                M07 had one command and no query, no route and no screen:
+                an intervention could be approved and put into use, and
+                nobody could record that a participant had received it.
+                Only offered once they are actually taking part — there is
+                nothing to record against an invitation.
+              */}
+              {['Active', 'Paused'].includes(e.enrolmentState) && (
+                <DeliveryRecord session={session} enrolmentId={e.enrolmentId} />
               )}
 
               {withdrawable && (

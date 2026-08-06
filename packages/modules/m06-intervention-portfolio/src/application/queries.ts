@@ -91,3 +91,68 @@ export async function listInterventions(deps: M06Deps, ctx: RequestContext): Pro
     versions: byIntervention.get(r.id as string) ?? [],
   }));
 }
+
+export interface InterventionConfigurationView {
+  interventionConfigurationId: string;
+  researchProjectId: string;
+  protocolVersionId: string;
+  interventionVersionId: string;
+  interventionCode: string;
+  interventionName: string;
+  versionNumber: number;
+  versionState: string;
+  configurationState: string;
+  createdAt: string;
+}
+
+/**
+ * Which intervention version a project is running, under which protocol
+ * version.
+ *
+ * This was deliberately left off screen (D-41): the command existed with
+ * a route and no caller, nothing read a configuration, and building a
+ * screen for it would have added a control that records a decision
+ * nothing acts on. The unlock condition written into that decision was
+ * that something must actually read one — and recording a delivered
+ * session does, because a session cannot say what a participant was
+ * exposed to without naming the exact configuration it came from. So
+ * this exists now for the same reason it did not before.
+ *
+ * `configuration_state` is returned verbatim and must not be shown as a
+ * lifecycle: it is inserted as 'Draft' and no code has ever moved it, so
+ * every configuration in the database reads the same.
+ */
+export async function listInterventionConfigurations(
+  deps: M06Deps,
+  ctx: RequestContext,
+  researchProjectId?: string,
+): Promise<InterventionConfigurationView[]> {
+  const decision = await deps.checkPermission(ctx, {
+    action: 'intervention.view',
+    resource: { type: 'InterventionConfiguration', id: 'all', state: 'Active', protectedExistence: false },
+  });
+  assertAllowed(decision, false);
+  const res = await deps.pool.query(
+    `SELECT c.id, c.research_project_id, c.protocol_version_id, c.intervention_version_id,
+            c.configuration_state, c.created_at,
+            v.version_number, v.version_state, i.intervention_code, i.name
+       FROM intervention_portfolio.intervention_configurations c
+       JOIN intervention_portfolio.intervention_versions v ON v.id = c.intervention_version_id
+       JOIN intervention_portfolio.interventions i ON i.id = v.intervention_id
+      ${researchProjectId === undefined ? '' : 'WHERE c.research_project_id = $1'}
+      ORDER BY c.created_at DESC`,
+    researchProjectId === undefined ? [] : [researchProjectId],
+  );
+  return res.rows.map((r) => ({
+    interventionConfigurationId: r.id as string,
+    researchProjectId: r.research_project_id as string,
+    protocolVersionId: r.protocol_version_id as string,
+    interventionVersionId: r.intervention_version_id as string,
+    interventionCode: r.intervention_code as string,
+    interventionName: r.name as string,
+    versionNumber: r.version_number as number,
+    versionState: r.version_state as string,
+    configurationState: r.configuration_state as string,
+    createdAt: (r.created_at as Date).toISOString(),
+  }));
+}

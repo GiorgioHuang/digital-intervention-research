@@ -20,6 +20,7 @@ import {
 import type { M04Deps } from '@platform/m04-research-design';
 import { listOwnEnrolments, type M05Deps } from '@platform/m05-enrolment';
 import type { M06Deps } from '@platform/m06-intervention-portfolio';
+import type { M07Deps } from '@platform/m07-delivery';
 import { recordSafetySignal, type M09Deps } from '@platform/m09-safety';
 import type { M10Deps } from '@platform/m10-evidence';
 import type { M12Deps } from '@platform/m12-dataset';
@@ -96,6 +97,7 @@ export interface ApiDeps {
   m04: M04Deps;
   m05: M05Deps;
   m06: M06Deps;
+  m07: M07Deps;
   m09: M09Deps;
   m10: M10Deps;
   m12: M12Deps;

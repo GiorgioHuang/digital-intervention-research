@@ -65,6 +65,9 @@ importers:
       '@platform/m06-intervention-portfolio':
         specifier: workspace:*
         version: link:../../packages/modules/m06-intervention-portfolio
+      '@platform/m07-delivery':
+        specifier: workspace:*
+        version: link:../../packages/modules/m07-delivery
       '@platform/m09-safety':
         specifier: workspace:*
         version: link:../../packages/modules/m09-safety

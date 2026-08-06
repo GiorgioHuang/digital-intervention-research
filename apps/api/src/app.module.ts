@@ -53,6 +53,7 @@ export function buildAppModule(config: ApiConfig) {
       protocolVersions: createProtocolVersionQuery(pool),
     },
     m06: moduleDeps,
+    m07: moduleDeps,
     m09: moduleDeps,
     m10: { ...moduleDeps, knowledgePlatform },
     m12: moduleDeps,

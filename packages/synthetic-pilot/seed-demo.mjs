@@ -51,9 +51,11 @@ import {
   activateInterventionVersion,
   approveInterventionVersion,
   createIntervention,
+  createInterventionConfiguration,
   createInterventionVersion,
   submitInterventionVersion,
 } from '@platform/m06-intervention-portfolio';
+import { recordInterventionSession } from '@platform/m07-delivery';
 import {
   activateEnrolment,
   enrolParticipant,
@@ -542,6 +544,30 @@ async function main() {
   await submitInterventionVersion(base, ctx(researcherId), interventionVersionId);
   await approveInterventionVersion(base, mfa(approverId), interventionVersionId, true);
   await activateInterventionVersion(base, mfa(approverId), interventionVersionId, true);
+
+  /*
+   * Bound to the project and the approved protocol version, then
+   * delivered — because until this session M07 had one command, no query,
+   * no route and no screen, so an intervention could be put into use and
+   * nobody could record that anybody had received it.
+   */
+  const { interventionConfigurationId } = await createInterventionConfiguration(base, ctx(researcherId), {
+    researchProjectId,
+    protocolVersionId,
+    interventionVersionId,
+  });
+  await recordInterventionSession(base, ctx(coordId), {
+    enrolmentId: annEnrolment,
+    interventionConfigurationId,
+    exposureState: 'Completed',
+  });
+  // Not everything lands, and a demo that only shows the happy state
+  // teaches the wrong thing about what this record is for.
+  await recordInterventionSession(base, ctx(coordId), {
+    enrolmentId: annEnrolment,
+    interventionConfigurationId,
+    exposureState: 'Partially Received',
+  });
 
   const { interventionVersionId: pendingInterventionVersionId } = await createInterventionVersion(
     base,

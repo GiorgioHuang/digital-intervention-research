@@ -9,7 +9,9 @@ export {
   type M06Deps,
 } from './application/commands.js';
 export {
+  listInterventionConfigurations,
   listInterventions,
+  type InterventionConfigurationView,
   type InterventionView,
   type InterventionVersionView,
 } from './application/queries.js';
