@@ -120,6 +120,28 @@ export interface SafetyEventItem {
   description: string;
   timeline: SafetyTimelineEntry[];
 }
+export interface InterventionVersionItem {
+  interventionVersionId: string;
+  versionNumber: number;
+  versionState: string;
+  submittedByActorId: string | null;
+  approvedByActorId: string | null;
+  approvedAt: string | null;
+  recordVersion: number;
+  createdAt: string;
+}
+
+export interface InterventionItem {
+  interventionId: string;
+  interventionCode: string;
+  name: string;
+  lifecycleMaturity: string;
+  /** Returned verbatim; nothing in the platform ever writes either. */
+  evidenceStatus: string;
+  evidenceDirection: string;
+  versions: InterventionVersionItem[];
+}
+
 /** One line of the platform's accountability record. */
 export interface AuditEventItem {
   auditEventId: string;
@@ -387,6 +409,18 @@ export const staffApi = {
       whatChanged,
       confirmed: true,
     }),
+
+  listInterventions: (s: StaffSession) => get<List<InterventionItem>>(s, '/v1/interventions'),
+  createIntervention: (s: StaffSession, interventionCode: string, name: string) =>
+    post<Id>(s, '/v1/interventions', { interventionCode, name }),
+  createInterventionVersion: (s: StaffSession, interventionId: string, content: Record<string, unknown>) =>
+    post<Id>(s, `/v1/interventions/${interventionId}/versions`, { content }),
+  submitInterventionVersion: (s: StaffSession, versionId: string) =>
+    post<Id>(s, `/v1/intervention-versions/${versionId}/submit`, {}),
+  approveInterventionVersion: (s: StaffSession, versionId: string) =>
+    post<Id>(s, `/v1/intervention-versions/${versionId}/approve`, { confirmed: true }),
+  activateInterventionVersion: (s: StaffSession, versionId: string) =>
+    post<Id>(s, `/v1/intervention-versions/${versionId}/activate`, { confirmed: true }),
 
   listSafetyEvents: (s: StaffSession) => get<List<SafetyEventItem>>(s, '/v1/safety-events'),
 

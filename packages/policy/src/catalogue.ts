@@ -57,6 +57,7 @@ export const POLICY_V1: PolicyConfiguration = {
       'protocol.submit',
       'intervention.draft',
       'intervention.submit',
+      'intervention.view',
       'evidence.search',
       'evidence.reference',
       'evidence-review.create',
@@ -79,7 +80,7 @@ export const POLICY_V1: PolicyConfiguration = {
     ResearchApprover: [
       'protocol.review', 'protocol.approve', 'protocol.activate',
       'project.approve', 'project.activate',
-      'intervention.approve', 'intervention.activate',
+      'intervention.approve', 'intervention.activate', 'intervention.view',
       'dataset.approve-definition', 'dataset.lock',
       'analysis-plan.approve', 'interpretation.approve', 'finding.approve',
       'approval.decide',
@@ -223,6 +224,14 @@ export const POLICY_V1: PolicyConfiguration = {
     'protocol.draft': {},
     'protocol.submit': {},
     'protocol.activate': { confirmationRequired: true },
+    /**
+     * Seeing the portfolio. M06 had six commands and no query at all, so
+     * an approver had a decision to make with no way to learn there was
+     * anything to decide, and the researcher who submitted a version
+     * could not find out what became of it. Held by both sides of that
+     * exchange, as the other work queues are.
+     */
+    'intervention.view': {},
     'intervention.draft': {},
     'intervention.submit': {},
     'intervention.approve': { confirmationRequired: true, minimumAuthStrength: 'mfa' },

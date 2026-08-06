@@ -29,6 +29,7 @@ import {
   createInterventionConfiguration,
   createInterventionVersion,
   submitInterventionVersion,
+  listInterventions,
 } from '@platform/m06-intervention-portfolio';
 import {
   listSafetyEvents,
@@ -496,7 +497,20 @@ export class StaffCommandController {
     return { data: { type: 'Enrolment', id: enrolmentId, meta: { state: 'Withdrawn' } } };
   }
 
-  // --- M06 intervention portfolio -------------------------------------
+  // --- M06 intervention portfolio ---------------------------------------
+
+  /**
+   * The portfolio, which nothing could see. M06 had six commands and no
+   * query at all: the approver had decisions to make with no way to learn
+   * there was anything to decide, and the researcher who submitted a
+   * version could not find out what became of it.
+   */
+  @Get('interventions')
+  async interventions(@Req() req: Request) {
+    const ctx = requireActor(req);
+    const items = await listInterventions(this.deps.m06, ctx);
+    return { data: items.map((i) => ({ type: 'Intervention', id: i.interventionId, attributes: i })) };
+  }
 
   @Post('interventions')
   async createIntervention(@Req() req: Request, @Body() body: { interventionCode: string; name: string }) {

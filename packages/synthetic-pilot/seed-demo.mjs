@@ -47,6 +47,13 @@ import {
   submitProtocolVersion,
 } from '@platform/m04-research-design';
 import {
+  activateInterventionVersion,
+  approveInterventionVersion,
+  createIntervention,
+  createInterventionVersion,
+  submitInterventionVersion,
+} from '@platform/m06-intervention-portfolio';
+import {
   activateEnrolment,
   enrolParticipant,
   inviteParticipant,
@@ -507,6 +514,32 @@ async function main() {
     protocolVersionId,
   });
   await startScreening(m05, ctx(coordId), benEnrolment);
+
+  /*
+   * The portfolio, which nothing in the product could see. M06 had six
+   * commands and no query at all, so the module the platform is named
+   * after had never had a row anyone could look at. One intervention
+   * carried all the way into use, and a second version left waiting so
+   * the approver's new queue holds something real.
+   */
+  const { interventionId } = await createIntervention(base, ctx(researcherId), {
+    interventionCode: 'INT-001',
+    name: 'Life story work with a supporter',
+  });
+  const { interventionVersionId } = await createInterventionVersion(base, ctx(researcherId), {
+    interventionId,
+    content: { components: ['weekly prompts', 'supporter contributions', 'participant-controlled sharing'] },
+  });
+  await submitInterventionVersion(base, ctx(researcherId), interventionVersionId);
+  await approveInterventionVersion(base, mfa(approverId), interventionVersionId, true);
+  await activateInterventionVersion(base, mfa(approverId), interventionVersionId, true);
+
+  const { interventionVersionId: pendingInterventionVersionId } = await createInterventionVersion(
+    base,
+    ctx(researcherId),
+    { interventionId, content: { components: ['weekly prompts', 'a shorter version for people who tire easily'] } },
+  );
+  await submitInterventionVersion(base, ctx(researcherId), pendingInterventionVersionId);
 
   // Evidence: one review carried to approved, with a reference that
   // resolved and one that did not, so the honest "not found" state is

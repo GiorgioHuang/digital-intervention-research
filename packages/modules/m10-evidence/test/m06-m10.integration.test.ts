@@ -18,6 +18,7 @@ import {
   createIntervention,
   createInterventionConfiguration,
   createInterventionVersion,
+  listInterventions,
   submitInterventionVersion,
   type M06Deps,
 } from '@platform/m06-intervention-portfolio';
@@ -302,6 +303,7 @@ describe.skipIf(!dbAvailable)('M06 intervention portfolio + M10 evidence chain (
     ).rejects.toThrow(/immutable/);
   });
 
+
   /**
    * A snapshot is the immutable record of what an agreed decision rested
    * on. A refused decision rests on nothing anyone may cite afterwards, so
@@ -386,6 +388,44 @@ describe.skipIf(!dbAvailable)('M06 intervention portfolio + M10 evidence chain (
         [interventionVersionId],
       ),
     ).rejects.toThrow(/immutable/);
+  });
+
+  /**
+   * M06 had six commands, no query at all, and no caller anywhere in the
+   * product for any of them. An intervention created straight against the
+   * API was invisible from that moment on: the approver had two decisions
+   * to make with no way to learn anything was waiting, and the researcher
+   * who submitted a version could not find out what became of it. On the
+   * module the platform is named after, the interventions were the one
+   * thing nobody could look at.
+   */
+  it('the portfolio can be read, by both sides of the decision', async () => {
+    const mine = await listInterventions(m06, ctx(researcherId));
+    const seen = mine.find((i) => i.versions.some((v) => v.interventionVersionId === interventionVersionId));
+    expect(seen).toBeDefined();
+    const active = seen!.versions.find((v) => v.interventionVersionId === interventionVersionId);
+    expect(active?.versionState).toBe('Active');
+    // Who did what, so the approver's row can say it and the separation
+    // of duties is legible rather than only enforced.
+    expect(active?.submittedByActorId).toBe(researcherId);
+    expect(active?.approvedByActorId).toBe(approverId);
+
+    // The approver sees the same portfolio: they hold the decisions, so
+    // withholding the list would make those decisions unreachable.
+    const theirs = await listInterventions(
+      m06,
+      createRequestContext({ actor: { type: 'user', id: approverId }, organisationId: orgId }),
+    );
+    expect(theirs.length).toBe(mine.length);
+
+    /*
+     * Returned verbatim and never as a grade. Nothing in the platform
+     * writes either column, so every row carries the defaults - which is
+     * why the screen says these are not recorded rather than printing
+     * "E0" beside an intervention as though somebody had assessed it.
+     */
+    expect(mine.every((i) => i.evidenceStatus === 'E0')).toBe(true);
+    expect(mine.every((i) => i.evidenceDirection === 'Not Evaluated')).toBe(true);
   });
 
   it('NEGATIVE draft binding: configuration cannot reference a non-approved intervention version', async () => {

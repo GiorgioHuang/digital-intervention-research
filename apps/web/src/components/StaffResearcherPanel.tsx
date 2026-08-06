@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { staffActionError, staffLoadError } from '../errors.js';
 import { staffApi, type ProtocolVersionItem, type StaffSession } from '../staff-api.js';
 import { AnalysisWork } from './AnalysisWork.js';
+import { Interventions } from './Interventions.js';
 import { DatasetWork } from './DatasetWork.js';
 import { EvidenceDecisionWork } from './EvidenceDecisionWork.js';
 import { EvidenceWork } from './EvidenceWork.js';
@@ -198,6 +199,13 @@ export function StaffResearcherPanel({ session }: { session: StaffSession }) {
         the four before it could be performed by nobody.
       */}
       <DatasetWork session={session} />
+
+      {/*
+        The module the platform is named after: six commands, no callers
+        anywhere in the product, and no query at all — so an intervention
+        created straight against the API was invisible from that moment.
+      */}
+      <Interventions session={session} />
 
       {/*
         Every step of the analysis chain had a command and none had a

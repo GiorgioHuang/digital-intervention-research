@@ -8,3 +8,8 @@ export {
   createInterventionConfiguration,
   type M06Deps,
 } from './application/commands.js';
+export {
+  listInterventions,
+  type InterventionView,
+  type InterventionVersionView,
+} from './application/queries.js';
