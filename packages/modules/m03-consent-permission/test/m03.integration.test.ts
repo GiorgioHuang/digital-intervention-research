@@ -6,6 +6,8 @@ import { POLICY_V1 } from '@platform/policy';
 import {
   assignRole,
   createOrganisation,
+  listOrganisationAccounts,
+  revokeRole,
   createRoleAssignmentQuery,
   createUserAccount,
   seedBootstrapAdministrator,
@@ -623,6 +625,75 @@ describe.skipIf(!dbAvailable)('M01+M03 identity, consent and permission (integra
     });
     const alone = (await listOwnConsents(m03, ctxFor(participantId), participantId)).find((c) => c.scope === scope);
     expect(alone?.assistanceRecorded).toBe(false);
+  });
+
+  /**
+   * `revokeRole` had its permission check, its optimistic version guard,
+   * its domain event and its audit entry from the day M01 was written,
+   * and no route and no screen; `user.view` was granted to two roles and
+   * checked by no code at all; and nothing listed an account or a role.
+   * Access on this platform could be given and never taken back.
+   */
+  it('a role can be listed and taken back, and the refusal is immediate', async () => {
+    const adminCtx = ctxFor(adminId, { organisationId: orgId });
+
+    // The researcher could read a participant record before this.
+    const before = await researcherView();
+    expect(before.outcome).not.toBe('Deny');
+
+    const accounts = await listOrganisationAccounts(m01, adminCtx);
+    const theirs = accounts.find((a) => a.userAccountId === researcherId);
+    expect(theirs).toBeDefined();
+    const role = theirs!.roles.find((r) => r.role === 'Researcher' && r.assignmentState === 'Active');
+    expect(role).toBeDefined();
+
+    // Version-bound: a role that changed underneath is refused, not merged.
+    await expect(
+      revokeRole(m01, adminCtx, { roleAssignmentId: role!.roleAssignmentId, expectedVersion: 99, confirmed: true }),
+    ).rejects.toMatchObject({ code: 'VERSION_CONFLICT' });
+
+    // High-impact, so unconfirmed is refused too.
+    await expect(
+      revokeRole(m01, adminCtx, {
+        roleAssignmentId: role!.roleAssignmentId,
+        expectedVersion: role!.recordVersion,
+        confirmed: false,
+      }),
+    ).rejects.toBeDefined();
+
+    await revokeRole(m01, adminCtx, {
+      roleAssignmentId: role!.roleAssignmentId,
+      expectedVersion: role!.recordVersion,
+      confirmed: true,
+    });
+
+    /*
+     * What the whole thing is for: the next thing they try is refused,
+     * and refused for the right reason. The outcome hides the record's
+     * existence (ADR-050) rather than saying "denied" — a former
+     * colleague learning that this participant exists would be the thing
+     * revocation was meant to prevent.
+     */
+    const after = await researcherView();
+    expect(after.outcome).toBe('DenyAndHideExistence');
+    expect(after.reason).toBe('no-granting-role');
+
+    // The record of the revocation stays visible rather than the row
+    // vanishing: who took it back and when is the part somebody will need.
+    const listed = (await listOrganisationAccounts(m01, adminCtx))
+      .find((a) => a.userAccountId === researcherId)!
+      .roles.find((r) => r.roleAssignmentId === role!.roleAssignmentId);
+    expect(listed?.assignmentState).toBe('Revoked');
+    expect(listed?.revokedByActorId).toBe(adminId);
+
+    /*
+     * And an account cannot be closed: five states exist on the column
+     * and nothing writes any of them, so 'Active' is the default rather
+     * than anybody's decision. The screen says so, because an
+     * administrator who believes otherwise thinks they have shut somebody
+     * out when they have not.
+     */
+    expect(accounts.every((a) => a.accountState === 'Active')).toBe(true);
   });
 });
 

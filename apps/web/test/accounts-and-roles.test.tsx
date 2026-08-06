@@ -1,0 +1,125 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act } from 'react';
+import { AccountsAndRoles } from '../src/components/AccountsAndRoles.js';
+
+const session = { actorId: 'actor_admin', authStrength: 'mfa' as const, organisationId: 'org_1' };
+
+const role = (over: Record<string, unknown> = {}) => ({
+  roleAssignmentId: 'ra_1',
+  role: 'Researcher',
+  organisationId: 'org_1',
+  researchProjectId: null,
+  assignmentState: 'Active',
+  expiresAt: null,
+  assignedByActorId: 'actor_admin',
+  revokedAt: null,
+  revokedByActorId: null,
+  recordVersion: 3,
+  createdAt: '2026-08-01T00:00:00Z',
+  ...over,
+});
+
+function stubFetch(roles: unknown[] = [role()]) {
+  const calls: { path: string; method: string; body: Record<string, unknown> }[] = [];
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (path: string, init?: RequestInit) => {
+      const method = init?.method ?? 'GET';
+      if (method === 'GET') {
+        calls.push({ path, method, body: {} });
+        return new Response(
+          JSON.stringify({
+            data: [
+              {
+                type: 'UserAccount',
+                id: 'actor_r',
+                attributes: {
+                  userAccountId: 'actor_r',
+                  displayName: 'Researcher Rae',
+                  accountState: 'Active',
+                  actorType: 'user',
+                  roles,
+                },
+              },
+            ],
+          }),
+          { status: 200 },
+        );
+      }
+      calls.push({ path, method, body: JSON.parse(init!.body as string) as Record<string, unknown> });
+      return new Response(JSON.stringify({ data: { id: 'ra_1' } }), { status: 201 });
+    }),
+  );
+  return calls;
+}
+
+/**
+ * revokeRole had its permission check, version guard, domain event and
+ * audit entry from the day M01 was written, and no route and no screen.
+ * Access could be given and never taken back.
+ */
+describe('accounts and roles', () => {
+  beforeEach(() => {
+    (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+  });
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllGlobals();
+  });
+
+  /**
+   * account_state has five values and no writer, so every account reads
+   * Active because that is the column default. An administrator who
+   * believes accounts can be closed thinks they have shut somebody out
+   * when they have not.
+   */
+  it('says an account cannot be closed rather than showing a state nobody maintains', async () => {
+    stubFetch();
+    await act(async () => {
+      render(<AccountsAndRoles session={session} />);
+    });
+    expect(screen.getByText(/There is no way to close an account here/i)).toBeTruthy();
+    expect(screen.getByText(/Removing every role is the only way to stop somebody/i)).toBeTruthy();
+    // The unmaintained state is not printed as a status.
+    expect(document.body.textContent).not.toContain('Active');
+  });
+
+  it('revoking is confirmed, version-bound, and says what it does not undo', async () => {
+    const calls = stubFetch();
+    await act(async () => {
+      render(<AccountsAndRoles session={session} />);
+    });
+    expect(screen.getByText(/does not remove anything the person did/i)).toBeTruthy();
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Take back this role' }));
+    });
+    // Nothing sent until confirmed.
+    expect(calls.filter((c) => c.method === 'POST').length).toBe(0);
+    expect(screen.getByText(/This is their last role in force/i)).toBeTruthy();
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Yes, take it back' }));
+    });
+    const post = calls.find((c) => c.method === 'POST');
+    expect(post?.path).toBe('/v1/role-assignments/ra_1/revoke');
+    expect(post?.body['expectedVersion']).toBe(3);
+    expect(post?.body['confirmed']).toBe(true);
+  });
+
+  it('a role already taken back offers nothing and keeps who took it', async () => {
+    stubFetch([
+      role({
+        assignmentState: 'Revoked',
+        revokedAt: '2026-08-05T00:00:00Z',
+        revokedByActorId: 'actor_admin',
+      }),
+    ]);
+    await act(async () => {
+      render(<AccountsAndRoles session={session} />);
+    });
+    expect(screen.queryByRole('button', { name: 'Take back this role' })).toBeNull();
+    expect(screen.getByText(/taken back by actor_admin/)).toBeTruthy();
+    // And the consequence of holding nothing is stated rather than implied.
+    expect(screen.getByText(/the platform has no way to stop them signing in/i)).toBeTruthy();
+  });
+});

@@ -22,6 +22,7 @@ import {
   startScreening,
   withdrawParticipant,
 } from '@platform/m05-enrolment';
+import { listOrganisationAccounts, revokeRole } from '@platform/m01-identity-org';
 import {
   activateInterventionVersion,
   approveInterventionVersion,
@@ -495,6 +496,44 @@ export class StaffCommandController {
     if (body.reasonCategory !== undefined) input.reasonCategory = body.reasonCategory;
     await withdrawParticipant(this.deps.m05, ctx, input);
     return { data: { type: 'Enrolment', id: enrolmentId, meta: { state: 'Withdrawn' } } };
+  }
+
+  // --- M01 accounts and roles -------------------------------------------
+
+  /**
+   * Who holds what in this organisation.
+   *
+   * `revokeRole` has existed since M01 was written — permission check,
+   * version guard, domain event, audit entry — with no route and no
+   * screen, and `user.view` was granted to two roles and checked nowhere.
+   * Access could be given and never taken back.
+   *
+   * The organisation comes from the request context and never from an
+   * argument: a listing that takes an organisation identifier is a way of
+   * asking which organisations exist.
+   */
+  @Get('user-accounts')
+  async organisationAccounts(@Req() req: Request) {
+    const ctx = requireActor(req);
+    const items = await listOrganisationAccounts(this.deps.m01, ctx);
+    return { data: items.map((a) => ({ type: 'UserAccount', id: a.userAccountId, attributes: a })) };
+  }
+
+  /** Taking a role back. Confirmed, and version-bound so a role that
+   *  changed under the administrator is refused rather than merged. */
+  @Post('role-assignments/:roleAssignmentId/revoke')
+  async revokeRoleAssignment(
+    @Req() req: Request,
+    @Param('roleAssignmentId') roleAssignmentId: string,
+    @Body() body: { expectedVersion: number; confirmed: boolean },
+  ) {
+    const ctx = requireActor(req);
+    await revokeRole(this.deps.m01, ctx, {
+      roleAssignmentId,
+      expectedVersion: body.expectedVersion,
+      confirmed: body.confirmed === true,
+    });
+    return { data: { type: 'RoleAssignment', id: roleAssignmentId, meta: { state: 'Revoked' } } };
   }
 
   // --- M06 intervention portfolio ---------------------------------------

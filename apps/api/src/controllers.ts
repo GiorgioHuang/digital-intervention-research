@@ -2,7 +2,7 @@ import { Body, Controller, Get, Inject, Param, Post, Query, Req } from '@nestjs/
 import type { Request } from 'express';
 import type { Clock } from '@platform/kernel';
 import type { Pool } from '@platform/database';
-import type { AccountNameQueryPort } from '@platform/m01-identity-org';
+import type { AccountNameQueryPort, M01Deps } from '@platform/m01-identity-org';
 import type { M02Deps } from '@platform/m02-participant';
 import {
   approveRelationship,
@@ -90,6 +90,7 @@ export interface ApiDeps {
   accountNames: AccountNameQueryPort;
   /** Participant display names (M02), for the same reason on the supporter side. */
   participantNames: { findDisplayNames(participantIds: string[]): Promise<Map<string, string>> };
+  m01: M01Deps;
   m02: M02Deps;
   m03: M03Deps;
   m04: M04Deps;

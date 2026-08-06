@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { staffLoadError } from '../errors.js';
 import { staffApi, type AdministeredParticipant, type StaffSession } from '../staff-api.js';
+import { AccountsAndRoles } from './AccountsAndRoles.js';
 
 /**
  * Administrative participant list for one organisation (decision D-13).
@@ -87,6 +88,13 @@ export function StaffAdminPanel({ session }: { session: StaffSession }) {
       <p aria-live="polite" role="status">
         {announcement}
       </p>
+    {/*
+        revokeRole had its permission check, its version guard, its domain
+        event and its audit entry from the day M01 was written, and no
+        route and no screen: access could be given and never taken back.
+      */}
+      <AccountsAndRoles session={session} />
+
     </section>
   );
 }

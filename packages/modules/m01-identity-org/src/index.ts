@@ -8,4 +8,9 @@ export {
   type M01Deps,
   type PermissionCheck,
 } from './application/commands.js';
+export {
+  listOrganisationAccounts,
+  type AccountView,
+  type RoleAssignmentView,
+} from './application/queries.js';
 export { createAccountNameQuery, createRoleAssignmentQuery } from './infrastructure/repository.js';

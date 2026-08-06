@@ -120,6 +120,29 @@ export interface SafetyEventItem {
   description: string;
   timeline: SafetyTimelineEntry[];
 }
+export interface RoleAssignmentItem {
+  roleAssignmentId: string;
+  role: string;
+  organisationId: string | null;
+  researchProjectId: string | null;
+  assignmentState: string;
+  expiresAt: string | null;
+  assignedByActorId: string;
+  revokedAt: string | null;
+  revokedByActorId: string | null;
+  recordVersion: number;
+  createdAt: string;
+}
+
+export interface AccountItem {
+  userAccountId: string;
+  displayName: string;
+  /** Returned verbatim; nothing in the platform ever writes it. */
+  accountState: string;
+  actorType: string;
+  roles: RoleAssignmentItem[];
+}
+
 export interface InterventionVersionItem {
   interventionVersionId: string;
   versionNumber: number;
@@ -409,6 +432,11 @@ export const staffApi = {
       whatChanged,
       confirmed: true,
     }),
+
+  listOrganisationAccounts: (s: StaffSession) => get<List<AccountItem>>(s, '/v1/user-accounts'),
+  /** Version-bound: a role that changed underneath is refused, not merged. */
+  revokeRole: (s: StaffSession, roleAssignmentId: string, expectedVersion: number) =>
+    post<Id>(s, `/v1/role-assignments/${roleAssignmentId}/revoke`, { expectedVersion, confirmed: true }),
 
   listInterventions: (s: StaffSession) => get<List<InterventionItem>>(s, '/v1/interventions'),
   createIntervention: (s: StaffSession, interventionCode: string, name: string) =>
