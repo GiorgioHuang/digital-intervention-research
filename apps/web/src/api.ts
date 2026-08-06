@@ -382,6 +382,15 @@ export const api = {
       `/v1/match-candidates/${candidateId}/decision`,
       { participantId: s.participantId, expectedCandidateVersion, decision, confirmed },
     ),
+  /**
+   * Starting a conversation with a supporter. Refused unless the
+   * relationship itself allows messages — being trusted to see what you
+   * share is not being allowed to write to you (D-29).
+   */
+  startRelationshipThread: (s: Session, relationshipId: string) =>
+    post<{ data: { id: string } }>(s, `/v1/relationships/${relationshipId}/conversation-thread`, {
+      creatorId: s.participantId,
+    }),
   /** Ending a connection. This is not blocking, and the screen says so. */
   endConnection: (s: Session, connectionId: string) =>
     post<{ data: { id: string } }>(s, `/v1/connections/${connectionId}/end`, {

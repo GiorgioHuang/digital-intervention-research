@@ -424,3 +424,43 @@ export async function listMyPosts(
     publishedAt: r.published_at === null ? null : (r.published_at as Date).toISOString(),
   }));
 }
+
+/**
+ * The conversations a supporter is a party to.
+ *
+ * `listThreads` is keyed by participant identifier, and a supporter has no
+ * participant record — so before this a thread could be written to them and
+ * they could never read it. That is why relationship messaging was not
+ * built until the way to read it existed: a channel somebody can only be
+ * written into is worse than no channel, because the person writing
+ * believes they were heard.
+ *
+ * Scoped inside the query to threads naming this actor, which is the same
+ * shape `relationship.view-own` already uses: the reader here is the
+ * related party, not the participant the conversation is about.
+ */
+export async function listThreadsForActor(deps: M18Deps, ctx: RequestContext): Promise<ThreadSummary[]> {
+  const actorId = ctx.actor?.id;
+  if (actorId === undefined) throw new PlatformError('AUTHORISATION_DENIED', 'Not authenticated');
+  const decision = await deps.checkPermission(ctx, {
+    action: 'thread.view-own',
+    resource: { type: 'ConversationThread', id: 'mine', state: 'Any', protectedExistence: true },
+  });
+  assertAllowed(decision, false);
+  const res = await deps.pool.query(
+    `SELECT id, participant_a_id, participant_b_id, basis_type, thread_state, created_at
+       FROM community_social.conversation_threads
+      WHERE basis_type = 'AuthorisedRelationship' AND participant_b_id = $1
+      ORDER BY created_at DESC`,
+    [actorId],
+  );
+  const rows = res.rows.map((r) => ({
+    threadId: r.id as string,
+    otherParticipantId: r.participant_a_id as string,
+    basisType: r.basis_type as string,
+    threadState: r.thread_state as string,
+    createdAt: (r.created_at as Date).toISOString(),
+  }));
+  const name = await nameOf(deps, rows.map((r) => r.otherParticipantId));
+  return rows.map((r) => ({ ...r, otherDisplayName: name(r.otherParticipantId) }));
+}

@@ -50,15 +50,27 @@ describe('proposing a supporter', () => {
    * Exactly two actions are relationship-gated in the whole platform.
    * Offering more would record permissions nothing reads.
    */
-  it('offers only the two things a relationship actually gates, and says why the list is short', () => {
+  it('offers only what a relationship actually gates, and says why the list is short', () => {
     stubFetch();
     render(<ProposeRelationship session={session} />);
     expect(screen.getByLabelText('See what the participant chooses to share')).toBeTruthy();
     expect(screen.getByLabelText('Offer additions to their life story')).toBeTruthy();
-    expect(screen.getByText(/These are the only two/)).toBeTruthy();
+    expect(screen.getByText(/These are the only ones/)).toBeTruthy();
     expect(screen.getByText(/would record permissions that nothing reads/)).toBeTruthy();
-    // Messaging is not gated by any relationship, so it is not on offer.
-    expect(screen.queryByLabelText(/message/i)).toBeNull();
+  });
+
+  /**
+   * Its own permission, not a consequence of being able to see things:
+   * a participant who wanted a niece to read their life story and nothing
+   * more would otherwise have granted her a channel into their inbox by
+   * accident (D-29).
+   */
+  it('messaging is a separate permission, and says the participant starts it', () => {
+    stubFetch();
+    render(<ProposeRelationship session={session} />);
+    expect(screen.getByLabelText('Write to the participant, and read what they write back')).toBeTruthy();
+    expect(screen.getByText(/not the same as being allowed into their inbox/)).toBeTruthy();
+    expect(screen.getByText(/a supporter cannot start one/)).toBeTruthy();
   });
 
   /** Each permission says what it still depends on. */

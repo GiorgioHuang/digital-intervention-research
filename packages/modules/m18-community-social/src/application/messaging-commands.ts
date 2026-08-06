@@ -87,6 +87,7 @@ export async function createThread(
 
 interface ThreadRow {
   id: string;
+  basisType: string;
   basisReference: string;
   participantA: string;
   participantB: string;
@@ -95,19 +96,53 @@ interface ThreadRow {
 
 async function loadThread(deps: M18Deps, threadId: string): Promise<ThreadRow> {
   const res = await deps.pool.query(
-    `SELECT id, basis_reference, participant_a_id, participant_b_id, thread_state
+    `SELECT id, basis_type, basis_reference, participant_a_id, participant_b_id, thread_state
        FROM community_social.conversation_threads WHERE id = $1`,
     [threadId],
   );
   const r = res.rows[0];
   if (r === undefined) throw new PlatformError('RESOURCE_NOT_FOUND', 'Thread not found');
-  return { id: r.id, basisReference: r.basis_reference, participantA: r.participant_a_id, participantB: r.participant_b_id, state: r.thread_state };
+  return {
+    id: r.id,
+    basisType: r.basis_type,
+    basisReference: r.basis_reference,
+    participantA: r.participant_a_id,
+    participantB: r.participant_b_id,
+    state: r.thread_state,
+  };
 }
 
-/** Basis re-evaluation for effectful message actions (ADR-031). */
+/**
+ * Basis re-evaluation for effectful message actions (ADR-031).
+ *
+ * Branching on the basis is the point of the ADR: a thread is only usable
+ * while the thing that made it possible is still in force. For a matched
+ * connection that is the connection still being Active; for an authorised
+ * relationship it is the relationship still being Active AND still
+ * carrying `relationship.message` — a participant who revokes the
+ * relationship, or has it narrowed, stops the conversation at that moment
+ * rather than at the next time somebody thinks to check.
+ */
 async function assertBasisEffective(deps: M18Deps, thread: ThreadRow): Promise<void> {
   if (thread.state !== 'Active') {
     throw new PlatformError('CONVERSATION_THREAD_NOT_USABLE', 'Thread is not usable');
+  }
+  if (thread.basisType === 'AuthorisedRelationship') {
+    const rel = await deps.pool.query(
+      `SELECT relationship_state, permitted_actions, expires_at
+         FROM consent_permission.relationships WHERE id = $1`,
+      [thread.basisReference],
+    );
+    const r = rel.rows[0];
+    const stillPermits =
+      r !== undefined &&
+      r.relationship_state === 'Active' &&
+      (r.permitted_actions as string[]).includes('relationship.message') &&
+      (r.expires_at === null || (r.expires_at as Date) > deps.clock.now());
+    if (!stillPermits) {
+      throw new PlatformError('COMMUNICATION_BASIS_EXPIRED', 'The communication basis is no longer effective');
+    }
+    return;
   }
   const conn = await deps.pool.query(
     `SELECT connection_state FROM community_social.connections WHERE id = $1`,
@@ -116,6 +151,127 @@ async function assertBasisEffective(deps: M18Deps, thread: ThreadRow): Promise<v
   if (conn.rows[0]?.connection_state !== 'Active') {
     throw new PlatformError('COMMUNICATION_BASIS_EXPIRED', 'The communication basis is no longer effective');
   }
+}
+
+/**
+ * Which permission a message action needs, and whose resource it is.
+ *
+ * On a relationship thread the two parties are not alike: participantA is
+ * the participant and participantB is the supporter. The participant is
+ * writing their own message and owns it. The supporter is writing into
+ * somebody else's conversation, so the resource is the PARTICIPANT'S and
+ * the action is the relationship-gated one — which is what makes the
+ * participant's approval of that relationship the thing that permits it.
+ */
+function messagingAuthority(
+  thread: ThreadRow,
+  senderId: string,
+  ownAction: 'message.draft' | 'message.confirm-send',
+): { action: string; ownerParticipantId: string } {
+  if (thread.basisType === 'AuthorisedRelationship' && senderId !== thread.participantA) {
+    return { action: 'relationship.message', ownerParticipantId: thread.participantA };
+  }
+  return { action: ownAction, ownerParticipantId: senderId };
+}
+
+/**
+ * A conversation resting on an authorised relationship.
+ *
+ * `basis_type` has carried 'AuthorisedRelationship' from the start and
+ * nothing could write it: threads could only rest on a matched connection,
+ * so a participant could message a stranger the platform suggested and not
+ * the family member they themselves approved. For a study about older
+ * people and connection that was the wrong way round, and the wording for
+ * this basis — "you approved this person as a supporter" — sat unreachable
+ * in the messages screen.
+ *
+ * The relationship must name `relationship.message` among its permitted
+ * actions. Being trusted to see what someone shares is not the same as
+ * being allowed to write to them, so the participant grants this
+ * separately (D-29); a relationship that does not name it is not a basis
+ * for a conversation and the thread is refused rather than created and
+ * then found unusable.
+ *
+ * participantA is the participant and participantB is the supporter. They
+ * are not alike here — one owns the conversation and the other is in it by
+ * permission — and every later check depends on the order.
+ */
+export async function createRelationshipThread(
+  deps: M18Deps,
+  ctx: RequestContext,
+  input: { relationshipId: string; creatorId: string },
+): Promise<{ threadId: string }> {
+  const rel = await deps.pool.query(
+    `SELECT participant_id, related_actor_id, relationship_state, permitted_actions, expires_at
+       FROM consent_permission.relationships WHERE id = $1`,
+    [input.relationshipId],
+  );
+  const r = rel.rows[0];
+  if (r === undefined) throw new PlatformError('RESOURCE_NOT_FOUND', 'Relationship not found');
+  const participantId = r.participant_id as string;
+  const supporterId = r.related_actor_id as string;
+  if (input.creatorId !== participantId && input.creatorId !== supporterId) {
+    throw new PlatformError('AUTHORISATION_DENIED', 'Not a party to this relationship');
+  }
+  if (
+    r.relationship_state !== 'Active' ||
+    !(r.permitted_actions as string[]).includes('relationship.message') ||
+    (r.expires_at !== null && (r.expires_at as Date) <= deps.clock.now())
+  ) {
+    throw new PlatformError('COMMUNICATION_BASIS_REQUIRED', 'That relationship does not allow messages');
+  }
+
+  const decision = await deps.checkPermission(ctx, {
+    action: input.creatorId === participantId ? 'thread.create' : 'relationship.message',
+    resource: {
+      type: 'ConversationThread',
+      id: 'new',
+      state: 'Draft',
+      protectedExistence: true,
+      ownerParticipantId: participantId,
+    },
+  });
+  assertAllowed(decision, false);
+  await assertNoBlock(deps, participantId, supporterId);
+
+  // One conversation per relationship: a second would split the same
+  // history in two and leave each party reading half of it.
+  const existing = await deps.pool.query(
+    `SELECT id FROM community_social.conversation_threads
+      WHERE basis_type = 'AuthorisedRelationship' AND basis_reference = $1 AND thread_state = 'Active'`,
+    [input.relationshipId],
+  );
+  if (existing.rows[0] !== undefined) return { threadId: existing.rows[0].id as string };
+
+  const threadId = newId('ct');
+  const now = deps.clock.now();
+  await withTransaction(deps.pool, async (client) => {
+    await client.query(
+      `INSERT INTO community_social.conversation_threads
+         (id, basis_type, basis_reference, participant_a_id, participant_b_id)
+       VALUES ($1, 'AuthorisedRelationship', $2, $3, $4)`,
+      [threadId, input.relationshipId, participantId, supporterId],
+    );
+    await appendToOutbox(client, ctx, {
+      eventCategory: 'Domain',
+      eventType: MSG_EVENTS.ConversationThreadCreated,
+      sourceModule: 'M18',
+      aggregateType: 'ConversationThread',
+      aggregateId: threadId,
+      occurredAt: now,
+    });
+    await recordAuditEvent(client, ctx, {
+      action: 'thread.create',
+      targetType: 'ConversationThread',
+      targetId: threadId,
+      participantId,
+      occurredAt: now,
+      result: 'Succeeded',
+      source: 'M18',
+      policyVersion: decision.policyVersion,
+    });
+  });
+  return { threadId };
 }
 
 /** Creating a Draft never sends (ADR-032): delivery stays Not Submitted. */
@@ -128,14 +284,15 @@ export async function createMessageDraft(
   if (input.senderParticipantId !== thread.participantA && input.senderParticipantId !== thread.participantB) {
     throw new PlatformError('THREAD_PARTICIPANT_MISMATCH', 'Sender is not a thread participant');
   }
+  const authority = messagingAuthority(thread, input.senderParticipantId, 'message.draft');
   const decision = await deps.checkPermission(ctx, {
-    action: 'message.draft',
+    action: authority.action,
     resource: {
       type: 'Message',
       id: 'new',
       state: 'Draft',
       protectedExistence: true,
-      ownerParticipantId: input.senderParticipantId,
+      ownerParticipantId: authority.ownerParticipantId,
     },
   });
   assertAllowed(decision, false);
@@ -168,14 +325,20 @@ export async function reviseMessageDraft(
   ctx: RequestContext,
   input: { messageId: string; senderParticipantId: string; contentText: string },
 ): Promise<{ messageVersion: number }> {
+  const owning = await deps.pool.query(`SELECT thread_id FROM community_social.messages WHERE id = $1`, [
+    input.messageId,
+  ]);
+  if (owning.rows[0] === undefined) throw new PlatformError('RESOURCE_NOT_FOUND', 'Message not found');
+  const draftThread = await loadThread(deps, owning.rows[0].thread_id as string);
+  const editAuthority = messagingAuthority(draftThread, input.senderParticipantId, 'message.draft');
   const decision = await deps.checkPermission(ctx, {
-    action: 'message.draft',
+    action: editAuthority.action,
     resource: {
       type: 'Message',
       id: input.messageId,
       state: 'Draft',
       protectedExistence: true,
-      ownerParticipantId: input.senderParticipantId,
+      ownerParticipantId: editAuthority.ownerParticipantId,
     },
   });
   assertAllowed(decision, false);
@@ -241,18 +404,30 @@ export async function confirmSend(
     throw new PlatformError('AUTHORISATION_DENIED', 'Only the author can confirm their message');
   }
   const thread = await loadThread(deps, m.thread_id);
+  const authority = messagingAuthority(thread, input.senderParticipantId, 'message.confirm-send');
   const decision = await deps.checkPermission(ctx, {
-    action: 'message.confirm-send',
+    action: authority.action,
     resource: {
       type: 'Message',
       id: input.messageId,
       state: m.lifecycle_state,
       protectedExistence: true,
-      ownerParticipantId: input.senderParticipantId,
+      ownerParticipantId: authority.ownerParticipantId,
     },
     confirmed: input.confirmed,
   });
   assertAllowed(decision, input.confirmed);
+  /*
+   * `message.confirm-send` carries confirmationRequired in the catalogue,
+   * so the participant's own send is already guarded by the policy engine.
+   * `relationship.message` deliberately does not — making it
+   * confirmationRequired would also demand a confirmation to write a
+   * draft, and a supporter would have to confirm typing. Sending is still
+   * sending, so the guard lives here instead of being quietly absent.
+   */
+  if (authority.action === 'relationship.message' && input.confirmed !== true) {
+    throw new PlatformError('CONFIRMATION_REQUIRED', 'Sending needs to be confirmed');
+  }
   await assertBasisEffective(deps, thread);
   const other = thread.participantA === input.senderParticipantId ? thread.participantB : thread.participantA;
   await assertNoBlock(deps, input.senderParticipantId, other);

@@ -65,6 +65,7 @@ import {
   activateMatchPreference,
   confirmSend,
   createBlockQuery,
+  createRelationshipThread,
   createCommunitySpace,
   createMessageDraft,
   createThread,
@@ -381,9 +382,34 @@ async function main() {
     participantId: annId,
     relatedActorId: supporterId,
     relationshipType: 'FamilyMember',
-    permittedActions: ['life-story.contribute'],
+    // Messaging is its own permission, granted separately from the rest
+    // (D-29): being trusted to offer something for someone's life story is
+    // not the same as being let into their inbox.
+    permittedActions: ['life-story.contribute', 'relationship.message'],
   });
   await approveRelationship(m03, ctx(annAcc), { relationshipId, expectedVersion: 1, confirmed: true });
+
+  /*
+   * Ann opens a conversation with the family member she approved. Before
+   * this, a thread could only rest on a matched connection — she could
+   * write to a stranger the platform suggested and not to Sofia.
+   */
+  const { threadId: supporterThreadId } = await createRelationshipThread(base, ctx(annAcc), {
+    relationshipId,
+    creatorId: annId,
+  });
+  const { messageId: toSofia } = await createMessageDraft(base, ctx(annAcc), {
+    threadId: supporterThreadId,
+    senderParticipantId: annId,
+    contentText: 'Could you bring the seed trays on Thursday? The mint has taken over again.',
+  });
+  await confirmSend(base, ctx(annAcc), {
+    messageId: toSofia,
+    senderParticipantId: annId,
+    expectedMessageVersion: 1,
+    recipientIds: [supporterId],
+    confirmed: true,
+  });
 
   // Something actually waiting on Ann, so the "Waiting for you" block on
   // Home is not permanently empty in the demo. No part of the story is

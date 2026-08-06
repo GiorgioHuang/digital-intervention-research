@@ -24,6 +24,7 @@ export {
 } from './application/matching-commands.js';
 export {
   createThread,
+  createRelationshipThread,
   createMessageDraft,
   reviseMessageDraft,
   confirmSend,
@@ -32,6 +33,7 @@ export {
 export {
   listConnections,
   listThreads,
+  listThreadsForActor,
   listMatchCandidates,
   listThreadMessages,
   type ConnectionSummary,

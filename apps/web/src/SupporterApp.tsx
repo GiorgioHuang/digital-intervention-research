@@ -74,6 +74,22 @@ const STATE_LABELS: Record<string, string> = {
  * participant decides — acceptance records it as a SUPPORTER
  * contribution, never as the participant's own testimony (ADR-042).
  */
+interface SupporterThread {
+  threadId: string;
+  otherParticipantId: string;
+  otherDisplayName: string;
+  basisType: string;
+  threadState: string;
+}
+
+interface SupporterMessage {
+  messageId: string;
+  senderParticipantId: string;
+  contentText: string;
+  lifecycleState: string;
+  deliveryState: string;
+}
+
 export function SupporterApp({ onExit }: { onExit: () => void }) {
   const [session, setSession] = useState<SupporterSession | null>(null);
   const [actorId, setActorId] = useState('');
@@ -82,6 +98,9 @@ export function SupporterApp({ onExit }: { onExit: () => void }) {
   const [report, setReport] = useState({ actorId: '', description: '' });
   const [announcement, setAnnouncement] = useState('');
   const [people, setPeople] = useState<SupportedPerson[] | null>(null);
+  const [threads, setThreads] = useState<SupporterThread[] | null>(null);
+  const [messages, setMessages] = useState<Record<string, SupporterMessage[]>>({});
+  const [replies, setReplies] = useState<Record<string, string>>({});
   const [writingFor, setWritingFor] = useState<SupportedPerson | null>(null);
   /**
    * Where the contribution goes, looked up rather than typed. Undefined
@@ -237,6 +256,117 @@ export function SupporterApp({ onExit }: { onExit: () => void }) {
           )}
         </section>
       )}
+
+      {/*
+        Reading and answering the participant who opened a conversation.
+        Until this existed a thread could be written to a supporter and
+        they could never see it — which is why the messaging itself was
+        held back: a channel somebody can only be written into is worse
+        than no channel, because the person writing believes they were
+        heard.
+      */}
+      <section aria-labelledby="sup-threads-heading">
+        <h2 id="sup-threads-heading">Conversations</h2>
+        <p>
+          A conversation exists only where the person you support both approved you for it and started it. You cannot
+          begin one yourself.
+        </p>
+        <p>
+          <button
+            onClick={() =>
+              void run(async () => {
+                const res = await req<{ data: { attributes: SupporterThread }[] }>(
+                  session,
+                  '/v1/conversation-threads/mine',
+                );
+                setThreads(res.data.map((t) => t.attributes));
+              }, 'Updated.')
+            }
+          >
+            View my conversations
+          </button>
+        </p>
+        {threads !== null && threads.length === 0 && (
+          <p>Nobody you support has opened a conversation with you.</p>
+        )}
+        {(threads ?? []).map((t) => (
+          <article key={t.threadId} aria-label={`Conversation with ${t.otherDisplayName}`}>
+            <h3>{t.otherDisplayName}</h3>
+            <p>
+              {t.threadState === 'Active'
+                ? 'Open.'
+                : 'The reason this conversation was possible has ended, so nothing more can be sent.'}
+            </p>
+            <p>
+              <button
+                onClick={() =>
+                  void run(async () => {
+                    const res = await req<{ data: { attributes: SupporterMessage }[] }>(
+                      session,
+                      `/v1/conversation-threads/${t.threadId}/messages?participantId=${encodeURIComponent(session.actorId)}`,
+                    );
+                    setMessages({ ...messages, [t.threadId]: res.data.map((m) => m.attributes) });
+                  }, 'Updated.')
+                }
+              >
+                Read it
+              </button>
+            </p>
+            {(messages[t.threadId] ?? []).map((m) => (
+              <p key={m.messageId}>
+                <strong>{m.senderParticipantId === session.actorId ? 'You' : t.otherDisplayName}:</strong>{' '}
+                {m.contentText}
+                <br />
+                <small>{m.lifecycleState === 'Draft' ? 'Not sent yet — only you can see this' : m.deliveryState}</small>
+              </p>
+            ))}
+            {t.threadState === 'Active' && (
+              <>
+                <p>
+                  <label htmlFor={`reply-${t.threadId}`}>Your reply</label>
+                  <textarea
+                    id={`reply-${t.threadId}`}
+                    rows={2}
+                    value={replies[t.threadId] ?? ''}
+                    onChange={(e) => setReplies({ ...replies, [t.threadId]: e.target.value })}
+                  />
+                </p>
+                {/*
+                  Draft first and then a separate confirmed send, the same
+                  as everywhere else: nothing leaves the screen because
+                  somebody typed.
+                */}
+                <p>
+                  <button
+                    disabled={(replies[t.threadId] ?? '').trim() === ''}
+                    onClick={() =>
+                      void run(async () => {
+                        const draft = await req<{ data: { id: string } }>(
+                          session,
+                          `/v1/conversation-threads/${t.threadId}/messages`,
+                          {
+                            senderParticipantId: session.actorId,
+                            contentText: (replies[t.threadId] ?? '').trim(),
+                          },
+                        );
+                        await req(session, `/v1/messages/${draft.data.id}/confirm-send`, {
+                          senderParticipantId: session.actorId,
+                          expectedMessageVersion: 1,
+                          recipientIds: [t.otherParticipantId],
+                          confirmed: true,
+                        });
+                        setReplies({ ...replies, [t.threadId]: '' });
+                      }, 'Sent.')
+                    }
+                  >
+                    Send this reply
+                  </button>
+                </p>
+              </>
+            )}
+          </article>
+        ))}
+      </section>
 
       <section aria-labelledby="mine-heading">
         <h2 id="mine-heading">My contributions</h2>

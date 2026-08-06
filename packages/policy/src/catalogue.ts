@@ -142,6 +142,11 @@ export const POLICY_V1: PolicyConfiguration = {
     Supporter: [
       'participant.view-shared',
       'life-story.contribute',
+      // Writing to the participant they support — only ever effective when
+      // the relationship itself carries `relationship.message`, which the
+      // participant approves separately from anything else (D-29).
+      'relationship.message',
+      'thread.view-own',
       'report.submit',
       'contribution.view-own',
       'relationship.view-own',
@@ -320,6 +325,32 @@ export const POLICY_V1: PolicyConfiguration = {
     'life-story.withdraw': { ownerPermitted: true, ownerOnly: true, confirmationRequired: true },
     'life-story.export': { ownerPermitted: true, ownerOnly: true, confirmationRequired: true },
     'life-story.contribute': { requiresRelationship: true, consentScopes: ['supporter-contribution'], interaction: true },
+    /**
+     * A supporter writing to the participant they support.
+     *
+     * Its own action rather than a widening of `participant.view-shared`,
+     * because being trusted to see what someone shares is not the same as
+     * being allowed to write to them (D-29). A participant who wanted a
+     * niece to read their life story and nothing more would otherwise have
+     * granted her a channel into their inbox by accident.
+     *
+     * `requiresRelationship` means the relationship's own permitted actions
+     * decide it, so the participant grants it by approving a relationship
+     * that names it — and revoking the relationship stops it, which the
+     * basis re-evaluation on every message enforces (ADR-031). Not
+     * `ownerOnly`: the whole point is that someone other than the owner may
+     * act, which is what a relationship is for. `interaction` brings the
+     * block check with it.
+     *
+     * Deliberately NOT gated on `supporter-involvement` consent. That scope
+     * governs a supporter seeing the participant's things; writing to
+     * someone is a different act, and the relationship's own permission is
+     * what authorises it.
+     */
+    'relationship.message': { requiresRelationship: true, interaction: true },
+    /** A supporter reading the conversations they are a party to. Scoped
+     *  inside the query to threads naming this actor. */
+    'thread.view-own': {},
 
     'matching.activate': { ownerPermitted: true, ownerOnly: true, consentScopes: ['open-matching'], confirmationRequired: true },
     'matching.generate': {},

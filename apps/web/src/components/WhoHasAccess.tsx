@@ -28,6 +28,9 @@ import { EmptyState, ErrorState, LoadingState } from './StateBlock.js';
 const ACTION_WORDING: Record<string, string> = {
   'participant.view-shared': 'See the parts of your information you have agreed to share with supporters',
   'life-story.contribute': 'Offer something for your life story — which only you can accept',
+  // Granted separately from the others on purpose: letting someone read
+  // what you share is not the same as letting them write to you (D-29).
+  'relationship.message': 'Write to you, and read what you write back',
 };
 
 const TYPE_WORDING: Record<string, string> = {
@@ -85,6 +88,13 @@ export function WhoHasAccess({ session }: { session: Session }) {
   useEffect(() => {
     void load();
   }, []);
+
+  const startThread = async (r: MyRelationship) => {
+    await run(
+      () => api.startRelationshipThread(session, r.relationshipId),
+      `A conversation with ${r.relatedDisplayName ?? 'them'} is open under Messages. Nothing has been sent yet.`,
+    );
+  };
 
   const run = async (fn: () => Promise<unknown>, said: string) => {
     try {
@@ -145,6 +155,17 @@ export function WhoHasAccess({ session }: { session: Session }) {
           {AWAITING.has(r.relationshipState) && (
             <p>
               <button onClick={() => setDeciding(r)}>Decide about this</button>
+            </p>
+          )}
+          {LIVE.has(r.relationshipState) && r.permittedActions.includes('relationship.message') && (
+            <p>
+              {/*
+                Threads could only rest on a matched connection, so you
+                could write to a stranger the platform suggested and not to
+                the person you approved yourself.
+              */}
+              <button onClick={() => void startThread(r)}>Write to {r.relatedDisplayName ?? 'this person'}</button>{' '}
+              <small>Opens a conversation under Messages.</small>
             </p>
           )}
           {LIVE.has(r.relationshipState) && (

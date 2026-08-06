@@ -19,12 +19,16 @@ import { staffApi, type StaffSession } from '../staff-api.js';
  * who believed otherwise would tell a family member they now have access.
  *
  * And the list of what the relationship may permit contains exactly the
- * two actions that any relationship actually gates. Every other dotted
- * action in the platform is decided by role or by ownership and would not
- * consult this list, so offering a longer menu here would record
- * permissions that nothing reads — a supporter told they may do something
- * they cannot, or a participant believing they limited something they did
- * not.
+ * actions that a relationship actually gates. Every other dotted action in
+ * the platform is decided by role or by ownership and would not consult
+ * this list, so offering a longer menu here would record permissions that
+ * nothing reads — a supporter told they may do something they cannot, or a
+ * participant believing they limited something they did not.
+ *
+ * Messaging is on the list as its own line rather than folded into seeing
+ * (D-29): a participant who wanted a niece to read their life story and
+ * nothing more would otherwise have granted her a channel into their inbox
+ * by accident.
  */
 const PERMITTED_ACTIONS = [
   {
@@ -32,6 +36,12 @@ const PERMITTED_ACTIONS = [
     label: 'See what the participant chooses to share',
     detail:
       'Also needs the participant to have given supporter-involvement consent. Without that consent this permits nothing.',
+  },
+  {
+    action: 'relationship.message',
+    label: 'Write to the participant, and read what they write back',
+    detail:
+      'Granted separately from the others on purpose: being trusted to see what someone shares is not the same as being allowed into their inbox. The participant opens the conversation — a supporter cannot start one — and taking this permission back stops it at that moment.',
   },
   {
     action: 'life-story.contribute',
@@ -142,13 +152,13 @@ export function ProposeRelationship({ session }: { session: StaffSession }) {
       ))}
       {/*
         Naming the limit rather than leaving a short list to look arbitrary.
-        A coordinator who cannot find "can send them messages" needs to know
-        it is missing because no relationship gates messaging, not because
+        A coordinator who cannot find some other permission here needs to
+        know it is missing because no relationship gates it, not because
         this screen is withholding it.
       */}
       <p>
         <small>
-          These are the only two. Every other thing a person can do on this platform is decided by their role or by
+          These are the only ones. Every other thing a person can do on this platform is decided by their role or by
           it being their own information, and would not look at this list at all — so a longer menu here would record
           permissions that nothing reads.
         </small>

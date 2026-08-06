@@ -12,11 +12,20 @@ import {
   type M01Deps,
 } from '@platform/m01-identity-org';
 import { createParticipantQuery, registerParticipant, type M02Deps } from '@platform/m02-participant';
-import { createPermissionService, recordConsentDecision, type M03Deps } from '@platform/m03-consent-permission';
+import {
+  approveRelationship,
+  createPermissionService,
+  proposeRelationship,
+  recordConsentDecision,
+  revokeRelationship,
+  type M03Deps,
+} from '@platform/m03-consent-permission';
 import { createProviderSimulator, handleProviderCallback, signCallback } from '@platform/m16-integration';
 import {
   activateConnection,
+  createRelationshipThread,
   endConnection,
+  listThreadsForActor,
   activateMatchPreference,
   confirmSend,
   createBlockQuery,
@@ -56,6 +65,7 @@ describe.skipIf(!dbAvailable)('M18/M16 messaging pipeline (integration)', () => 
   let adminId: string, orgId: string, coordId: string;
   let aAcc: string, aId: string, bAcc: string, bId: string;
   let threadId: string, messageId: string;
+  let supporterActorId: string;
   const ctx = (actorId: string) => createRequestContext({ actor: { type: 'user', id: actorId } });
   const svcCtx = () => createRequestContext({ actor: { type: 'service-account', id: 'sa_worker' } });
 
@@ -99,6 +109,10 @@ describe.skipIf(!dbAvailable)('M18/M16 messaging pipeline (integration)', () => 
     };
     [aAcc, aId] = await mk('Ann');
     [bAcc, bId] = await mk('Ben');
+    // A supporter is an actor with no participant record of their own —
+    // which is exactly why their inbox needed its own query.
+    ({ userAccountId: supporterActorId } = await createUserAccount(m01, adminCtx, { displayName: 'Sofia' }));
+    await assignRole(m01, adminCtx, { userAccountId: supporterActorId, role: 'Supporter', confirmed: true });
   }, 30_000);
 
   afterAll(async () => {
@@ -266,6 +280,96 @@ describe.skipIf(!dbAvailable)('M18/M16 messaging pipeline (integration)', () => 
     await expect(
       endConnection(m18, ctx(bAcc), { connectionId, participantId: bId, confirmed: true }),
     ).rejects.toMatchObject({ code: 'INVALID_STATE_TRANSITION' });
+  });
+
+
+  /**
+   * basis_type carried 'AuthorisedRelationship' from the start and nothing
+   * could write it: a participant could message a stranger the platform
+   * matched them with, but not the family member they themselves approved.
+   * The wording for this basis has sat unreachable in the messages screen
+   * since it was written.
+   *
+   * Being trusted to see what someone shares is not the same as being
+   * allowed to write to them, so the relationship has to name
+   * `relationship.message` separately (D-29).
+   */
+  it('a relationship only becomes a conversation when it says it may', async () => {
+    const { relationshipId } = await proposeRelationship(m03, ctx(coordId), {
+      participantId: aId,
+      relatedActorId: supporterActorId,
+      relationshipType: 'FamilyMember',
+      permittedActions: ['participant.view-shared'],
+    });
+    await approveRelationship(m03, ctx(aAcc), { relationshipId, expectedVersion: 1, confirmed: true });
+
+    // Approved, active, and it does not allow messages — so it is not a
+    // basis for one.
+    await expect(
+      createRelationshipThread(m18, ctx(aAcc), { relationshipId, creatorId: aId }),
+    ).rejects.toMatchObject({ code: 'COMMUNICATION_BASIS_REQUIRED' });
+  });
+
+  it('the participant opens it, the supporter reads and answers, and revoking stops it', async () => {
+    const { relationshipId } = await proposeRelationship(m03, ctx(coordId), {
+      participantId: aId,
+      relatedActorId: supporterActorId,
+      relationshipType: 'FamilyMember',
+      permittedActions: ['participant.view-shared', 'relationship.message'],
+    });
+    await approveRelationship(m03, ctx(aAcc), { relationshipId, expectedVersion: 1, confirmed: true });
+
+    const { threadId: relThread } = await createRelationshipThread(m18, ctx(aAcc), {
+      relationshipId,
+      creatorId: aId,
+    });
+    // One conversation per relationship: asking again returns the same one
+    // rather than splitting the history in two.
+    const again = await createRelationshipThread(m18, ctx(aAcc), { relationshipId, creatorId: aId });
+    expect(again.threadId).toBe(relThread);
+
+    // The supporter can find it, which is the part that did not exist.
+    const inbox = await listThreadsForActor(m18, ctx(supporterActorId));
+    expect(inbox.map((t) => t.threadId)).toContain(relThread);
+    expect(inbox[0]?.basisType).toBe('AuthorisedRelationship');
+
+    // And can answer: the relationship is what permits it, not a role.
+    const { messageId: reply } = await createMessageDraft(m18, ctx(supporterActorId), {
+      threadId: relThread,
+      senderParticipantId: supporterActorId,
+      contentText: 'I will bring the seedlings on Thursday.',
+    });
+    // Sending is still sending — a supporter confirms like anybody else.
+    await expect(
+      confirmSend(m18, ctx(supporterActorId), {
+        messageId: reply,
+        senderParticipantId: supporterActorId,
+        expectedMessageVersion: 1,
+        recipientIds: [aId],
+        confirmed: false,
+      }),
+    ).rejects.toMatchObject({ code: 'CONFIRMATION_REQUIRED' });
+    await confirmSend(m18, ctx(supporterActorId), {
+      messageId: reply,
+      senderParticipantId: supporterActorId,
+      expectedMessageVersion: 1,
+      recipientIds: [aId],
+      confirmed: true,
+    });
+
+    /*
+     * ADR-031 basis re-evaluation, which is the whole reason this is a
+     * relationship-gated action rather than a role: the participant taking
+     * the permission back stops the conversation at that moment.
+     */
+    await revokeRelationship(m03, ctx(aAcc), { relationshipId, expectedVersion: 2 });
+    await expect(
+      createMessageDraft(m18, ctx(supporterActorId), {
+        threadId: relThread,
+        senderParticipantId: supporterActorId,
+        contentText: 'one more thing',
+      }),
+    ).rejects.toBeDefined();
   });
 
 });

@@ -58,6 +58,8 @@ import {
   createBlock,
   createMessageDraft,
   createThread,
+  createRelationshipThread,
+  listThreadsForActor,
   draftSocialPost,
   joinCommunity,
   leaveCommunity,
@@ -639,6 +641,36 @@ export class CommandController {
       data: story.items.map((i) => ({ type: 'LifeStoryItem', id: i.itemId, attributes: i })),
       meta: { archiveId: story.archiveId },
     };
+  }
+
+  /**
+   * The conversations a supporter is a party to. Keyed by the requesting
+   * actor, because a supporter has no participant record — which is why
+   * relationship messaging could not exist until this did: a channel
+   * somebody can only be written into is worse than no channel.
+   */
+  @Get('conversation-threads/mine')
+  async myThreadsAsSupporter(@Req() req: Request) {
+    const ctx = requireActor(req);
+    const items = await listThreadsForActor(this.deps.m18, ctx);
+    return { data: items.map((t) => ({ type: 'ConversationThread', id: t.threadId, attributes: t })) };
+  }
+
+  @Post('relationships/:relationshipId/conversation-thread')
+  async startRelationshipThread(
+    @Req() req: Request,
+    @Param('relationshipId') relationshipId: string,
+    @Body() body: { creatorId: string },
+  ) {
+    const ctx = requireActor(req);
+    // Refused unless the relationship itself names relationship.message:
+    // being trusted to see what someone shares is not being allowed to
+    // write to them (D-29).
+    const result = await createRelationshipThread(this.deps.m18, ctx, {
+      relationshipId,
+      creatorId: body.creatorId,
+    });
+    return { data: { type: 'ConversationThread', id: result.threadId, meta: { basis: 'AuthorisedRelationship' } } };
   }
 
   @Get('life-story/contributions/mine')
