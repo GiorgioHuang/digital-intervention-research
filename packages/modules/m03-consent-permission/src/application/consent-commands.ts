@@ -31,6 +31,17 @@ export async function recordConsentDecision(
     researchProjectId?: string;
     restrictions?: string[];
     expiresAt?: Date;
+    /**
+     * Whether somebody was helping the participant when they decided.
+     * The column for this has existed since the consent tables were
+     * written and nothing ever set it, while a chat message sent with
+     * help was marked and said so to its recipient — the platform
+     * recorded assistance for small talk and not for consent.
+     *
+     * Never who. The helper's name is the participant's own business and
+     * stays on their device (D-15).
+     */
+    assistanceRecorded?: boolean;
   },
 ): Promise<{ consentDecisionId: string }> {
   const decision = await deps.permissions.evaluate(ctx, {
@@ -60,6 +71,7 @@ export async function recordConsentDecision(
       decidedByActorId: ctx.actor!.id,
       effectiveFrom: now,
       ...(input.expiresAt !== undefined ? { expiresAt: input.expiresAt } : {}),
+      assistanceRecorded: input.assistanceRecorded === true,
     });
     await appendToOutbox(client, ctx, {
       eventCategory: 'Domain',
@@ -213,6 +225,9 @@ export async function withdrawConsent(
     templateVersion: string;
     researchProjectId?: string;
     confirmed: boolean;
+    /** Whether somebody was helping. Withdrawing matters as much as
+     *  granting, and more if a question is ever raised about it. */
+    assistanceRecorded?: boolean;
   },
 ): Promise<{ consentDecisionId: string }> {
   const decision = await deps.permissions.evaluate(ctx, {
@@ -249,6 +264,7 @@ export async function withdrawConsent(
       decision: 'Withdrawn',
       decidedByActorId: ctx.actor!.id,
       effectiveFrom: now,
+      assistanceRecorded: input.assistanceRecorded === true,
     });
     await appendToOutbox(client, ctx, {
       eventCategory: 'Domain',

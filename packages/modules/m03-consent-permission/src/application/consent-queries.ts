@@ -141,6 +141,11 @@ export interface ConsentStateView {
    * no explanation, because the participant made it themselves.
    */
   decisionNote: string | null;
+  /**
+   * Whether somebody was helping when this was decided. Never who — the
+   * helper's name stays on the participant's own device (D-15).
+   */
+  assistanceRecorded: boolean;
 }
 
 /**
@@ -178,7 +183,7 @@ export async function listOwnConsents(
   assertAllowed(decision, false);
   const res = await deps.pool.query(
     `SELECT consent_scope, decision, consent_template_version, updated_at, restrictions, expires_at,
-            decision_note
+            decision_note, assistance_recorded
        FROM consent_permission.consent_current
       WHERE participant_id = $1
       ORDER BY consent_scope ASC`,
@@ -192,5 +197,6 @@ export async function listOwnConsents(
     restrictions: (r.restrictions ?? []) as string[],
     expiresAt: r.expires_at === null ? null : (r.expires_at as Date).toISOString(),
     decisionNote: (r.decision_note as string | null) ?? null,
+    assistanceRecorded: r.assistance_recorded === true,
   }));
 }

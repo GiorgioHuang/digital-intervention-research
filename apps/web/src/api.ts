@@ -175,6 +175,8 @@ export interface ConsentState {
   expiresAt: string | null;
   /** What changed, when the participant is being asked to agree again. */
   decisionNote: string | null;
+  /** Whether somebody was helping when this was decided. Never who. */
+  assistanceRecorded: boolean;
 }
 
 export interface MyEnrolment {
@@ -309,10 +311,31 @@ export const api = {
     }),
   listMyConsents: (s: Session) =>
     get<{ data: { id: string; attributes: ConsentState }[] }>(s, `/v1/participants/${s.participantId}/consents`),
-  recordConsent: (s: Session, scope: string, decision: 'Granted' | 'Declined') =>
-    post(s, `/v1/participants/${s.participantId}/consents`, { scope, decision, templateVersion: 'ct_v1' }),
-  withdrawConsent: (s: Session, scope: string, confirmed: boolean) =>
-    post(s, `/v1/participants/${s.participantId}/consents/withdraw`, { scope, templateVersion: 'ct_v1', confirmed }),
+  /**
+   * The version must be the one the participant is actually being shown.
+   * It was hardcoded to 'ct_v1', which was harmless while no consent text
+   * could ever change — and became wrong the moment one could: somebody
+   * asked to agree to a revised wording would have been recorded as
+   * agreeing to the old one, which is the exact fact the demand existed
+   * to establish. The platform has no consent-template registry, so
+   * 'ct_v1' remains the fallback for a scope with no decision yet.
+   *
+   * `assisted` says somebody was helping, never who (D-15).
+   */
+  recordConsent: (
+    s: Session,
+    scope: string,
+    decision: 'Granted' | 'Declined',
+    templateVersion: string,
+    assisted: boolean,
+  ) => post(s, `/v1/participants/${s.participantId}/consents`, { scope, decision, templateVersion, assisted }),
+  withdrawConsent: (s: Session, scope: string, confirmed: boolean, templateVersion: string, assisted: boolean) =>
+    post(s, `/v1/participants/${s.participantId}/consents/withdraw`, {
+      scope,
+      templateVersion,
+      confirmed,
+      assisted,
+    }),
   draftMessage: (s: Session, threadId: string, contentText: string) =>
     post<{ data: { id: string } }>(s, `/v1/conversation-threads/${threadId}/messages`, {
       senderParticipantId: s.participantId,

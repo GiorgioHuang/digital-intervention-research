@@ -70,7 +70,19 @@ const DECISION_LABELS: Record<string, string> = {
   Superseded: 'Replaced by a later decision',
 };
 
-export function ConsentPanel({ session }: { session: Session }) {
+/**
+ * The consent text version a decision is recorded under.
+ *
+ * It was hardcoded to 'ct_v1' at the API client, which was harmless while
+ * nothing could ever change a consent text and became wrong the moment
+ * something could: a participant asked to agree to a revised wording
+ * would have been recorded as agreeing to the old one — the exact fact
+ * the demand existed to establish. The platform has no template registry,
+ * so a scope with no decision yet still falls back to 'ct_v1'.
+ */
+const versionShown = (state: ConsentState | undefined): string => state?.templateVersion ?? 'ct_v1';
+
+export function ConsentPanel({ session, assistedBy }: { session: Session; assistedBy?: string | null }) {
   const [current, setCurrent] = useState<Record<string, ConsentState> | null>(null);
   const [loadError, setLoadError] = useState<PresentedError | null>(null);
   const [actionError, setActionError] = useState<PresentedError | null>(null);
@@ -121,6 +133,21 @@ export function ConsentPanel({ session }: { session: Session }) {
         These are the choices this platform acts on. Each one changes what the server allows, so a choice you make here
         takes effect rather than only being noted.
       </p>
+      {/*
+        Said before any of the choices, not beside each button. The
+        platform already marked a chat message sent while somebody was
+        helping and recorded nothing about whether anybody was present for
+        this — the one decision where it matters most. Now that it does,
+        the participant is told, because a fact recorded about them that
+        they did not know was being recorded is not a safeguard.
+      */}
+      {assistedBy != null && (
+        <p role="note">
+          <strong>{assistedBy} is helping you right now, and your choices below will be recorded as made with
+          somebody helping.</strong> Their name is not recorded — only that someone was here. This does not make your
+          choice count for less; it is written down so that nobody has to guess about it later.
+        </p>
+      )}
 
       {current === null && loadError === null && <LoadingState label="Loading your current choices…" />}
       {loadError !== null && <ErrorState error={loadError} />}
@@ -174,12 +201,29 @@ export function ConsentPanel({ session }: { session: Session }) {
                       .toISOString()
                       .slice(0, 10)} under consent text ${state.templateVersion}`}
                 {state !== undefined && state.restrictions.length > 0 && ` · limits: ${state.restrictions.join(', ')}`}
+                {state?.assistanceRecorded === true && ' · made with somebody helping'}
               </p>
               {/* No preselection: both actions are equal-weight buttons. */}
-              <button onClick={() => act(scope, () => api.recordConsent(session, scope, 'Granted'), `Granted: ${label}`)}>
+              <button
+                onClick={() =>
+                  act(
+                    scope,
+                    () => api.recordConsent(session, scope, 'Granted', versionShown(state), assistedBy != null),
+                    `Granted: ${label}`,
+                  )
+                }
+              >
                 Grant "{label}"
               </button>{' '}
-              <button onClick={() => act(scope, () => api.recordConsent(session, scope, 'Declined'), `Declined: ${label}`)}>
+              <button
+                onClick={() =>
+                  act(
+                    scope,
+                    () => api.recordConsent(session, scope, 'Declined', versionShown(state), assistedBy != null),
+                    `Declined: ${label}`,
+                  )
+                }
+              >
                 Decline "{label}"
               </button>{' '}
               <button onClick={() => setPendingWithdrawal(scope)}>Withdraw consent for "{label}"</button>
@@ -192,7 +236,11 @@ export function ConsentPanel({ session }: { session: Session }) {
                   <button
                     onClick={() => {
                       setPendingWithdrawal(null);
-                      void act(scope, () => api.withdrawConsent(session, scope, true), `Withdrawn: ${label}`);
+                      void act(
+                        scope,
+                        () => api.withdrawConsent(session, scope, true, versionShown(state), assistedBy != null),
+                        `Withdrawn: ${label}`,
+                      );
                     }}
                   >
                     Confirm withdrawal of "{label}"

@@ -143,13 +143,27 @@ export class CommandController {
   async recordConsent(
     @Req() req: Request,
     @Param('participantId') participantId: string,
-    @Body() body: { scope: string; decision: 'Granted' | 'Declined' | 'Restricted' | 'Deferred'; templateVersion: string },
+    @Body()
+    body: {
+      scope: string;
+      decision: 'Granted' | 'Declined' | 'Restricted' | 'Deferred';
+      templateVersion: string;
+      /** Whether somebody was helping. Never who — that name stays on the
+       *  participant's device (D-15). */
+      assisted?: boolean;
+    },
   ) {
     const ctx = requireActor(req);
     const result = await recordConsentDecision(
       { pool: this.deps.pool, clock: this.deps.clock, permissions: this.deps.permissions },
       ctx,
-      { participantId, scope: body.scope, decision: body.decision, templateVersion: body.templateVersion },
+      {
+        participantId,
+        scope: body.scope,
+        decision: body.decision,
+        templateVersion: body.templateVersion,
+        assistanceRecorded: body.assisted === true,
+      },
     );
     return { data: { type: 'ConsentDecision', id: result.consentDecisionId } };
   }
@@ -158,13 +172,19 @@ export class CommandController {
   async withdraw(
     @Req() req: Request,
     @Param('participantId') participantId: string,
-    @Body() body: { scope: string; templateVersion: string; confirmed: boolean },
+    @Body() body: { scope: string; templateVersion: string; confirmed: boolean; assisted?: boolean },
   ) {
     const ctx = requireActor(req);
     const result = await withdrawConsent(
       { pool: this.deps.pool, clock: this.deps.clock, permissions: this.deps.permissions },
       ctx,
-      { participantId, scope: body.scope, templateVersion: body.templateVersion, confirmed: body.confirmed === true },
+      {
+        participantId,
+        scope: body.scope,
+        templateVersion: body.templateVersion,
+        confirmed: body.confirmed === true,
+        assistanceRecorded: body.assisted === true,
+      },
     );
     return { data: { type: 'ConsentDecision', id: result.consentDecisionId } };
   }

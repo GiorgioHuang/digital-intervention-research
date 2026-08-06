@@ -371,7 +371,7 @@ export function App() {
             </section>
           </section>
         )}
-        {screen === 'consent' && <ConsentPanel session={session} />}
+        {screen === 'consent' && <ConsentPanel session={session} assistedBy={helper} />}
         {screen === 'access' && <WhoHasAccess session={session} />}
         {screen === 'message' && (
           <MessagesScreen session={session} onGetHelp={() => setScreen('help')} assistedBy={helper} />

@@ -576,6 +576,54 @@ describe.skipIf(!dbAvailable)('M01+M03 identity, consent and permission (integra
     const settled = (await listOwnConsents(m03, ctxFor(participantId), participantId)).find((c) => c.scope === scope);
     expect(settled?.decisionNote).toBeNull();
   });
+
+  /**
+   * `assistance_recorded` has been on the consent history since the first
+   * migration and nothing ever set it — while a chat message sent with
+   * somebody helping carried its own flag and said so to the recipient.
+   * The platform recorded assistance for small talk and recorded nothing
+   * about whether anybody was sitting beside a person when they agreed to
+   * take part.
+   */
+  it('records that somebody was helping when consent was decided, and never who', async () => {
+    const scope = 'participant-messaging';
+    await recordConsentDecision(m03, ctxFor(participantId), {
+      participantId,
+      scope,
+      decision: 'Granted',
+      templateVersion: 'ct_v1',
+      assistanceRecorded: true,
+    });
+    const view = (await listOwnConsents(m03, ctxFor(participantId), participantId)).find((c) => c.scope === scope);
+    expect(view?.assistanceRecorded).toBe(true);
+
+    // The history carries it too, which is where it has to live: the
+    // projection only holds the choice standing now.
+    const history = await pool.query(
+      `SELECT assistance_recorded FROM consent_permission.consent_decisions
+        WHERE participant_id = $1 AND consent_scope = $2 ORDER BY recorded_at DESC LIMIT 1`,
+      [participantId, scope],
+    );
+    expect(history.rows[0].assistance_recorded).toBe(true);
+
+    // Nothing anywhere holds the helper's name: it stays on the
+    // participant's device (D-15), and recording it would make their
+    // household a matter of study record.
+    const columns = await pool.query(
+      `SELECT column_name FROM information_schema.columns
+        WHERE table_schema = 'consent_permission' AND table_name = 'consent_decisions'`,
+    );
+    const names = columns.rows.map((r) => r.column_name as string);
+    expect(names.some((n) => n.includes('helper') || n.includes('assistant'))).toBe(false);
+
+    // Deciding alone is the default and is recorded as such, so "no help"
+    // is a fact rather than an absence.
+    await recordConsentDecision(m03, ctxFor(participantId), {
+      participantId, scope, decision: 'Declined', templateVersion: 'ct_v1',
+    });
+    const alone = (await listOwnConsents(m03, ctxFor(participantId), participantId)).find((c) => c.scope === scope);
+    expect(alone?.assistanceRecorded).toBe(false);
+  });
 });
 
 describe.skipIf(dbAvailable)('M01+M03 integration (skipped)', () => {

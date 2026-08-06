@@ -189,4 +189,75 @@ describe('ConsentPanel (Doc 20 consent UX rules)', () => {
     // Not shown as a bare state code.
     expect(document.body.textContent).not.toContain('ReConsentRequired');
   });
+
+  /**
+   * The version was hardcoded to 'ct_v1' in the API client. Harmless
+   * while no consent text could ever change; wrong the moment one could,
+   * because somebody asked to agree to a revised wording would have been
+   * recorded as agreeing to the old one — the exact fact the demand
+   * existed to establish.
+   */
+  it('records the version the participant was actually shown', async () => {
+    const calls = stubFetch({
+      data: [
+        {
+          id: 'community-participation',
+          attributes: {
+            scope: 'community-participation', decision: 'ReConsentRequired',
+            decidedAt: '2026-08-06T00:00:00Z', templateVersion: 'ct_v2', restrictions: [], expiresAt: null,
+            decisionNote: 'The section on who can see your posts was rewritten.', assistanceRecorded: false,
+          },
+        },
+      ],
+    });
+    await act(async () => {
+      render(<ConsentPanel session={session} />);
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Grant "Join the community"' }));
+    });
+    const posted = commands(calls);
+    expect(posted[0]?.body['templateVersion']).toBe('ct_v2');
+  });
+
+  /**
+   * `assistance_recorded` existed from the first consent migration and
+   * nothing ever set it, while a chat message sent with somebody helping
+   * was marked and said so to its recipient. The platform recorded
+   * assistance for small talk and not for consent.
+   */
+  it('records that somebody was helping, tells the participant so, and never who', async () => {
+    const calls = stubFetch();
+    await act(async () => {
+      render(<ConsentPanel session={session} assistedBy="Sofia" />);
+    });
+    expect(screen.getByText(/Sofia is helping you right now/)).toBeTruthy();
+    expect(screen.getByText(/Their name is not recorded/)).toBeTruthy();
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Grant "Join the community"' }));
+    });
+    const posted = commands(calls);
+    expect(posted[0]?.body['assisted']).toBe(true);
+    // The fact, never the person.
+    expect(JSON.stringify(posted[0]?.body)).not.toContain('Sofia');
+  });
+
+  it('a past choice made with help says so', async () => {
+    stubFetch({
+      data: [
+        {
+          id: 'study-participation',
+          attributes: {
+            scope: 'study-participation', decision: 'Granted', decidedAt: '2026-07-28T00:00:00Z',
+            templateVersion: 'ct_v1', restrictions: [], expiresAt: null, decisionNote: null,
+            assistanceRecorded: true,
+          },
+        },
+      ],
+    });
+    await act(async () => {
+      render(<ConsentPanel session={session} />);
+    });
+    expect(screen.getByText(/made with somebody helping/)).toBeTruthy();
+  });
 });

@@ -17,14 +17,21 @@ export async function appendConsentDecision(
     /** Only set when somebody other than the participant needs to explain
      *  the row — today, a demand to agree again. */
     decisionNote?: string;
+    /**
+     * Whether somebody was helping the participant at the moment they
+     * decided. Never who: the helper's name stays on the participant's
+     * device (D-15), and recording it would make their household a
+     * matter of study record.
+     */
+    assistanceRecorded?: boolean;
   },
 ): Promise<void> {
   await client.query(
     `INSERT INTO consent_permission.consent_decisions
        (id, participant_id, research_project_id, consent_scope, consent_template_version,
         decision, restrictions, decided_by_actor_id, effective_from, expires_at,
-        decision_note)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+        decision_note, assistance_recorded)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
     [
       row.id,
       row.participantId,
@@ -37,6 +44,7 @@ export async function appendConsentDecision(
       row.effectiveFrom,
       row.expiresAt ?? null,
       row.decisionNote ?? null,
+      row.assistanceRecorded ?? false,
     ],
   );
   // Maintain the current-state projection in the same transaction.
@@ -44,8 +52,8 @@ export async function appendConsentDecision(
     `INSERT INTO consent_permission.consent_current
        (participant_id, research_project_id, consent_scope, decision,
         consent_template_version, restrictions, expires_at, last_decision_id, updated_at,
-        decision_note)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8, now(), $9)
+        decision_note, assistance_recorded)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8, now(), $9, $10)
      ON CONFLICT (participant_id, research_project_id, consent_scope)
      DO UPDATE SET decision = EXCLUDED.decision,
                    consent_template_version = EXCLUDED.consent_template_version,
@@ -56,7 +64,8 @@ export async function appendConsentDecision(
                    -- Cleared by an ordinary decision: once the participant
                    -- has answered, the explanation of what they were asked
                    -- is history and the history table keeps it.
-                   decision_note = EXCLUDED.decision_note`,
+                   decision_note = EXCLUDED.decision_note,
+                   assistance_recorded = EXCLUDED.assistance_recorded`,
     [
       row.participantId,
       row.researchProjectId ?? '',
@@ -67,6 +76,7 @@ export async function appendConsentDecision(
       row.expiresAt ?? null,
       row.id,
       row.decisionNote ?? null,
+      row.assistanceRecorded ?? false,
     ],
   );
 }
