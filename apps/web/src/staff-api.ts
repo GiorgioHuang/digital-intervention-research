@@ -350,6 +350,21 @@ export const staffApi = {
   moveSafetyEvent: (s: StaffSession, eventId: string, toState: string, note: string) =>
     post<Id>(s, `/v1/safety-events/${eventId}/state`, { toState, note, confirmed: true }),
 
+  /**
+   * Proposing a relationship. Nothing in the product could do this: the
+   * whole supporter path existed only for whoever could call the API, so a
+   * coordinator could not bring a family member into the study at all.
+   *
+   * Proposing grants nothing — the participant approves it themselves.
+   */
+  proposeRelationship: (
+    s: StaffSession,
+    participantId: string,
+    relatedActorId: string,
+    relationshipType: string,
+    permittedActions: string[],
+  ) => post<Id>(s, '/v1/relationships', { participantId, relatedActorId, relationshipType, permittedActions }),
+
   // M05 enrolment chain
   invite: (s: StaffSession, participantId: string, researchProjectId: string, protocolVersionId: string) =>
     post<Id>(s, '/v1/enrolments/invite', { participantId, researchProjectId, protocolVersionId }),

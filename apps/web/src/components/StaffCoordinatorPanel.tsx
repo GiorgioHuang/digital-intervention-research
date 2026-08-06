@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { staffActionError, staffLoadError } from '../errors.js';
 import { staffApi, type EnrolmentItem, type StaffSession } from '../staff-api.js';
+import { ProposeRelationship } from './ProposeRelationship.js';
 
 /**
  * Enrolment coordination (M05): invite against an approved protocol
@@ -111,6 +112,13 @@ export function StaffCoordinatorPanel({ session }: { session: StaffSession }) {
           </button>
         </p>
       </section>
+
+      {/*
+        The supporter path had no way in at all: POST /v1/relationships had
+        no caller anywhere in the product, so a coordinator could not bring
+        a family member into a participant's study.
+      */}
+      <ProposeRelationship session={session} />
 
       <section aria-labelledby="list-heading">
         <h3 id="list-heading">Enrolments</h3>
