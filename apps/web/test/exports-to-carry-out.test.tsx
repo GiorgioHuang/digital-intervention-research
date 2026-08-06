@@ -58,13 +58,30 @@ describe('exports waiting to be carried out', () => {
       render(<ExportsToCarryOut session={session} />);
     });
     expect(calls[0]?.path).toBe('/v1/export-requests/to-carry-out');
-    expect(screen.getByText(/The package has not been put together yet/)).toBeTruthy();
+    expect(screen.getByText(/The manifest has not been written yet/)).toBeTruthy();
     expect(screen.queryByText(/Manifest hash/)).toBeNull();
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Put the package together' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Write the manifest for this export' }));
     });
     const post = calls.find((c) => c.method === 'POST');
     expect(post?.path).toBe('/v1/export-requests/exr_1/generate');
+  });
+
+  /**
+   * The command reads no participant data, gathers no records and
+   * produces no file — it writes the export's own type, sources,
+   * de-identification and restrictions with a hash over them. Described
+   * as "the package", it reads as the data itself, and somebody hands
+   * over a file believing the platform decided what went into it.
+   */
+  it('does not claim the platform gathered anything', async () => {
+    stubFetch([row({ requestState: 'Generated', manifestHash: 'c'.repeat(64) })]);
+    await act(async () => {
+      render(<ExportsToCarryOut session={session} />);
+    });
+    expect(screen.getByText(/This platform does not assemble the data/i)).toBeTruthy();
+    expect(screen.getByText(/Nothing has been gathered and nothing has been handed over/)).toBeTruthy();
+    expect(document.body.textContent).not.toContain('put together');
   });
 
   it('a generated package is not described as handed over, and the hash is shown', async () => {
@@ -72,7 +89,7 @@ describe('exports waiting to be carried out', () => {
     await act(async () => {
       render(<ExportsToCarryOut session={session} />);
     });
-    expect(screen.getByText(/Nothing has been handed over/)).toBeTruthy();
+    expect(screen.getByText(/Nothing has been gathered and nothing has been handed over/)).toBeTruthy();
     expect(screen.getByText('a'.repeat(64))).toBeTruthy();
     // The platform sends nothing, so the control records what a person
     // did rather than claiming a transfer happened here.

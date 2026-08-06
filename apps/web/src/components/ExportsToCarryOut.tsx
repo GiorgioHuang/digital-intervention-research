@@ -13,15 +13,28 @@ import { staffApi, type ExportToCarryOutItem, type StaffSession } from '../staff
  * anywhere could take the next step.
  *
  * The three states are kept apart in the wording, because they are three
- * different facts (Doc 16 §37.3). Putting the package together is work
- * this platform does. Handing it over is not: the platform sends nothing,
- * so recording delivery is a person saying what they did, and the screen
- * says so rather than implying a transfer happened here.
+ * different facts (Doc 16 §37.3). None of them is the platform sending
+ * anything: recording delivery is a person saying what they did.
+ *
+ * And one of the three was being described as more than it is. The screen
+ * said "put the package together", and what the command writes is a
+ * manifest — the export's own type, sources, de-identification and
+ * restrictions, with a SHA-256 over that JSON. It reads no participant
+ * data, gathers no records and writes no file. Whoever carries the export
+ * out assembles it themselves, outside this platform, against that
+ * manifest.
+ *
+ * That distinction is the whole value of the hash. The manifest is the
+ * agreed statement of what may leave, fixed at the moment it was agreed,
+ * so an assembled package can be checked against what was actually
+ * approved. Called "the package", it instead reads as the data itself,
+ * and somebody would hand over a file believing the platform had decided
+ * what went into it.
  */
 const STATE_WORDING: Record<string, string> = {
-  Approved: 'Agreed to. The package has not been put together yet.',
-  Generated: 'The package exists. Nothing has been handed over.',
-  Delivered: 'Recorded as handed over. The recipient has not confirmed it.',
+  Approved: 'Agreed to. The manifest has not been written yet.',
+  Generated: 'The manifest exists. Nothing has been gathered and nothing has been handed over.',
+  Delivered: 'Somebody recorded handing it over. The recipient has not confirmed it.',
 };
 
 const TYPE_WORDING: Record<string, string> = {
@@ -63,7 +76,14 @@ export function ExportsToCarryOut({ session }: { session: StaffSession }) {
     <section aria-labelledby="carry-out-heading">
       <h3 id="carry-out-heading">Exports waiting to be carried out</h3>
       <p>
-        These have already been agreed to by someone other than whoever asked. What is left is the work itself.
+        These have already been agreed to by someone other than whoever asked. What is left is the work itself, and
+        nearly all of it is yours.
+      </p>
+      <p>
+        <strong>This platform does not assemble the data.</strong> What it writes is a manifest: the type, the
+        sources, the de-identification and the restrictions that were agreed, with a hash over them. Gathering the
+        records, producing the file and getting it to the recipient are things you do, outside here. Check what you
+        assemble against the manifest — that is what the hash is for.
       </p>
       <p>
         <button onClick={() => void load()}>Refresh the list</button>
@@ -89,12 +109,13 @@ export function ExportsToCarryOut({ session }: { session: StaffSession }) {
                 onClick={() =>
                   void run(
                     () => staffApi.generateExportPackage(session, e.exportRequestId),
-                    'The package has been put together. Nothing has been handed over.',
+                    'The manifest is written. Nothing has been gathered — that part is yours.',
                   )
                 }
               >
-                Put the package together
-              </button>
+                Write the manifest for this export
+              </button>{' '}
+              <small>This records what may leave. It does not collect anything.</small>
             </p>
           )}
           {e.requestState === 'Generated' && (

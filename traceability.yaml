@@ -1030,3 +1030,13 @@
   code: [packages/policy/src/catalogue.ts, packages/modules/m06-intervention-portfolio/src/application/queries.ts, apps/api/src/staff-controllers.ts, apps/web/src/staff-api.ts, apps/web/src/components/Interventions.tsx, apps/web/src/components/approver/InterventionDecisions.tsx, apps/web/src/components/StaffResearcherPanel.tsx, apps/web/src/components/StaffApproverPanel.tsx, packages/synthetic-pilot/seed-demo.mjs]
   tests: [packages/modules/m10-evidence/test/m06-m10.integration.test.ts, apps/web/test/interventions.test.tsx]
   status: implemented
+
+- implementation_id: IMP-M14-EXPORT-WORDING-001
+  module: M14
+  summary: The platform stopped telling a participant that a copy of their information exists. generateExportPackage writes a manifest - the export's own type, sources, de-identification and restrictions, with a SHA-256 over that JSON - and it reads no participant data, gathers no records and produces no file. Both screens described it as more than that. The staff screen said putting the package together is work this platform does, with a button labelled put the package together; the participant screen said the copy has been put together and, at the next state, that the copy had been sent to them. For somebody exercising their right to a copy of their own information that is the most damaging wording in the product — they would wait for a file the platform was never going to produce and check an inbox for something nothing here sends. The states are now described as what they are, namely a decision, a written record of exactly what may be shared, and one person's account of handing something over. The staff screen says outright that the platform does not assemble the data and that gathering the records, producing the file and getting it to the recipient are the operator's work, done outside, and that the hash exists so an assembled package can be checked against what was actually approved - a purpose that is lost the moment anyone believes the platform decided what went into the file. The participant screen adds that a recorded hand-over is the operator's record and not proof, so somebody who received nothing knows to say so. Not built — actually assembling a participant's data, which needs cross-module reads and de-identification rulings and is an implementation rather than a wording fix
+  trace_ids: [ATR-005, ATR-013]
+  adr_ids: [ADR-051]
+  docs: ["UI_INVENTORY.md B12", "UI_INVENTORY.md C17", "design/DESIGN_DECISIONS.md D-35"]
+  code: [packages/modules/m14-reporting/src/application/commands.ts, apps/web/src/components/ExportsToCarryOut.tsx, apps/web/src/components/MyDataCopy.tsx]
+  tests: [apps/web/test/exports-to-carry-out.test.tsx, apps/web/test/my-data-copy.test.tsx]
+  status: implemented

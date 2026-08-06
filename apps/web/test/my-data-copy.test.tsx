@@ -89,16 +89,38 @@ describe('asking for a copy of my information', () => {
     await act(async () => {
       render(<MyDataCopy session={session} />);
     });
-    expect(screen.getByText(/The copy has not been put together yet/)).toBeTruthy();
+    expect(screen.getByText(/Nothing has been gathered yet/)).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Ask for a copy of my information' })).toBeNull();
     expect(screen.getByText(/Asking again would not make it any faster/)).toBeTruthy();
   });
 
-  it('a generated copy is not described as delivered', async () => {
+  /**
+   * The screen used to say "the copy has been put together", describing a
+   * step nothing performs: the command writes a record of what may be
+   * shared and reads no data at all. Somebody told their copy existed
+   * would be waiting for a file this platform was never going to make.
+   */
+  it('does not tell the participant a copy of their information exists', async () => {
     stubFetch(request('Generated'));
     await act(async () => {
       render(<MyDataCopy session={session} />);
     });
-    expect(screen.getByText(/has not been handed over yet/)).toBeTruthy();
+    expect(screen.getByText(/written down exactly what may be shared with you/i)).toBeTruthy();
+    expect(screen.getByText(/this platform does not do that part/i)).toBeTruthy();
+    expect(document.body.textContent).not.toContain('put together');
+  });
+
+  /**
+   * And "the copy has been sent to you" would have somebody checking an
+   * inbox for something nothing here sends. It is one person's account of
+   * what they did, which is worth saying and is not proof.
+   */
+  it('a recorded hand-over is somebody’s account, not proof it arrived', async () => {
+    stubFetch(request('Delivered'));
+    await act(async () => {
+      render(<MyDataCopy session={session} />);
+    });
+    expect(screen.getByText(/If nothing has reached you, say so/i)).toBeTruthy();
+    expect(document.body.textContent).not.toContain('has been sent to you');
   });
 });

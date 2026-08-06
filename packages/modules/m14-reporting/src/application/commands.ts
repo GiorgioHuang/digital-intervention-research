@@ -337,7 +337,18 @@ export async function decideExport(
   });
 }
 
-/** Generate the package for an APPROVED export only; manifest + hash recorded atomically. */
+/**
+ * Write the manifest for an APPROVED export; manifest + hash recorded
+ * atomically.
+ *
+ * Named carefully, because the screens above it once called this "putting
+ * the package together". It reads no participant data, gathers no records
+ * and produces no file: the manifest is the export's own type, sources,
+ * de-identification and restrictions, with a SHA-256 over that JSON.
+ * Whoever carries the export out assembles it themselves and checks it
+ * against this — which is the whole purpose of the hash, and is lost the
+ * moment anybody believes the platform decided what went into the file.
+ */
 export async function generateExportPackage(
   deps: M14Deps,
   ctx: RequestContext,

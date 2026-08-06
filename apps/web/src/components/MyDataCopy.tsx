@@ -16,16 +16,27 @@ import { EmptyState, ErrorState, LoadingState } from './StateBlock.js';
  *
  * The wording never promises delivery. A request is reviewed by someone
  * who is not the person who asked — the database refuses a decision made
- * by the requester — and the copy is put together only after that. Saying
- * "your data will be sent to you" would be describing a step the platform
- * does not take on its own.
+ * by the requester.
+ *
+ * What it used to promise was a copy. "The copy has been put together"
+ * described a step nothing performs: the command writes a manifest —
+ * what was agreed may be shared, with a hash over it — and reads no
+ * records at all. The people running the study gather the information
+ * and get it to the person themselves. Someone told their copy existed
+ * would be waiting for a file this platform was never going to produce,
+ * and "the copy has been sent to you" would have them checking an inbox
+ * for something nothing here sends.
+ *
+ * So the states are described as what they are: a decision, a record of
+ * what may be shared, and somebody's account of handing it over.
  */
 const STATE_WORDING: Record<string, string> = {
   Requested: 'Asked for. Nobody has looked at it yet.',
-  Approved: 'Agreed to. The copy has not been put together yet.',
+  Approved: 'Agreed to. Nothing has been gathered yet.',
   Rejected: 'Not agreed to. If you want to know why, ask the research team.',
-  Generated: 'The copy has been put together. It has not been handed over yet.',
-  Delivered: 'The copy has been sent to you.',
+  Generated:
+    'The research team has written down exactly what may be shared with you. They still have to gather it and get it to you — this platform does not do that part.',
+  Delivered: 'Somebody has recorded that they gave it to you. If nothing has reached you, say so — that record is theirs, not proof.',
   Received: 'You confirmed you received the copy.',
 };
 
@@ -105,7 +116,12 @@ export function MyDataCopy({ session }: { session: Session }) {
           <h2 id="ask-copy-heading">Ask for a copy of your information?</h2>
           <p>
             This is a request, not a download. Someone other than you reviews it — the platform will not let the
-            person who asked be the person who agrees — and the copy is put together after that.
+            person who asked be the person who agrees.
+          </p>
+          <p>
+            After that, <strong>people gather the information and get it to you</strong>. Nothing is sent from here
+            and no file appears on this screen. What this platform records is the decision and exactly what may be
+            shared; the rest is the research team&apos;s work, and if it does not reach you, they are who to ask.
           </p>
           <p>
             The copy covers the records you are allowed to have. Things other people wrote about themselves are not
