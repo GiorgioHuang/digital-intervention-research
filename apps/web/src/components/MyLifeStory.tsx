@@ -51,6 +51,18 @@ export function MyLifeStory({ session }: { session: Session }) {
   const [writing, setWriting] = useState(false);
   const [draft, setDraft] = useState({ title: '', text: '' });
   const [confirming, setConfirming] = useState<MyLifeStoryItem | null>(null);
+  /**
+   * Changing an entry you already wrote.
+   *
+   * `reviseItem` has existed with a route and no caller: a participant
+   * could write an entry and never change a word of it from any screen.
+   * This one told them about revision three times over — that earlier
+   * versions are kept, that changing the text un-confirms it, and by
+   * showing "you have changed this since confirming" — while offering no
+   * way to do it. Being unable to correct your own account of your own
+   * life is a strange thing for a life story to enforce.
+   */
+  const [revising, setRevising] = useState<{ itemId: string; text: string } | null>(null);
   const [announcement, setAnnouncement] = useState('');
 
   const load = async () => {
@@ -82,6 +94,23 @@ export function MyLifeStory({ session }: { session: Session }) {
       setWriting(false);
       setDraft({ title: '', text: '' });
       setAnnouncement('Saved. Only you can see it — nothing is shared until you choose to share it.');
+      await load();
+    } catch (err) {
+      setActionError(presentError(err));
+    }
+  };
+
+  const revise = async (item: MyLifeStoryItem) => {
+    if (revising === null) return;
+    try {
+      await api.reviseLifeStoryItem(session, item.itemId, revising.text.trim());
+      setActionError(null);
+      setRevising(null);
+      setAnnouncement(
+        item.testimonyState === 'ParticipantTestimony'
+          ? 'Saved as a new version. It is not confirmed as your own words yet — the earlier confirmation stands for the earlier words.'
+          : 'Saved as a new version. Nothing you wrote before was overwritten.',
+      );
       await load();
     } catch (err) {
       setActionError(presentError(err));
@@ -180,6 +209,56 @@ export function MyLifeStory({ session }: { session: Session }) {
               versions are kept.
             </p>
           )}
+          {/*
+            Not offered on a withdrawn item: the command refuses it, and a
+            control that cannot work is the same defect as one that does
+            nothing.
+          */}
+          {item.itemState !== 'Withdrawn' && item.contentText !== null && revising === null && (
+            <p>
+              <button onClick={() => setRevising({ itemId: item.itemId, text: item.contentText ?? '' })}>
+                Change what this says
+              </button>
+            </p>
+          )}
+
+          {revising?.itemId === item.itemId && (
+            <div>
+              <p>
+                <label htmlFor={`revise-${item.itemId}`}>Your words</label>
+              </p>
+              <textarea
+                id={`revise-${item.itemId}`}
+                rows={6}
+                value={revising.text}
+                onChange={(e) => setRevising({ itemId: item.itemId, text: e.target.value })}
+              />
+              <p>Nothing you wrote before is overwritten. The earlier version is kept and you can still read it.</p>
+              {/*
+                Said here rather than after the fact: confirming applied to
+                the exact words that were confirmed, so changing them
+                leaves the new text unconfirmed. The participant is about
+                to undo something they did deliberately.
+              */}
+              {item.testimonyState === 'ParticipantTestimony' && (
+                <p role="note">
+                  <strong>You confirmed these words as your own.</strong> That confirmation belongs to the words you
+                  confirmed, not to this entry, so the new text will not be confirmed until you say so again. What you
+                  confirmed before stays on the record as it was.
+                </p>
+              )}
+              <p>
+                <button
+                  disabled={revising.text.trim() === '' || revising.text === item.contentText}
+                  onClick={() => void revise(item)}
+                >
+                  Save this version
+                </button>{' '}
+                <button onClick={() => setRevising(null)}>Leave it as it was</button>
+              </p>
+            </div>
+          )}
+
           {item.testimonyState !== 'ParticipantTestimony' &&
             item.currentVersionId !== null &&
             item.itemState !== 'Withdrawn' && (

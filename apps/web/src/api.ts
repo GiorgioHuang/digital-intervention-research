@@ -279,6 +279,14 @@ export const api = {
       // it would be a false provenance record.
       sourceType: 'ParticipantAuthored',
     }),
+  /**
+   * Changing what you wrote. Nothing is overwritten — the command adds a
+   * version and keeps every earlier one — and the provenance stays
+   * ParticipantAuthored for the same reason it does above: this screen
+   * has no drafting assistant (D-14).
+   */
+  reviseLifeStoryItem: (s: Session, itemId: string, contentText: string) =>
+    post(s, `/v1/life-story/items/${itemId}/revise`, { contentText, sourceType: 'ParticipantAuthored' }),
   confirmTestimony: (s: Session, itemId: string, versionId: string) =>
     post(s, `/v1/life-story/items/${itemId}/confirm-testimony`, { versionId, confirmed: true }),
   listContributionsAwaitingReview: (s: Session) =>

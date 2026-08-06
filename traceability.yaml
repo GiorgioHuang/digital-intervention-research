@@ -1130,3 +1130,13 @@
   code: [packages/modules/m09-safety/src/application/commands.ts, packages/policy/src/catalogue.ts, apps/api/src/controllers.ts]
   tests: [packages/modules/m11-ai/test/m09-m11.integration.test.ts]
   status: implemented
+
+- implementation_id: IMP-M17-REVISE-REACHABLE-001
+  module: M17
+  summary: A participant can change what they wrote in their own life story. reviseItem had a command and a route and no caller anywhere, so somebody could write an entry and never alter a word of it from any screen - while that screen described revision three times over. It said the entry had been written several times and that nothing earlier was overwritten, it warned inside the confirmation dialog that changing the text afterwards leaves the new text unconfirmed, and it displayed a flag meaning the participant had changed the entry since confirming it, which is a state only reachable by revising. Being unable to correct your own account of your own life is a strange thing for a life story to enforce. The editor is pre-filled with what is there, so this is changing rather than starting again from nothing, and saving adds a version while every earlier one is kept and stays readable. A withdrawn entry is not offered the control at all, because the command refuses it and a control that cannot work is the same defect as one that does nothing. Where the entry had been confirmed as the participant's own testimony, the consequence is stated before they press rather than after - the confirmation belongs to the exact words that were confirmed rather than to the entry, so the new text will not be confirmed until they say so again, and what they confirmed before stays on the record as it was. The provenance stays ParticipantAuthored because this screen has no drafting assistant under D-14, and recording anything else would be a false claim about who wrote the words
+  trace_ids: [ATR-007]
+  adr_ids: [ADR-042]
+  docs: ["UI_INVENTORY.md B9", "design/DESIGN_DECISIONS.md D-14", "design/DESIGN_DECISIONS.md D-47"]
+  code: [apps/web/src/api.ts, apps/web/src/components/MyLifeStory.tsx]
+  tests: [apps/web/test/my-life-story.test.tsx]
+  status: implemented
