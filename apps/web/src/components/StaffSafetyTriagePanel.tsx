@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { SafetyEvents } from './SafetyEvents.js';
 import { staffActionError, staffLoadError } from '../errors.js';
 import { staffApi, type StaffSession, type TriageQueueItem } from '../staff-api.js';
 
@@ -121,6 +122,12 @@ export function StaffSafetyTriagePanel({ session }: { session: StaffSession }) {
       <p aria-live="polite" role="status">
         {announcement}
       </p>
+      {/*
+        Converting a signal said "converted to a safety event" and the
+        event then went where nobody could look. The events belong on the
+        same screen as the triage that creates them.
+      */}
+      <SafetyEvents session={session} />
     </section>
   );
 }

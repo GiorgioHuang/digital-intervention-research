@@ -30,7 +30,13 @@ import {
   createInterventionVersion,
   submitInterventionVersion,
 } from '@platform/m06-intervention-portfolio';
-import { listSignalsAwaitingTriage, triageSafetySignal } from '@platform/m09-safety';
+import {
+  listSafetyEvents,
+  listSignalsAwaitingTriage,
+  recordSafetyAction,
+  triageSafetySignal,
+  updateSafetyEventState,
+} from '@platform/m09-safety';
 import {
   approveEvidenceDecision,
   rejectEvidenceDecision,
@@ -522,6 +528,52 @@ export class StaffCommandController {
   }
 
   // --- M09 safety triage ----------------------------------------------
+
+  @Get('safety-events')
+  async safetyEvents(@Req() req: Request) {
+    const ctx = requireActor(req);
+    const items = await listSafetyEvents(this.deps.m09, ctx);
+    return { data: items.map((i) => ({ type: 'SafetyEvent', id: i.safetyEventId, attributes: i })) };
+  }
+
+  @Post('safety-events/:safetyEventId/actions')
+  async recordSafetyAction(
+    @Req() req: Request,
+    @Param('safetyEventId') safetyEventId: string,
+    @Body() body: {
+      label: string;
+      actionState: 'Not Started' | 'In Progress' | 'Completed' | 'No Action Taken';
+      note: string;
+      confirmed: boolean;
+    },
+  ) {
+    const ctx = requireActor(req);
+    const result = await recordSafetyAction(this.deps.m09, ctx, {
+      safetyEventId,
+      label: body.label ?? '',
+      actionState: body.actionState,
+      note: body.note ?? '',
+      confirmed: body.confirmed === true,
+    });
+    return { data: { type: 'SafetyEventAction', id: result.entryId, meta: { state: body.actionState } } };
+  }
+
+  @Post('safety-events/:safetyEventId/state')
+  async moveSafetyEvent(
+    @Req() req: Request,
+    @Param('safetyEventId') safetyEventId: string,
+    @Body() body: { toState: string; note: string; confirmed: boolean },
+  ) {
+    const ctx = requireActor(req);
+    await updateSafetyEventState(this.deps.m09, ctx, {
+      safetyEventId,
+      toState: body.toState,
+      note: body.note ?? '',
+      confirmed: body.confirmed === true,
+    });
+    return { data: { type: 'SafetyEvent', id: safetyEventId, meta: { state: body.toState } } };
+  }
+
 
   @Post('safety-signals/:signalId/triage')
   async triageSafetySignal(

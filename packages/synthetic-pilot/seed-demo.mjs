@@ -34,6 +34,12 @@ import {
 import { createParticipantQuery, registerParticipant } from '@platform/m02-participant';
 import { executeBreakGlass } from '@platform/m15-governance';
 import {
+  recordSafetyAction,
+  recordSafetySignal,
+  triageSafetySignal,
+  updateSafetyEventState,
+} from '@platform/m09-safety';
+import {
   approveProtocolVersion,
   createProtocolVersion,
   createProtocolVersionQuery,
@@ -587,6 +593,58 @@ async function main() {
     purpose: 'A copy of my own information, requested by me',
     confirmed: true,
   });
+
+  /*
+   * Safety: one signal left for triage, and one carried through to a
+   * confirmed event with something recorded against it.
+   *
+   * The safety workspace had nothing in it at all - no signal had ever
+   * been raised - and until this increment a confirmed event went into a
+   * table nobody could read. Both halves are seeded so the screen shows a
+   * worked example rather than an empty page.
+   */
+  const { safetySignalId: openSignalId } = await recordSafetySignal(base, ctx(coordId), {
+    sourceType: 'Staff',
+    category: 'low mood',
+    severity: 'Moderate',
+    description: 'Ann mentioned on a call that she has not been sleeping and has stopped going to the allotment.',
+  });
+  const { safetySignalId: convertedSignalId } = await recordSafetySignal(base, ctx(coordId), {
+    sourceType: 'Staff',
+    category: 'self-harm risk',
+    severity: 'High',
+    description: 'Ben said on a call that he had been thinking about not being here.',
+  });
+  const { safetyEventId } = await triageSafetySignal(base, mfa(safetyId), {
+    safetySignalId: convertedSignalId,
+    disposition: 'Converted to Safety Event',
+    reason: 'Risk confirmed on the call; this needs following up today.',
+    confirmed: true,
+  });
+  await recordSafetyAction(base, ctx(safetyId), {
+    safetyEventId,
+    label: 'Rang Ben',
+    actionState: 'Completed',
+    // What was done, never what was said.
+    note: 'Spoke with him and agreed a call back tomorrow morning.',
+    confirmed: true,
+  });
+  await updateSafetyEventState(base, ctx(safetyId), {
+    safetyEventId,
+    toState: 'In Review',
+    note: 'Picked this up; keeping it open until after tomorrow’s call.',
+    confirmed: true,
+  });
+  await recordSafetyAction(base, ctx(safetyId), {
+    safetyEventId,
+    label: 'Tell the approved contact',
+    actionState: 'Not Started',
+    note: 'Waiting until after the call back so Ben can say whether he wants this done.',
+    confirmed: true,
+  });
+  // openSignalId is left untriaged on purpose: the triage queue needs
+  // something in it too.
+  void openSignalId;
 
   // One emergency-access record left awaiting its review, so the privacy
   // reviewer's queue holds something real. The bootstrap administrator is

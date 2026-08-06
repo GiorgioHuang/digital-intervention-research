@@ -12,7 +12,14 @@ import {
   type M01Deps,
 } from '@platform/m01-identity-org';
 import { createPermissionService } from '@platform/m03-consent-permission';
-import { recordSafetySignal, triageSafetySignal, type M09Deps } from '@platform/m09-safety';
+import {
+  listSafetyEvents,
+  recordSafetyAction,
+  recordSafetySignal,
+  triageSafetySignal,
+  updateSafetyEventState,
+  type M09Deps,
+} from '@platform/m09-safety';
 import {
   createModelGateway,
   createModelProviderSimulator,
@@ -211,6 +218,104 @@ describe.skipIf(!dbAvailable)('M09 safety + M11 AI governance (integration)', ()
     );
     expect(rec.rows[0].n).toBe(PROHIBITED_AI_ACTIONS.length);
   });
+
+  /**
+   * A SafetyEvent was born 'Open' and nothing could ever change it,
+   * nothing listed one and nothing showed one. The most serious record
+   * this platform holds went into a table nobody could read, while the
+   * triage screen said the reviewer had "converted this to a safety
+   * event" - which reads as an escalation to something that will be
+   * worked.
+   */
+  it('a confirmed safety event can be seen, acted on and moved, and the record cannot be edited', async () => {
+    const mfaCtx = createRequestContext({ actor: { type: 'user', id: reviewerId }, authStrength: 'mfa' });
+    const { safetySignalId } = await recordSafetySignal(m09, ctx(reviewerId), {
+      sourceType: 'Staff',
+      category: 'self-harm risk',
+      severity: 'High',
+      description: 'Said on a call that they had been thinking about not being here',
+    });
+    const { safetyEventId } = await triageSafetySignal(m09, mfaCtx, {
+      safetySignalId,
+      disposition: 'Converted to Safety Event',
+      reason: 'risk confirmed on the call',
+      confirmed: true,
+    });
+
+    // It can be found at all, which was the whole gap.
+    const listed = await listSafetyEvents(m09, ctx(reviewerId));
+    const mine = listed.find((e) => e.safetyEventId === safetyEventId);
+    expect(mine?.eventState).toBe('Open');
+    // What was confirmed travels with it, from the signal it was made from.
+    expect(mine?.severity).toBe('High');
+    expect(mine?.category).toBe('self-harm risk');
+    expect(mine?.timeline).toHaveLength(0);
+
+    const { entryId } = await recordSafetyAction(m09, ctx(reviewerId), {
+      safetyEventId: safetyEventId!,
+      label: 'Rang the participant',
+      actionState: 'Completed',
+      note: 'Spoke to them; they agreed to a call back tomorrow.',
+      confirmed: true,
+    });
+
+    // An action needs to say what it was and where it stands.
+    await expect(
+      recordSafetyAction(m09, ctx(reviewerId), {
+        safetyEventId: safetyEventId!,
+        label: '  ',
+        actionState: 'Completed',
+        note: 'x',
+        confirmed: true,
+      }),
+    ).rejects.toMatchObject({ code: 'VALIDATION_ERROR' });
+
+    // The state machine is real: Open goes to In Review and nowhere else.
+    await expect(
+      updateSafetyEventState(m09, ctx(reviewerId), {
+        safetyEventId: safetyEventId!,
+        toState: 'Resolved',
+        note: 'straight to the end',
+        confirmed: true,
+      }),
+    ).rejects.toMatchObject({ code: 'INVALID_STATE_TRANSITION' });
+    await updateSafetyEventState(m09, ctx(reviewerId), {
+      safetyEventId: safetyEventId!,
+      toState: 'In Review',
+      note: 'picked this up',
+      confirmed: true,
+    });
+
+    // Both kinds of entry are on one timeline, so the account of what
+    // happened is one thing rather than two half-histories.
+    const after = (await listSafetyEvents(m09, ctx(reviewerId))).find((e) => e.safetyEventId === safetyEventId);
+    expect(after?.eventState).toBe('In Review');
+    expect(after?.timeline.map((t) => t.entryType)).toEqual(['Action', 'State']);
+
+    // A safety record that can be tidied up afterwards is not a record.
+    await expect(
+      pool.query(`UPDATE safety.safety_event_timeline SET note = 'nicer' WHERE id = $1`, [entryId]),
+    ).rejects.toThrow(/append-only/);
+    await expect(
+      pool.query(`DELETE FROM safety.safety_event_timeline WHERE id = $1`, [entryId]),
+    ).rejects.toThrow(/append-only/);
+  });
+
+  it('NEGATIVE automation cannot record a safety action', async () => {
+    const events = await listSafetyEvents(m09, ctx(reviewerId));
+    const target = events[0];
+    expect(target).toBeDefined();
+    await expect(
+      recordSafetyAction(m09, aiCtx(), {
+        safetyEventId: target!.safetyEventId,
+        label: 'auto-closed',
+        actionState: 'Completed',
+        note: 'handled',
+        confirmed: true,
+      }),
+    ).rejects.toMatchObject({ code: 'AUTHORISATION_DENIED' });
+  });
+
 });
 
 describe.skipIf(dbAvailable)('M09+M11 integration (skipped)', () => {

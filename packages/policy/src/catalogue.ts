@@ -93,7 +93,14 @@ export const POLICY_V1: PolicyConfiguration = {
       'evidence-decision.view-queue',
       'evidence-decision.approve',
     ],
-    SafetyReviewer: ['safety-signal.record', 'safety-signal.triage', 'safety-event.create', 'safety-event.review', 'triage-queue.view'],
+    SafetyReviewer: [
+      'safety-signal.record',
+      'safety-signal.triage',
+      'safety-event.create',
+      'safety-event.review',
+      'safety-event.act',
+      'triage-queue.view',
+    ],
     Participant: [
       // Participant self-service actions are owner-permitted on own resources.
       'participant.view-own',
@@ -381,5 +388,15 @@ export const POLICY_V1: PolicyConfiguration = {
     'safety-signal.triage': { confirmationRequired: true },
     'safety-event.create': { minimumAuthStrength: 'mfa', confirmationRequired: true },
     'safety-event.review': {},
+    /*
+     * Recording what was done about a safety event, and moving where the
+     * event stands. Confirmed, because each entry is permanent - the
+     * timeline is append-only and a correction is a further entry with the
+     * original left standing. Not MFA-tier: creating the event is the act
+     * that needs the strongest authority, and putting the same barrier in
+     * front of writing down what you did afterwards would discourage the
+     * recording, which is the part that has to happen.
+     */
+    'safety-event.act': { confirmationRequired: true },
   },
 };

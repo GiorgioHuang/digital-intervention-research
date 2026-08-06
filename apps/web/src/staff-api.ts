@@ -100,6 +100,26 @@ export interface ProtocolVersionItem {
   refusedReason: string | null;
   updatedAt: string;
 }
+export interface SafetyTimelineEntry {
+  entryId: string;
+  entryType: 'Action' | 'State';
+  label: string;
+  actionState: string | null;
+  note: string;
+  recordedByActorId: string;
+  recordedAt: string;
+}
+export interface SafetyEventItem {
+  safetyEventId: string;
+  safetySignalId: string;
+  eventState: string;
+  confirmedByActorId: string;
+  confirmedAt: string;
+  category: string;
+  severity: string;
+  description: string;
+  timeline: SafetyTimelineEntry[];
+}
 export interface PendingApprovalItem {
   approvalRecordId: string;
   artefactType: string;
@@ -317,6 +337,18 @@ export const staffApi = {
       reason,
       confirmed: true,
     }),
+
+  // M09 safety events: created and then unreachable until now
+  listSafetyEvents: (s: StaffSession) => get<List<SafetyEventItem>>(s, '/v1/safety-events'),
+  recordSafetyAction: (
+    s: StaffSession,
+    eventId: string,
+    label: string,
+    actionState: 'Not Started' | 'In Progress' | 'Completed' | 'No Action Taken',
+    note: string,
+  ) => post<Id>(s, `/v1/safety-events/${eventId}/actions`, { label, actionState, note, confirmed: true }),
+  moveSafetyEvent: (s: StaffSession, eventId: string, toState: string, note: string) =>
+    post<Id>(s, `/v1/safety-events/${eventId}/state`, { toState, note, confirmed: true }),
 
   // M05 enrolment chain
   invite: (s: StaffSession, participantId: string, researchProjectId: string, protocolVersionId: string) =>
