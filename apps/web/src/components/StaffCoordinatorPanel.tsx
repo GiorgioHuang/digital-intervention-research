@@ -55,13 +55,14 @@ export function StaffCoordinatorPanel({ session }: { session: StaffSession }) {
   const [enrolments, setEnrolments] = useState<EnrolmentItem[] | null>(null);
   const [announcement, setAnnouncement] = useState('');
 
-  const loadEnrolments = async () => {
+  /** Returns the load error to announce, or null when the list refreshed. */
+  const loadEnrolments = async (): Promise<string | null> => {
     try {
       const res = await staffApi.listEnrolments(session, listProjectId);
       setEnrolments(res.data.map((i) => i.attributes));
-      setAnnouncement('Enrolment list updated.');
+      return null;
     } catch (err) {
-      setAnnouncement(staffLoadError(err, 'the enrolment list'));
+      return staffLoadError(err, 'the enrolment list');
     }
   };
 
@@ -70,11 +71,21 @@ export function StaffCoordinatorPanel({ session }: { session: StaffSession }) {
    * state it had before the step, and the next button to press is the one
    * that has just stopped being valid.
    */
+  /*
+   * The reload used to happen after the outcome was announced, and it
+   * announced 'Enrolment list updated.' itself — so the message saying
+   * what had just been done was overwritten before anyone could read it,
+   * and a coordinator who withdrew a participant was told only that a
+   * list had been refreshed. The outcome is the thing that matters and
+   * has to be what remains; a failed refresh is added to it rather than
+   * replacing it, because both are true and a stale list is worth
+   * knowing about.
+   */
   const run = async (fn: () => Promise<unknown>, done: string) => {
     try {
       await fn();
-      setAnnouncement(done);
-      if (enrolments !== null) await loadEnrolments();
+      const loadError = enrolments === null ? null : await loadEnrolments();
+      setAnnouncement(loadError === null ? done : `${done} ${loadError}`);
     } catch (err) {
       setAnnouncement(staffActionError(err, 'That enrolment step'));
     }
@@ -131,7 +142,13 @@ export function StaffCoordinatorPanel({ session }: { session: StaffSession }) {
         <p>
           <label htmlFor="list-proj">Filter by project (optional)</label>{' '}
           <input id="list-proj" value={listProjectId} onChange={(e) => setListProjectId(e.target.value)} />{' '}
-          <button onClick={() => void loadEnrolments()}>View enrolments</button>
+          <button
+            onClick={() => {
+              void loadEnrolments().then((err) => setAnnouncement(err ?? 'Enrolment list updated.'));
+            }}
+          >
+            View enrolments
+          </button>
         </p>
         {enrolments !== null && enrolments.length === 0 && <p>No enrolments match.</p>}
         {(enrolments ?? []).map((e) => {
@@ -245,9 +262,25 @@ export function StaffCoordinatorPanel({ session }: { session: StaffSession }) {
       {withdrawing !== null && (
         <div role="alertdialog" aria-labelledby="wd-confirm">
           <p id="wd-confirm">
-            Withdraw {withdrawing.participantId} from {withdrawing.researchProjectId}? Withdrawal stops further data
-            collection and propagates to related records; research datasets that are already locked are not
-            rewritten.
+            Withdraw {withdrawing.participantId} from {withdrawing.researchProjectId}?
+          </p>
+          {/*
+            This used to say withdrawal "propagates to related records".
+            Nothing propagates: the platform records the event and no
+            consumer is registered to act on it, so every one is marked
+            published having reached nobody. What is true is narrower and
+            worth saying exactly — the enrolment is marked withdrawn, and
+            the places that ask before they act will refuse from that
+            moment.
+          */}
+          <p>
+            From then on, nothing further can be recorded against this enrolment — a delivery record is refused, and
+            their consent decisions are re-read on every action rather than relied on from before.
+          </p>
+          <p>
+            <strong>It does not reach back.</strong> What was already recorded stays as it is, and research datasets
+            that are already locked are not rewritten. If something already collected has to be removed, that is a
+            separate piece of work by people, not something this does.
           </p>
           <button
             onClick={() => {
@@ -255,7 +288,7 @@ export function StaffCoordinatorPanel({ session }: { session: StaffSession }) {
               setWithdrawing(null);
               void run(
                 () => staffApi.withdrawEnrolment(session, target.enrolmentId, 'participant-request'),
-                'Withdrawal recorded and propagation started.',
+                'Withdrawn. Nothing further can be recorded against this enrolment.',
               );
             }}
           >

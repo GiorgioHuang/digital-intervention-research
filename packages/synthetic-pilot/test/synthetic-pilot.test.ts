@@ -244,14 +244,66 @@ describe.skipIf(!dbAvailable)('Synthetic Pilot: one governed research cycle end 
     expect(f.rows[0].finding_state).toBe('Approved with Limitations');
   });
 
-  it('Scenario 30 — withdrawal propagates: consent withdrawal + study withdrawal end future access', async () => {
+  /*
+   * This scenario used to be called "withdrawal propagates", and all it
+   * proved was that two events had been written to the outbox. Nothing
+   * consumes them — `register()` is called nowhere in the platform — so
+   * every one of those events is marked Published having reached no one
+   * (see apps/worker/test/outbox-consumers.test.ts, and D-52).
+   *
+   * Withdrawal is real for a different reason: every decision is taken
+   * against the record as it stands at the moment it is taken. The
+   * permission engine re-reads consent on each evaluation; the two
+   * commands that attach data to an enrolment re-read its state on each
+   * write. Nothing has to have propagated for either to be correct, and
+   * neither can go stale.
+   */
+  it('Scenario 30 — withdrawal is enforced at use time, not by propagation', async () => {
+    // Before any of it, Ben's enrolment takes records like anyone else's.
+    await recordInterventionSession(m07, ctx(coordId), {
+      enrolmentId: benEnrolment, interventionConfigurationId: configurationId, exposureState: 'Offered',
+    });
+
     await withdrawConsent(m03, ctx(benAcc), { participantId: benId, scope: 'study-participation', templateVersion: 'ct_v1', confirmed: true });
     const decision = await (m05.permissions).evaluate(ctx(researcherId, { researchProjectId: projectId, purposeCode: 'research-operations' }), {
       action: 'participant.view-assigned',
       resource: { type: 'ParticipantRecord', id: benId, state: 'Active', protectedExistence: true, ownerParticipantId: benId, researchProjectId: projectId },
     });
     expect(decision.outcome).toBe('DenyAndHideExistence');
+
     await withdrawParticipant(m05, ctx(benAcc), { enrolmentId: benEnrolment, confirmed: true });
+
+    /*
+     * The claim the coordinator's screen makes — that nothing further can
+     * be recorded — is only true if the writes refuse. Until this landed
+     * they did not, and the delivery screen I built two increments ago is
+     * what made that reachable from a browser.
+     */
+    await expect(recordInterventionSession(m07, ctx(coordId), {
+      enrolmentId: benEnrolment, interventionConfigurationId: configurationId, exposureState: 'Completed',
+    })).rejects.toMatchObject({ code: 'RESOURCE_STATE_BLOCKED' });
+
+    await expect(recordAssessment(m08, ctx(coordId), {
+      enrolmentId: benEnrolment, instrument: 'end-of-pilot-experience', instrumentVersion: 'v1',
+      recordState: 'Completed', responses: { meaningfulness: 3 },
+    })).rejects.toMatchObject({ code: 'RESOURCE_STATE_BLOCKED' });
+
+    /*
+     * But a record of why the data is absent is still allowed, and has
+     * to be: 'Withdrawn' is in the missingness vocabulary precisely so
+     * the dataset can say this rather than leave a blank (Doc 19).
+     */
+    const { assessmentRecordId } = await recordAssessment(m08, ctx(coordId), {
+      enrolmentId: benEnrolment, instrument: 'end-of-pilot-experience', instrumentVersion: 'v1',
+      recordState: 'Invalidated', missingnessReason: 'Withdrawn',
+    });
+    expect(assessmentRecordId).toBeTruthy();
+
+    // What was recorded before the withdrawal stays recorded: withdrawal
+    // stops what comes next, and does not reach back.
+    const before = await listInterventionSessions(m07, ctx(coordId), benEnrolment);
+    expect(before.map((s) => s.exposureState)).toEqual(['Offered']);
+
     const events = await pool.query(
       `SELECT count(*)::int AS n FROM platform_kernel.outbox_messages WHERE event_type IN ('ConsentWithdrawn', 'ParticipantWithdrawn')`,
     );

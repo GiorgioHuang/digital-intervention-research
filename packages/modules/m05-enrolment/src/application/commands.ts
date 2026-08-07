@@ -301,7 +301,15 @@ export async function activateEnrolment(deps: M05Deps, ctx: RequestContext, enro
 /**
  * Withdrawal is always available to the Participant (owner-permitted) and
  * to authorised staff; requires explicit confirmation; emits
- * ParticipantWithdrawn atomically for downstream propagation (ADR-054).
+ * ParticipantWithdrawn atomically with the state change (ADR-054).
+ *
+ * The event is persisted reliably and consumed by nobody: no handler is
+ * registered anywhere in the platform, so it is marked published having
+ * reached no one (D-52). Withdrawal therefore takes effect the way
+ * consent does — at the moment somebody tries to act. M07 refuses to
+ * record a session against a withdrawn enrolment, and the permission
+ * engine re-reads consent on every decision. Saying "propagation" here
+ * would describe a mechanism that runs and does nothing.
  */
 export async function withdrawParticipant(
   deps: M05Deps,

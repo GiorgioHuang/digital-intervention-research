@@ -43,6 +43,34 @@ export async function recordAssessment(
   if (input.recordState === 'Completed' && input.responses === undefined) {
     throw new PlatformError('VALIDATION_ERROR', 'A completed assessment requires responses');
   }
+
+  /*
+   * The same use-time check M07 makes, and for the same reason: the
+   * ParticipantWithdrawn event reaches no consumer, so nothing revokes
+   * anything downstream on withdrawal. If withdrawal is to mean data
+   * collection stops, it has to be the write that refuses.
+   *
+   * But not every write. `missingnessReason` already carries
+   * 'Withdrawn', and Doc 19's rule is that missingness is explicit and
+   * typed, never silent. Refusing the whole table after withdrawal would
+   * leave the dataset with a blank where it could have said why the row
+   * is empty, which is the failure that vocabulary exists to prevent.
+   * So: no new responses may be collected, and a record that states the
+   * absence is still allowed.
+   */
+  const enrolment = await deps.pool.query(
+    `SELECT enrolment_state FROM enrolment.enrolments WHERE id = $1`,
+    [input.enrolmentId],
+  );
+  const row = enrolment.rows[0] as { enrolment_state: string } | undefined;
+  if (row === undefined) throw new PlatformError('RESOURCE_NOT_FOUND', 'Enrolment not found');
+  if (['Withdrawn', 'Discontinued'].includes(row.enrolment_state) && input.responses !== undefined) {
+    throw new PlatformError(
+      'RESOURCE_STATE_BLOCKED',
+      'This participant has left the study; no further answers can be recorded against this enrolment. ' +
+        'A record stating why the assessment was not collected can still be entered.',
+    );
+  }
   const assessmentRecordId = newId('asr');
   const now = deps.clock.now();
   await withTransaction(deps.pool, async (client) => {

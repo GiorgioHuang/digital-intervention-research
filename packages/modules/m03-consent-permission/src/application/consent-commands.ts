@@ -214,7 +214,10 @@ export async function requireReConsent(
 /**
  * Withdraw consent for one scope. Withdrawal is scoped, not all-or-nothing;
  * the ConsentWithdrawn Domain Event commits atomically with the state
- * change (outbox) so downstream propagation is reliable (ADR-018/054).
+ * change (outbox, ADR-018/054). The event reaches no consumer today
+ * (D-52) and withdrawal does not depend on one: the permission engine
+ * re-reads `consent_current` on every decision, so a withdrawal is in
+ * force at the next action rather than whenever something propagates.
  */
 export async function withdrawConsent(
   deps: M03Deps,

@@ -40,6 +40,39 @@ export async function recordInterventionSession(
     resource: { type: 'InterventionSession', id: 'new', state: 'Draft', protectedExistence: false },
   });
   assertAllowed(decision, false);
+
+  /*
+   * Withdrawal has to bite here, because there is nowhere else it can.
+   *
+   * The withdrawal command emits ParticipantWithdrawn "for downstream
+   * propagation", and the outbox delivers it reliably to nobody: no
+   * consumer is registered anywhere in the platform, so every event is
+   * marked Published having reached no one. Meanwhile `enrolment_state`
+   * was read by nothing outside M05. So a participant could withdraw
+   * from a study and a session could still be recorded against their
+   * enrolment the next minute — while the withdrawal screen told the
+   * coordinator that data collection had stopped.
+   *
+   * Checking the state at the moment of the write is the mechanism this
+   * platform actually has, and it is the same one consent relies on: the
+   * permission engine re-reads a participant's consent on every decision
+   * rather than trusting anything to have propagated. Enforcement at use
+   * time cannot go stale, and does not depend on a consumer somebody has
+   * not written yet.
+   */
+  const enrolment = await deps.pool.query(
+    `SELECT enrolment_state FROM enrolment.enrolments WHERE id = $1`,
+    [input.enrolmentId],
+  );
+  const row = enrolment.rows[0] as { enrolment_state: string } | undefined;
+  if (row === undefined) throw new PlatformError('RESOURCE_NOT_FOUND', 'Enrolment not found');
+  if (['Withdrawn', 'Discontinued'].includes(row.enrolment_state)) {
+    throw new PlatformError(
+      'RESOURCE_STATE_BLOCKED',
+      'This participant has left the study; nothing further can be recorded against this enrolment',
+    );
+  }
+
   const interventionSessionId = newId('is');
   const now = deps.clock.now();
   await withTransaction(deps.pool, async (client) => {

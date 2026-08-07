@@ -1168,3 +1168,19 @@
   code: [apps/web/src/errors.ts]
   tests: [apps/web/test/error-presentation.test.tsx]
   status: implemented
+
+- implementation_id: IMP-WITHDRAWAL-BITES-AT-USE-TIME-001
+  module: M07
+  summary: Withdrawal from a study now stops what it says it stops, because nothing was ever going to stop it downstream. The worker builds an EventDispatcher and hands it to the outbox loop, and register is called in no file in this repository, so every domain event the platform has emitted was claimed, dispatched to zero consumers and marked Published - a word that reads as delivered and acted upon - while the machinery around it, inbox deduplication, exponential backoff, dead-lettering after ten attempts and a visibility timeout that recovers messages from a publisher that died mid-flight, all conveys reliable delivery. It is reliable. It delivers to nobody. The consequence landed on withdrawal. withdrawParticipant emits ParticipantWithdrawn for downstream propagation and enrolment_state is read nowhere outside M05, so a participant could withdraw in the morning and a delivery session could be recorded against their enrolment in the afternoon, while the coordinator's dialog said withdrawal stops further data collection and propagates to related records. The delivery screen I built two increments earlier is what made that reachable from a browser, because before it nothing could record a session at all. The ruling is not to write consumers. Consent withdrawal has always been correct and not because anything propagated - the permission engine re-reads consent_current on every decision - so use-time evaluation is the mechanism this platform actually has, it cannot go stale, and it does not wait on a consumer nobody has written. The same mechanism now covers the only two tables in the database that hang data on an enrolment, intervention_sessions and assessment_records, each re-reading the enrolment state before it writes and refusing when it is Withdrawn or Discontinued. M08 refuses answers rather than the whole row, because missingnessReason already carries Withdrawn and Doc 19 requires missingness to be explicit and typed rather than silent, so sealing the table would turn a row that could state its reason into a blank. The wording narrowed to match - the dialog no longer claims propagation, says that from that moment nothing further can be recorded against the enrolment, and says outright that it does not reach back. A defect of the same class was fixed alongside it - run announced the outcome and then reloaded the list, and the reload announced that the enrolment list had been updated, so the message describing a consequential act was overwritten before anyone could read it and a coordinator who withdrew a participant was told only that a list had refreshed
+  trace_ids: [ATR-007, ATR-013]
+  adr_ids: [ADR-015, ADR-023]
+  docs: ["UI_INVENTORY.md C12", "UI_INVENTORY.md C13", "design/DESIGN_DECISIONS.md D-52"]
+  code:
+    - packages/modules/m07-delivery/src/application/commands.ts
+    - packages/modules/m08-assessment/src/application/commands.ts
+    - apps/web/src/components/StaffCoordinatorPanel.tsx
+  tests:
+    - packages/synthetic-pilot/test/synthetic-pilot.test.ts
+    - apps/web/test/enrolment-chain.test.tsx
+    - apps/worker/test/outbox-consumers.test.ts
+  status: implemented

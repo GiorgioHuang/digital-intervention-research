@@ -140,17 +140,68 @@ describe('the enrolment chain', () => {
     expect(screen.getByRole('button', { name: 'Record eligibility decision' })).toBeTruthy();
   });
 
+  /**
+   * The dialog used to say withdrawal "propagates to related records"
+   * and the screen then announced that "propagation started". Neither
+   * was true: the event is written to the outbox and no consumer is
+   * registered to receive it, so it is marked published having reached
+   * nobody. The word has to stay out, because a coordinator who reads it
+   * will believe the downstream is handled.
+   */
+  it('withdrawal never claims to propagate', async () => {
+    stubFetch(['Active']);
+    render(<StaffCoordinatorPanel session={session} />);
+    await load();
+    fireEvent.click(screen.getByRole('button', { name: 'Withdraw this participant' }));
+    expect(screen.getByRole('alertdialog').textContent).not.toMatch(/propagat/i);
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Confirm withdrawal' }));
+    });
+    expect(document.body.textContent).not.toMatch(/propagat/i);
+  });
+
   it('withdrawal is confirmed and says what it does and does not reach', async () => {
     const calls = stubFetch(['Active']);
     render(<StaffCoordinatorPanel session={session} />);
     await load();
     fireEvent.click(screen.getByRole('button', { name: 'Withdraw this participant' }));
     const dialog = screen.getByRole('alertdialog');
+    // What it does: the writes that attach data to this enrolment refuse
+    // from this moment, which is the only thing withdrawal actually does.
+    expect(dialog.textContent).toMatch(/nothing further can be recorded against this enrolment/i);
+    // And what it does not do, said plainly rather than left to be assumed.
+    expect(dialog.textContent).toMatch(/It does not reach back/);
     expect(dialog.textContent).toContain('locked');
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Confirm withdrawal' }));
     });
     expect(calls.some((c) => c.path === '/v1/enrolments/enr_1/withdraw')).toBe(true);
+    // The announcement repeats the same narrow claim, not a wider one.
+    expect(
+      screen.getAllByRole('status').some((s) => /Nothing further can be recorded/i.test(s.textContent ?? '')),
+    ).toBe(true);
+  });
+
+  /**
+   * Every action reloads the list, and the reload used to announce
+   * 'Enrolment list updated.' after the outcome had been announced —
+   * overwriting it. Whatever the screen had just been told to say about
+   * a consequential act, what remained in the live region was that a
+   * list had been refreshed.
+   */
+  it('what the action did is what the screen still says afterwards', async () => {
+    stubFetch(['Active', 'Withdrawn']);
+    render(<StaffCoordinatorPanel session={session} />);
+    await load();
+    fireEvent.click(screen.getByRole('button', { name: 'Withdraw this participant' }));
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Confirm withdrawal' }));
+    });
+    const live = screen.getAllByRole('status').map((s) => s.textContent ?? '');
+    expect(live.some((t) => /Nothing further can be recorded/i.test(t))).toBe(true);
+    expect(live.every((t) => t !== 'Enrolment list updated.')).toBe(true);
+    // The reload still happened — the row has moved on.
+    expect(screen.queryByRole('button', { name: 'Withdraw this participant' })).toBeNull();
   });
 
   it('an enrolment that has already ended is not offered a withdrawal', async () => {
