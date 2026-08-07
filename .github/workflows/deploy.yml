@@ -127,6 +127,8 @@ jobs:
           else
             echo "::notice::R2 not configured — uploaded bytes stay in the Postgres simulator. Set the R2_ACCOUNT_ID and R2_BUCKET variables and the HADI_R2_ACCESS_KEY_ID and HADI_R2_SECRET_ACCESS_KEY secrets to use the object store." 
           fi
+          # Carried to the smoke step, which is a separate shell.
+          echo "R2_PRESENT=$R2_PRESENT" >> "$GITHUB_ENV"
           # Real Knowledge Graph integration (ADR-052/110): the deployed
           # platform talks to the live MCP endpoint.
           ENVVARS="$ENVVARS,KNOWLEDGE_PLATFORM_MODE=mcp,KNOWLEDGE_MCP_URL=${{ vars.KNOWLEDGE_MCP_URL || 'https://knowledge-graph.internal.example' }}"
@@ -183,6 +185,22 @@ jobs:
           done
           echo "health: HTTP $HEALTH"; cat /tmp/health.json 2>/dev/null || true; echo
           [ "$HEALTH" = "200" ] || { echo "::error::deployed revision is not healthy"; exit 1; }
+
+          # Where the deployed revision is actually putting uploaded files.
+          # Reported by the service itself rather than inferred from what
+          # this workflow attached: the settings can be right here and the
+          # process still be running an older revision.
+          curl -s --max-time 30 "$URL/ready" -o /tmp/ready.json || true
+          STORE=$(sed -n 's/.*"fileStorage":"\([^"]*\)".*/\1/p' /tmp/ready.json)
+          echo "file storage: ${STORE:-unreported}"
+          if [ "$R2_PRESENT" = true ] && [ "$STORE" != "object-store" ]; then
+            echo "::error::R2 is configured but the running revision reports fileStorage=${STORE:-unreported}"
+            exit 1
+          fi
+          if [ "$R2_PRESENT" != true ] && [ "$STORE" = "object-store" ]; then
+            echo "::error::no object store was attached, yet the running revision reports one"
+            exit 1
+          fi
 
           SHELL_CODE=$(curl -s -o /tmp/index.html -w '%{http_code}' --max-time 30 "$URL/" || echo 000)
           grep -q "<div id=\"root\"" /tmp/index.html \

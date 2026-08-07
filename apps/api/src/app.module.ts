@@ -11,7 +11,7 @@ import { createKnowledgePlatformMcpClient, createKnowledgePlatformSimulator } fr
 import { createBlobStore } from '@platform/m16-integration';
 import { createBlockQuery } from '@platform/m18-community-social';
 import type { ApiConfig } from './config.js';
-import { HealthController, PG_POOL } from './health.controller.js';
+import { BLOB_STORE, HealthController, PG_POOL } from './health.controller.js';
 import { API_DEPS, CommandController, type ApiDeps } from './controllers.js';
 import { StaffCommandController } from './staff-controllers.js';
 import { PlatformErrorFilter } from './error-filter.js';
@@ -30,6 +30,13 @@ export function buildAppModule(config: ApiConfig) {
   });
   const checkPermission = permissions.evaluate.bind(permissions);
   const moduleDeps = { pool, clock, checkPermission };
+  /*
+   * Where uploaded bytes go. Built once and reported on /ready, because
+   * this process is the one that serves an upload and it used to choose
+   * in silence.
+   */
+  const blobs = createBlobStore(process.env, pool);
+  console.log(JSON.stringify({ msg: 'object storage', blobStore: blobs.description }));
   // ADR-052: the external Healthy Aging Knowledge Graph stays behind the
   // KnowledgePlatformPort ACL; 'mcp' mode makes real JSON-RPC calls.
   const knowledgePlatform =
@@ -61,7 +68,7 @@ export function buildAppModule(config: ApiConfig) {
     m13: moduleDeps,
     m14: moduleDeps,
     m15: moduleDeps,
-    m16storage: { ...moduleDeps, blobs: createBlobStore(process.env, pool) },
+    m16storage: { ...moduleDeps, blobs },
     m17: moduleDeps,
     m18: { ...moduleDeps, participants: createParticipantQuery(pool) },
   };
@@ -70,6 +77,7 @@ export function buildAppModule(config: ApiConfig) {
     controllers: [HealthController, CommandController, StaffCommandController],
     providers: [
       { provide: PG_POOL, useValue: pool },
+      { provide: BLOB_STORE, useValue: blobs },
       { provide: API_DEPS, useValue: deps },
       { provide: APP_FILTER, useClass: PlatformErrorFilter },
     ],

@@ -110,9 +110,24 @@ describe.skipIf(!dbAvailable)('HTTP API (e2e)', () => {
     await pool?.end();
   });
 
-  it('health and readiness respond', async () => {
+  /**
+   * Readiness also says where uploaded files are going. Nothing said it
+   * before: the worker logged its choice at startup and the API, which
+   * is what serves an upload, chose in silence — so whether a deployment
+   * was writing participants' files to the object store or into a
+   * Postgres column could only be learned by reading a deploy log.
+   */
+  it('health and readiness respond, and readiness says where files are stored', async () => {
     expect((await call('/health', undefined)).status).toBe(200);
-    expect((await call('/ready', undefined)).status).toBe(200);
+    const ready = await call('/ready', undefined);
+    expect(ready.status).toBe(200);
+    const body = (await ready.json()) as Record<string, unknown>;
+    // This suite runs with no object store configured, so it must say so
+    // rather than implying one.
+    expect(body).toMatchObject({ status: 'ready', fileStorage: 'database-simulator' });
+    // The kind only: /ready is outside the access-token gate, so it must
+    // not name the bucket or the vendor.
+    expect(JSON.stringify(body)).not.toMatch(/bucket|cloudflare|r2/i);
   });
 
   it('NEGATIVE unauthenticated command returns the stable error envelope with 401', async () => {

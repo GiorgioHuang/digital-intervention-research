@@ -1295,3 +1295,17 @@
   # is that five vendors are still unchosen and the sixth is chosen and
   # not yet connected, which is exactly this status.
   status: pending_external_approval
+
+- implementation_id: IMP-API-REPORTS-ITS-FILE-STORE-001
+  module: API
+  summary: The platform would not say where it was putting people's files. With the object store configured by the owner, answering whether a deployment was actually using it turned out to be impossible from outside - the worker logs its choice at startup and the API, which is the process that actually serves an upload, chose in silence, so the only route was to read a deploy log and trust it. A platform that cannot tell you where it is putting participants' files is not one anybody can check. Readiness now reports fileStorage, and two limits on that are deliberate. The kind only, never the bucket or the vendor, because the endpoint sits outside the access-token gate. And the configured choice rather than a live probe, because an unauthenticated endpoint that made a request to the object store on demand would be an amplifier and a billed one. The deploy smoke test now asks the running service rather than checking what the workflow attached, since those can disagree - the settings can be right while the revision serving traffic is an older one - and attaching is not the same as taking effect. It asserts in both directions, so a deployment that attached the object store while the service reports the simulator fails, and so does the reverse
+  trace_ids: [ATR-021, ATR-022]
+  adr_ids: [ADR-055, ADR-106]
+  docs: ["design/DESIGN_DECISIONS.md D-58", "design/DESIGN_DECISIONS.md D-60"]
+  code:
+    - apps/api/src/health.controller.ts
+    - apps/api/src/app.module.ts
+    - .github/workflows/deploy.yml
+  tests:
+    - apps/api/test/api.e2e.test.ts
+  status: implemented
