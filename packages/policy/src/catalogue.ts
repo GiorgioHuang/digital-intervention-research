@@ -493,3 +493,49 @@ export const RELATIONSHIP_AUTHORISABLE_ACTIONS: readonly string[] = Object.entri
   .filter(([, requirement]) => requirement.requiresRelationship === true)
   .map(([action]) => action)
   .sort();
+
+/**
+ * Actions this catalogue declares and grants that no command ever checks.
+ *
+ * A permission nothing checks grants nothing, so none of these is a way
+ * in. What they are is a claim: this file is the platform's statement of
+ * what a role may do, and it is read as one — by whoever is deciding
+ * which role to give somebody, and by anyone auditing what a role could
+ * have done. Ten actions here described capabilities that do not exist.
+ *
+ * They are kept rather than deleted, because each records a real
+ * intention and deleting it would lose the design, and each is named
+ * here with why. The test beside this file derives the same set from the
+ * module and route sources and requires the two to match exactly, so it
+ * fails in both directions: a new unchecked action cannot appear
+ * quietly, and implementing one of these fails until it is removed from
+ * this list.
+ */
+export const ACTIONS_WITH_NO_CHECK: Readonly<Record<string, string>> = {
+  /*
+   * The only one that is deliberate and must stay that way. A person
+   * raising a concern about somebody's safety is never refused for want
+   * of a role, so recordSafetySignal checks nothing — see the comment at
+   * its definition. Implementing a check here would be the defect.
+   */
+  'safety-signal.record': 'deliberately unchecked: raising a safety concern is never refused for want of a role',
+
+  /*
+   * Decided rather than unbuilt: D-39 established that sharing with a
+   * supporter does not exist in this platform at all — no code reads
+   * this action and not one row has ever been written to access_grants.
+   * The screens that name it say so in those words.
+   */
+  'participant.view-shared': 'inert by decision (D-39); the screens naming it say it grants nothing',
+
+  // Capabilities the catalogue describes and the platform does not have.
+  'participant.view-assigned': 'no staff read path to a participant record exists; staff screens read enrolments',
+  'project.approve': 'projects have no approval lifecycle: project_state has no writer and no command moves it',
+  'project.activate': 'projects have no approval lifecycle: project_state has no writer and no command moves it',
+  'protocol.review': 'protocol versions are drafted, submitted, approved, activated or refused — there is no review step',
+  'moderation.triage': 'only moderation.decide exists; a triage step separate from the decision was never built',
+  'life-story.export': 'M17 holds no export command; a participant exports through M14 under participant.export',
+  'evidence-snapshot.create':
+    'a snapshot is only ever written inside approving an evidence decision (ADR-044), so it is never created on its own',
+  'system.configure': 'the platform has no configuration surface',
+};
