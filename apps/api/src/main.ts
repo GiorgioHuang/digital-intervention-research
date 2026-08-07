@@ -6,6 +6,7 @@ import express from 'express';
 import { buildAppModule } from './app.module.js';
 import { loadConfig } from './config.js';
 import { createLogger } from './logger.js';
+import { servesSpaShell } from './spa-fallback.js';
 
 async function bootstrap(): Promise<void> {
   const config = loadConfig();
@@ -20,7 +21,7 @@ async function bootstrap(): Promise<void> {
     const dist = config.WEB_DIST_DIR;
     app.use(express.static(dist));
     app.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
-      if (req.method === 'GET' && !req.path.startsWith('/v1') && !req.path.startsWith('/health')) {
+      if (servesSpaShell(req.method, req.path)) {
         res.sendFile(join(dist, 'index.html'));
       } else {
         next();

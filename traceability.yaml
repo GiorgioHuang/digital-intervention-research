@@ -1309,3 +1309,18 @@
   tests:
     - apps/api/test/api.e2e.test.ts
   status: implemented
+
+- implementation_id: IMP-API-READY-IS-NOT-THE-WEB-SHELL-001
+  module: API
+  summary: Readiness answered with the web app's shell in every outward deployment. The single-service deployment serves the built web app from the API process and falls back to the SPA shell for unknown GETs, and the hand-written list of paths that must not fall back held only the API prefix and liveness - readiness was never on it. So a readiness check against any deployed revision returned HTTP 200 and an HTML page. An endpoint that answers 200 whatever the state of the database is worse than no endpoint, because it reports a readiness nobody checked, and a probe or a load balancer or a person watching it concludes the platform is fine on the strength of a static file existing. The end-to-end suite did not catch it because it runs with no web directory configured, so the fallback that broke readiness did not exist in the test at all - the suite covered a shape the deployment does not have. Three things changed. The exclusion list is now a single exported source, and a test reads the routes the health controller actually declares and asserts each one is excluded, because a list maintained by memory is exactly how this happened. Matching is by whole path segment rather than string prefix, so a client-side route that merely begins with the same letters is still served the shell. And the end-to-end suite now starts a second application in the deployed shape, with a web directory and the fallback middleware, and asserts readiness still answers JSON. A defect of the same kind introduced an hour earlier was fixed alongside it - the not-ready branch passed fileStorage into the exception, and the error filter replaces the body of any HttpException with the platform's error envelope, so that field was written and never readable
+  trace_ids: [ATR-021, ATR-022]
+  adr_ids: [ADR-055]
+  docs: ["design/DESIGN_DECISIONS.md D-60", "design/DESIGN_DECISIONS.md D-61"]
+  code:
+    - apps/api/src/spa-fallback.ts
+    - apps/api/src/main.ts
+    - apps/api/src/health.controller.ts
+  tests:
+    - apps/api/test/spa-fallback.test.ts
+    - apps/api/test/api.e2e.test.ts
+  status: implemented

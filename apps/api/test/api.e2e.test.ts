@@ -111,6 +111,54 @@ describe.skipIf(!dbAvailable)('HTTP API (e2e)', () => {
   });
 
   /**
+   * The deployed shape, which no test covered.
+   *
+   * In production the API also serves the built web app and falls back
+   * to its shell for unknown GETs. `/ready` was not on the exclusion
+   * list, so every deployment answered a readiness check with an HTML
+   * page and HTTP 200 — a readiness nobody had checked. This suite ran
+   * without a web directory, so the fallback that broke it did not
+   * exist here at all.
+   */
+  it('readiness is still readiness when the web app is served alongside it', async () => {
+    const { NestFactory: Factory } = await import('@nestjs/core');
+    const express = (await import('express')).default;
+    const { servesSpaShell } = await import('../src/spa-fallback.js');
+    const { mkdtempSync, writeFileSync } = await import('node:fs');
+    const { tmpdir } = await import('node:os');
+    const { join: joinPath } = await import('node:path');
+
+    const dist = mkdtempSync(joinPath(tmpdir(), 'web-'));
+    writeFileSync(joinPath(dist, 'index.html'), '<html><body><div id="root"></div></body></html>');
+    const withWeb = await Factory.create(
+      buildAppModule({
+        DATABASE_URL, API_PORT: 0, LOG_LEVEL: 'error', AUTH_MODE: 'dev-header',
+        KNOWLEDGE_PLATFORM_MODE: 'simulator', WEB_DIST_DIR: dist,
+      }),
+      { logger: false },
+    );
+    withWeb.use(express.static(dist));
+    withWeb.use((req: { method: string; path: string }, res: { sendFile: (p: string) => void }, next: () => void) => {
+      if (servesSpaShell(req.method, req.path)) res.sendFile(joinPath(dist, 'index.html'));
+      else next();
+    });
+    await withWeb.listen(0);
+    try {
+      const url = await withWeb.getUrl();
+      const res = await fetch(`${url}/ready`);
+      expect(res.status).toBe(200);
+      const text = await res.text();
+      // The failure this exists for: an HTML page answering 200.
+      expect(text, 'readiness answered with the web shell').not.toContain('<div id="root">');
+      expect(JSON.parse(text)).toMatchObject({ status: 'ready', fileStorage: 'database-simulator' });
+      // And the shell is still served where it should be.
+      expect(await (await fetch(`${url}/my-life-story`)).text()).toContain('<div id="root">');
+    } finally {
+      await withWeb.close();
+    }
+  }, 60_000);
+
+  /**
    * Readiness also says where uploaded files are going. Nothing said it
    * before: the worker logged its choice at startup and the API, which
    * is what serves an upload, chose in silence — so whether a deployment
