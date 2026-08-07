@@ -45,7 +45,14 @@ export class HealthController {
       return { status: 'ready', fileStorage };
     } catch {
       // Truthful failure (ADR-055): report not-ready, never fake readiness.
-      throw new ServiceUnavailableException({ status: 'not-ready', reason: 'database unreachable', fileStorage });
+      /*
+       * Deliberately without fileStorage: the error filter replaces the
+       * body of any HttpException with the platform's error envelope, so
+       * a field put here would be written and never readable — the very
+       * defect this session keeps finding. A service that is not ready
+       * reports not ready, and that envelope is the filter's to own.
+       */
+      throw new ServiceUnavailableException({ status: 'not-ready', reason: 'database unreachable' });
     }
   }
 }

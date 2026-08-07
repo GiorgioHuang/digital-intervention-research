@@ -190,11 +190,29 @@ jobs:
           # Reported by the service itself rather than inferred from what
           # this workflow attached: the settings can be right here and the
           # process still be running an older revision.
-          curl -s --max-time 30 "$URL/ready" -o /tmp/ready.json || true
+          # Retried, like the liveness and gate checks above it. The first
+          # version of this had no retry and failed on a cold instance
+          # that had not finished starting — a check failing for a reason
+          # other than the thing it tests, which is the defect the gate
+          # retry was added for. Readiness also touches the database, so
+          # it is ready later than liveness by definition.
+          READY=000
+          for i in 1 2 3 4 5 6; do
+            READY=$(curl -s -o /tmp/ready.json -w '%{http_code}' --max-time 30 "$URL/ready" || echo 000)
+            [ "$READY" = "200" ] && break
+            echo "  ready attempt $i: HTTP $READY — retrying"
+            sleep 10
+          done
+          echo "ready: HTTP $READY"; cat /tmp/ready.json 2>/dev/null || true; echo
+          [ "$READY" = "200" ] || { echo "::error::deployed revision never became ready"; exit 1; }
           STORE=$(sed -n 's/.*"fileStorage":"\([^"]*\)".*/\1/p' /tmp/ready.json)
           echo "file storage: ${STORE:-unreported}"
+          # Three outcomes, kept apart. No answer is not the same as the
+          # wrong answer: the first says this check could not be made, the
+          # second says the deployment is not doing what was attached.
+          [ -n "$STORE" ] || { echo "::error::readiness answered 200 without a fileStorage field — this check could not be made"; exit 1; }
           if [ "$R2_PRESENT" = true ] && [ "$STORE" != "object-store" ]; then
-            echo "::error::R2 is configured but the running revision reports fileStorage=${STORE:-unreported}"
+            echo "::error::R2 was attached, but the running revision reports fileStorage=$STORE"
             exit 1
           fi
           if [ "$R2_PRESENT" != true ] && [ "$STORE" = "object-store" ]; then
