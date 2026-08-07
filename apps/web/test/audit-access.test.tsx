@@ -103,4 +103,21 @@ describe('AuditAccess (G7)', () => {
     });
     expect(screen.getByText(/not the same as nothing having happened/i)).toBeTruthy();
   });
+
+  /**
+   * The screen used to say only actions that changed something are
+   * written here, which reads as a promise that everything which changed
+   * something is. Thirty-nine application commands write to the database
+   * and record nothing. A partial record presented as a complete one is
+   * worse than no record, because an absence in it reads as proof.
+   */
+  it('does not let its reader treat a gap as proof that nothing happened', async () => {
+    stubFetch();
+    await act(async () => {
+      render(<AuditAccess session={session} />);
+    });
+    expect(screen.getByText(/It is not every change/)).toBeTruthy();
+    expect(screen.getByText(/a gap in this record is not evidence that nothing happened/i)).toBeTruthy();
+    expect(document.body.textContent).not.toContain('Only actions that changed something are written here');
+  });
 });

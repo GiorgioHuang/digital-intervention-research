@@ -16,7 +16,18 @@ import { staffApi, type AuditEventItem, type AuditFilters, type StaffSession } f
  * Two things about this screen are more important than the table.
  *
  * The first is what the record does NOT contain, said before anyone
- * reads a row. Only actions that changed something are written here.
+ * reads a row.
+ *
+ * This screen used to say that only actions which changed something are
+ * written here, which reads as a promise that everything which changed
+ * something is. It was not: thirty-nine application commands write to
+ * the database and record nothing, including — until this was fixed —
+ * the two that attach data to a participant's enrolment. A partial
+ * record presented as a complete one is worse than no record, because
+ * an absence in it reads as proof. Delivery and assessment now write an
+ * entry, the rest are pinned by a test in the database package, and this
+ * screen says plainly that it is not every change.
+ *
  * Nothing records a read, so this cannot answer "who looked at my file".
  * And although the store has a column for whether a permission was
  * allowed or refused, no code has ever written either value — every row
@@ -70,8 +81,14 @@ export function AuditAccess({ session }: { session: StaffSession }) {
       */}
       <h3>What is in here, and what is not</h3>
       <p>
-        This is the record of <strong>things people did that changed something</strong>: who, what, to which record,
+        This is a record of <strong>things people did that changed something</strong>: who, what, to which record,
         when, under which role and authentication.
+      </p>
+      <p>
+        <strong>It is not every change.</strong> An entry is written only where the code that made the change was
+        written to write one, and not every part of the platform does — most of the research workflow, community and
+        messaging work is missing from here today. So a gap in this record is not evidence that nothing happened,
+        and it is not a finding you can rest anything on.
       </p>
       <p>
         <strong>It does not record anyone reading anything.</strong> Looking at a participant&apos;s file, opening a

@@ -1,5 +1,5 @@
 import { newId, PlatformError, type Clock, type RequestContext } from '@platform/kernel';
-import { appendToOutbox, withTransaction, type Pool } from '@platform/database';
+import { appendToOutbox, recordAuditEvent, withTransaction, type Pool } from '@platform/database';
 import { assertAllowed, type PolicyDecisionResult } from '@platform/policy';
 
 export type PermissionCheck = (
@@ -59,10 +59,10 @@ export async function recordAssessment(
    * absence is still allowed.
    */
   const enrolment = await deps.pool.query(
-    `SELECT enrolment_state FROM enrolment.enrolments WHERE id = $1`,
+    `SELECT enrolment_state, participant_id FROM enrolment.enrolments WHERE id = $1`,
     [input.enrolmentId],
   );
-  const row = enrolment.rows[0] as { enrolment_state: string } | undefined;
+  const row = enrolment.rows[0] as { enrolment_state: string; participant_id: string } | undefined;
   if (row === undefined) throw new PlatformError('RESOURCE_NOT_FOUND', 'Enrolment not found');
   if (['Withdrawn', 'Discontinued'].includes(row.enrolment_state) && input.responses !== undefined) {
     throw new PlatformError(
@@ -99,6 +99,18 @@ export async function recordAssessment(
       aggregateId: assessmentRecordId,
       occurredAt: now,
       payload: { instrument: input.instrument, recordState: input.recordState },
+    });
+    // The same gap as M07's: an assessment recorded against somebody was
+    // not in the record that exists to say what was done to them.
+    await recordAuditEvent(client, ctx, {
+      action: 'assessment.record',
+      targetType: 'AssessmentRecord',
+      targetId: assessmentRecordId,
+      participantId: row.participant_id,
+      occurredAt: now,
+      result: 'Succeeded',
+      source: 'M08',
+      policyVersion: decision.policyVersion,
     });
   });
   return { assessmentRecordId };

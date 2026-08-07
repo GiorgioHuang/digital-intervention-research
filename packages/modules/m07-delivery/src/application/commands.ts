@@ -1,5 +1,5 @@
 import { newId, PlatformError, type Clock, type RequestContext } from '@platform/kernel';
-import { appendToOutbox, withTransaction, type Pool } from '@platform/database';
+import { appendToOutbox, recordAuditEvent, withTransaction, type Pool } from '@platform/database';
 import { assertAllowed, type PolicyDecisionResult } from '@platform/policy';
 
 export type PermissionCheck = (
@@ -61,10 +61,10 @@ export async function recordInterventionSession(
    * not written yet.
    */
   const enrolment = await deps.pool.query(
-    `SELECT enrolment_state FROM enrolment.enrolments WHERE id = $1`,
+    `SELECT enrolment_state, participant_id FROM enrolment.enrolments WHERE id = $1`,
     [input.enrolmentId],
   );
-  const row = enrolment.rows[0] as { enrolment_state: string } | undefined;
+  const row = enrolment.rows[0] as { enrolment_state: string; participant_id: string } | undefined;
   if (row === undefined) throw new PlatformError('RESOURCE_NOT_FOUND', 'Enrolment not found');
   if (['Withdrawn', 'Discontinued'].includes(row.enrolment_state)) {
     throw new PlatformError(
@@ -90,6 +90,25 @@ export async function recordInterventionSession(
       aggregateId: interventionSessionId,
       occurredAt: now,
       payload: { exposureState: input.exposureState },
+    });
+    /*
+     * The accountability record exists to answer what was done to a
+     * participant and by whom, and recording that somebody received an
+     * intervention was not in it. The audit screen says only actions
+     * that changed something are written there, which a reader takes to
+     * mean everything that changed is — so a participant asking what had
+     * been recorded about them would have been shown a record with the
+     * delivery missing, and no indication that anything was.
+     */
+    await recordAuditEvent(client, ctx, {
+      action: 'session.record',
+      targetType: 'InterventionSession',
+      targetId: interventionSessionId,
+      participantId: row.participant_id,
+      occurredAt: now,
+      result: 'Succeeded',
+      source: 'M07',
+      policyVersion: decision.policyVersion,
     });
   });
   return { interventionSessionId };

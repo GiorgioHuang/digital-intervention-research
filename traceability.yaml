@@ -1246,3 +1246,18 @@
   code: [packages/policy/src/catalogue.ts, packages/policy/src/index.ts]
   tests: [packages/policy/test/unchecked-actions.test.ts]
   status: implemented
+
+- implementation_id: IMP-AUDIT-RECORD-IS-PARTIAL-AND-SAYS-SO-001
+  module: GOVERNANCE
+  summary: The accountability record was presented as complete and was not. The audit screen tells its reader before they read a row what the record does not contain - no reads, and no refused attempts - and both of those are true. It then said that only actions which changed something are written there, which a reader takes as a promise that everything which changed something is. Thirty-nine application commands write to the database and record nothing, and two of them were the only two in the platform that attach data to a participant's enrolment. So somebody asking what had been recorded about them would have been shown a record with the delivery and the assessment missing, and no sign that anything was missing. A partial record presented as a complete one is worse than no record at all, because an absence in it reads as proof. Delivery and assessment now write an entry naming the participant, which is what makes them findable in the record that exists to answer what was done to somebody and by whom. The remaining thirty-seven are listed in a test with an equality assertion rather than containment, so it fails in both directions - a new unaudited command cannot appear quietly, and auditing one of the listed ones fails until it is struck off. The check walks calls within each file rather than reading only the command body, because several modules do the write and the audit in a shared helper and a narrower rule would have called enrolment withdrawal unaudited. The screen now says it is not every change, that most of the research workflow, community and messaging work is missing from it today, and that a gap in it is not evidence that nothing happened and is not a finding anything can rest on. The test reads that sentence out of the component rather than restating it, so when the list finally empties the wording has to change with it
+  trace_ids: [ATR-013]
+  adr_ids: [ADR-120]
+  docs: ["UI_INVENTORY.md G7", "design/DESIGN_DECISIONS.md D-57"]
+  code:
+    - packages/modules/m07-delivery/src/application/commands.ts
+    - packages/modules/m08-assessment/src/application/commands.ts
+    - apps/web/src/components/AuditAccess.tsx
+  tests:
+    - packages/database/test/audited-commands.test.ts
+    - apps/web/test/audit-access.test.tsx
+  status: implemented
