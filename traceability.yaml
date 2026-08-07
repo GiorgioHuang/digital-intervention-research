@@ -1158,3 +1158,13 @@
   adr_ids: [ADR-020]
   docs: ["UI_INVENTORY.md B15", "design/DESIGN_DECISIONS.md D-17", "design/DESIGN_DECISIONS.md D-49", "design/DESIGN_DECISIONS.md D-50"]
   status: deferred
+
+- implementation_id: IMP-WEB-ERROR-TABLE-TRUTH-001
+  module: WEB
+  summary: The refusal-wording tables stopped answering a code the platform does not have and started answering the ones it does. Both presenters carried an entry for VALIDATION_FAILED, which is not a code this platform declares or raises - a prepared sentence for a refusal that cannot happen - while VALIDATION_ERROR fell through to the generic line saying the cause could not be determined. That code is what every guard checking a supplied value raises, including four added in this same session for the re-consent note, the research question text, the audit access reason and the safety signal provenance, so all of them presented as though the platform did not know what had happened. It is the defect this work keeps finding in the product, sitting inside the table that explains refusals. The staff presenter also gained the refusals staff actually meet and had no words for - an unapproved artefact, an unlocked dataset version, message content needing a governed restricted definition, a record in a state that does not allow the action, a listing with no organisation in the session, a missing confirmation, and an unexpected server failure where the honest answer is that it is not known whether the action took effect. Each was read at its throw site rather than guessed, following the correction in D-44. The test's rule is deliberately that wording may exist only for a code the kernel declares, not only for one currently raised - CONSENT_REQUIRED is a real code the permission engine does not raise, because a missing consent returns a plain denial rather than naming consent as the barrier, since saying which gate stopped somebody would confirm the record exists under ADR-050, and a currently-raised rule would have argued for deleting it. Both the kernel's code table and the presenters' keys are read from source rather than restated, because a list copied into a test drifts exactly as the table did
+  trace_ids: [ATR-013]
+  adr_ids: [ADR-050]
+  docs: ["design/DESIGN_DECISIONS.md D-44", "design/DESIGN_DECISIONS.md D-51"]
+  code: [apps/web/src/errors.ts]
+  tests: [apps/web/test/error-presentation.test.tsx]
+  status: implemented

@@ -57,6 +57,16 @@ const BY_CODE: Record<string, Omit<PresentedError, 'code'>> = {
     nextStep: `You can check the related options under My consent choices. ${SUPPORT}`,
   },
   RESOURCE_NOT_FOUND: NOT_FOUND,
+  /*
+   * A real code that the permission engine does not raise today: a
+   * missing consent returns a plain denial rather than naming consent as
+   * the barrier, because saying which gate stopped somebody would
+   * confirm the record exists (ADR-050). The wording is kept because the
+   * code is real and something may raise it, but nobody should assume a
+   * participant has seen this — what they get today is the
+   * AUTHORISATION_DENIED entry, which mentions consent among the
+   * possibilities precisely because it cannot say which.
+   */
   CONSENT_REQUIRED: {
     severity: 2,
     title: 'This step needs a consent choice from you',
@@ -226,7 +236,15 @@ const BY_CODE: Record<string, Omit<PresentedError, 'code'>> = {
     reassurance: 'Nothing changed.',
     nextStep: 'Refresh to see its current state; you can try again once it changes.',
   },
-  VALIDATION_FAILED: {
+  /*
+   * VALIDATION_ERROR, not VALIDATION_FAILED. Both presenters carried
+   * wording for VALIDATION_FAILED, which this platform raises nowhere —
+   * a prepared sentence for a refusal that cannot happen, while the
+   * refusal that does happen fell through to "we could not determine the
+   * cause". The kernel's code is VALIDATION_ERROR and every guard that
+   * checks what somebody typed uses it.
+   */
+  VALIDATION_ERROR: {
     severity: 1,
     title: 'One field still needs a change',
     reassurance: 'What you wrote is still below and has not been lost.',
@@ -321,9 +339,50 @@ const STAFF_BY_CODE: Record<string, { reason: string; nextStep: string }> = {
     reason: 'the artefact changed after this queue was loaded',
     nextStep: 'reload the queue and decide against the current version',
   },
-  VALIDATION_FAILED: {
-    reason: 'the server rejected the request body',
-    nextStep: 'correct the field named in the response, then submit again',
+  VALIDATION_ERROR: {
+    reason: 'the server refused a value you supplied — the message says which',
+    nextStep: 'read the message, correct that value and submit again',
+  },
+  /*
+   * The refusals staff meet while doing the work, which had no wording:
+   * every one of them fell through to a generic line that names neither
+   * the reason nor the next step. Each is checked against its throw site
+   * rather than guessed — the lesson from MATCHING_NOT_ACTIVE (D-44),
+   * which I first worded as pointing at the wrong screen.
+   */
+  APPROVAL_REQUIRED: {
+    // Raised where an analysis runs without an approved plan, a finding
+    // rests on an unapproved interpretation, or an export is generated
+    // before it was agreed to.
+    reason: 'the thing this rests on has not been approved yet, and approval is somebody else\'s step',
+    nextStep: 'find it in the approval queue; if it is yours to submit, submit it and wait for a different person',
+  },
+  DATASET_LOCK_NOT_READY: {
+    reason:
+      'the dataset version is not locked — a version must pass quality review before it can be locked, and analysis only runs against a locked one',
+    nextStep: 'complete the quality review, then lock the version; the run binds to exactly that locked data',
+  },
+  DEIDENTIFICATION_REQUIRED: {
+    reason: 'this would put message content into a dataset, which needs a separately governed restricted definition',
+    nextStep: 'do not work around it — a restricted definition is a governance decision, not a setting here',
+  },
+  RESOURCE_STATE_BLOCKED: {
+    reason: 'the record is in a state that does not allow this — something withdrawn or already decided, for instance',
+    nextStep: 'reload to see how it stands now, and act on what it actually says',
+  },
+  ORGANISATION_CONTEXT_REQUIRED: {
+    reason: 'this listing is scoped to one organisation and your session carries none',
+    nextStep: 'sign in again with an organisation identifier; a listing that took one as an argument would be a way of asking which organisations exist',
+  },
+  CONFIRMATION_REQUIRED: {
+    reason: 'this action is in the confirmed tier and the confirmation did not reach the server',
+    nextStep: 'repeat it and confirm when asked',
+  },
+  INTERNAL_ERROR: {
+    // Never claim to know: this is the one case where the honest answer
+    // is that the platform does not know what happened.
+    reason: 'the server failed in a way it did not expect, and it is not known whether the action took effect',
+    nextStep: 'reload before repeating it — repeating blindly may do it twice — and report it with the code below',
   },
   CONSENT_REQUIRED: {
     reason: 'the participant has not granted the consent this step depends on',

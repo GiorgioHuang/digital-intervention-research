@@ -1,9 +1,33 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
 import { act } from 'react';
 import { PlatformApiError } from '../src/api.js';
 import { presentError, staffActionError, staffLoadError } from '../src/errors.js';
 import { EmptyState, ErrorState, LoadingState } from '../src/components/StateBlock.js';
+
+// vitest runs with the package as cwd; import.meta.url is not a file URL
+// under the jsdom + vite transform, so the repo root is derived from cwd.
+const REPO = join(process.cwd(), '..', '..');
+
+/**
+ * The presenters' tables are read out of their own source rather than
+ * exported for the test. Widening a module's API so a test can look
+ * inside it invites the export drifting from the thing it describes, and
+ * this way the test reads exactly what ships.
+ */
+const errorsSource = readFileSync(join(REPO, 'apps/web/src/errors.ts'), 'utf8');
+const keysOf = (mapName: string): string[] => {
+  const start = errorsSource.indexOf(`const ${mapName}`);
+  expect(start, `${mapName} not found in errors.ts`).toBeGreaterThan(-1);
+  const end = errorsSource.indexOf('\n};', start);
+  return [...errorsSource.slice(start, end).matchAll(/^ {2}([A-Z_]{4,}):/gm)].map((m) => m[1]!);
+};
+const participantCodes = (): string[] => keysOf('BY_CODE');
+const staffCodes = (): string[] => keysOf('STAFF_BY_CODE');
+/** Synthesised by the presenter itself; not kernel codes. */
+const TRANSPORT_CODES = ['NETWORK', 'UNKNOWN'];
 
 const apiError = (code: string, status: number) =>
   new PlatformApiError({ code, message: 'm', requestId: 'r', retryable: false }, status);
@@ -198,6 +222,61 @@ describe('error presentation', () => {
     );
     for (const word of ['blocked', 'withdrew', 'declined', 'refused you']) {
       expect(`${p.reason ?? ''} ${p.nextStep}`.toLowerCase()).not.toContain(word);
+    }
+  });
+
+  /**
+   * Every code the wording tables answer must be one the kernel actually
+   * declares, read out of the kernel source rather than restated here.
+   *
+   * Both presenters carried an entry for VALIDATION_FAILED, which is not
+   * a code this platform has: a prepared sentence for a refusal that
+   * cannot happen, while VALIDATION_ERROR — raised by every guard that
+   * checks what somebody typed — fell through to "we could not determine
+   * the cause". That is the defect this project keeps finding in the
+   * product, sitting inside the table that explains refusals.
+   *
+   * The rule is deliberately "declared", not "currently raised". Wording
+   * may legitimately run ahead of use: CONSENT_REQUIRED is a real code
+   * that the permission engine does not raise today, because a missing
+   * consent returns a plain denial rather than naming consent as the
+   * barrier — saying which gate stopped you would confirm the record
+   * exists (ADR-050). Requiring every entry to be in current use would
+   * have argued for deleting that, which is the opposite of the point.
+   */
+  it('answers only refusals this platform actually has a code for', () => {
+    const kernel = readFileSync(join(REPO, 'packages/kernel/src/error-codes.ts'), 'utf8');
+    const declared = new Set([...kernel.matchAll(/^ {2}([A-Z_]{4,}):\s*\d{3},/gm)].map((m) => m[1]!));
+    expect(declared.size, 'no codes parsed from the kernel').toBeGreaterThan(20);
+    const worded = [...new Set([...participantCodes(), ...staffCodes()])];
+    const phantom = worded.filter((c) => !declared.has(c) && !TRANSPORT_CODES.includes(c));
+    expect(phantom, `wording for codes the kernel does not declare: ${phantom.join(', ')}`).toEqual([]);
+  });
+
+  /**
+   * And the refusals staff meet doing the work have words. Not every
+   * code needs staff wording — a participant's expired match suggestion
+   * never reaches a staff screen — so this pins the ones that do.
+   */
+  it('gives staff a reason and a next step for the refusals they meet', () => {
+    const staffReachable = [
+      'APPROVAL_REQUIRED',
+      'DATASET_LOCK_NOT_READY',
+      'DEIDENTIFICATION_REQUIRED',
+      'RESOURCE_STATE_BLOCKED',
+      'ORGANISATION_CONTEXT_REQUIRED',
+      'CONFIRMATION_REQUIRED',
+      'VALIDATION_ERROR',
+      'INTERNAL_ERROR',
+    ];
+    for (const code of staffReachable) {
+      const line = staffActionError(
+        new PlatformApiError({ code, message: 'x', requestId: 'r', retryable: false }, 409),
+        'That step',
+      );
+      expect(line, code).not.toContain('could not determine');
+      // Staff keep the code, because they act on it (design system §I.1).
+      expect(line, code).toContain(code);
     }
   });
 });
