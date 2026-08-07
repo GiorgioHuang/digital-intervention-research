@@ -1184,3 +1184,22 @@
     - apps/web/test/enrolment-chain.test.tsx
     - apps/worker/test/outbox-consumers.test.ts
   status: implemented
+
+- implementation_id: IMP-WEB-CONFIRMATION-TIER-001
+  module: WEB
+  summary: The confirmation tier was being satisfied by the api client rather than by a person, on five actions. The permission engine holds forty-five actions that may proceed only when a human has confirmed - the command forwards confirmed to the engine and the engine refuses without it - and both api clients write confirmed true as a literal at every call site. That is honest wherever the screen asked first, because the client is then reporting what happened. Where the screen did not ask, the constant is the confirmation and the tier stops nothing. Checking all forty-five found five recorded on a single click. Approving an intervention version, which is also in the strong-authentication tier and whose own component comment had always claimed it needed a confirmation, having only the first half of that. Recording an eligibility decision, on the same screen whose withdrawal has always asked, so the decision that ends somebody's enrolment was the one that did not. Recording an action against a safety event, and moving a safety event's state including to Resolved, on a screen with no confirmation of any kind, which told the reviewer their entry was recorded in their name and could not be changed only after it already was. And switching matching on, where deciding about a candidate and connecting both asked and the step that puts somebody into the pool did not. All five now ask, each confirmation carrying what is about to be recorded and what it means - refusing eligibility says it ends the enrolment, approving a version says approving is not putting into use, resolving a safety event repeats that it does not mean the person is safe at the last moment before it is written. The matching confirmation deliberately omits a sentence it would have been natural to write. Nothing in the platform can switch matching off - activateMatchPreference inserts an Active row and no command sets that column to anything else - and withdrawing the open-matching consent only stops it being switched on again, because candidate generation reads the preference row rather than the consent. Both reassurances would be promises the platform does not keep, so neither is offered until it can keep them. The mechanical test states its own limits - it can tell that a screen sending a confirmation has no way of asking anything, which is how the safety screen was caught, and it cannot tell whether one particular call sits behind the gate, because three of the five were on screens whose confirmation had been written for a different action. The behavioural test on each screen is what holds those, and a checked-in inventory of which screens send confirmations makes a new pairing something a person has to look at
+  trace_ids: [ATR-013]
+  adr_ids: [ADR-051]
+  docs: ["UI_INVENTORY.md B5", "UI_INVENTORY.md C6", "UI_INVENTORY.md C12", "UI_INVENTORY.md F5", "design/DESIGN_DECISIONS.md D-53"]
+  code:
+    - apps/web/src/components/SafetyEvents.tsx
+    - apps/web/src/components/StaffCoordinatorPanel.tsx
+    - apps/web/src/components/MatchingPanel.tsx
+    - apps/web/src/components/approver/InterventionDecisions.tsx
+  tests:
+    - apps/web/test/confirmation-tier.test.ts
+    - apps/web/test/safety-events.test.tsx
+    - apps/web/test/enrolment-chain.test.tsx
+    - apps/web/test/matching-panel.test.tsx
+    - apps/web/test/interventions.test.tsx
+  status: implemented

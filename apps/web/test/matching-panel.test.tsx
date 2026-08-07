@@ -67,6 +67,36 @@ describe('MatchingPanel (opt-in matching over API lists, ADR-036)', () => {
     expect(screen.getByText(/Open matching/)).toBeTruthy();
   });
 
+  /**
+   * `matching.activate` is in the permission engine's confirmation tier
+   * and this was one click, with `confirmed: true` supplied by the api
+   * client. Deciding on a candidate and connecting both asked; the step
+   * that puts somebody into the pool did not.
+   */
+  it('switching matching on asks first, and says what being in the pool means', async () => {
+    const calls = stubFetch();
+    render(<MatchingPanel session={session} />);
+    fireEvent.change(screen.getByLabelText(/Interests I am willing to use/), { target: { value: 'gardening' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Switch on matching' }));
+    expect(calls.filter((c) => c.method === 'POST').length).toBe(0);
+    const dialog = screen.getByRole('alertdialog');
+    expect(dialog.textContent).toMatch(/suggested to other people/);
+    expect(dialog.textContent).toMatch(/gardening/);
+    /*
+     * And what it must not say. Nothing in this platform can switch
+     * matching off — activateMatchPreference inserts an Active row and
+     * no command sets it to anything else — so a reassurance that it can
+     * be undone would be a promise the platform does not keep.
+     */
+    expect(dialog.textContent).not.toMatch(/switch it off|turn it off|undone|whenever you want/i);
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Yes, switch it on' }));
+    });
+    const post = calls.find((c) => c.method === 'POST') as { body?: Record<string, unknown>; path: string };
+    expect(post.path).toBe('/v1/match-preferences');
+    expect(post.body?.['confirmed']).toBe(true);
+  });
+
   it('candidates come from the API; a decision is version-bound, confirmed, and private', async () => {
     const calls = stubFetch();
     render(<MatchingPanel session={session} />);

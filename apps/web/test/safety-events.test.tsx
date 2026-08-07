@@ -98,12 +98,37 @@ describe('safety events', () => {
     fireEvent.change(screen.getByLabelText(/Anything a colleague would need to know/), {
       target: { value: 'They agreed to a call back tomorrow.' },
     });
+    fireEvent.click(screen.getByRole('button', { name: 'Record this' }));
+    /*
+     * Nothing may be sent on that click. `safety-event.act` is in the
+     * permission engine's confirmation tier, and the api client sends
+     * `confirmed: true` unconditionally — so if the screen does not ask,
+     * the server is told a person confirmed on the word of a constant.
+     */
+    expect(calls.find((c) => c.method === 'POST')).toBeUndefined();
+    const dialog = screen.getByRole('alertdialog');
+    expect(dialog.textContent).toMatch(/Rang the participant/);
+    expect(dialog.textContent).toMatch(/They agreed to a call back tomorrow/);
+    expect(dialog.textContent).toMatch(/cannot be edited or deleted afterwards/);
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Record this' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Yes, record it' }));
     });
     const posted = calls.find((c) => c.method === 'POST');
     expect(posted?.path).toBe('/v1/safety-events/se_1/actions');
     expect(posted?.body).toMatchObject({ label: 'Rang the participant', actionState: 'Completed', confirmed: true });
+  });
+
+  /** Going back must leave the record untouched. */
+  it('going back from the confirmation records nothing', async () => {
+    const calls = await open();
+    fireEvent.change(screen.getByLabelText('What you did'), { target: { value: 'Rang the participant' } });
+    fireEvent.change(screen.getByLabelText(/Anything a colleague would need to know/), {
+      target: { value: 'They agreed to a call back tomorrow.' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Record this' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Go back' }));
+    expect(screen.queryByRole('alertdialog')).toBeNull();
+    expect(calls.find((c) => c.method === 'POST')).toBeUndefined();
   });
 
   /** "Decided that no action was needed" is a real answer and must exist. */
@@ -137,6 +162,28 @@ describe('safety events', () => {
       fireEvent.change(screen.getByLabelText('Move it to'), { target: { value: 'Resolved' } });
     });
     expect(screen.getByText(/It does not mean the person is safe/)).toBeTruthy();
+  });
+
+  /**
+   * And it has to survive to the moment of commitment. A warning beside
+   * the picker is read while choosing; the confirmation is the last thing
+   * seen before the record is written and cannot be changed.
+   */
+  it('the confirmation repeats that resolving does not mean the person is safe', async () => {
+    const calls = await open(EVENT({ eventState: 'In Review' }));
+    await act(async () => {
+      fireEvent.change(screen.getByLabelText('Move it to'), { target: { value: 'Resolved' } });
+    });
+    fireEvent.change(screen.getByLabelText('Why (required)'), { target: { value: 'the team has taken it on' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Move this event' }));
+    expect(calls.find((c) => c.method === 'POST')).toBeUndefined();
+    const dialog = screen.getByRole('alertdialog');
+    expect(dialog.textContent).toMatch(/does not mean the person is safe/);
+    expect(dialog.textContent).toMatch(/the team has taken it on/);
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Yes, record it' }));
+    });
+    expect(calls.find((c) => c.method === 'POST')?.path).toBe('/v1/safety-events/se_1/state');
   });
 
   it('the timeline shows both what was done and where the event moved, with who and when', async () => {

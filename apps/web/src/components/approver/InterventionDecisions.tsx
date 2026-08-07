@@ -24,6 +24,15 @@ export function InterventionDecisions({ session }: { session: StaffSession }) {
   const [activating, setActivating] = useState<{ versionId: string; label: string; displaces: string | null } | null>(
     null,
   );
+  /*
+   * The comment above this component has always said approving needs a
+   * confirmation, and it did not have one: the button called the command
+   * on one click, and `confirmed: true` was supplied by the api client.
+   * The permission engine puts `intervention.approve` in the confirmation
+   * tier, so the server was being told a human had confirmed on the word
+   * of a constant in the transport layer.
+   */
+  const [approving, setApproving] = useState<{ versionId: string; label: string; submittedBy: string } | null>(null);
 
   const load = async () => {
     try {
@@ -92,10 +101,11 @@ export function InterventionDecisions({ session }: { session: StaffSession }) {
             <p>
               <button
                 onClick={() =>
-                  void run(
-                    () => staffApi.approveInterventionVersion(session, version.interventionVersionId),
-                    'Approved in your name. It is not in use until somebody activates it.',
-                  )
+                  setApproving({
+                    versionId: version.interventionVersionId,
+                    label: `${intervention.interventionCode} version ${version.versionNumber}`,
+                    submittedBy: version.submittedByActorId ?? 'somebody not recorded',
+                  })
                 }
               >
                 Approve version {version.versionNumber}
@@ -120,6 +130,37 @@ export function InterventionDecisions({ session }: { session: StaffSession }) {
           )}
         </article>
       ))}
+
+      {approving !== null && (
+        <div role="alertdialog" aria-labelledby="int-approve-confirm">
+          <p id="int-approve-confirm">Approve {approving.label}?</p>
+          <p>Submitted by {approving.submittedBy}. The decision is recorded in your name and cannot be changed.</p>
+          {/*
+            The distinction the word "approve" hides, and the one this
+            screen's own text already makes further up: approving does not
+            put anything in front of a participant.
+          */}
+          <p>
+            Approving does not put it into use. Until somebody activates it, no study configuration can name it and
+            nobody receives it.
+          </p>
+          <p>
+            <button
+              onClick={() => {
+                const target = approving;
+                setApproving(null);
+                void run(
+                  () => staffApi.approveInterventionVersion(session, target.versionId),
+                  'Approved in your name. It is not in use until somebody activates it.',
+                );
+              }}
+            >
+              Yes, approve it
+            </button>{' '}
+            <button onClick={() => setApproving(null)}>Go back</button>
+          </p>
+        </div>
+      )}
 
       {activating !== null && (
         <div role="alertdialog" aria-labelledby="int-activate-confirm">

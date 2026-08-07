@@ -111,6 +111,29 @@ describe('the intervention portfolio', () => {
     expect(screen.queryByRole('button', { name: /Put version 1 into use/ })).toBeNull();
   });
 
+  /**
+   * This component's own doc comment had said all along that approving
+   * needs strong authentication and a confirmation. It had the first and
+   * not the second: the button called the command on one click, and
+   * `confirmed: true` came from the api client, so the server was told a
+   * person had confirmed on the word of a constant.
+   */
+  it('approving asks before it records, and says approving is not putting into use', async () => {
+    const calls = stubFetch();
+    await act(async () => {
+      render(<InterventionDecisions session={approver} />);
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Approve version 2' }));
+    expect(calls.find((c) => c.method === 'POST')).toBeUndefined();
+    const dialog = screen.getByRole('alertdialog');
+    expect(dialog.textContent).toMatch(/Approving does not put it into use/);
+    expect(dialog.textContent).toMatch(/cannot be changed/);
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Yes, approve it' }));
+    });
+    expect(calls.find((c) => c.method === 'POST')?.path).toBe('/v1/intervention-versions/iv_2/approve');
+  });
+
   it('an approved version says which version putting it into use replaces', async () => {
     stubFetch({
       data: [

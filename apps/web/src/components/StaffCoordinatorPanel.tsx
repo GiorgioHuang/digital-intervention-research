@@ -51,6 +51,17 @@ export function StaffCoordinatorPanel({ session }: { session: StaffSession }) {
     null,
   );
   const [withdrawing, setWithdrawing] = useState<EnrolmentItem | null>(null);
+  /*
+   * `eligibility.decide` is in the permission engine's confirmation tier
+   * and this screen recorded it on one click, with `confirmed: true`
+   * supplied by the api client — so the server was told a human had
+   * confirmed on the word of a constant. Withdrawal on the same screen
+   * has always asked. The decision that ends somebody's enrolment did
+   * not.
+   */
+  const [decidingEligibility, setDecidingEligibility] = useState<
+    { id: string; decision: 'Eligible' | 'Ineligible'; reason: string } | null
+  >(null);
   const [listProjectId, setListProjectId] = useState('');
   const [enrolments, setEnrolments] = useState<EnrolmentItem[] | null>(null);
   const [announcement, setAnnouncement] = useState('');
@@ -220,16 +231,11 @@ export function StaffCoordinatorPanel({ session }: { session: StaffSession }) {
                     <button
                       disabled={eligibility?.id !== e.enrolmentId || eligibility.reason.trim() === ''}
                       onClick={() =>
-                        void run(
-                          () =>
-                            staffApi.eligibilityDecision(
-                              session,
-                              e.enrolmentId,
-                              eligibility!.decision,
-                              eligibility!.reason.trim(),
-                            ),
-                          'Eligibility decision recorded in your name.',
-                        )
+                        setDecidingEligibility({
+                          id: e.enrolmentId,
+                          decision: eligibility!.decision,
+                          reason: eligibility!.reason.trim(),
+                        })
                       }
                     >
                       Record eligibility decision
@@ -258,6 +264,37 @@ export function StaffCoordinatorPanel({ session }: { session: StaffSession }) {
           );
         })}
       </section>
+
+      {decidingEligibility !== null && (
+        <div role="alertdialog" aria-labelledby="elig-confirm">
+          <p id="elig-confirm">
+            Record this person as{' '}
+            {decidingEligibility.decision === 'Eligible' ? 'eligible' : 'not eligible'} for the study?
+          </p>
+          <p>Your reason, as it will be stored: &ldquo;{decidingEligibility.reason}&rdquo;</p>
+          <p>
+            {decidingEligibility.decision === 'Ineligible'
+              ? 'This ends their enrolment. They do not take part, and the decision cannot be reversed on this screen — a new enrolment would have to be started.'
+              : 'This lets consent and enrolment go ahead. It is not consent, and they have still to agree themselves.'}
+          </p>
+          <p>It is recorded in your name and cannot be changed afterwards.</p>
+          <p>
+            <button
+              onClick={() => {
+                const target = decidingEligibility;
+                setDecidingEligibility(null);
+                void run(
+                  () => staffApi.eligibilityDecision(session, target.id, target.decision, target.reason),
+                  'Eligibility decision recorded in your name.',
+                );
+              }}
+            >
+              Yes, record it
+            </button>{' '}
+            <button onClick={() => setDecidingEligibility(null)}>Go back</button>
+          </p>
+        </div>
+      )}
 
       {withdrawing !== null && (
         <div role="alertdialog" aria-labelledby="wd-confirm">

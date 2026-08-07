@@ -26,6 +26,13 @@ export function MatchingPanel({ session }: { session: Session }) {
   const [pending, setPending] = useState<{ candidate: MatchCandidateSummary; decision: Decision } | null>(null);
   const [mutualAcceptanceId, setMutualAcceptanceId] = useState<string | null>(null);
   const [confirmingConnection, setConfirmingConnection] = useState(false);
+  /*
+   * `matching.activate` is in the permission engine's confirmation tier
+   * and this was a single click, with `confirmed: true` supplied by the
+   * api client. Deciding on a candidate and connecting both asked; the
+   * step that puts somebody into the pool in the first place did not.
+   */
+  const [confirmingMatching, setConfirmingMatching] = useState(false);
   const [announcement, setAnnouncement] = useState('');
 
   const run = async (fn: () => Promise<unknown>, done: string) => {
@@ -89,22 +96,50 @@ export function MatchingPanel({ session }: { session: Session }) {
         </p>
         <textarea id="interests" rows={2} value={interests} onChange={(e) => setInterests(e.target.value)} />
         <p>
-          <button
-            onClick={() =>
-              void run(
-                () =>
-                  api.activateMatching(
-                    session,
-                    { interests: interests.split(/[,，]/).map((s) => s.trim()).filter((s) => s !== '') },
-                    true,
-                  ),
-                'Matching is now on. Only the interests you chose to share are used for suggestions.',
-              )
-            }
-          >
-            Switch on matching
-          </button>
+          <button onClick={() => setConfirmingMatching(true)}>Switch on matching</button>
         </p>
+        {confirmingMatching && (
+          <div role="alertdialog" aria-labelledby="matching-confirm-heading">
+            <h4 id="matching-confirm-heading">Switch matching on?</h4>
+            <p>
+              You will start being suggested to other people who have also switched it on, and they will start being
+              suggested to you. Nobody is told anything about you beyond the interests you typed here.
+            </p>
+            <p>
+              What you shared: {interests.trim() === '' ? 'no interests — you can add some later' : interests.trim()}
+            </p>
+            {/*
+              What is deliberately NOT here: a sentence saying you can
+              switch it off again. Nothing in this platform can —
+              `activateMatchPreference` inserts an Active row and no
+              command anywhere sets it to anything else. Withdrawing the
+              "Meet new people" consent stops you switching it on again
+              and nothing more, because candidate generation reads the
+              preference row rather than the consent. Saying either would
+              be a promise the platform does not keep, so the dialog says
+              neither until it does.
+            */}
+            <p>
+              <button
+                onClick={() => {
+                  setConfirmingMatching(false);
+                  void run(
+                    () =>
+                      api.activateMatching(
+                        session,
+                        { interests: interests.split(/[,，]/).map((s) => s.trim()).filter((s) => s !== '') },
+                        true,
+                      ),
+                    'Matching is now on. Only the interests you chose to share are used for suggestions.',
+                  );
+                }}
+              >
+                Yes, switch it on
+              </button>{' '}
+              <button onClick={() => setConfirmingMatching(false)}>Go back</button>
+            </p>
+          </div>
+        )}
       </section>
 
       <section aria-labelledby="candidate-heading">

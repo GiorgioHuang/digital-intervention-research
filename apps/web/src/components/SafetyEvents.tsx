@@ -61,6 +61,18 @@ export function SafetyEvents({ session }: { session: StaffSession }) {
     Record<string, { label: string; actionState: (typeof ACTION_STATES)[number]['value']; note: string }>
   >({});
   const [moves, setMoves] = useState<Record<string, { toState: string; note: string }>>({});
+  /*
+   * Both writes on this screen check `safety-event.act`, which the
+   * permission engine puts in the confirmation tier, and both recorded on
+   * one click with `confirmed: true` supplied by the api client — the
+   * server was told a person had confirmed on the word of a constant in
+   * the transport layer. The screen already said what it had done after
+   * the fact ("Recorded in your name. It cannot be changed"), which is
+   * the wrong moment for a sentence like that.
+   */
+  const [confirming, setConfirming] = useState<
+    { kind: 'action' | 'move'; eventId: string; heading: string; lines: string[]; go: () => Promise<unknown> } | null
+  >(null);
 
   const load = async () => {
     try {
@@ -221,8 +233,16 @@ export function SafetyEvents({ session }: { session: StaffSession }) {
               <button
                 disabled={draft.label.trim() === '' || draft.note.trim() === ''}
                 onClick={() =>
-                  void run(
-                    () =>
+                  setConfirming({
+                    kind: 'action',
+                    eventId: e.safetyEventId,
+                    heading: `Record “${draft.label.trim()}” against this safety event?`,
+                    lines: [
+                      `Where it stands: ${ACTION_STATES.find((a) => a.value === draft.actionState)?.label ?? draft.actionState}.`,
+                      `What you wrote: “${draft.note.trim()}”`,
+                      'It is recorded in your name and cannot be edited or deleted afterwards. A correction is another entry; this one stays.',
+                    ],
+                    go: () =>
                       staffApi.recordSafetyAction(
                         session,
                         e.safetyEventId,
@@ -230,8 +250,7 @@ export function SafetyEvents({ session }: { session: StaffSession }) {
                         draft.actionState,
                         draft.note.trim(),
                       ),
-                    'Recorded in your name. It cannot be changed.',
-                  )
+                  })
                 }
               >
                 Record this
@@ -283,10 +302,22 @@ export function SafetyEvents({ session }: { session: StaffSession }) {
                   <button
                     disabled={move.toState === '' || move.note.trim() === ''}
                     onClick={() =>
-                      void run(
-                        () => staffApi.moveSafetyEvent(session, e.safetyEventId, move.toState, move.note.trim()),
-                        'Recorded in your name. It cannot be changed.',
-                      )
+                      setConfirming({
+                        kind: 'move',
+                        eventId: e.safetyEventId,
+                        heading: `Move this event to “${EVENT_STATE_WORDING[move.toState] ?? move.toState}”?`,
+                        lines: [
+                          `Your reason: “${move.note.trim()}”`,
+                          ...(move.toState === 'Resolved' || move.toState === 'Closed'
+                            ? [
+                                'This records that the platform’s part is finished. It does not mean the person is safe, and nothing here tells anyone that they are.',
+                              ]
+                            : []),
+                          'It is recorded in your name and cannot be edited or deleted afterwards.',
+                        ],
+                        go: () =>
+                          staffApi.moveSafetyEvent(session, e.safetyEventId, move.toState, move.note.trim()),
+                      })
                     }
                   >
                     Move this event
@@ -297,6 +328,26 @@ export function SafetyEvents({ session }: { session: StaffSession }) {
           </article>
         );
       })}
+      {confirming !== null && (
+        <div role="alertdialog" aria-labelledby="safety-confirm">
+          <p id="safety-confirm">{confirming.heading}</p>
+          {confirming.lines.map((l) => (
+            <p key={l}>{l}</p>
+          ))}
+          <p>
+            <button
+              onClick={() => {
+                const target = confirming;
+                setConfirming(null);
+                void run(target.go, 'Recorded in your name. It cannot be changed.');
+              }}
+            >
+              Yes, record it
+            </button>{' '}
+            <button onClick={() => setConfirming(null)}>Go back</button>
+          </p>
+        </div>
+      )}
       <p aria-live="polite" role="status">
         {announcement}
       </p>

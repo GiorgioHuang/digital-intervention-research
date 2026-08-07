@@ -118,11 +118,37 @@ describe('the enrolment chain', () => {
     fireEvent.change(screen.getByLabelText('Reason (required)'), {
       target: { value: 'Meets the inclusion criteria' },
     });
+    fireEvent.click(screen.getByRole('button', { name: 'Record eligibility decision' }));
+    /*
+     * `eligibility.decide` is in the permission engine's confirmation
+     * tier and the api client sends `confirmed: true` unconditionally.
+     * Until this landed the screen recorded on one click, so the server
+     * was told a person had confirmed on the strength of a constant in
+     * the transport layer.
+     */
+    expect(calls.find((c) => c.path === '/v1/enrolments/enr_1/eligibility-decision')).toBeUndefined();
+    const dialog = screen.getByRole('alertdialog');
+    expect(dialog.textContent).toMatch(/Meets the inclusion criteria/);
+    expect(dialog.textContent).toMatch(/cannot be changed afterwards/);
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Record eligibility decision' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Yes, record it' }));
     });
     const posted = calls.find((c) => c.path === '/v1/enrolments/enr_1/eligibility-decision');
     expect(posted?.body).toMatchObject({ decision: 'Eligible', reason: 'Meets the inclusion criteria' });
+  });
+
+  /**
+   * "Not eligible" ends the enrolment, so the confirmation has to say
+   * that rather than leaving it to be discovered from the row afterwards.
+   */
+  it('refusing eligibility says in the confirmation that it ends the enrolment', async () => {
+    stubFetch(['Screening']);
+    render(<StaffCoordinatorPanel session={session} />);
+    await load();
+    fireEvent.change(screen.getByLabelText('Eligibility decision'), { target: { value: 'Ineligible' } });
+    fireEvent.change(screen.getByLabelText('Reason (required)'), { target: { value: 'outside the age range' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Record eligibility decision' }));
+    expect(screen.getByRole('alertdialog').textContent).toMatch(/ends their enrolment/);
   });
 
   /**
