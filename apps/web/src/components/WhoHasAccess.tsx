@@ -148,10 +148,22 @@ export function WhoHasAccess({ session }: { session: Session }) {
             <p>This gives no particular access on its own.</p>
           ) : (
             <>
+              {/*
+                The fallback below used to print the raw action name.
+                This list is stored on the relationship and was written
+                with no validation, so a name the platform has no wording
+                for could reach this heading and be approved as though it
+                meant something. The write refuses those now; anything
+                already stored says what it is rather than dressing
+                itself up as access.
+              */}
               <p>What this would let them do:</p>
               <ul>
                 {r.permittedActions.map((a) => (
-                  <li key={a}>{ACTION_WORDING[a] ?? a}</li>
+                  <li key={a}>
+                    {ACTION_WORDING[a] ??
+                      `Recorded as “${a}”, which this platform does not recognise. It grants nothing, and nothing here acts on it.`}
+                  </li>
                 ))}
               </ul>
             </>

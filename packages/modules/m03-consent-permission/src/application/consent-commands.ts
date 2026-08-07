@@ -1,6 +1,6 @@
 import { newId, PlatformError, type Clock, type RequestContext } from '@platform/kernel';
 import { appendToOutbox, recordAuditEvent, withTransaction, type Pool } from '@platform/database';
-import { assertAllowed } from '@platform/policy';
+import { assertAllowed, RELATIONSHIP_AUTHORISABLE_ACTIONS } from '@platform/policy';
 import { M03_EVENTS, type PermissionServicePort } from '../contracts/index.js';
 import {
   appendConsentDecision,
@@ -309,6 +309,34 @@ export async function proposeRelationship(
     resource: { type: 'Relationship', id: 'new', state: 'Draft', protectedExistence: false },
   });
   assertAllowed(decision, false);
+
+  /*
+   * A relationship may only carry actions the engine will actually
+   * consult it for.
+   *
+   * `permittedActions` was written here verbatim, and step 4 of the
+   * engine reads a relationship's list only for actions whose
+   * requirement carries `requiresRelationship`. Anything else went into
+   * the row, was read by nothing, and — this is the part that matters —
+   * was printed back to the participant under "What this would let them
+   * do" on the screen where they decide whether to approve it, falling
+   * through to the raw string when no wording matched. So the one
+   * decision on the platform that is entirely the participant's own
+   * could be taken on a list the platform did not understand and would
+   * never honour.
+   *
+   * The staff screen has only ever offered the three real ones, so
+   * nothing legitimate is refused by this; it closes the gap between
+   * that screen and the route behind it, which validates nothing.
+   */
+  const unhonourable = input.permittedActions.filter((a) => !RELATIONSHIP_AUTHORISABLE_ACTIONS.includes(a));
+  if (unhonourable.length > 0) {
+    throw new PlatformError(
+      'VALIDATION_ERROR',
+      `A relationship cannot grant ${unhonourable.join(', ')}: nothing in the platform reads a relationship for those, ` +
+        'so the participant would be shown access that would never take effect',
+    );
+  }
 
   const relationshipId = newId('rel');
   const now = deps.clock.now();

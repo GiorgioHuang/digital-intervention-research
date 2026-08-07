@@ -403,6 +403,55 @@ describe.skipIf(!dbAvailable)('M01+M03 identity, consent and permission (integra
    * A proposal waited on an approval they could not see they had been
    * asked for.
    */
+  /**
+   * A relationship's permittedActions is not internal bookkeeping. It is
+   * printed to the participant under "What this would let them do" on the
+   * screen where they decide whether to approve it, and it was written
+   * verbatim with no validation, while step 4 of the engine reads the
+   * list only for actions carrying requiresRelationship. So the one
+   * decision that is entirely the participant's own could be taken on a
+   * list the platform did not understand and would never honour.
+   */
+  it('refuses to record a relationship grant nothing would ever read', async () => {
+    await expect(
+      proposeRelationship(m03, ctxFor(adminId), {
+        participantId,
+        relatedActorId: supporterId,
+        relationshipType: 'FamilyMember',
+        permittedActions: ['participant.view-shared', 'read your medical records'],
+      }),
+    ).rejects.toMatchObject({ code: 'VALIDATION_ERROR' });
+
+    // A real action that a relationship is never consulted for is refused
+    // for the same reason — the participant would be shown access the
+    // engine would not look at this list to decide.
+    await expect(
+      proposeRelationship(m03, ctxFor(adminId), {
+        participantId,
+        relatedActorId: supporterId,
+        relationshipType: 'FamilyMember',
+        permittedActions: ['consent.withdraw'],
+      }),
+    ).rejects.toMatchObject({ code: 'VALIDATION_ERROR' });
+
+    // Nothing was written by either attempt.
+    const rows = await pool.query(
+      `SELECT count(*)::int AS n FROM consent_permission.relationships
+        WHERE participant_id = $1 AND 'consent.withdraw' = ANY(permitted_actions)`,
+      [participantId],
+    );
+    expect(rows.rows[0].n).toBe(0);
+
+    // The three the engine does consult are all accepted.
+    const ok = await proposeRelationship(m03, ctxFor(adminId), {
+      participantId,
+      relatedActorId: supporterId,
+      relationshipType: 'FamilyMember',
+      permittedActions: ['participant.view-shared', 'relationship.message', 'life-story.contribute'],
+    });
+    expect(ok.relationshipId).toBeTruthy();
+  });
+
   it('a participant lists who has, or has asked for, access — and ends it', async () => {
     const own = ctxFor(participantId);
     const { relationshipId } = await proposeRelationship(m03, ctxFor(adminId), {

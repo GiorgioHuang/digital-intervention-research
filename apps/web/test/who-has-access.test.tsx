@@ -75,6 +75,28 @@ describe('who has access to me', () => {
     expect(screen.getAllByText(/does not change your consent choices/).length).toBeGreaterThan(0);
   });
 
+  /**
+   * A relationship's permitted actions are stored on the row and were
+   * written with no validation, then printed here under "What this would
+   * let them do" — falling through to the raw string when no wording
+   * matched. So the participant could be asked to approve a list the
+   * platform had never heard of, in whatever words the proposer chose.
+   * The write refuses those now; a row already carrying one says what it
+   * is rather than dressing itself up as access.
+   */
+  it('an access the platform does not recognise says so, rather than reading as a capability', async () => {
+    stubFetch({ data: [rel({ permittedActions: ['read your medical records'] })] });
+    await act(async () => {
+      render(<WhoHasAccess session={session} />);
+    });
+    expect(screen.getByText(/which this platform does not recognise/)).toBeTruthy();
+    expect(screen.getByText(/It grants nothing/)).toBeTruthy();
+    // The phrase is still shown, because hiding what is on the record
+    // would leave the participant unable to ask about it — but it is
+    // never shown as a thing this grants.
+    expect(document.body.textContent).toContain('read your medical records');
+  });
+
   it('approving is version-bound and confirmed', async () => {
     const calls = stubFetch({ data: [rel()] });
     await act(async () => {

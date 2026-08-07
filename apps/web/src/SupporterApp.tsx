@@ -208,7 +208,10 @@ export function SupporterApp({ onExit }: { onExit: () => void }) {
             {p.permittedActions.length > 0 && (
               <ul>
                 {p.permittedActions.map((a) => (
-                  <li key={a}>{SUPPORTER_ACTION_LABELS[a] ?? a}</li>
+                  <li key={a}>
+                    {SUPPORTER_ACTION_LABELS[a] ??
+                      `Recorded as “${a}”, which this platform does not recognise. It lets you do nothing.`}
+                  </li>
                 ))}
               </ul>
             )}

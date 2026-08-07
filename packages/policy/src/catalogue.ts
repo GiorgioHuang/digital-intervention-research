@@ -472,3 +472,24 @@ export const POLICY_V1: PolicyConfiguration = {
     'safety-event.act': { confirmationRequired: true },
   },
 };
+
+/**
+ * The actions a Relationship can actually authorise.
+ *
+ * Step 4 of the engine consults a relationship's `permittedActions` only
+ * for actions whose requirement carries `requiresRelationship`. Anything
+ * else in that list is read by nothing — and the list is not internal
+ * bookkeeping: it is printed to the participant, under the heading "What
+ * this would let them do", on the screen where they decide whether to
+ * grant it. A grant the platform cannot honour is worse there than
+ * anywhere else, because it is the participant's decision that is being
+ * taken on false information.
+ *
+ * Derived from the requirement table rather than restated, so a new
+ * relationship-bearing action is covered the day it is added and a list
+ * copied by hand cannot drift away from the engine.
+ */
+export const RELATIONSHIP_AUTHORISABLE_ACTIONS: readonly string[] = Object.entries(POLICY_V1.actionRequirements)
+  .filter(([, requirement]) => requirement.requiresRelationship === true)
+  .map(([action]) => action)
+  .sort();

@@ -1219,3 +1219,20 @@
     - packages/modules/m18-community-social/test/matching.integration.test.ts
     - apps/web/test/matching-panel.test.tsx
   status: implemented
+
+- implementation_id: IMP-M03-RELATIONSHIP-GRANTS-ARE-HONOURABLE-001
+  module: M03
+  summary: A relationship's permitted actions were unvalidated free text, and that list is printed to the participant on the screen where they decide whether to grant it. proposeRelationship wrote permittedActions into the row verbatim while step four of the permission engine consults a relationship's list only for actions whose requirement carries requiresRelationship - three in the whole platform, seeing what is shared, writing to the participant, and offering life story contributions. Anything else stored there was read by nothing. That would be unremarkable as internal bookkeeping, and it is not internal - both the participant's who-has-access screen and the supporter's own list render every entry, under the heading saying what this would let them do, falling through to the raw string whenever no wording matched. So the one decision on this platform that is entirely the participant's own could be taken on a list the platform did not understand and would never honour, worded however the proposer chose. The staff screen has only ever offered the three real ones, so nothing legitimate is refused by this - it closes the gap between that screen and the route behind it, which validates nothing, there being no validation pipe at the HTTP boundary. The authorisable set is derived from the requirement table rather than restated, so a new relationship-bearing action is covered the day it is added and a hand-copied list cannot drift away from the engine. Both screens also stopped printing the raw action name - an entry the platform has no wording for now says it is recorded, that the platform does not recognise it and that it grants nothing. The text itself is still shown, because hiding what is on the record would leave the participant unable to ask about it, but it is never shown as a thing the relationship grants
+  trace_ids: [ATR-002, ATR-013]
+  adr_ids: [ADR-050]
+  docs: ["UI_INVENTORY.md B20", "UI_INVENTORY.md D2", "design/DESIGN_DECISIONS.md D-29", "design/DESIGN_DECISIONS.md D-39", "design/DESIGN_DECISIONS.md D-55"]
+  code:
+    - packages/policy/src/catalogue.ts
+    - packages/policy/src/index.ts
+    - packages/modules/m03-consent-permission/src/application/consent-commands.ts
+    - apps/web/src/components/WhoHasAccess.tsx
+    - apps/web/src/SupporterApp.tsx
+  tests:
+    - packages/modules/m03-consent-permission/test/m03.integration.test.ts
+    - apps/web/test/who-has-access.test.tsx
+  status: implemented
