@@ -5,9 +5,9 @@
 ## 1. 仓库结构与当前技术栈 `[Prototype Observation]`
 
 - pnpm workspaces monorepo：`apps/{api,web,worker,scheduler}` + `packages/{kernel,database,policy,synthetic-pilot}` + `packages/modules/m01…m18`（16 个模块包，M14/M15 已补齐）。
-- TypeScript strict / Node 22 / NestJS / PostgreSQL 16 单库多 schema / node-pg-migrate 纯 SQL 迁移（20 个，全部可逆且每推送演练）/ pg-boss / React 18 + Vite。
-- 全部外部依赖为**确定性模拟器**：通信供应商（HMAC 回调+重放防护）、Knowledge Platform、模型/工具网关、对象存储+扫描器、身份（dev-header 桩）。约 240 个确定性测试，CI 每推送全量执行。
-- 治理工件：traceability.yaml（52 条，工具校验）、IMPLEMENTATION_BASELINE、PILOT_READINESS_REPORT、SECURITY_AND_PRIVACY_PLAN、THREAT_MODEL、ACCESSIBILITY_TEST_PLAN、SYNTHETIC_PILOT_PLAN。
+- TypeScript strict / Node 22 / NestJS / PostgreSQL 16 单库多 schema / node-pg-migrate 纯 SQL 迁移（26 个，全部可逆且每推送演练）/ pg-boss / React 18 + Vite。
+- 外部依赖（2026-08-07 核对）：**Knowledge Platform 已是真实接入**（ADR-110，活的 MCP 端点，非模拟器）；**对象存储供应商已定为 Cloudflare R2（ADR-106）但尚未接通**，凭据未配置时走 Postgres 模拟器；**仍为确定性模拟器的**是通信供应商（HMAC 回调+重放防护）、模型/工具网关、恶意软件扫描器（ADR-126）、身份（dev-header 桩，ADR-104）。576 个确定性测试，CI 每推送全量执行。
+- 治理工件：traceability.yaml（124 条，工具校验）、IMPLEMENTATION_BASELINE、PILOT_READINESS_REPORT、SECURITY_AND_PRIVACY_PLAN、THREAT_MODEL、ACCESSIBILITY_TEST_PLAN、SYNTHETIC_PILOT_PLAN。
 
 ## 2. 检出的权威版本 `[Source-Derived]`
 

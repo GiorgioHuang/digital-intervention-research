@@ -12,7 +12,7 @@
 - TypeScript（strict）/ Node.js 22 / pnpm workspaces monorepo。
 - 后端 NestJS（API 进程），Worker/Scheduler 为同代码库独立入口；前端 React + Vite PWA（后续阶段引入）。
 - PostgreSQL 16 单库多 schema；纯 SQL 迁移（node-pg-migrate）+ Kysely 类型化查询；pg-boss 持久队列。
-- 本地依赖：docker-compose（PostgreSQL、MinIO、Keycloak-dev）。
+- 本地依赖：docker-compose（PostgreSQL、MinIO、Keycloak-dev）（**2026-08-07 核查**：MinIO 容器目前没有任何代码连接它——`BlobStore` 只认 R2 的四个设置，未配置时用 Postgres 模拟器，R2 适配器的端点由账户 ID 拼出、不能指向 MinIO。它是一个没有使用方的本地依赖）。
 
 ## 3. 应用/服务/库现状
 
@@ -58,7 +58,7 @@ M01/M02/M03/M04/M05 Implemented（身份、参与者档案、同意/权限、协
 
 ## 8. 安全/隐私/无障碍/研究风险（初始清单）
 
-1. 供应商未选定（AI/通信/IdP/托管）→ 全部走确定性模拟器 + ACL 接口，fail closed（Pending External Approval）。
+1. 供应商未选定（AI/通信/IdP/托管/恶意软件扫描器 ADR-126）→ 全部走确定性模拟器 + ACL 接口，fail closed（Pending External Approval）。**对象存储已选定 Cloudflare R2（ADR-106，2026-08-07）**，端口与适配器已落，但凭据未配置、尚未接通。
 2. 保留期/驻留/备份策略未批（ADR-119/120/121）→ 配置驱动，不硬编码。
 3. 伦理批准 Pending（ATR-025）→ 任何阶段不得声称可真实招募。
 4. 无障碍验收（WCAG AA + 七模式）需真实用户测试，自动化不充分——排入 P4+ 每个参与者纵切。

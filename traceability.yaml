@@ -1278,3 +1278,20 @@
     - packages/modules/m16-integration/test/blob-store.test.ts
     - packages/modules/m16-integration/test/storage-pipeline.integration.test.ts
   status: implemented
+
+- implementation_id: IMP-DOCS-VENDOR-STATUS-TRUE-001
+  module: DOCS
+  summary: The ADR register and the implementation documents had drifted apart on vendor status, and one vendor decision had no number at all. Recording the object-storage ruling in DESIGN_DECISIONS without amending the register left ADR-106 still reading local MinIO and Proposed, with six other documents still listing object storage among the unchosen vendors - the defect this work keeps finding in the product, this time in my own increment from an hour earlier. Checking that turned up three more things. The malware scanner has never had an ADR number, so while every other vendor decision carries an identifier and a Pending External Approval state, the scanner appears in no summary of what is still outstanding, and it is precisely the one blocking any screen from saying a file was scanned - it is now ADR-126. Choosing R2 created a new undecided value rather than only closing one, because the bucket's jurisdiction is a second place where personal data comes to rest where before there was only the GCP region, and that is recorded under ADR-119. And RESEARCH_BASELINE described the Knowledge Platform as a deterministic simulator when it has been a real connection to a live MCP endpoint since ADR-110, with the test, migration and traceability counts in the same sentence all stale as well. Every document now holds one line consistently - the vendor is chosen and is not connected. The credentials are not configured, the deployment still runs the Postgres simulator, and the first real round trip is unverified. Writing chosen as though it meant connected would be the same kind of untruth as the ones this platform refuses elsewhere. The docker-compose MinIO container is also noted as having no caller, since the blob store recognises only R2's four settings and the R2 adapter builds its endpoint from the account identifier, so nothing can point at MinIO
+  trace_ids: [ATR-021]
+  adr_ids: [ADR-106, ADR-110, ADR-119, ADR-126]
+  docs:
+    - "IMPLEMENTATION_DECISIONS.md ADR-106"
+    - "IMPLEMENTATION_DECISIONS.md ADR-119"
+    - "IMPLEMENTATION_DECISIONS.md ADR-126"
+    - "design/DESIGN_DECISIONS.md D-58"
+    - "design/DESIGN_DECISIONS.md D-59"
+  # Documentation only: no code and no test, and the checker is right to
+  # refuse 'implemented' without both. The substance of what this records
+  # is that five vendors are still unchosen and the sixth is chosen and
+  # not yet connected, which is exactly this status.
+  status: pending_external_approval

@@ -15,7 +15,7 @@ ADR-001…060 全部按 Accepted/Deferred/Prohibited 原样遵从；实现不启
 | ADR-103 | 托管平台 | **合成数据概念原型环境**采用 Cloud Run（单服务，CI 绿后自动部署，见 DEPLOYMENT.md）；容器化+12-factor 保持可移植；**真实/识别数据的生产托管决定仍待批**——该部署不预决生产选型 | Adopted for Implementation（仅原型环境；生产待批） | ATR-021 |
 | ADR-104 | 身份供应商 | 开发期 Keycloak(OIDC)；M01 为 UserAccount 权威；OIDC ACL 隔离 | Proposed（生产 IdP 待批） | ATR-003 |
 | ADR-105 | 托管 PostgreSQL | 本地/CI 用 PG16 容器；概念原型环境用 Neon（HADI_DATABASE_URL，迁移每次部署前执行）；真实数据的生产托管服务待批 | Adopted for Implementation（仅原型环境；生产待批） | ATR-019 |
-| ADR-106 | 对象存储 | S3 兼容接口；本地 MinIO；上传隔离/扫描管线按 Doc 16 §46–50 | Proposed | ATR-021 |
+| ADR-106 | 对象存储 | **Cloudflare R2**（S3 兼容 API）——所有者裁定 2026-08-07，与实现方建议的 GCS 相反（平台已在 GCP 上、已有 WIF，用 GCS 不需长期凭据、不增加第二家个人数据处理方）。代码侧已落 `BlobStore` 端口 + 两个适配器；**四个设置全有才用 R2，全无用 Postgres 模拟器，半配置直接拒绝启动**（D-58）。**尚未接通**：账户/桶/密钥未提供，当前部署仍在跑模拟器；首次真实往返未验证 | **Adopted for Implementation（供应商已定，接入待配置）** | ATR-021 |
 | ADR-107 | 队列/调度 | pg-boss（PG 持久队列+cron），按工作负载分队列；与 outbox 同库事务语义 | Adopted for Implementation | ATR-023 |
 | ADR-108 | Search/Vector | PG 全文检索；pgvector 可选且默认关闭；派生投影再授权 | Adopted for Implementation | ATR-015/016 |
 | ADR-109 | AI 供应商/网关栈 | Model Gateway+Provider Registry+别名先行；确定性本地模拟 Provider；真实供应商接入以批准为前提 | Pending External Approval | ATR-018 |
@@ -28,17 +28,18 @@ ADR-001…060 全部按 Accepted/Deferred/Prohibited 原样遵从；实现不启
 | ADR-116 | 数据集文件格式 | Parquet+manifest+变量字典+校验和；CSV 仅交换 | Adopted for Implementation | ATR-019 |
 | ADR-117 | Message 正文加密 | 应用层信封加密（列内密文或对象引用）；密钥独立；正文默认排除日志/事件/索引 | Proposed（策略待批） | ATR-015 |
 | ADR-118 | RLS | 非唯一控制；对含 organisation_id 的高敏表可选启用为纵深 | Proposed | ATR-021 |
-| ADR-119 | 数据驻留区域 | 配置驱动的 region 路由约束；不签供应商前不定值 | Pending External Approval | ATR-021 |
+| ADR-119 | 数据驻留区域 | 配置驱动的 region 路由约束；不签供应商前不定值。**2026-08-07 新增待决值**：R2 桶所在司法辖区——选定 R2 之前平台只有 GCP 一个落地面（us-east1），现在多了一个需要单独确定并写进治理文件的位置 | Pending External Approval | ATR-021 |
 | ADR-120 | 保留期计划 | retention_policies 配置表驱动；未定值 fail closed（不自动删除、不无限保留敏感回调证据——按域最短安全默认+人工复核） | Pending External Approval | ATR-024 |
 | ADR-121 | 备份/RPO/RTO | PITR+恢复演练脚本；目标值待批 | Pending External Approval | ATR-021 |
 | ADR-122 | 可观测性/审计技术 | OpenTelemetry+pino（脱敏过滤一等公民）；治理审计=M15 append-only 表，与遥测分离 | Adopted for Implementation | ATR-022 |
 | ADR-123 | 附件格式/限制 | 配置驱动 allowlist+大小限额；默认最小集（图片/音频），待批 | Pending External Approval | ATR-014 |
 | ADR-124 | 投递映射/Unknown 超时 | 供应商证据→canonical 状态映射表+Unknown 超时全部配置化；reconciliation 升级路径实现 | Pending External Approval | ATR-014/023 |
 | ADR-125 | MutualAcceptance 有效期/确认步骤 | 有效期/失效触发器配置化；额外确认步骤以功能旗标预留（默认关） | Pending External Approval | ATR-011 |
+| ADR-126 | 恶意软件扫描供应商 | **登记表此前没有这一条**（2026-08-07 核查补入）：上传扫描器是只认得 EICAR 测试串与一个强制失败标记的确定性模拟器，而其余每个供应商决策都有编号与状态，唯独它没有，因此不会出现在任何「还差什么」的汇总里。**硬约束**：在真实扫描器接入前，任何界面都不得出现「已查毒」一类措辞（D-50）。GCP 无托管杀毒产品，通行做法是 Cloud Run 上跑 ClamAV 由桶通知触发 | Pending External Approval | ATR-021 |
 
 ## 未决批准依赖汇总
 
-伦理与试点（ADR-048/049、ATR-025）、四类供应商合同（ADR-103/104/105/106/109/111/114）、政策值（ADR-119/120/121/123/124/125）、匹配与排序政策（ADR-112/113）、分析环境（ADR-115）、加密策略（ADR-117）。全部按「接口+模拟器先行、配置驱动、fail closed、不伪造批准」处理，不阻塞无关工作流。
+伦理与试点（ADR-048/049、ATR-025）、供应商合同（ADR-103/104/105/109/111/114/126；**ADR-106 对象存储已定为 Cloudflare R2，但尚未接通**）、政策值（ADR-119/120/121/123/124/125）、匹配与排序政策（ADR-112/113）、分析环境（ADR-115）、加密策略（ADR-117）。全部按「接口+模拟器先行、配置驱动、fail closed、不伪造批准」处理，不阻塞无关工作流。
 
 ---
 

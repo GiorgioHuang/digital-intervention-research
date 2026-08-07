@@ -35,7 +35,7 @@ Handbook 刻意不指定语言/框架（ADR-101 Proposed）。以下选择满足
 | — | 数据访问/迁移 | **纯 SQL 迁移（node-pg-migrate）+ Kysely 类型化查询** | 本域约束密集（partial unique、check、deferred constraint），ORM 抽象反而碍事；迁移即代码评审对象 |
 | ADR-107 | 队列/调度 | **pg-boss**（PostgreSQL 支撑的持久队列+定时） | 与 Outbox 同库同事务语义契合；避免 MVP 引入独立 broker；按工作负载分队列（consent/block 传播、safety、message delivery、matching、AI、media、analytics） |
 | ADR-104 | 身份供应商 | 开发期 **Keycloak（OIDC）**，生产 IdP 待批 | M01 保持 UserAccount 权威，IdP 仅认证；接口抽象为 OIDC ACL |
-| ADR-106 | 对象存储 | **S3 兼容接口，本地 MinIO** | 供应商待批，接口先行 |
+| ADR-106 | 对象存储 | **Cloudflare R2**（S3 兼容 API，所有者裁定 2026-08-07） | 供应商已定、**尚未接通**；`BlobStore` 端口 + R2/Postgres 模拟器两个适配器，半配置拒绝启动（D-58） |
 | ADR-108 | Search/Vector | **Postgres 全文检索**；Vector 用 pgvector、**默认关闭** | Doc 13：先关系型全文，专用集群需论证 |
 | ADR-109 | AI 供应商 | **确定性本地模拟 Provider**（Pending Approval 前不接真实模型） | Model Gateway 接口 + Provider Registry 先行，别名解析可换真供应商 |
 | ADR-111 | 通信供应商 | **确定性 Provider Simulator**（可脚本化 accepted/delivered/failed/unknown/重放/乱序回调） | ADR-124 的投递映射先做成配置 |
@@ -170,7 +170,7 @@ CI：GitHub Actions（lint + typecheck + 架构边界测试 + 单元/集成/契�
 ## 12. 第一批代码变更（P0→P1 入口）
 
 1. Monorepo 初始化（pnpm workspaces + TypeScript strict + ESLint + dependency-cruiser 架构规则）。
-2. `docker-compose`：PostgreSQL 16 + MinIO + Keycloak（dev）。
+2. `docker-compose`：PostgreSQL 16 + MinIO + Keycloak（dev）（**2026-08-07 核查**：MinIO 容器目前没有任何代码连接它——`BlobStore` 只认 R2 的四个设置，未配置时用 Postgres 模拟器，R2 适配器的端点由账户 ID 拼出、不能指向 MinIO。它是一个没有使用方的本地依赖）。
 3. kernel 包：RequestContext（correlation/causation/trace）、结构化错误（Doc 15 错误码目录起步）、敏感字段日志过滤器、确定性时钟。
 4. 迁移框架 + `migration_admin` schema + 首批迁移（outbox/inbox/audit_events/idempotency_records）。
 5. CI：build、typecheck、lint、架构边界测试、迁移演练、测试骨架。

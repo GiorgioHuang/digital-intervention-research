@@ -47,7 +47,7 @@
 
 ## 6. 集成与供应链
 
-- 全部外部供应商（AI/通信/IdP/托管/对象存储/扫描器）未选定：**确定性模拟器 + ACL 接口，fail closed**。
+- 外部供应商：**对象存储已选定 Cloudflare R2（ADR-106，2026-08-07 裁定），但尚未接通**——凭据未配置，当前仍走 Postgres 模拟器；**AI/通信/IdP/托管/恶意软件扫描器（ADR-109/111/104/103/126）仍未选定**：确定性模拟器 + ACL 接口，fail closed。扫描器此前在 ADR 登记表里没有编号，2026-08-07 补为 ADR-126。
 - 供应商回调：HMAC 签名验证 + nonce 重放防护（`m16 provider-adapter.ts`，负例测试：伪造/重放/未知引用全拒）。
 - AI 治理：Model Gateway 别名白名单；Tool Gateway 17 项 Level-5 禁止动作按名拒绝；AI 只能产生 SafetySignal 永不能产生 SafetyEvent。
 
