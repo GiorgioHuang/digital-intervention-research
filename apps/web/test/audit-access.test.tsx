@@ -112,7 +112,7 @@ describe('AuditAccess (G7)', () => {
    * worse than no record, because an absence in it reads as proof.
    */
   it('does not let its reader treat a gap as proof that nothing happened', async () => {
-    stubFetch();
+    stubFetch({ data: [] });
     await act(async () => {
       render(<AuditAccess session={session} />);
     });
