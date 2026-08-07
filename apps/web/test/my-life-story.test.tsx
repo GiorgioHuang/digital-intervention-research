@@ -42,6 +42,34 @@ function stubFetch(body: unknown) {
 }
 
 /**
+ * The life story answers one shape and the attachment listing another,
+ * so a single canned body cannot serve both — a stub that returned the
+ * life story for every GET would make the file list look populated.
+ */
+function stubWithFiles(files: unknown[]) {
+  const calls: { path: string; method: string; body: Record<string, unknown> }[] = [];
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (path: string, init?: RequestInit) => {
+      const method = init?.method ?? 'GET';
+      calls.push({
+        path,
+        method,
+        body: method === 'GET' ? {} : (JSON.parse(init!.body as string) as Record<string, unknown>),
+      });
+      if (method === 'GET' && path.includes('/objects')) {
+        return new Response(JSON.stringify({ data: files }), { status: 200 });
+      }
+      if (method === 'GET') {
+        return new Response(JSON.stringify({ data: [item()], meta: { archiveId: 'ar_1' } }), { status: 200 });
+      }
+      return new Response(JSON.stringify({ data: { id: 'obj_1' } }), { status: 201 });
+    }),
+  );
+  return calls;
+}
+
+/**
  * Nothing could read a life story. A participant could write into it,
  * confirm testimony, change visibility and withdraw items — and could
  * accept a supporter's contribution into it — with no way to see what was
@@ -272,5 +300,66 @@ describe('a participant reading their own life story', () => {
     expect(screen.queryByRole('button', { name: 'Change what this says' })).toBeNull();
     // And the entry is still readable by its author, as the screen says.
     expect(screen.getByText(/I grew roses/)).toBeTruthy();
+  });
+
+  /**
+   * Photographs on an entry, and the two sentences that must not be
+   * written.
+   *
+   * Attaching used to take three calls, the last of which could only be
+   * made after a background sweep had checked the file — so a
+   * participant uploaded a photograph and had to come back and attach it
+   * themselves. The destination now goes with the upload.
+   *
+   * The wording is bounded by what the platform can do. The checker
+   * recognises a test string, not real malware (ADR-126), so nothing
+   * here may say a file was scanned for viruses; and sharing with a
+   * supporter does not exist at all (D-39), so the screen says that
+   * rather than implying an audience.
+   */
+  it('adds a photograph in one act, and never claims it was scanned for viruses', async () => {
+    const calls = stubWithFiles([]);
+    await act(async () => {
+      render(<MyLifeStory session={session} />);
+    });
+    const input = screen.getAllByLabelText('Add a photograph to this entry')[0]!;
+    const file = new File([new Uint8Array([1, 2, 3])], 'gran.jpg', { type: 'image/jpeg' });
+    // jsdom's File does not implement arrayBuffer(); browsers do.
+    Object.defineProperty(file, 'arrayBuffer', {
+      value: async () => new Uint8Array([1, 2, 3]).buffer,
+    });
+    await act(async () => {
+      fireEvent.change(input, { target: { files: [file] } });
+    });
+
+    const started = calls.find((c) => c.path === '/v1/objects');
+    expect(started?.body).toMatchObject({
+      declaredContentType: 'image/jpeg',
+      declaredSizeBytes: 3,
+      attachTo: { owningResourceType: 'LifeStoryItem' },
+    });
+    expect(calls.some((c) => /\/v1\/objects\/.*\/content$/.test(c.path))).toBe(true);
+    // One act: the participant is never asked to release it themselves.
+    expect(calls.some((c) => /\/release$/.test(c.path))).toBe(false);
+
+    const said = document.body.textContent ?? '';
+    // It is not on the entry yet, and the screen says so.
+    expect(said).toMatch(/received and is being checked/i);
+    expect(said).toMatch(/not on this entry yet/i);
+    // The two claims the platform cannot keep.
+    expect(said).not.toMatch(/virus|malware|scanned for/i);
+    expect(said).toMatch(/no way to share a photograph with anyone/i);
+  });
+
+  /** Only files that cleared checking are listed; nothing else is shown as held. */
+  it('lists nothing for an entry with no accepted files, and says so', async () => {
+    stubWithFiles([]);
+    await act(async () => {
+      render(<MyLifeStory session={session} />);
+    });
+    await act(async () => {
+      fireEvent.click(screen.getAllByRole('button', { name: 'Show photographs on this entry' })[0]!);
+    });
+    expect(screen.getByText(/Nothing has been added to this entry yet/i)).toBeTruthy();
   });
 });

@@ -162,6 +162,92 @@ describe.skipIf(!dbAvailable)('object-storage quarantine pipeline (integration)'
    * entry could never show it, unless they had memorised an opaque
    * identifier. This is why D-50 refused to build the upload screen.
    */
+  /**
+   * Attaching in one act.
+   *
+   * It took three calls, and the third could not be made until a worker
+   * sweep had scanned the file — every five minutes, and only while an
+   * instance is alive, since the service scales to zero. So a
+   * participant uploaded a photograph, waited an unknown time, came back
+   * and pressed a second button to attach it. That asks somebody to do
+   * the platform's bookkeeping and to know when a background job has
+   * run.
+   *
+   * The destination is now part of the request that starts the upload,
+   * and the clean scan releases it. Nothing about the release gate is
+   * relaxed: the scan still has to come back clean, and the CHECK
+   * constraint still refuses Available without a classification and an
+   * owning resource.
+   */
+  it('a destination given at the start is attached by the scan, with no second act', async () => {
+    const { objectId } = await initiateUpload(storage, ctx(patAcc), cfg, {
+      ownerParticipantId: patId,
+      declaredContentType: 'text/plain',
+      declaredSizeBytes: 5,
+      attachTo: { owningResourceType: 'LifeStoryItem', owningResourceId: 'lsi_one_step' },
+    });
+    await completeUpload(storage, ctx(patAcc), { objectId, content: Buffer.from('hello') });
+
+    // Still quarantined: naming a destination does not attach anything.
+    const before = await listObjectsForResource(storage, ctx(patAcc), {
+      ownerParticipantId: patId, owningResourceType: 'LifeStoryItem', owningResourceId: 'lsi_one_step',
+    });
+    expect(before).toEqual([]);
+
+    await scanPendingObjects(storage, sysCtx(), cfg);
+
+    const after = await listObjectsForResource(storage, ctx(patAcc), {
+      ownerParticipantId: patId, owningResourceType: 'LifeStoryItem', owningResourceId: 'lsi_one_step',
+    });
+    expect(after.map((a) => a.objectId)).toEqual([objectId]);
+    // The classification came from the resource type, exactly as the
+    // explicit release path derives it.
+    expect(after[0]?.dataClassification).toBe('Sensitive-Personal');
+  });
+
+  /**
+   * A destination does not make a bad file good. The same clean-scan
+   * requirement stands, and the record must not read as attached.
+   */
+  it('malware with a destination is rejected and attached to nothing', async () => {
+    const { objectId } = await initiateUpload(storage, ctx(patAcc), cfg, {
+      ownerParticipantId: patId,
+      declaredContentType: 'text/plain',
+      declaredSizeBytes: EICAR_MARKER.length,
+      attachTo: { owningResourceType: 'LifeStoryItem', owningResourceId: 'lsi_bad' },
+    });
+    await completeUpload(storage, ctx(patAcc), { objectId, content: Buffer.from(EICAR_MARKER) });
+    await scanPendingObjects(storage, sysCtx(), cfg);
+
+    expect(
+      await listObjectsForResource(storage, ctx(patAcc), {
+        ownerParticipantId: patId, owningResourceType: 'LifeStoryItem', owningResourceId: 'lsi_bad',
+      }),
+    ).toEqual([]);
+    const row = await pool.query(
+      `SELECT object_state, owning_resource_id FROM storage_ops.stored_objects WHERE id = $1`,
+      [objectId],
+    );
+    expect(row.rows[0]).toMatchObject({ object_state: 'Rejected', owning_resource_id: null });
+  });
+
+  /**
+   * Told before the upload, not after. A resource type with no
+   * classification policy cannot receive objects, and learning that once
+   * the bytes are already sent means being told a file is stuck for a
+   * reason that could have been given first.
+   */
+  it('refuses an unmapped destination before any bytes are sent', async () => {
+    await expect(
+      initiateUpload(storage, ctx(patAcc), cfg, {
+        ownerParticipantId: patId,
+        declaredContentType: 'text/plain',
+        declaredSizeBytes: 5,
+        attachTo: { owningResourceType: 'SomethingUnmapped', owningResourceId: 'x_1' },
+      }),
+    ).rejects.toMatchObject({ code: 'UNSUPPORTED_CAPABILITY' });
+  });
+
   it('a record can be asked what is attached to it, and only its owner may ask', async () => {
     const objectId = await upload(Buffer.from('a photograph of a garden'));
     await scanPendingObjects(storage, sysCtx());

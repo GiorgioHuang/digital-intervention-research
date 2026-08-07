@@ -195,6 +195,15 @@ export interface ContributionAwaitingReview {
   createdAt: string;
 }
 
+export interface AttachedFile {
+  objectId: string;
+  declaredContentType: string;
+  declaredSizeBytes: number;
+  objectState: string;
+  dataClassification: string | null;
+  createdAt: string;
+}
+
 export interface MyLifeStoryItem {
   itemId: string;
   title: string;
@@ -294,6 +303,33 @@ export const api = {
    */
   withdrawLifeStoryItem: (s: Session, itemId: string) =>
     post(s, `/v1/life-story/items/${itemId}/withdraw`, { confirmed: true }),
+  /**
+   * Adding a photograph to an entry, in one act.
+   *
+   * The destination is named when the upload starts, so the participant
+   * does not have to come back and attach it once a background sweep has
+   * checked the file. What they get back is the object's identifier and
+   * nothing else — it is not attached yet, and this must not report that
+   * it is.
+   */
+  attachToLifeStoryItem: async (s: Session, itemId: string, file: File) => {
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    const started = await post<{ data: { id: string } }>(s, '/v1/objects', {
+      ownerParticipantId: s.participantId,
+      declaredContentType: file.type,
+      declaredSizeBytes: bytes.byteLength,
+      attachTo: { owningResourceType: 'LifeStoryItem', owningResourceId: itemId },
+    });
+    let binary = '';
+    for (const b of bytes) binary += String.fromCharCode(b);
+    await post(s, `/v1/objects/${started.data.id}/content`, { contentBase64: btoa(binary) });
+    return started.data.id;
+  },
+  listLifeStoryItemFiles: (s: Session, itemId: string) =>
+    get<{ data: { id: string; attributes: AttachedFile }[] }>(
+      s,
+      `/v1/participants/${s.participantId}/objects?owningResourceType=LifeStoryItem&owningResourceId=${encodeURIComponent(itemId)}`,
+    ),
   confirmTestimony: (s: Session, itemId: string, versionId: string) =>
     post(s, `/v1/life-story/items/${itemId}/confirm-testimony`, { versionId, confirmed: true }),
   listContributionsAwaitingReview: (s: Session) =>

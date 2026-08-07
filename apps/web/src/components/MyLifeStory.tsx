@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { api, type MyLifeStoryItem, type Session } from '../api.js';
+import { api, type AttachedFile, type MyLifeStoryItem, type Session } from '../api.js';
 import { presentError, type PresentedError } from '../errors.js';
 import { EmptyState, ErrorState, LoadingState } from './StateBlock.js';
 
@@ -74,6 +74,13 @@ export function MyLifeStory({ session }: { session: Session }) {
    */
   const [withdrawing, setWithdrawing] = useState<MyLifeStoryItem | null>(null);
   const [announcement, setAnnouncement] = useState('');
+  /*
+   * Photographs on an entry. Loaded per entry rather than with the list,
+   * because a listing that always fetched them would make every visit
+   * pay for something most entries do not have.
+   */
+  const [files, setFiles] = useState<Record<string, AttachedFile[]>>({});
+  const [uploading, setUploading] = useState<string | null>(null);
 
   const load = async () => {
     try {
@@ -89,6 +96,41 @@ export function MyLifeStory({ session }: { session: Session }) {
   useEffect(() => {
     void load();
   }, []);
+
+  const loadFiles = async (itemId: string) => {
+    try {
+      const res = await api.listLifeStoryItemFiles(session, itemId);
+      setFiles((f) => ({ ...f, [itemId]: res.data.map((d) => d.attributes) }));
+    } catch (err) {
+      setActionError(presentError(err));
+    }
+  };
+
+  /*
+   * One act. The destination goes with the request that starts the
+   * upload, so nobody has to come back and attach the file once it has
+   * been checked.
+   *
+   * What is said afterwards is deliberately narrow. The file has been
+   * received and is being checked; it is NOT on the entry yet, and this
+   * platform's checker recognises a test string rather than real
+   * malware, so nothing here says the file was scanned for viruses.
+   */
+  const attach = async (itemId: string, file: File) => {
+    setUploading(itemId);
+    try {
+      await api.attachToLifeStoryItem(session, itemId, file);
+      setActionError(null);
+      setAnnouncement(
+        'Your file has been received and is being checked. It is not on this entry yet — look again in a few minutes.',
+      );
+      await loadFiles(itemId);
+    } catch (err) {
+      setActionError(presentError(err));
+    } finally {
+      setUploading(null);
+    }
+  };
 
   const save = async () => {
     if (draft.title.trim() === '' || draft.text.trim() === '') {
@@ -230,6 +272,56 @@ export function MyLifeStory({ session }: { session: Session }) {
               This has been written {item.versionCount} times. Nothing you wrote before was overwritten — earlier
               versions are kept.
             </p>
+          )}
+
+          {/*
+            Photographs. Only files that have cleared checking are listed
+            — anything else has not been accepted yet, and showing it
+            would say the entry holds something it does not.
+          */}
+          {item.itemState !== 'Withdrawn' && (
+            <div>
+              <h3>Photographs on this entry</h3>
+              {files[item.itemId] === undefined ? (
+                <p>
+                  <button onClick={() => void loadFiles(item.itemId)}>Show photographs on this entry</button>
+                </p>
+              ) : files[item.itemId]!.length === 0 ? (
+                <p>Nothing has been added to this entry yet.</p>
+              ) : (
+                <ul>
+                  {files[item.itemId]!.map((f) => (
+                    <li key={f.objectId}>
+                      {f.declaredContentType} · {Math.max(1, Math.round(f.declaredSizeBytes / 1024))} KB · added{' '}
+                      {new Date(f.createdAt).toLocaleDateString()}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <p>
+                <label htmlFor={`file-${item.itemId}`}>Add a photograph to this entry</label>{' '}
+                <input
+                  id={`file-${item.itemId}`}
+                  type="file"
+                  disabled={uploading !== null}
+                  onChange={(e) => {
+                    const chosen = e.target.files?.[0];
+                    if (chosen !== undefined) void attach(item.itemId, chosen);
+                  }}
+                />
+              </p>
+              {/*
+                What this platform can and cannot say about a file. The
+                checker recognises a test string, not real malware
+                (ADR-126), so "checked" is as far as the wording may go.
+              */}
+              <p>
+                <small>
+                  A file you add is kept privately and is checked before it appears here. Nobody else can see it —
+                  this platform has no way to share a photograph with anyone, not even a supporter.
+                </small>
+              </p>
+            </div>
           )}
           {/*
             Not offered on a withdrawn item: the command refuses it, and a

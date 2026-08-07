@@ -82,6 +82,11 @@ describe('commands that change something and record nothing', () => {
   /**
    * Equality, not containment: a new unaudited command cannot appear
    * quietly, and auditing one of these fails until it is struck off.
+   *
+   * That second direction has since done its job: scanning gained an
+   * audit entry when a clean scan started releasing an object onto the
+   * resource it was uploaded for, and this list refused to pass until
+   * both scan commands were struck off.
    */
   it('are exactly the ones written down here', () => {
     expect(unaudited()).toEqual([
@@ -104,8 +109,6 @@ describe('commands that change something and record nothing', () => {
       'm13-analysis runAnalysis',
       'm16-integration completeUpload',
       'm16-integration handleProviderCallback',
-      'm16-integration scanObject',
-      'm16-integration scanPendingObjects',
       'm17-life-story proposeContribution',
       'm17-life-story reviewContribution',
       'm17-life-story reviseItem',

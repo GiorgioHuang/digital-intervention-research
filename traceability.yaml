@@ -1339,3 +1339,21 @@
     - packages/modules/m16-integration/test/storage-pipeline.integration.test.ts
     - apps/api/test/api.e2e.test.ts
   status: implemented
+
+- implementation_id: IMP-M16-ATTACH-IN-ONE-ACT-001
+  module: M16
+  summary: Attaching a photograph took three calls and the third could not be made until a background sweep had run. Create the object, send the bytes, then release it onto an owning resource - and release requires a clean scan, which only the worker sweep produces, every five minutes and only while an instance is alive since the service scales to zero. So a participant uploaded a photograph, waited an unknown time, came back and pressed a second button to attach it. That asks an older adult to do the platform's bookkeeping and to know when a background job has run. The destination is now part of the request that starts the upload, held in two new nullable columns with a constraint that they are both present or both absent, and a clean scan releases the object onto it. Nothing about the release gate is relaxed - the scan must still come back clean, the table's CHECK still refuses Available without a checksum, a classification and an owning resource, and the classification is still derived from the resource type exactly as the explicit path derives it. A destination whose type has no classification policy is refused when the upload starts rather than after the bytes have been sent, because telling somebody their file is stuck for a reason they could have been given first is the worse moment. The life story screen can now add a photograph to an entry and list what is attached, and its wording is bounded by what the platform can do - the file has been received and is being checked and is not on the entry yet, never that it was scanned for viruses, since the checker recognises a test string rather than malware, and it says outright that nobody else can see it because this platform has no way to share a photograph with anyone, not even a supporter. Two findings came out of the work. The audit tripwire from D-57 failed as designed when scanning gained an audit entry, and would not pass until both scan commands were struck off its list - the equality assertion doing the half of its job that had not yet been exercised. And the listing route answered 200 with an empty list when no resource was named, which reads as this record has no files, an absence presented as a fact about a record nobody identified; it now refuses
+  trace_ids: [ATR-013, ATR-014]
+  adr_ids: [ADR-020, ADR-126]
+  docs: ["design/DESIGN_DECISIONS.md D-50", "design/DESIGN_DECISIONS.md D-58", "design/DESIGN_DECISIONS.md D-63"]
+  code:
+    - packages/database/migrations/1753800000026_object-intended-destination.sql
+    - packages/modules/m16-integration/src/application/storage-pipeline.ts
+    - apps/api/src/controllers.ts
+    - apps/web/src/api.ts
+    - apps/web/src/components/MyLifeStory.tsx
+  tests:
+    - packages/modules/m16-integration/test/storage-pipeline.integration.test.ts
+    - apps/web/test/my-life-story.test.tsx
+    - apps/api/test/api.e2e.test.ts
+  status: implemented

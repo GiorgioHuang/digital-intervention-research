@@ -65,7 +65,18 @@ export async function initiateUpload(
   deps: StorageDeps,
   ctx: RequestContext,
   config: StorageConfig,
-  input: { ownerParticipantId: string; declaredContentType: string; declaredSizeBytes: number },
+  input: {
+    ownerParticipantId: string;
+    declaredContentType: string;
+    declaredSizeBytes: number;
+    /**
+     * Where this is going, said at the start rather than in a second
+     * call the participant has to make later. Optional: the explicit
+     * release path is unchanged, and an upload with no destination yet
+     * is legitimate.
+     */
+    attachTo?: { owningResourceType: string; owningResourceId: string };
+  },
 ): Promise<{ objectId: string }> {
   const decision = await deps.checkPermission(ctx, {
     action: 'object.upload',
@@ -85,15 +96,29 @@ export async function initiateUpload(
   if (input.declaredSizeBytes <= 0 || input.declaredSizeBytes > config.maxSizeBytes) {
     throw new PlatformError('VALIDATION_ERROR', 'File size exceeds the accepted limit');
   }
+  /*
+   * The destination is checked now, not at release. A resource type with
+   * no classification policy cannot receive objects, and finding that
+   * out after somebody has uploaded a photograph means telling them
+   * their file is stuck somewhere for a reason they could have been told
+   * before they chose it.
+   */
+  if (input.attachTo !== undefined && config.classificationByResourceType[input.attachTo.owningResourceType] === undefined) {
+    throw new PlatformError('UNSUPPORTED_CAPABILITY', 'No classification policy for this resource type');
+  }
 
   const objectId = newId('obj');
   const now = deps.clock.now();
   await withTransaction(deps.pool, async (client) => {
     await client.query(
       `INSERT INTO storage_ops.stored_objects
-         (id, owner_participant_id, uploaded_by_actor_id, declared_content_type, declared_size_bytes)
-       VALUES ($1, $2, $3, $4, $5)`,
-      [objectId, input.ownerParticipantId, ctx.actor!.id, input.declaredContentType, input.declaredSizeBytes],
+         (id, owner_participant_id, uploaded_by_actor_id, declared_content_type, declared_size_bytes,
+          intended_owning_resource_type, intended_owning_resource_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [
+        objectId, input.ownerParticipantId, ctx.actor!.id, input.declaredContentType, input.declaredSizeBytes,
+        input.attachTo?.owningResourceType ?? null, input.attachTo?.owningResourceId ?? null,
+      ],
     );
     await recordAuditEvent(client, ctx, {
       action: 'object.upload',
@@ -172,9 +197,11 @@ export async function scanObject(
   deps: StorageDeps,
   ctx: RequestContext,
   input: { objectId: string },
+  config: StorageConfig = DEFAULT_STORAGE_CONFIG,
 ): Promise<{ outcome: 'Clean' | 'Malware Detected' | 'Scan Failed' }> {
   const obj = await deps.pool.query(
-    `SELECT object_state FROM storage_ops.stored_objects WHERE id = $1`,
+    `SELECT object_state, intended_owning_resource_type, intended_owning_resource_id
+       FROM storage_ops.stored_objects WHERE id = $1`,
     [input.objectId],
   );
   const row = obj.rows[0];
@@ -208,6 +235,47 @@ export async function scanObject(
           WHERE id = $1`,
         [input.objectId, outcome, now],
       );
+    } else if (outcome === 'Clean' && row.intended_owning_resource_type !== null) {
+      /*
+       * The destination was named when the upload began, so this is
+       * where it takes effect. Doing it here rather than asking the
+       * participant for a second act is the whole point: a clean scan is
+       * the last thing the platform was waiting for, and it is the
+       * platform's business to notice, not theirs.
+       *
+       * Every part of the release gate still holds — the CHECK
+       * constraint on this table refuses Available without a clean scan,
+       * a checksum, a classification and an owning resource, and the
+       * classification is derived from the resource type exactly as the
+       * explicit path derives it.
+       */
+      const classification = config.classificationByResourceType[row.intended_owning_resource_type as string];
+      if (classification === undefined) {
+        // Unreachable via initiateUpload, which refuses an unmapped type
+        // up front. Fail closed rather than assume: an object released
+        // without a classification is a file nobody has graded.
+        throw new PlatformError('UNSUPPORTED_CAPABILITY', 'No classification policy for this resource type');
+      }
+      await client.query(
+        `UPDATE storage_ops.stored_objects
+            SET scan_outcome = $2, object_state = 'Available', data_classification = $4,
+                owning_resource_type = $5, owning_resource_id = $6,
+                record_version = record_version + 1, updated_at = $3
+          WHERE id = $1`,
+        [
+          input.objectId, outcome, now, classification,
+          row.intended_owning_resource_type, row.intended_owning_resource_id,
+        ],
+      );
+      await recordAuditEvent(client, ctx, {
+        action: 'object.assign',
+        targetType: 'StoredObject',
+        targetId: input.objectId,
+        occurredAt: now,
+        result: 'Succeeded',
+        source: 'M16',
+        policyVersion: 'storage-pipeline',
+      });
     } else {
       await client.query(
         `UPDATE storage_ops.stored_objects
@@ -241,13 +309,14 @@ export async function scanObject(
 export async function scanPendingObjects(
   deps: StorageDeps,
   ctx: RequestContext,
+  config: StorageConfig = DEFAULT_STORAGE_CONFIG,
 ): Promise<{ scanned: number }> {
   const res = await deps.pool.query(
     `SELECT id FROM storage_ops.stored_objects WHERE object_state = 'Quarantined' AND scan_outcome IS NULL`,
   );
   let scanned = 0;
   for (const row of res.rows) {
-    await scanObject(deps, ctx, { objectId: row.id as string });
+    await scanObject(deps, ctx, { objectId: row.id as string }, config);
     scanned += 1;
   }
   return { scanned };

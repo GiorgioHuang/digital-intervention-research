@@ -433,7 +433,13 @@ export class CommandController {
   @Post('objects')
   async initiateUpload(
     @Req() req: Request,
-    @Body() body: { ownerParticipantId: string; declaredContentType: string; declaredSizeBytes: number },
+    @Body()
+    body: {
+      ownerParticipantId: string;
+      declaredContentType: string;
+      declaredSizeBytes: number;
+      attachTo?: { owningResourceType: string; owningResourceId: string };
+    },
   ) {
     const ctx = requireActor(req);
     const result = await initiateUpload(this.deps.m16storage, ctx, DEFAULT_STORAGE_CONFIG, body);
@@ -474,6 +480,38 @@ export class CommandController {
         meta: { state: 'Available', dataClassification: result.dataClassification },
       },
     };
+  }
+
+  /**
+   * The attachments on one resource. The read path that did not exist:
+   * ownership is recorded on the object's side and nothing pointed back,
+   * so a file could be attached to a life-story entry that could never
+   * show it.
+   */
+  @Get('participants/:participantId/objects')
+  async listObjectsForResource(
+    @Req() req: Request,
+    @Param('participantId') participantId: string,
+    @Query('owningResourceType') owningResourceType: string,
+    @Query('owningResourceId') owningResourceId: string,
+  ) {
+    const ctx = requireActor(req);
+    /*
+     * Which record is being asked about is required, not guessed at.
+     * Without it the query matches nothing and answers with an empty
+     * list, which reads as "this record has no files" — an absence
+     * presented as a fact about a record nobody named. There is no
+     * validation pipe at this boundary, so the check is here.
+     */
+    if ((owningResourceType ?? '') === '' || (owningResourceId ?? '') === '') {
+      throw new PlatformError('VALIDATION_ERROR', 'Say which record you are asking about');
+    }
+    const items = await listObjectsForResource(this.deps.m16storage, ctx, {
+      ownerParticipantId: participantId,
+      owningResourceType,
+      owningResourceId,
+    });
+    return { data: items.map((a) => ({ type: 'StoredObject', id: a.objectId, attributes: a })) };
   }
 
   @Get('objects/:objectId')
