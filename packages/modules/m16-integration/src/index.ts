@@ -14,6 +14,7 @@ export {
   scanPendingObjects,
   releaseObject,
   getObjectStatus,
+  listObjectsForResource,
   assertObjectSendable,
   DEFAULT_STORAGE_CONFIG,
   EICAR_MARKER,
@@ -21,4 +22,5 @@ export {
   type StorageConfig,
   type StorageDeps,
   type StoredObjectStatus,
+  type AttachedObject,
 } from './application/storage-pipeline.js';

@@ -143,6 +143,7 @@ export const POLICY_V1: PolicyConfiguration = {
       'message.confirm-send',
       'object.upload',
       'object.assign',
+      'object.view-own',
     ],
     Supporter: [
       'participant.view-shared',
@@ -214,6 +215,14 @@ export const POLICY_V1: PolicyConfiguration = {
     // on the participant's own objects.
     'object.upload': { ownerPermitted: true, ownerOnly: true },
     'object.assign': { ownerPermitted: true, ownerOnly: true },
+    /*
+     * Seeing one's own attachments. A separate action from assigning
+     * because reading and attaching are different authorities, and
+     * because `object.assign` had been gating reads as well — a write
+     * action standing in for a read tells an auditor the wrong thing
+     * about what somebody did.
+     */
+    'object.view-own': { ownerPermitted: true, ownerOnly: true },
     'moderation-queue.view': {},
     'contribution.view-own': {},
 

@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Inject, Param, Post, Query, Req } from '@nestjs/common';
 import type { Request } from 'express';
-import type { Clock } from '@platform/kernel';
+import { PlatformError, type Clock } from '@platform/kernel';
 import type { Pool } from '@platform/database';
 import type { AccountNameQueryPort, M01Deps } from '@platform/m01-identity-org';
 import type { M02Deps } from '@platform/m02-participant';
@@ -30,6 +30,7 @@ import {
   completeUpload,
   DEFAULT_STORAGE_CONFIG,
   getObjectStatus,
+  listObjectsForResource,
   initiateUpload,
   releaseObject,
   type StorageDeps,
@@ -480,6 +481,38 @@ export class CommandController {
     const ctx = requireActor(req);
     const status = await getObjectStatus(this.deps.m16storage, ctx, objectId);
     return { data: { type: 'StoredObject', id: objectId, attributes: status } };
+  }
+
+  /**
+   * What a participant has attached to one of their own records.
+   *
+   * Ownership was recorded only on the object's side, so nothing could
+   * ask the question the other way round: a file attached to a life
+   * story entry could never be found from that entry. The owning
+   * resource is named in the query rather than the path because M16
+   * knows nothing about life stories, and a route per owning type would
+   * put that knowledge in the wrong module.
+   */
+  @Get('participants/:participantId/objects')
+  async myAttachedObjects(
+    @Req() req: Request,
+    @Param('participantId') participantId: string,
+    @Query('owningResourceType') owningResourceType: string,
+    @Query('owningResourceId') owningResourceId: string,
+  ) {
+    const ctx = requireActor(req);
+    if (!owningResourceType || !owningResourceId) {
+      throw new PlatformError(
+        'VALIDATION_ERROR',
+        'Say which record the attachments belong to: owningResourceType and owningResourceId are both required',
+      );
+    }
+    const items = await listObjectsForResource(this.deps.m16storage, ctx, {
+      ownerParticipantId: participantId,
+      owningResourceType,
+      owningResourceId,
+    });
+    return { data: items.map((o) => ({ type: 'StoredObject', id: o.objectId, attributes: o })) };
   }
 
   /**

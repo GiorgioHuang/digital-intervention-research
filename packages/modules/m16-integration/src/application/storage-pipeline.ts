@@ -335,6 +335,73 @@ export async function getObjectStatus(
   };
 }
 
+export interface AttachedObject {
+  objectId: string;
+  declaredContentType: string;
+  declaredSizeBytes: number;
+  objectState: string;
+  dataClassification: string | null;
+  createdAt: string;
+}
+
+/**
+ * The objects attached to one owning resource — the read path that did
+ * not exist.
+ *
+ * `releaseObject` records ownership on the object's side, and nothing
+ * pointed back: the life story holds no reference to an object, and the
+ * only query was for a single object by its identifier. So a file could
+ * be uploaded, cleared and attached to a life story entry, and that
+ * entry could never show it — unless the person had memorised an opaque
+ * identifier. D-50 refused to build the upload screen for exactly this
+ * reason, and this is the half that removes it.
+ *
+ * Owner-scoped, deliberately. Attachments belong to the participant who
+ * uploaded them, and no supporter or member of staff reads them here —
+ * D-39 established that sharing with a supporter does not exist in this
+ * platform at all, so a listing that pretended otherwise would be the
+ * control-that-does-nothing this project keeps removing.
+ *
+ * Only Available objects. Anything short of that has not cleared
+ * quarantine, and a screen that listed it would be showing a file the
+ * platform is not prepared to hand back.
+ */
+export async function listObjectsForResource(
+  deps: StorageDeps,
+  ctx: RequestContext,
+  input: { ownerParticipantId: string; owningResourceType: string; owningResourceId: string },
+): Promise<AttachedObject[]> {
+  const decision = await deps.checkPermission(ctx, {
+    action: 'object.view-own',
+    resource: {
+      type: 'StoredObject',
+      id: `${input.owningResourceType}:${input.owningResourceId}`,
+      state: 'Available',
+      protectedExistence: true,
+      ownerParticipantId: input.ownerParticipantId,
+    },
+  });
+  assertAllowed(decision, false);
+  const res = await deps.pool.query(
+    `SELECT id, declared_content_type, declared_size_bytes, object_state, data_classification, created_at
+       FROM storage_ops.stored_objects
+      WHERE owner_participant_id = $1
+        AND owning_resource_type = $2
+        AND owning_resource_id = $3
+        AND object_state = 'Available'
+      ORDER BY created_at`,
+    [input.ownerParticipantId, input.owningResourceType, input.owningResourceId],
+  );
+  return res.rows.map((r) => ({
+    objectId: r.id as string,
+    declaredContentType: r.declared_content_type as string,
+    declaredSizeBytes: Number(r.declared_size_bytes),
+    objectState: r.object_state as string,
+    dataClassification: (r.data_classification as string | null) ?? null,
+    createdAt: (r.created_at as Date).toISOString(),
+  }));
+}
+
 /** Attachment gate (Doc 15 §58.4): anything short of Available refuses. */
 export async function assertObjectSendable(deps: StorageDeps, objectId: string): Promise<void> {
   const res = await deps.pool.query(

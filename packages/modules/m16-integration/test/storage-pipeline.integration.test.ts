@@ -21,6 +21,7 @@ import {
   EICAR_MARKER,
   getObjectStatus,
   initiateUpload,
+  listObjectsForResource,
   releaseObject,
   SCAN_ERROR_MARKER,
   scanPendingObjects,
@@ -151,6 +152,64 @@ describe.skipIf(!dbAvailable)('object-storage quarantine pipeline (integration)'
     await assertObjectSendable(storage, objectId);
     const status = await getObjectStatus(storage, ctx(patAcc), objectId);
     expect(status.objectState).toBe('Available');
+  });
+
+  /**
+   * The question that could not be asked. Ownership was recorded on the
+   * object's side only — the life story holds no reference back — and
+   * the sole query was for a single object by its identifier. So a
+   * participant could attach a photograph to a life story entry and that
+   * entry could never show it, unless they had memorised an opaque
+   * identifier. This is why D-50 refused to build the upload screen.
+   */
+  it('a record can be asked what is attached to it, and only its owner may ask', async () => {
+    const objectId = await upload(Buffer.from('a photograph of a garden'));
+    await scanPendingObjects(storage, sysCtx());
+    await releaseObject(storage, ctx(patAcc), cfg, {
+      objectId, owningResourceType: 'LifeStoryItem', owningResourceId: 'lsi_read_1',
+    });
+
+    const attached = await listObjectsForResource(storage, ctx(patAcc), {
+      ownerParticipantId: patId, owningResourceType: 'LifeStoryItem', owningResourceId: 'lsi_read_1',
+    });
+    expect(attached.map((a) => a.objectId)).toEqual([objectId]);
+    expect(attached[0]).toMatchObject({ objectState: 'Available', dataClassification: 'Sensitive-Personal' });
+
+    // A different entry is a different answer, not the same list.
+    expect(
+      await listObjectsForResource(storage, ctx(patAcc), {
+        ownerParticipantId: patId, owningResourceType: 'LifeStoryItem', owningResourceId: 'lsi_read_2',
+      }),
+    ).toEqual([]);
+
+    // Somebody else asking about this participant's attachments is
+    // refused: the existence of the record is protected, not only its
+    // contents (D-39 — sharing with a supporter does not exist here).
+    await expect(
+      listObjectsForResource(storage, ctx(otherAcc), {
+        ownerParticipantId: patId, owningResourceType: 'LifeStoryItem', owningResourceId: 'lsi_read_1',
+      }),
+    ).rejects.toBeDefined();
+  });
+
+  /**
+   * Anything short of Available has not cleared quarantine, and listing
+   * it would show a file the platform is not prepared to hand back.
+   */
+  it('does not list an object until it has cleared quarantine and been attached', async () => {
+    const pending = await upload(Buffer.from('not scanned yet'));
+    const ask = () =>
+      listObjectsForResource(storage, ctx(patAcc), {
+        ownerParticipantId: patId, owningResourceType: 'LifeStoryItem', owningResourceId: 'lsi_read_3',
+      });
+    expect(await ask()).toEqual([]);
+    // A clean scan alone is still not enough — it is not attached yet.
+    await scanPendingObjects(storage, sysCtx());
+    expect(await ask()).toEqual([]);
+    await releaseObject(storage, ctx(patAcc), cfg, {
+      objectId: pending, owningResourceType: 'LifeStoryItem', owningResourceId: 'lsi_read_3',
+    });
+    expect((await ask()).map((a) => a.objectId)).toEqual([pending]);
   });
 
   it('malware is rejected and the blob is purged; scan failure never means safe', async () => {

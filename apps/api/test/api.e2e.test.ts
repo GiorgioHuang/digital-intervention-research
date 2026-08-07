@@ -527,6 +527,30 @@ describe.skipIf(!dbAvailable)('HTTP API (e2e)', () => {
 
     // A stranger probing the object learns nothing.
     expect((await call(`/v1/objects/${objectId}`, strangerAcc)).status).toBe(404);
+
+    /*
+     * Asking the record what is attached to it — the direction that did
+     * not exist. Ownership was recorded on the object's side only, so a
+     * life story entry could never find the photograph attached to it.
+     */
+    const attached = await call(
+      `/v1/participants/${patId}/objects?owningResourceType=LifeStoryItem&owningResourceId=lsi_e2e`,
+      patAcc,
+    );
+    expect(attached.status).toBe(200);
+    const listed = (await attached.json()) as { data: { id: string }[] };
+    expect(listed.data.map((o) => o.id)).toEqual([objectId]);
+
+    // Which record is being asked about is required, not guessed at.
+    expect((await call(`/v1/participants/${patId}/objects`, patAcc)).status).toBe(400);
+
+    // And a stranger asking about somebody else's attachments learns nothing.
+    expect(
+      (await call(
+        `/v1/participants/${patId}/objects?owningResourceType=LifeStoryItem&owningResourceId=lsi_e2e`,
+        strangerAcc,
+      )).status,
+    ).toBe(404);
     // Disallowed types are refused at the gate.
     const badType = await call('/v1/objects', patAcc, {
       ownerParticipantId: patId, declaredContentType: 'application/x-msdownload', declaredSizeBytes: 10,

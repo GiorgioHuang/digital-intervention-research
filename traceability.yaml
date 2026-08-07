@@ -1324,3 +1324,18 @@
     - apps/api/test/spa-fallback.test.ts
     - apps/api/test/api.e2e.test.ts
   status: implemented
+
+- implementation_id: IMP-M16-ATTACHMENTS-CAN-BE-FOUND-001
+  module: M16
+  summary: An uploaded file could never be seen again, which was D-50's second reason for refusing to build the upload screen. releaseObject records ownership on the object's side, in owning_resource_type and owning_resource_id, and the life story schema holds no reference back, while the only query was for a single object by its identifier. So a photograph could be uploaded, cleared through quarantine and attached to a life story entry, and that entry could never show it unless the participant had memorised an opaque identifier. The question can now be asked in the other direction. Only Available objects are listed, because anything short of that has not cleared quarantine and listing it would show a file the platform is not prepared to hand back. The listing is owner-scoped deliberately - attachments belong to the participant who uploaded them and no supporter or member of staff reads them here, since D-39 established that sharing with a supporter does not exist in this platform at all and a listing implying otherwise would be the control that does nothing which this work keeps removing. A new object.view-own action gates it rather than reusing object.assign, which had been standing in for reads as well - a write action guarding a read tells an auditor the wrong thing about what somebody did. The owning resource is named in the query string rather than the path because M16 knows nothing about life stories, and a route per owning type would put that knowledge in the wrong module. No interface yet - this is the first of the two increments D-50 requires to land together, and the second attaches a photograph to a life story entry and shows it on that entry. Until a real scanner exists no screen may say a file was scanned for viruses, under ADR-126
+  trace_ids: [ATR-013, ATR-014]
+  adr_ids: [ADR-020, ADR-126]
+  docs: ["design/DESIGN_DECISIONS.md D-39", "design/DESIGN_DECISIONS.md D-50", "design/DESIGN_DECISIONS.md D-62"]
+  code:
+    - packages/policy/src/catalogue.ts
+    - packages/modules/m16-integration/src/application/storage-pipeline.ts
+    - apps/api/src/controllers.ts
+  tests:
+    - packages/modules/m16-integration/test/storage-pipeline.integration.test.ts
+    - apps/api/test/api.e2e.test.ts
+  status: implemented
