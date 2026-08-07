@@ -82,18 +82,36 @@ describe('MatchingPanel (opt-in matching over API lists, ADR-036)', () => {
     const dialog = screen.getByRole('alertdialog');
     expect(dialog.textContent).toMatch(/suggested to other people/);
     expect(dialog.textContent).toMatch(/gardening/);
-    /*
-     * And what it must not say. Nothing in this platform can switch
-     * matching off — activateMatchPreference inserts an Active row and
-     * no command sets it to anything else — so a reassurance that it can
-     * be undone would be a promise the platform does not keep.
-     */
-    expect(dialog.textContent).not.toMatch(/switch it off|turn it off|undone|whenever you want/i);
+    // The sentence that could only be written once there was a way out.
+    expect(dialog.textContent).toMatch(/switch it off again whenever you want/i);
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Yes, switch it on' }));
     });
     const post = calls.find((c) => c.method === 'POST') as { body?: Record<string, unknown>; path: string };
     expect(post.path).toBe('/v1/match-preferences');
+    expect(post.body?.['confirmed']).toBe(true);
+  });
+
+  /**
+   * There was no way out. activateMatchPreference inserted a row in
+   * state Active and nothing anywhere set that column to anything else,
+   * so "Switch on matching" was a one-way door.
+   */
+  it('matching can be switched off, and says what that does and does not reach', async () => {
+    const calls = stubFetch();
+    render(<MatchingPanel session={session} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Switch off matching' }));
+    expect(calls.filter((c) => c.method === 'POST').length).toBe(0);
+    const dialog = screen.getByRole('alertdialog');
+    expect(dialog.textContent).toMatch(/stop being suggested to anyone/i);
+    // Leaving the pool is not leaving the conversations it led to.
+    expect(dialog.textContent).toMatch(/Conversations you are already in are not affected/i);
+    expect(dialog.textContent).toMatch(/Nobody is told/i);
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Yes, switch it off' }));
+    });
+    const post = calls.find((c) => c.method === 'POST') as { body?: Record<string, unknown>; path: string };
+    expect(post.path).toBe('/v1/match-preferences/deactivate');
     expect(post.body?.['confirmed']).toBe(true);
   });
 

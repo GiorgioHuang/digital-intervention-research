@@ -129,6 +129,7 @@ describe('the confirmation tier is confirmed by a person, not by the api client'
       'components/ConsentPanel.tsx → withdrawConsent',
       'components/MatchingPanel.tsx → activateConnection',
       'components/MatchingPanel.tsx → activateMatching',
+      'components/MatchingPanel.tsx → deactivateMatching',
       'components/MatchingPanel.tsx → matchDecision',
       'components/MessagePanel.tsx → confirmSend',
       'components/MessagesScreen.tsx → endConnection',

@@ -1203,3 +1203,19 @@
     - apps/web/test/matching-panel.test.tsx
     - apps/web/test/interventions.test.tsx
   status: implemented
+
+- implementation_id: IMP-M18-MATCHING-HAS-A-WAY-OUT-001
+  module: M18
+  summary: Open Matching was a one-way door, and the consent that opened it did not close it. Writing the confirmation for switching matching on called for a sentence saying it could be switched off again, and checking found that it could not - activateMatchPreference inserts a row in preference_state Active and no command anywhere sets that column to anything else, so the screen offered Switch on matching and the platform had no switch. Worse, withdrawing the consent did not close it either. matching.activate requires the open-matching scope, but generateMatchCandidate reads the preference row and never the consent, so somebody who withdrew Meet new people stayed in the pool and went on being suggested to others - which is exactly the control that consent screen presents itself as, and the case D-2 and D-5 exist to prevent. Both halves are fixed. A matching.deactivate command sets the preference to Inactive, a value the CHECK constraint has allowed since the first migration with nothing ever writing it, and it is deliberately not gated on open-matching - entering the pool needs that consent and leaving it must not, or withdrawing the consent would lock somebody inside the thing it let them into, which is the reasoning D-26 used for leaving a community. Switching off something already off returns quietly with nothing written, because telling a person who asked to leave that they were not in it anyway is a worse answer than simply being out. And candidate generation now re-reads consent_current before it generates, accepting the same two decisions the permission engine treats as permitting and treating expiry the same way, which is the use-time evaluation D-52 established as the only enforcement this platform has that cannot go stale. The wording follows the code rather than leading it - the activation confirmation can now say it is reversible, and the deactivation confirmation says what stops, that conversations already under way are untouched, and that nobody is told
+  trace_ids: [ATR-007]
+  adr_ids: [ADR-026, ADR-112]
+  docs: ["UI_INVENTORY.md B5", "design/DESIGN_DECISIONS.md D-26", "design/DESIGN_DECISIONS.md D-53", "design/DESIGN_DECISIONS.md D-54"]
+  code:
+    - packages/policy/src/catalogue.ts
+    - packages/modules/m18-community-social/src/application/matching-commands.ts
+    - apps/api/src/controllers.ts
+    - apps/web/src/components/MatchingPanel.tsx
+  tests:
+    - packages/modules/m18-community-social/test/matching.integration.test.ts
+    - apps/web/test/matching-panel.test.tsx
+  status: implemented

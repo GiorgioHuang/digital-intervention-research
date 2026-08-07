@@ -406,6 +406,11 @@ export const api = {
       severity,
       description,
     }),
+  deactivateMatching: (s: Session, confirmed: boolean) =>
+    post<{ data: { id: string; meta: { changed: boolean } } }>(s, '/v1/match-preferences/deactivate', {
+      participantId: s.participantId,
+      confirmed,
+    }),
   activateMatching: (s: Session, declaredAttributes: Record<string, unknown>, confirmed: boolean) =>
     post<{ data: { id: string } }>(s, '/v1/match-preferences', {
       participantId: s.participantId,

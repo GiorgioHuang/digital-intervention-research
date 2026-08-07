@@ -134,6 +134,7 @@ export const POLICY_V1: PolicyConfiguration = {
       'post.draft',
       'post.publish',
       'matching.activate',
+      'matching.deactivate',
       'match.decide',
       'connection.activate',
       'connection.end',
@@ -376,6 +377,13 @@ export const POLICY_V1: PolicyConfiguration = {
     'thread.view-own': {},
 
     'matching.activate': { ownerPermitted: true, ownerOnly: true, consentScopes: ['open-matching'], confirmationRequired: true },
+    /*
+     * The way out, and deliberately not gated on `open-matching`. Joining
+     * the pool needs that consent; leaving it cannot, or withdrawing the
+     * consent would lock somebody inside the thing it let them into —
+     * the same reasoning D-26 used for leaving a community.
+     */
+    'matching.deactivate': { ownerPermitted: true, ownerOnly: true, confirmationRequired: true },
     'matching.generate': {},
     'match.decide': { ownerPermitted: true, ownerOnly: true, confirmationRequired: true },
     'connection.activate': { ownerPermitted: true, confirmationRequired: true },

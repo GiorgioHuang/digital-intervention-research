@@ -14,6 +14,7 @@ export {
 export { createBlockQuery } from './infrastructure/block-query.js';
 export {
   activateMatchPreference,
+  deactivateMatchPreference,
   generateMatchCandidate,
   recordMatchDecision,
   activateConnection,

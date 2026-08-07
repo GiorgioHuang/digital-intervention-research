@@ -33,6 +33,7 @@ export function MatchingPanel({ session }: { session: Session }) {
    * step that puts somebody into the pool in the first place did not.
    */
   const [confirmingMatching, setConfirmingMatching] = useState(false);
+  const [confirmingStop, setConfirmingStop] = useState(false);
   const [announcement, setAnnouncement] = useState('');
 
   const run = async (fn: () => Promise<unknown>, done: string) => {
@@ -109,16 +110,16 @@ export function MatchingPanel({ session }: { session: Session }) {
               What you shared: {interests.trim() === '' ? 'no interests — you can add some later' : interests.trim()}
             </p>
             {/*
-              What is deliberately NOT here: a sentence saying you can
-              switch it off again. Nothing in this platform can —
-              `activateMatchPreference` inserts an Active row and no
-              command anywhere sets it to anything else. Withdrawing the
-              "Meet new people" consent stops you switching it on again
-              and nothing more, because candidate generation reads the
-              preference row rather than the consent. Saying either would
-              be a promise the platform does not keep, so the dialog says
-              neither until it does.
+              This sentence could not be written until there was a way
+              out: activateMatchPreference inserted an Active row and
+              nothing set that column to anything else, so matching was a
+              one-way door and a reassurance here would have been a
+              promise the platform did not keep.
             */}
+            <p>
+              You can switch it off again whenever you want. Nothing you have already done is undone by that — any
+              conversation you are already in stays as it is.
+            </p>
             <p>
               <button
                 onClick={() => {
@@ -137,6 +138,54 @@ export function MatchingPanel({ session }: { session: Session }) {
                 Yes, switch it on
               </button>{' '}
               <button onClick={() => setConfirmingMatching(false)}>Go back</button>
+            </p>
+          </div>
+        )}
+
+        {/*
+          The exit. Offered without first reading the current state,
+          because there is no query for it and the command is the same
+          answer either way — asking to leave something you were not in
+          should leave you out of it, not produce a correction. What
+          actually changed is reported back rather than assumed.
+        */}
+        <p>
+          <button onClick={() => setConfirmingStop(true)}>Switch off matching</button>
+        </p>
+        {confirmingStop && (
+          <div role="alertdialog" aria-labelledby="matching-stop-heading">
+            <h4 id="matching-stop-heading">Switch matching off?</h4>
+            <p>
+              You stop being suggested to anyone and nobody new is suggested to you. Nobody is told that you have done
+              this.
+            </p>
+            <p>
+              Conversations you are already in are not affected, and nothing you have already said or done is removed.
+              If you want a particular conversation to end, that is the separate step under Messages.
+            </p>
+            <p>You can switch it back on later.</p>
+            <p>
+              <button
+                onClick={() => {
+                  setConfirmingStop(false);
+                  void (async () => {
+                    try {
+                      const res = await api.deactivateMatching(session, true);
+                      setActionError(null);
+                      setAnnouncement(
+                        res.data.meta.changed
+                          ? 'Matching is off. You are not being suggested to anyone.'
+                          : 'Matching was already off. You are not being suggested to anyone.',
+                      );
+                    } catch (err) {
+                      setActionError(presentError(err));
+                    }
+                  })();
+                }}
+              >
+                Yes, switch it off
+              </button>{' '}
+              <button onClick={() => setConfirmingStop(false)}>Go back</button>
             </p>
           </div>
         )}

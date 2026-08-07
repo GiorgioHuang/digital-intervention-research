@@ -12,13 +12,19 @@ import {
   type M01Deps,
 } from '@platform/m01-identity-org';
 import { createParticipantQuery, registerParticipant, type M02Deps } from '@platform/m02-participant';
-import { createPermissionService, recordConsentDecision, type M03Deps } from '@platform/m03-consent-permission';
+import {
+  createPermissionService,
+  recordConsentDecision,
+  withdrawConsent,
+  type M03Deps,
+} from '@platform/m03-consent-permission';
 import {
   activateConnection,
   activateMatchPreference,
   createBlock,
   createBlockQuery,
   createConnectionRequest,
+  deactivateMatchPreference,
   generateMatchCandidate,
   recordMatchDecision,
   type M18Deps,
@@ -234,6 +240,59 @@ describe.skipIf(!dbAvailable)('M18 matching -> MutualAcceptance -> Connection (i
       activateConnection(m18, ctx(bAcc), { mutualAcceptanceId: ma2!, participantId: bId, confirmed: true }),
     ).rejects.toMatchObject({ code: 'MUTUAL_ACCEPTANCE_EXPIRED' });
     clock.set('2026-07-30T12:00:00Z');
+  });
+
+  /**
+   * Open Matching was a one-way door. activateMatchPreference inserted a
+   * row in state Active and no command anywhere set that column to
+   * anything else, so the screen offered "Switch on matching" and the
+   * platform had no switch. The vocabulary had been in the CHECK
+   * constraint from the first migration with nothing ever writing it.
+   */
+  it('matching can be switched off, and switching off what is already off is not an error', async () => {
+    const { matchPreferenceId } = await deactivateMatchPreference(m18, ctx(cAcc), { participantId: cId, confirmed: true });
+    expect(matchPreferenceId).not.toBeNull();
+    const row = await pool.query(
+      `SELECT preference_state FROM community_social.match_preferences WHERE participant_id = $1`,
+      [cId],
+    );
+    expect(row.rows[0].preference_state).toBe('Inactive');
+    // Out of the pool from that moment.
+    await expect(
+      generateMatchCandidate(m18, ctx(coordId), { participantAId: aId, participantBId: cId, explanation: 'x' }),
+    ).rejects.toMatchObject({ code: 'MATCHING_NOT_ACTIVE' });
+
+    // Asking to leave something you are not in leaves you out of it.
+    const again = await deactivateMatchPreference(m18, ctx(cAcc), { participantId: cId, confirmed: true });
+    expect(again.matchPreferenceId).toBeNull();
+
+    // And it can be switched back on, which the partial unique index on
+    // Active rows would have prevented had the old row stayed Active.
+    await activateMatchPreference(m18, ctx(cAcc), { participantId: cId, declaredAttributes: {}, confirmed: true });
+  });
+
+  /**
+   * The consent screen calls this scope "Meet new people", and it did not
+   * mean it after the fact: generation read the preference row and never
+   * the consent, so somebody who withdrew it stayed in the pool and went
+   * on being suggested to others. Consent is evaluated at the moment of
+   * use everywhere else in this platform, because that is the only
+   * enforcement that cannot go stale.
+   */
+  it('withdrawing the open-matching consent takes somebody out of the pool at once', async () => {
+    await withdrawConsent(m03, ctx(bAcc), {
+      participantId: bId, scope: 'open-matching', templateVersion: 'ct_v1', confirmed: true,
+    });
+    // The preference row is untouched — nothing propagated, and nothing
+    // needed to.
+    const row = await pool.query(
+      `SELECT preference_state FROM community_social.match_preferences WHERE participant_id = $1`,
+      [bId],
+    );
+    expect(row.rows[0].preference_state).toBe('Active');
+    await expect(
+      generateMatchCandidate(m18, ctx(coordId), { participantAId: aId, participantBId: bId, explanation: 'x' }),
+    ).rejects.toMatchObject({ code: 'MATCHING_NOT_ACTIVE' });
   });
 
   it('NEGATIVE ConnectionRequest is feature-disabled (ADR-029)', () => {

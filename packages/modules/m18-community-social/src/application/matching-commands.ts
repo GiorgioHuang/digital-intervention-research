@@ -5,6 +5,7 @@ import type { M18Deps } from './commands.js';
 
 const MATCHING_EVENTS = {
   MatchPreferenceActivated: 'MatchPreferenceActivated',
+  MatchPreferenceDeactivated: 'MatchPreferenceDeactivated',
   MatchCandidateGenerated: 'MatchCandidateGenerated',
   MatchDecisionRecorded: 'MatchDecisionRecorded',
   MutualAcceptanceRecorded: 'MutualAcceptanceRecorded',
@@ -73,6 +74,82 @@ export async function activateMatchPreference(
 }
 
 /**
+ * The way out of Open Matching.
+ *
+ * There was none. `activateMatchPreference` inserted a row in state
+ * Active and no command anywhere set that column to anything else, so
+ * matching was a one-way door: the screen offered "Switch on matching"
+ * and the platform had no switch. Withdrawing the `open-matching`
+ * consent did not close it either, because candidate generation reads
+ * the preference row rather than the consent — that is fixed below.
+ *
+ * Not gated on `open-matching`, deliberately. Joining the pool needs
+ * that consent; leaving it cannot need it, or withdrawing the consent
+ * would trap somebody inside the thing the consent let them into. This
+ * is the same reasoning D-26 used for leaving a community.
+ *
+ * The vocabulary was already in the database — the CHECK has allowed
+ * Inactive, Paused and Expired since the first migration and nothing had
+ * ever written any of them.
+ */
+export async function deactivateMatchPreference(
+  deps: M18Deps,
+  ctx: RequestContext,
+  input: { participantId: string; confirmed: boolean },
+): Promise<{ matchPreferenceId: string | null }> {
+  const decision = await deps.checkPermission(ctx, {
+    action: 'matching.deactivate',
+    resource: {
+      type: 'MatchPreference',
+      id: 'current',
+      state: 'Active',
+      protectedExistence: true,
+      ownerParticipantId: input.participantId,
+    },
+    confirmed: input.confirmed,
+  });
+  assertAllowed(decision, input.confirmed);
+  const now = deps.clock.now();
+  let matchPreferenceId: string | null = null;
+  await withTransaction(deps.pool, async (client) => {
+    const res = await client.query(
+      `UPDATE community_social.match_preferences
+          SET preference_state = 'Inactive', record_version = record_version + 1, updated_at = $2
+        WHERE participant_id = $1 AND preference_state = 'Active'
+        RETURNING id`,
+      [input.participantId, now],
+    );
+    matchPreferenceId = (res.rows[0]?.id as string | undefined) ?? null;
+    /*
+     * Switching off something already off is not an error to report back
+     * — telling somebody "you were not in it anyway" after they asked to
+     * leave is a worse answer than simply being out. But nothing is
+     * written down either, because nothing happened.
+     */
+    if (matchPreferenceId === null) return;
+    await appendToOutbox(client, ctx, {
+      eventCategory: 'Domain',
+      eventType: MATCHING_EVENTS.MatchPreferenceDeactivated,
+      sourceModule: 'M18',
+      aggregateType: 'MatchPreference',
+      aggregateId: matchPreferenceId,
+      occurredAt: now,
+    });
+    await recordAuditEvent(client, ctx, {
+      action: 'matching.deactivate',
+      targetType: 'MatchPreference',
+      targetId: matchPreferenceId,
+      participantId: input.participantId,
+      occurredAt: now,
+      result: 'Succeeded',
+      source: 'M18',
+      policyVersion: decision.policyVersion,
+    });
+  });
+  return { matchPreferenceId };
+}
+
+/**
  * Rule-based candidate generation (ADR-112 pending; algorithm is a stub but
  * the gates are real): both participants must have ACTIVE MatchPreferences
  * and no active Block between them — checked synchronously (fail closed).
@@ -88,6 +165,7 @@ export async function generateMatchCandidate(
   });
   assertAllowed(decision, false);
   const cfg = input.config ?? DEFAULT_MATCHING_CONFIG;
+  const now = deps.clock.now();
 
   const prefs = await deps.pool.query(
     `SELECT participant_id FROM community_social.match_preferences
@@ -95,6 +173,33 @@ export async function generateMatchCandidate(
     [[input.participantAId, input.participantBId]],
   );
   if (prefs.rowCount !== 2) {
+    throw new PlatformError('MATCHING_NOT_ACTIVE', 'Both participants must have opted into Open Matching');
+  }
+
+  /*
+   * And the consent has to still be there, read now rather than trusted
+   * from whenever the preference row was written.
+   *
+   * `matching.activate` requires `open-matching`, so nobody enters the
+   * pool without it — but the preference row outlives the consent, and
+   * this generator read only the row. Somebody who withdrew "Meet new
+   * people" therefore stayed in the pool and went on being suggested to
+   * others, which is precisely the control that consent screen claims to
+   * be. Consent is enforced at the moment of use everywhere else in this
+   * platform because that is the only enforcement that cannot go stale
+   * (D-52); it is enforced here now too.
+   */
+  const consents = await deps.pool.query(
+    `SELECT participant_id FROM consent_permission.consent_current
+      WHERE participant_id = ANY($1) AND consent_scope = 'open-matching'
+        -- The same two decisions the engine treats as permitting, and the
+        -- same treatment of expiry: an expired consent asks for re-consent
+        -- rather than standing.
+        AND decision IN ('Granted', 'Restricted')
+        AND (expires_at IS NULL OR expires_at > $2)`,
+    [[input.participantAId, input.participantBId], now],
+  );
+  if (consents.rowCount !== 2) {
     throw new PlatformError('MATCHING_NOT_ACTIVE', 'Both participants must have opted into Open Matching');
   }
   const blocks = await deps.pool.query(
@@ -108,7 +213,6 @@ export async function generateMatchCandidate(
   }
 
   const matchCandidateId = newId('mcand');
-  const now = deps.clock.now();
   await withTransaction(deps.pool, async (client) => {
     await client.query(
       `INSERT INTO community_social.match_candidates

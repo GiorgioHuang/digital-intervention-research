@@ -56,6 +56,7 @@ import {
   activateConnection,
   endConnection,
   activateMatchPreference,
+  deactivateMatchPreference,
   confirmSend,
   createBlock,
   createMessageDraft,
@@ -370,6 +371,30 @@ export class CommandController {
       confirmed: body.confirmed === true,
     });
     return { data: { type: 'MatchPreference', id: result.matchPreferenceId, meta: { state: 'Active' } } };
+  }
+
+  /**
+   * Switching Open Matching off. Not gated on the `open-matching`
+   * consent — leaving cannot need the consent that let you in, or
+   * withdrawing it would lock somebody inside.
+   */
+  @Post('match-preferences/deactivate')
+  async deactivateMatchPreference(
+    @Req() req: Request,
+    @Body() body: { participantId: string; confirmed: boolean },
+  ) {
+    const ctx = requireActor(req);
+    const result = await deactivateMatchPreference(this.deps.m18, ctx, {
+      participantId: body.participantId,
+      confirmed: body.confirmed === true,
+    });
+    return {
+      data: {
+        type: 'MatchPreference',
+        id: result.matchPreferenceId ?? 'none',
+        meta: { state: 'Inactive', changed: result.matchPreferenceId !== null },
+      },
+    };
   }
 
   @Post('match-candidates/:candidateId/decision')
