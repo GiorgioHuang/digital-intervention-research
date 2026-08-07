@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { newId, PlatformError, type Clock, type RequestContext } from '@platform/kernel';
 import { appendToOutbox, recordAuditEvent, withTransaction, type Pool } from '@platform/database';
 import { assertAllowed, type PolicyDecisionResult } from '@platform/policy';
+import type { BlobStore } from './blob-store.js';
 
 export type PermissionCheck = (
   ctx: RequestContext,
@@ -22,6 +23,12 @@ export interface StorageDeps {
   pool: Pool;
   clock: Clock;
   checkPermission: PermissionCheck;
+  /**
+   * Where the bytes go. Until this existed the pipeline wrote them into
+   * a Postgres column with no way to put them anywhere else — see
+   * blob-store.ts for what that meant and what the ordering rules are.
+   */
+  blobs: BlobStore;
 }
 
 /**
@@ -128,11 +135,15 @@ export async function completeUpload(
     throw new PlatformError('VALIDATION_ERROR', 'Uploaded size does not match the declaration');
   }
   const checksum = createHash('sha256').update(input.content).digest('hex');
+  /*
+   * Bytes first, then the record. If this write succeeds and the
+   * transaction below does not, what is left is bytes no record points
+   * at: unreachable, under an opaque identifier, and reclaimable. The
+   * other order leaves a record pointing at bytes that are not there,
+   * which is the platform saying it holds a file it does not.
+   */
+  await deps.blobs.put(input.objectId, input.content);
   await withTransaction(deps.pool, async (client) => {
-    await client.query(
-      `INSERT INTO storage_ops.simulated_blobs (object_id, content) VALUES ($1, $2)`,
-      [input.objectId, input.content],
-    );
     await client.query(
       `UPDATE storage_ops.stored_objects
           SET object_state = 'Quarantined', checksum_sha256 = $2, record_version = record_version + 1, updated_at = $3
@@ -163,9 +174,7 @@ export async function scanObject(
   input: { objectId: string },
 ): Promise<{ outcome: 'Clean' | 'Malware Detected' | 'Scan Failed' }> {
   const obj = await deps.pool.query(
-    `SELECT o.object_state, b.content FROM storage_ops.stored_objects o
-       LEFT JOIN storage_ops.simulated_blobs b ON b.object_id = o.id
-      WHERE o.id = $1`,
+    `SELECT object_state FROM storage_ops.stored_objects WHERE id = $1`,
     [input.objectId],
   );
   const row = obj.rows[0];
@@ -173,7 +182,16 @@ export async function scanObject(
   if (row.object_state !== 'Quarantined') {
     throw new PlatformError('INVALID_STATE_TRANSITION', 'Only quarantined objects are scanned');
   }
-  const text = (row.content as Buffer).toString('utf8');
+  const content = await deps.blobs.get(input.objectId);
+  /*
+   * A quarantined row whose bytes are gone is not clean and is not
+   * malware — it is a fault, and the one outcome that must never be
+   * inferred from a fault is safety.
+   */
+  if (content === null) {
+    throw new PlatformError('INTERNAL_ERROR', 'The stored bytes for this object could not be read');
+  }
+  const text = content.toString('utf8');
   const outcome: 'Clean' | 'Malware Detected' | 'Scan Failed' = text.includes(EICAR_MARKER)
     ? 'Malware Detected'
     : text.includes(SCAN_ERROR_MARKER)
@@ -190,8 +208,6 @@ export async function scanObject(
           WHERE id = $1`,
         [input.objectId, outcome, now],
       );
-      // The blob never leaves quarantine; remove it from the simulator.
-      await client.query(`DELETE FROM storage_ops.simulated_blobs WHERE object_id = $1`, [input.objectId]);
     } else {
       await client.query(
         `UPDATE storage_ops.stored_objects
@@ -210,6 +226,14 @@ export async function scanObject(
       payload: { outcome },
     });
   });
+  /*
+   * After the record, not inside it. The row already says Rejected, so
+   * nothing will serve these bytes whatever happens here; if the delete
+   * fails they are a leak to reclaim, not a file the platform is still
+   * offering. Doing it inside the transaction would mean a rollback
+   * could restore the record for bytes already gone.
+   */
+  if (outcome === 'Malware Detected') await deps.blobs.delete(input.objectId);
   return { outcome };
 }
 

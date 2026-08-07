@@ -1,4 +1,11 @@
 export * from './contracts/index.js';
+export {
+  createBlobStore,
+  createPostgresBlobStore,
+  createR2BlobStore,
+  type BlobStore,
+  type R2Settings,
+} from './application/blob-store.js';
 export { createProviderSimulator, handleProviderCallback, signCallback } from './application/provider-adapter.js';
 export {
   initiateUpload,

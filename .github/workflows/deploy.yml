@@ -83,7 +83,7 @@ jobs:
           NUM=$(gcloud projects describe "$PROJECT" --format='value(projectNumber)' 2>/dev/null || true)
           [ -z "$NUM" ] && { echo "::warning::could not resolve project number; skipping secret IAM"; exit 0; }
           RUNTIME_SA="${NUM}-compute@developer.gserviceaccount.com"
-          for S in HADI_DATABASE_URL HADI_ACCESS_TOKEN; do
+          for S in HADI_DATABASE_URL HADI_ACCESS_TOKEN HADI_R2_ACCESS_KEY_ID HADI_R2_SECRET_ACCESS_KEY; do
             if gcloud secrets describe "$S" --project "$PROJECT" >/dev/null 2>&1; then
               gcloud secrets add-iam-policy-binding "$S" --project "$PROJECT" \
                 --member "serviceAccount:${RUNTIME_SA}" \
@@ -109,7 +109,24 @@ jobs:
             AUTH_FLAG="--no-allow-unauthenticated"
             echo "::notice::HADI_ACCESS_TOKEN secret not found — deploying with IAM-only ingress (fail closed). Create the secret to open the token-gated public URL."
           fi
+          # Object storage (Cloudflare R2, S3-compatible). All four
+          # settings or none: the platform refuses to start on a partial
+          # configuration rather than writing participants' files into a
+          # Postgres column, so this block must never attach some of them.
+          # The account id and bucket are not secret; the key pair is.
+          R2_PRESENT=true
+          for S in HADI_R2_ACCESS_KEY_ID HADI_R2_SECRET_ACCESS_KEY; do
+            gcloud secrets describe "$S" --project "$PROJECT" >/dev/null 2>&1 || R2_PRESENT=false
+          done
+          [ -n "${{ vars.R2_ACCOUNT_ID }}" ] && [ -n "${{ vars.R2_BUCKET }}" ] || R2_PRESENT=false
           ENVVARS="AUTH_MODE=dev-header,WEB_DIST_DIR=/app/apps/web/dist,RUN_JOBS=${{ vars.RUN_JOBS || 'true' }},COMMIT_SHA=${{ github.event.workflow_run.head_sha || github.sha }}"
+          if [ "$R2_PRESENT" = true ]; then
+            SECRETS="$SECRETS,R2_ACCESS_KEY_ID=HADI_R2_ACCESS_KEY_ID:latest,R2_SECRET_ACCESS_KEY=HADI_R2_SECRET_ACCESS_KEY:latest"
+            ENVVARS="$ENVVARS,R2_ACCOUNT_ID=${{ vars.R2_ACCOUNT_ID }},R2_BUCKET=${{ vars.R2_BUCKET }}"
+            echo "::notice::R2 configured — uploaded bytes go to the object store."
+          else
+            echo "::notice::R2 not configured — uploaded bytes stay in the Postgres simulator. Set the R2_ACCOUNT_ID and R2_BUCKET variables and the HADI_R2_ACCESS_KEY_ID and HADI_R2_SECRET_ACCESS_KEY secrets to use the object store." 
+          fi
           # Real Knowledge Graph integration (ADR-052/110): the deployed
           # platform talks to the live MCP endpoint.
           ENVVARS="$ENVVARS,KNOWLEDGE_PLATFORM_MODE=mcp,KNOWLEDGE_MCP_URL=${{ vars.KNOWLEDGE_MCP_URL || 'https://knowledge-graph.internal.example' }}"

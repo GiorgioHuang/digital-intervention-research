@@ -1261,3 +1261,20 @@
     - packages/database/test/audited-commands.test.ts
     - apps/web/test/audit-access.test.tsx
   status: implemented
+
+- implementation_id: IMP-M16-BLOB-STORE-PORT-R2-001
+  module: M16
+  summary: Uploaded bytes had nowhere to go. Every part of the quarantine pipeline was real - the release gate is a database CHECK constraint and a failed scan can never yield Available - and underneath it a participant's photograph would have gone into a bytea column in the platform's own Postgres, which the migration that created it says outright is a simulator pending a real vendor. The owner ruled Cloudflare R2, against my recommendation of Google Cloud Storage on the grounds that the platform already runs on GCP with workload identity federation and so needs no long-lived credentials and no second processor of personal data. The cost of R2 is a key pair in Secret Manager and a second data-processing relationship to document, both of which are the owner's to carry, and the ruling is implemented as given. A BlobStore port now sits between the pipeline and the bytes, with two adapters - the Postgres simulator, unchanged in behaviour and describing itself as not an object store, and R2 over its S3-compatible API. Two rules hold whichever is behind it. Bytes are written before the record and deleted after it, so a failure leaves bytes no record points at - unreachable, under an opaque identifier and reclaimable - rather than a record pointing at bytes that are not there, which is the platform saying it holds a file it does not. And a half-configured store is a startup failure rather than a fallback, because silently writing participants' files into a database column when one environment variable is missing is the quiet wrong answer this platform exists to refuse. The deploy workflow attaches all four settings or none, and that is read out of the workflow by a test rather than assumed, since the script that assembles the arguments is where the rule is most likely to be broken. A missing object reports as an absence and any other failure as a failure, so a network fault is never presented as the participant never having uploaded anything. No interface is built - D-50's other half is unchanged, since ownership is recorded on the object side, the life story holds no reference back and no query lists objects by owning resource, so upload alone would still be handing somebody a photograph they can never see again. Nor may any screen say a file was scanned for viruses - changing where the bytes live does not change that the scanner recognises only the EICAR test string
+  trace_ids: [ATR-013]
+  adr_ids: [ADR-020]
+  docs: ["design/DESIGN_DECISIONS.md D-50", "design/DESIGN_DECISIONS.md D-58"]
+  code:
+    - packages/modules/m16-integration/src/application/blob-store.ts
+    - packages/modules/m16-integration/src/application/storage-pipeline.ts
+    - apps/api/src/app.module.ts
+    - apps/worker/src/main.ts
+    - .github/workflows/deploy.yml
+  tests:
+    - packages/modules/m16-integration/test/blob-store.test.ts
+    - packages/modules/m16-integration/test/storage-pipeline.integration.test.ts
+  status: implemented

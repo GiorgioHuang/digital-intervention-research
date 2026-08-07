@@ -8,6 +8,7 @@ import { createParticipantQuery } from '@platform/m02-participant';
 import { createPermissionService } from '@platform/m03-consent-permission';
 import { createProtocolVersionQuery } from '@platform/m04-research-design';
 import { createKnowledgePlatformMcpClient, createKnowledgePlatformSimulator } from '@platform/m10-evidence';
+import { createBlobStore } from '@platform/m16-integration';
 import { createBlockQuery } from '@platform/m18-community-social';
 import type { ApiConfig } from './config.js';
 import { HealthController, PG_POOL } from './health.controller.js';
@@ -60,7 +61,7 @@ export function buildAppModule(config: ApiConfig) {
     m13: moduleDeps,
     m14: moduleDeps,
     m15: moduleDeps,
-    m16storage: moduleDeps,
+    m16storage: { ...moduleDeps, blobs: createBlobStore(process.env, pool) },
     m17: moduleDeps,
     m18: { ...moduleDeps, participants: createParticipantQuery(pool) },
   };

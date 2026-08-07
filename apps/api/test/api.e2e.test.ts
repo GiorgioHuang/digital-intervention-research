@@ -8,7 +8,7 @@ import { POLICY_V1 } from '@platform/policy';
 import { assignRole, createOrganisation, createRoleAssignmentQuery, createUserAccount, seedBootstrapAdministrator } from '@platform/m01-identity-org';
 import { createParticipantQuery, registerParticipant } from '@platform/m02-participant';
 import { approveRelationship, createPermissionService, proposeRelationship } from '@platform/m03-consent-permission';
-import { scanPendingObjects } from '@platform/m16-integration';
+import { createPostgresBlobStore, scanPendingObjects } from '@platform/m16-integration';
 import { buildAppModule } from '../src/app.module.js';
 
 const DATABASE_URL =
@@ -446,7 +446,7 @@ describe.skipIf(!dbAvailable)('HTTP API (e2e)', () => {
     // The scan is the worker's job; trigger the same sweep directly.
     const clock = new FixedClock('2026-07-31T12:00:00Z');
     await scanPendingObjects(
-      { pool, clock, checkPermission: () => { throw new Error('sweeps hold no authority'); } },
+      { pool, clock, blobs: createPostgresBlobStore(pool), checkPermission: () => { throw new Error('sweeps hold no authority'); } },
       createRequestContext({ actor: { type: 'service-account', id: 'sa_scheduler' }, purposeCode: 'platform-maintenance' }),
     );
 

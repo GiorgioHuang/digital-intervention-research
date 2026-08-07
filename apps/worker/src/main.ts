@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { createPool, recoverStalePublishing, withTransaction } from '@platform/database';
 import { PlatformError, SystemClock, createRequestContext, redact } from '@platform/kernel';
 import { expireRelationships } from '@platform/m03-consent-permission';
-import { scanPendingObjects } from '@platform/m16-integration';
+import { createBlobStore, scanPendingObjects } from '@platform/m16-integration';
 import {
   expireMatchCandidates,
   expireMutualAcceptances,
@@ -60,6 +60,13 @@ async function main(): Promise<void> {
       actor: { type: 'service-account', id: 'sa_scheduler' },
       purposeCode: 'platform-maintenance',
     });
+  /*
+   * Where uploaded bytes live. Refuses to start on a half-configured
+   * object store rather than quietly writing files into the database.
+   */
+  const blobs = createBlobStore(process.env, pool);
+  logger.info({ blobStore: blobs.description }, 'object storage');
+
   const sweepDeps = {
     pool,
     clock,
@@ -96,7 +103,7 @@ async function main(): Promise<void> {
     if (reconciled > 0) logger.warn({ reconciled }, 'messages moved to Delivery Unknown (never assumed delivered)');
   });
   await boss.work('object-scan', async () => {
-    const { scanned } = await scanPendingObjects(sweepDeps, sweepCtx());
+    const { scanned } = await scanPendingObjects({ ...sweepDeps, blobs }, sweepCtx());
     if (scanned > 0) logger.info({ scanned }, 'quarantined objects scanned');
   });
   await boss.work('outbox-stale-recovery', async () => {

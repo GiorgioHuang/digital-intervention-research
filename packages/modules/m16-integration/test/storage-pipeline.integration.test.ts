@@ -16,6 +16,7 @@ import { createPermissionService } from '@platform/m03-consent-permission';
 import {
   assertObjectSendable,
   completeUpload,
+  createPostgresBlobStore,
   DEFAULT_STORAGE_CONFIG,
   EICAR_MARKER,
   getObjectStatus,
@@ -73,7 +74,7 @@ describe.skipIf(!dbAvailable)('object-storage quarantine pipeline (integration)'
     });
     const checkPermission = permissions.evaluate.bind(permissions);
     const m01: M01Deps = { pool, clock, checkPermission };
-    storage = { pool, clock, checkPermission };
+    storage = { pool, clock, checkPermission, blobs: createPostgresBlobStore(pool) };
 
     const { userAccountId: adminId } = await seedBootstrapAdministrator(pool, clock, { displayName: 'Admin' });
     const { organisationId } = await createOrganisation(m01, ctx(adminId), { name: 'Storage Org' });
