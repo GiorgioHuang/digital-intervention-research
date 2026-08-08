@@ -298,8 +298,17 @@ export function MyLifeStory({ session }: { session: Session }) {
             — anything else has not been accepted yet, and showing it
             would say the entry holds something it does not.
           */}
-          {item.itemState !== 'Withdrawn' && (
-            <div>
+          {/*
+            Shown on a withdrawn entry too, and this matters. The screen
+            tells its owner a withdrawn entry is kept for them to read —
+            hiding its photographs would take them away without saying
+            so, and the remove control lives in here, so hiding it would
+            put the pictures beyond reach again for exactly the people
+            who had decided they wanted the entry private. What is not
+            offered is adding: a withdrawn entry refuses every other
+            change, and the server refuses this one too.
+          */}
+          <div>
               <h3>Photographs on this entry</h3>
               {files[item.itemId] === undefined ? (
                 <p>
@@ -320,18 +329,22 @@ export function MyLifeStory({ session }: { session: Session }) {
                   ))}
                 </ul>
               )}
-              <p>
-                <label htmlFor={`file-${item.itemId}`}>Add a photograph to this entry</label>{' '}
-                <input
-                  id={`file-${item.itemId}`}
-                  type="file"
-                  disabled={uploading !== null}
-                  onChange={(e) => {
-                    const chosen = e.target.files?.[0];
-                    if (chosen !== undefined) void attach(item.itemId, chosen);
-                  }}
-                />
-              </p>
+              {item.itemState === 'Withdrawn' ? (
+                <p>You withdrew this entry, so nothing more can be added to it. What is already here stays, and you can still remove any of it.</p>
+              ) : (
+                <p>
+                  <label htmlFor={`file-${item.itemId}`}>Add a photograph to this entry</label>{' '}
+                  <input
+                    id={`file-${item.itemId}`}
+                    type="file"
+                    disabled={uploading !== null}
+                    onChange={(e) => {
+                      const chosen = e.target.files?.[0];
+                      if (chosen !== undefined) void attach(item.itemId, chosen);
+                    }}
+                  />
+                </p>
+              )}
               {/*
                 What this platform can and cannot say about a file. The
                 checker recognises a test string, not real malware
@@ -343,8 +356,7 @@ export function MyLifeStory({ session }: { session: Session }) {
                   this platform has no way to share a photograph with anyone, not even a supporter.
                 </small>
               </p>
-            </div>
-          )}
+          </div>
           {/*
             Not offered on a withdrawn item: the command refuses it, and a
             control that cannot work is the same defect as one that does

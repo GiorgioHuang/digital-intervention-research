@@ -1375,3 +1375,17 @@
     - apps/web/test/my-life-story.test.tsx
     - apps/web/test/confirmation-tier.test.ts
   status: implemented
+
+- implementation_id: IMP-M17-WITHDRAWN-ENTRY-KEEPS-ITS-PHOTOGRAPHS-001
+  module: M17
+  summary: Withdrawing a life-story entry hid the photographs attached to it and made them undeletable. The screen tells its owner a withdrawn entry is private, that nobody else can reach it, and that it is kept there for them to read. The attachment block added in the previous increment was rendered only for entries that were not withdrawn, so withdrawing one took its pictures off the screen without saying so - and the remove control lives inside that block, which put those pictures beyond deletion as well. The door closed an increment earlier reopened for everybody who chose to make an entry private, which is to say for exactly the people who had just expressed a wish for more privacy rather than less. A withdrawn entry now lists its photographs as before and can still remove them. What it does not offer is adding, because a withdrawn entry refuses every other change - it cannot be revised and its testimony cannot be confirmed - and the screen has never said it was still open to additions. The server refuses it too rather than relying on the screen, reading the entry's state inside initiateUpload by direct query the way delivery and assessment read an enrolment's state, since use-time evaluation is the mechanism this platform has and nothing propagates. Attaching to an entry that does not exist is refused on the same path, because handing a photograph to a place that is not there is handing it nowhere. The wording states both halves - nothing more can be added, what is already there stays and can still be removed
+  trace_ids: [ATR-007, ATR-014]
+  adr_ids: [ADR-023]
+  docs: ["design/DESIGN_DECISIONS.md D-63", "design/DESIGN_DECISIONS.md D-64", "design/DESIGN_DECISIONS.md D-65"]
+  code:
+    - packages/modules/m16-integration/src/application/storage-pipeline.ts
+    - apps/web/src/components/MyLifeStory.tsx
+  tests:
+    - packages/modules/m16-integration/test/storage-pipeline.integration.test.ts
+    - apps/web/test/my-life-story.test.tsx
+  status: implemented

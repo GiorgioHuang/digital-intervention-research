@@ -46,7 +46,7 @@ function stubFetch(body: unknown) {
  * so a single canned body cannot serve both — a stub that returned the
  * life story for every GET would make the file list look populated.
  */
-function stubWithFiles(files: unknown[]) {
+function stubWithFiles(files: unknown[], only?: unknown) {
   const calls: { path: string; method: string; body: Record<string, unknown> }[] = [];
   vi.stubGlobal(
     'fetch',
@@ -61,7 +61,7 @@ function stubWithFiles(files: unknown[]) {
         return new Response(JSON.stringify({ data: files }), { status: 200 });
       }
       if (method === 'GET') {
-        return new Response(JSON.stringify({ data: [item()], meta: { archiveId: 'ar_1' } }), { status: 200 });
+        return new Response(JSON.stringify({ data: [only ?? item()], meta: { archiveId: 'ar_1' } }), { status: 200 });
       }
       return new Response(JSON.stringify({ data: { id: 'obj_1' } }), { status: 201 });
     }),
@@ -417,5 +417,39 @@ describe('a participant reading their own life story', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Keep it' }));
     expect(screen.queryByRole('alertdialog')).toBeNull();
     expect(calls.some((c) => c.path.includes('/delete'))).toBe(false);
+  });
+
+  /**
+   * Withdrawing an entry must not take its photographs out of reach.
+   *
+   * The screen tells its owner a withdrawn entry is private and kept for
+   * them to read. Hiding the attachment block on a withdrawn entry took
+   * the pictures away without saying so — and the remove control lives
+   * inside that block, so it also put them beyond deletion, for exactly
+   * the people who had just decided they wanted the entry private. That
+   * is the one-way door again, on the same increment that closed it.
+   */
+  it('a withdrawn entry still shows its photographs, and can still remove them', async () => {
+    stubWithFiles(
+      [
+        { id: 'obj_1', attributes: {
+          objectId: 'obj_1', declaredContentType: 'image/jpeg', declaredSizeBytes: 2048,
+          objectState: 'Available', dataClassification: 'Sensitive-Personal', createdAt: '2026-08-07T00:00:00Z',
+        } },
+      ],
+      item({ itemState: 'Withdrawn' }),
+    );
+    await act(async () => {
+      render(<MyLifeStory session={session} />);
+    });
+    await act(async () => {
+      fireEvent.click(screen.getAllByRole('button', { name: 'Show photographs on this entry' })[0]!);
+    });
+    expect(screen.getAllByRole('button', { name: 'Remove this photograph' }).length).toBeGreaterThan(0);
+    // Adding is not offered, because a withdrawn entry refuses every
+    // other change and the server refuses this one too.
+    expect(screen.queryByLabelText('Add a photograph to this entry')).toBeNull();
+    expect(screen.getByText(/nothing more can be added to it/i)).toBeTruthy();
+    expect(screen.getByText(/you can still remove any of it/i)).toBeTruthy();
   });
 });

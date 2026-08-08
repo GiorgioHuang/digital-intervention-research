@@ -54,6 +54,24 @@ describe.skipIf(!dbAvailable)('object-storage quarantine pipeline (integration)'
   const sysCtx = () =>
     createRequestContext({ actor: { type: 'service-account', id: 'sa_scheduler' }, purposeCode: 'platform-maintenance' });
 
+  /*
+   * Attaching now requires the entry to exist and to still accept
+   * additions, so these tests make real ones rather than inventing
+   * identifiers — the guard is the point, not an obstacle to work round.
+   */
+  const entry = async (id: string, state = 'Active') => {
+    await pool.query(
+      `INSERT INTO life_story.archives (id, participant_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+      ['ar_storage', patId],
+    );
+    await pool.query(
+      `INSERT INTO life_story.items (id, archive_id, title, item_state) VALUES ($1, 'ar_storage', $2, $3)
+       ON CONFLICT (id) DO NOTHING`,
+      [id, `Entry ${id}`, state],
+    );
+    return id;
+  };
+
   const upload = async (content: Buffer, contentType = 'text/plain') => {
     const { objectId } = await initiateUpload(storage, ctx(patAcc), cfg, {
       ownerParticipantId: patId,
@@ -185,7 +203,7 @@ describe.skipIf(!dbAvailable)('object-storage quarantine pipeline (integration)'
       ownerParticipantId: patId,
       declaredContentType: 'text/plain',
       declaredSizeBytes: 5,
-      attachTo: { owningResourceType: 'LifeStoryItem', owningResourceId: 'lsi_one_step' },
+      attachTo: { owningResourceType: 'LifeStoryItem', owningResourceId: await entry('lsi_one_step') },
     });
     await completeUpload(storage, ctx(patAcc), { objectId, content: Buffer.from('hello') });
 
@@ -215,7 +233,7 @@ describe.skipIf(!dbAvailable)('object-storage quarantine pipeline (integration)'
       ownerParticipantId: patId,
       declaredContentType: 'text/plain',
       declaredSizeBytes: EICAR_MARKER.length,
-      attachTo: { owningResourceType: 'LifeStoryItem', owningResourceId: 'lsi_bad' },
+      attachTo: { owningResourceType: 'LifeStoryItem', owningResourceId: await entry('lsi_bad') },
     });
     await completeUpload(storage, ctx(patAcc), { objectId, content: Buffer.from(EICAR_MARKER) });
     await scanPendingObjects(storage, sysCtx(), cfg);
@@ -310,7 +328,7 @@ describe.skipIf(!dbAvailable)('object-storage quarantine pipeline (integration)'
       ownerParticipantId: patId,
       declaredContentType: 'text/plain',
       declaredSizeBytes: 5,
-      attachTo: { owningResourceType: 'LifeStoryItem', owningResourceId: 'lsi_remove' },
+      attachTo: { owningResourceType: 'LifeStoryItem', owningResourceId: await entry('lsi_remove') },
     });
     await completeUpload(storage, ctx(patAcc), { objectId, content: Buffer.from('hello') });
     await scanPendingObjects(storage, sysCtx(), cfg);
@@ -340,6 +358,37 @@ describe.skipIf(!dbAvailable)('object-storage quarantine pipeline (integration)'
 
     // Asking twice is not an error; the answer is the same either way.
     await deleteObject(storage, ctx(patAcc), { objectId, confirmed: true });
+  });
+
+  /**
+   * A withdrawn entry refuses every other change — it cannot be revised,
+   * and its testimony cannot be confirmed — while nothing stopped a
+   * photograph being attached to one. The screen tells the participant a
+   * withdrawn entry is kept for them to read, not that it is still open
+   * for additions.
+   */
+  it('refuses to attach to a withdrawn entry, and says what stays', async () => {
+    await entry('lsi_withdrawn', 'Withdrawn');
+    await expect(
+      initiateUpload(storage, ctx(patAcc), cfg, {
+        ownerParticipantId: patId,
+        declaredContentType: 'text/plain',
+        declaredSizeBytes: 5,
+        attachTo: { owningResourceType: 'LifeStoryItem', owningResourceId: 'lsi_withdrawn' },
+      }),
+    ).rejects.toMatchObject({ code: 'RESOURCE_STATE_BLOCKED' });
+  });
+
+  /** An entry that does not exist is not a place to put a photograph. */
+  it('refuses to attach to an entry that is not there', async () => {
+    await expect(
+      initiateUpload(storage, ctx(patAcc), cfg, {
+        ownerParticipantId: patId,
+        declaredContentType: 'text/plain',
+        declaredSizeBytes: 5,
+        attachTo: { owningResourceType: 'LifeStoryItem', owningResourceId: 'lsi_nowhere' },
+      }),
+    ).rejects.toMatchObject({ code: 'RESOURCE_NOT_FOUND' });
   });
 
   /** Destroying somebody's photograph is not something a click may do alone. */

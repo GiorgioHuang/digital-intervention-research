@@ -107,6 +107,35 @@ export async function initiateUpload(
     throw new PlatformError('UNSUPPORTED_CAPABILITY', 'No classification policy for this resource type');
   }
 
+  /*
+   * And the thing it is going onto has to still accept it.
+   *
+   * A withdrawn life-story entry refuses every other change — it cannot
+   * be revised, and its testimony cannot be confirmed — while nothing
+   * stopped a photograph being attached to one. The screen tells the
+   * participant a withdrawn entry is kept for them to read, not that it
+   * is still open for additions, and the platform should not be quietly
+   * more permissive than what it says.
+   *
+   * Read at the moment of the write and by direct query, the way M07 and
+   * M08 read an enrolment's state (D-52): use-time evaluation is the
+   * mechanism this platform has, and nothing propagates.
+   */
+  if (input.attachTo?.owningResourceType === 'LifeStoryItem') {
+    const item = await deps.pool.query(
+      `SELECT item_state FROM life_story.items WHERE id = $1`,
+      [input.attachTo.owningResourceId],
+    );
+    const state = (item.rows[0] as { item_state: string } | undefined)?.item_state;
+    if (state === undefined) throw new PlatformError('RESOURCE_NOT_FOUND', 'That entry does not exist');
+    if (['Withdrawn', 'Deleted', 'Archived'].includes(state)) {
+      throw new PlatformError(
+        'RESOURCE_STATE_BLOCKED',
+        'This entry has been withdrawn; nothing further can be added to it. What is already on it stays.',
+      );
+    }
+  }
+
   const objectId = newId('obj');
   const now = deps.clock.now();
   await withTransaction(deps.pool, async (client) => {
