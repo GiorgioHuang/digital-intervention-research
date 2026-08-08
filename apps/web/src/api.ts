@@ -325,6 +325,12 @@ export const api = {
     await post(s, `/v1/objects/${started.data.id}/content`, { contentBase64: btoa(binary) });
     return started.data.id;
   },
+  /**
+   * Taking a photograph back. Confirmation-tier and irreversible: the
+   * bytes go, and what remains says a file was added and removed.
+   */
+  removeFile: (s: Session, objectId: string) =>
+    post(s, `/v1/objects/${objectId}/delete`, { confirmed: true }),
   listLifeStoryItemFiles: (s: Session, itemId: string) =>
     get<{ data: { id: string; attributes: AttachedFile }[] }>(
       s,

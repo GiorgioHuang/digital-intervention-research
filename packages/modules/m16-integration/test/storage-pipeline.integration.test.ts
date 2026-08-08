@@ -17,6 +17,7 @@ import {
   assertObjectSendable,
   completeUpload,
   createPostgresBlobStore,
+  deleteObject,
   DEFAULT_STORAGE_CONFIG,
   EICAR_MARKER,
   getObjectStatus,
@@ -296,6 +297,58 @@ describe.skipIf(!dbAvailable)('object-storage quarantine pipeline (integration)'
       objectId: pending, owningResourceType: 'LifeStoryItem', owningResourceId: 'lsi_read_3',
     });
     expect((await ask()).map((a) => a.objectId)).toEqual([pending]);
+  });
+
+  /**
+   * Taking a photograph back. 'Deleted' has been in the CHECK constraint
+   * since the first migration with nothing ever writing it, so an
+   * attached file was a one-way door — and only became reachable when
+   * the screen for adding one existed.
+   */
+  it('an owner can remove a photograph: the bytes go, the fact that it existed stays', async () => {
+    const { objectId } = await initiateUpload(storage, ctx(patAcc), cfg, {
+      ownerParticipantId: patId,
+      declaredContentType: 'text/plain',
+      declaredSizeBytes: 5,
+      attachTo: { owningResourceType: 'LifeStoryItem', owningResourceId: 'lsi_remove' },
+    });
+    await completeUpload(storage, ctx(patAcc), { objectId, content: Buffer.from('hello') });
+    await scanPendingObjects(storage, sysCtx(), cfg);
+    expect(
+      (await listObjectsForResource(storage, ctx(patAcc), {
+        ownerParticipantId: patId, owningResourceType: 'LifeStoryItem', owningResourceId: 'lsi_remove',
+      })).length,
+    ).toBe(1);
+
+    await deleteObject(storage, ctx(patAcc), { objectId, confirmed: true });
+
+    // Gone from the entry, and the bytes are gone from the store.
+    expect(
+      await listObjectsForResource(storage, ctx(patAcc), {
+        ownerParticipantId: patId, owningResourceType: 'LifeStoryItem', owningResourceId: 'lsi_remove',
+      }),
+    ).toEqual([]);
+    expect(await storage.blobs.get(objectId)).toBeNull();
+
+    // The row stays. Erasing the fact that anything happened is not the
+    // platform's to do quietly — what remains holds no photograph.
+    const row = await pool.query(
+      `SELECT object_state, owning_resource_id FROM storage_ops.stored_objects WHERE id = $1`,
+      [objectId],
+    );
+    expect(row.rows[0]).toMatchObject({ object_state: 'Deleted', owning_resource_id: null });
+
+    // Asking twice is not an error; the answer is the same either way.
+    await deleteObject(storage, ctx(patAcc), { objectId, confirmed: true });
+  });
+
+  /** Destroying somebody's photograph is not something a click may do alone. */
+  it('removal is refused without a confirmation, and to anyone but the owner', async () => {
+    const objectId = await upload(Buffer.from('mine'));
+    await expect(deleteObject(storage, ctx(patAcc), { objectId, confirmed: false })).rejects.toBeDefined();
+    await expect(deleteObject(storage, ctx(otherAcc), { objectId, confirmed: true })).rejects.toBeDefined();
+    const row = await pool.query(`SELECT object_state FROM storage_ops.stored_objects WHERE id = $1`, [objectId]);
+    expect(row.rows[0].object_state).not.toBe('Deleted');
   });
 
   it('malware is rejected and the blob is purged; scan failure never means safe', async () => {

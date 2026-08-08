@@ -81,6 +81,13 @@ export function MyLifeStory({ session }: { session: Session }) {
    */
   const [files, setFiles] = useState<Record<string, AttachedFile[]>>({});
   const [uploading, setUploading] = useState<string | null>(null);
+  /*
+   * Taking a photograph back. `object_state` has allowed 'Deleted' since
+   * the first migration and nothing wrote it, so until now a participant
+   * could add a picture of their life and had no way to remove it — and
+   * nothing made that reachable until the screen above existed.
+   */
+  const [removing, setRemoving] = useState<{ itemId: string; objectId: string } | null>(null);
 
   const load = async () => {
     try {
@@ -116,6 +123,18 @@ export function MyLifeStory({ session }: { session: Session }) {
    * platform's checker recognises a test string rather than real
    * malware, so nothing here says the file was scanned for viruses.
    */
+  const remove = async (itemId: string, objectId: string) => {
+    setRemoving(null);
+    try {
+      await api.removeFile(session, objectId);
+      setActionError(null);
+      setAnnouncement('The photograph is gone. Your entry is unchanged.');
+      await loadFiles(itemId);
+    } catch (err) {
+      setActionError(presentError(err));
+    }
+  };
+
   const attach = async (itemId: string, file: File) => {
     setUploading(itemId);
     try {
@@ -293,7 +312,10 @@ export function MyLifeStory({ session }: { session: Session }) {
                   {files[item.itemId]!.map((f) => (
                     <li key={f.objectId}>
                       {f.declaredContentType} · {Math.max(1, Math.round(f.declaredSizeBytes / 1024))} KB · added{' '}
-                      {new Date(f.createdAt).toLocaleDateString()}
+                      {new Date(f.createdAt).toLocaleDateString()}{' '}
+                      <button onClick={() => setRemoving({ itemId: item.itemId, objectId: f.objectId })}>
+                        Remove this photograph
+                      </button>
                     </li>
                   ))}
                 </ul>
@@ -439,6 +461,28 @@ export function MyLifeStory({ session }: { session: Session }) {
       ))}
 
       {actionError !== null && <ErrorState error={actionError} />}
+      {removing !== null && (
+        <div role="alertdialog" aria-labelledby="remove-file-confirm">
+          <h3 id="remove-file-confirm">Remove this photograph?</h3>
+          {/*
+            What is destroyed and what is not, said before it happens.
+            The bytes go and cannot be brought back; the row saying a
+            file was added and removed stays, because quietly erasing the
+            fact that anything happened is not the platform's to do.
+          */}
+          <p>
+            The photograph itself is deleted and cannot be brought back — not by you, and not by anyone here.
+          </p>
+          <p>
+            Your entry and everything you wrote are untouched. A note that you added a file and removed it stays in
+            the account of what happened to your record; that note holds no photograph.
+          </p>
+          <p>
+            <button onClick={() => void remove(removing.itemId, removing.objectId)}>Yes, remove it</button>{' '}
+            <button onClick={() => setRemoving(null)}>Keep it</button>
+          </p>
+        </div>
+      )}
       <p aria-live="polite" role="status">
         {announcement}
       </p>

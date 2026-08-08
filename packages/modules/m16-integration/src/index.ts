@@ -15,6 +15,7 @@ export {
   releaseObject,
   getObjectStatus,
   listObjectsForResource,
+  deleteObject,
   assertObjectSendable,
   DEFAULT_STORAGE_CONFIG,
   EICAR_MARKER,

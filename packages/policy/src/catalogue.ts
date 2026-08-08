@@ -144,6 +144,7 @@ export const POLICY_V1: PolicyConfiguration = {
       'object.upload',
       'object.assign',
       'object.view-own',
+      'object.delete-own',
     ],
     Supporter: [
       'participant.view-shared',
@@ -223,6 +224,15 @@ export const POLICY_V1: PolicyConfiguration = {
      * about what somebody did.
      */
     'object.view-own': { ownerPermitted: true, ownerOnly: true },
+    /*
+     * Taking a photograph back. `object_state` has allowed 'Deleted'
+     * since the first migration and nothing ever wrote it, so a
+     * participant could attach a picture of their life and had no way to
+     * remove it — the same one-way door D-54 found in matching, on
+     * something more personal. In the confirmation tier because it
+     * destroys the bytes and cannot be undone.
+     */
+    'object.delete-own': { ownerPermitted: true, ownerOnly: true, confirmationRequired: true },
     'moderation-queue.view': {},
     'contribution.view-own': {},
 

@@ -471,6 +471,81 @@ export async function listObjectsForResource(
   }));
 }
 
+/**
+ * Taking a photograph back.
+ *
+ * `object_state` has allowed 'Deleted' since the first migration and no
+ * code ever wrote it. So a participant could attach a picture to their
+ * life story and had no way to remove it — a one-way door, on something
+ * more personal than the one D-54 found in matching. Nothing made that
+ * reachable until the screen for adding a photograph existed, which is
+ * the increment immediately before this one.
+ *
+ * The bytes go; the row stays. What remains says a file was added and
+ * removed and holds no photograph — deleting the row too would erase
+ * the fact that anything ever happened, and the account of what happened
+ * to somebody's record is not the platform's to quietly edit.
+ *
+ * Record first, then bytes, for the reason the whole pipeline follows:
+ * a failure after the commit leaves bytes nothing points at, and the
+ * other order would leave a record pointing at bytes that are gone.
+ */
+export async function deleteObject(
+  deps: StorageDeps,
+  ctx: RequestContext,
+  input: { objectId: string; confirmed: boolean },
+): Promise<void> {
+  const res = await deps.pool.query(
+    `SELECT object_state, owner_participant_id FROM storage_ops.stored_objects WHERE id = $1`,
+    [input.objectId],
+  );
+  const row = res.rows[0] as { object_state: string; owner_participant_id: string } | undefined;
+  if (row === undefined) throw new PlatformError('RESOURCE_NOT_FOUND', 'Object not found');
+  const decision = await deps.checkPermission(ctx, {
+    action: 'object.delete-own',
+    resource: {
+      type: 'StoredObject',
+      id: input.objectId,
+      state: row.object_state,
+      protectedExistence: true,
+      ownerParticipantId: row.owner_participant_id,
+    },
+    confirmed: input.confirmed,
+  });
+  assertAllowed(decision, input.confirmed);
+  if (row.object_state === 'Deleted') return; // Already gone; saying so twice helps nobody.
+
+  const now = deps.clock.now();
+  await withTransaction(deps.pool, async (client) => {
+    await client.query(
+      `UPDATE storage_ops.stored_objects
+          SET object_state = 'Deleted', owning_resource_type = NULL, owning_resource_id = NULL,
+              record_version = record_version + 1, updated_at = $2
+        WHERE id = $1`,
+      [input.objectId, now],
+    );
+    await appendToOutbox(client, ctx, {
+      eventCategory: 'Operational',
+      eventType: 'ObjectDeleted',
+      sourceModule: 'M16',
+      aggregateType: 'StoredObject',
+      aggregateId: input.objectId,
+      occurredAt: now,
+    });
+    await recordAuditEvent(client, ctx, {
+      action: 'object.delete-own',
+      targetType: 'StoredObject',
+      targetId: input.objectId,
+      participantId: row.owner_participant_id,
+      occurredAt: now,
+      result: 'Succeeded',
+      source: 'M16',
+      policyVersion: decision.policyVersion,
+    });
+  });
+  await deps.blobs.delete(input.objectId);
+}
+
 /** Attachment gate (Doc 15 §58.4): anything short of Available refuses. */
 export async function assertObjectSendable(deps: StorageDeps, objectId: string): Promise<void> {
   const res = await deps.pool.query(

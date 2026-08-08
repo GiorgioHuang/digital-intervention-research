@@ -31,6 +31,7 @@ import {
   DEFAULT_STORAGE_CONFIG,
   getObjectStatus,
   listObjectsForResource,
+  deleteObject as deleteStoredObject,
   initiateUpload,
   releaseObject,
   type StorageDeps,
@@ -512,6 +513,13 @@ export class CommandController {
       owningResourceId,
     });
     return { data: items.map((a) => ({ type: 'StoredObject', id: a.objectId, attributes: a })) };
+  }
+
+  @Post('objects/:objectId/delete')
+  async deleteObject(@Req() req: Request, @Param('objectId') objectId: string, @Body() body: { confirmed: boolean }) {
+    const ctx = requireActor(req);
+    await deleteStoredObject(this.deps.m16storage, ctx, { objectId, confirmed: body.confirmed === true });
+    return { data: { type: 'StoredObject', id: objectId, meta: { state: 'Deleted' } } };
   }
 
   @Get('objects/:objectId')

@@ -362,4 +362,60 @@ describe('a participant reading their own life story', () => {
     });
     expect(screen.getByText(/Nothing has been added to this entry yet/i)).toBeTruthy();
   });
+
+  /**
+   * A photograph could be added and never taken back. `object_state` has
+   * allowed 'Deleted' since the first migration and nothing ever wrote
+   * it — a one-way door, on a picture of somebody's life, and one that
+   * only became reachable when the screen for adding a photograph
+   * existed.
+   */
+  it('a photograph can be removed, and the confirmation says what is destroyed and what is not', async () => {
+    const calls = stubWithFiles([
+      { id: 'obj_1', attributes: {
+        objectId: 'obj_1', declaredContentType: 'image/jpeg', declaredSizeBytes: 2048,
+        objectState: 'Available', dataClassification: 'Sensitive-Personal', createdAt: '2026-08-07T00:00:00Z',
+      } },
+    ]);
+    await act(async () => {
+      render(<MyLifeStory session={session} />);
+    });
+    await act(async () => {
+      fireEvent.click(screen.getAllByRole('button', { name: 'Show photographs on this entry' })[0]!);
+    });
+    fireEvent.click(screen.getAllByRole('button', { name: 'Remove this photograph' })[0]!);
+
+    // Nothing is destroyed on the first click.
+    expect(calls.some((c) => c.path.includes('/delete'))).toBe(false);
+    const dialog = screen.getByRole('alertdialog');
+    expect(dialog.textContent).toMatch(/cannot be brought back/i);
+    // And what survives, so nobody thinks their entry went with it.
+    expect(dialog.textContent).toMatch(/entry and everything you wrote are untouched/i);
+    expect(dialog.textContent).toMatch(/that note holds no photograph/i);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Yes, remove it' }));
+    });
+    const deleted = calls.find((c) => c.path === '/v1/objects/obj_1/delete');
+    expect(deleted?.body).toMatchObject({ confirmed: true });
+  });
+
+  it('keeping it destroys nothing', async () => {
+    const calls = stubWithFiles([
+      { id: 'obj_1', attributes: {
+        objectId: 'obj_1', declaredContentType: 'image/jpeg', declaredSizeBytes: 2048,
+        objectState: 'Available', dataClassification: 'Sensitive-Personal', createdAt: '2026-08-07T00:00:00Z',
+      } },
+    ]);
+    await act(async () => {
+      render(<MyLifeStory session={session} />);
+    });
+    await act(async () => {
+      fireEvent.click(screen.getAllByRole('button', { name: 'Show photographs on this entry' })[0]!);
+    });
+    fireEvent.click(screen.getAllByRole('button', { name: 'Remove this photograph' })[0]!);
+    fireEvent.click(screen.getByRole('button', { name: 'Keep it' }));
+    expect(screen.queryByRole('alertdialog')).toBeNull();
+    expect(calls.some((c) => c.path.includes('/delete'))).toBe(false);
+  });
 });

@@ -135,6 +135,7 @@ describe('the confirmation tier is confirmed by a person, not by the api client'
       'components/MessagesScreen.tsx → endConnection',
       'components/MyDataCopy.tsx → requestMyExport',
       'components/MyLifeStory.tsx → confirmTestimony',
+      'components/MyLifeStory.tsx → removeFile',
       'components/MyLifeStory.tsx → withdrawLifeStoryItem',
       'components/MyResearchPart.tsx → withdrawFromStudy',
       'components/SafetyEvents.tsx → moveSafetyEvent',

@@ -1357,3 +1357,21 @@
     - apps/web/test/my-life-story.test.tsx
     - apps/api/test/api.e2e.test.ts
   status: implemented
+
+- implementation_id: IMP-M16-A-PHOTOGRAPH-CAN-BE-TAKEN-BACK-001
+  module: M16
+  summary: A photograph could be added and never taken back. The object state column has allowed Deleted since the first migration and no code ever wrote it, so a participant could attach a picture to their life story and had no way to remove it - the same one-way door D-54 found in matching, on something more personal, and one that only became reachable when the increment immediately before this built the screen for adding a photograph. Removal is owner-only, in the confirmation tier and irreversible. The bytes go and the row stays - what remains says a file was added and removed and holds no photograph, because deleting the row as well would erase the fact that anything ever happened, and the account of what happened to somebody's record is not the platform's to quietly edit. The ordering the whole pipeline follows holds here too - the record is committed first and the bytes deleted after, so a failure leaves bytes nothing points at rather than a record pointing at bytes that are gone. Asking twice is not an error, because telling somebody who has asked for their photograph to be destroyed that it was not there anyway helps nobody. The wording says both halves - the photograph itself is deleted and cannot be brought back by anyone here, and the entry and everything written in it are untouched, since the word remove would otherwise read as taking the whole record with it. Two tripwires fired as designed while this was built. The confirmation inventory from D-53 refused to pass when a new pairing appeared, forcing a check that this screen really does ask before that call. The audit list from D-57 was unaffected because the new command records its own event
+  trace_ids: [ATR-013, ATR-014]
+  adr_ids: [ADR-020]
+  docs: ["design/DESIGN_DECISIONS.md D-54", "design/DESIGN_DECISIONS.md D-63", "design/DESIGN_DECISIONS.md D-64"]
+  code:
+    - packages/policy/src/catalogue.ts
+    - packages/modules/m16-integration/src/application/storage-pipeline.ts
+    - apps/api/src/controllers.ts
+    - apps/web/src/api.ts
+    - apps/web/src/components/MyLifeStory.tsx
+  tests:
+    - packages/modules/m16-integration/test/storage-pipeline.integration.test.ts
+    - apps/web/test/my-life-story.test.tsx
+    - apps/web/test/confirmation-tier.test.ts
+  status: implemented
