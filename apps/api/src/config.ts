@@ -30,6 +30,20 @@ const envSchema = z.object({
 });
 
 const envSchemaChecked = envSchema.superRefine((cfg, issues) => {
+  // 'oidc' names the target (ADR-104) and nothing implements it. Left in the
+  // enum so this says what is wrong instead of "invalid enum value", but
+  // rejected at startup: with no actor resolver behind it every request
+  // would 401 forever. That is fail closed, and it is also indistinguishable
+  // from a platform that is simply broken — somebody would spend a morning
+  // on it. Refusing to start says which of the two it is, on line one.
+  if (cfg.AUTH_MODE === 'oidc') {
+    issues.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['AUTH_MODE'],
+      message:
+        "'oidc' is the target of ADR-104 and is NOT implemented — no actor is resolved in this mode, so every request would be refused. Use 'dev-header' (development/synthetic pilot only, behind ACCESS_TOKEN) until the OIDC integration exists.",
+    });
+  }
   if (cfg.KNOWLEDGE_PLATFORM_MODE === 'mcp' && cfg.KNOWLEDGE_MCP_URL === undefined) {
     issues.addIssue({
       code: z.ZodIssueCode.custom,

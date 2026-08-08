@@ -1405,3 +1405,15 @@
     - apps/web/test/surface.test.ts
     - apps/web/test/sign-in.test.tsx
   status: implemented
+- implementation_id: IMP-API-AUTH-STUB-BOUNDARY-001
+  module: API
+  summary: Two things that looked present and were not, both on the path ADR-104 will take. First, the actor header was read only under the development stub while the authentication-strength header was read in every mode - so an OIDC implementation that resolved identity correctly would still have accepted a client's own claim to be mfa, and the strong-authentication tier is what guards approving an intervention version and deciding an export. The check would have looked intact and been worth nothing, and this is the kind of thing that survives precisely because nobody re-reads it after the migration. Identity and strength now go quiet together when the stub is off; a real implementation has to take strength from the token's own claims. Headers that grant nothing by themselves - organisation, research project, purpose - are still read in any mode, because they are references to re-evaluate rather than grants, and pinning that keeps this correction from being read as stop reading headers. Second, AUTH_MODE=oidc was an accepted value with nothing behind it - the process started cleanly and then refused every request, since no actor is ever resolved. That is fail closed and it is also indistinguishable from a platform that is simply broken, which is a morning of somebody's life. The configuration is now refused at startup with a message naming ADR-104 and saying the mode is not implemented; the value stays in the enum so the error says that rather than invalid enum value
+  trace_ids: [ATR-003]
+  adr_ids: [ADR-104]
+  docs: ["design/DESIGN_DECISIONS.md D-67"]
+  code:
+    - apps/api/src/http-context.ts
+    - apps/api/src/config.ts
+  tests:
+    - apps/api/test/auth-mode.test.ts
+  status: implemented

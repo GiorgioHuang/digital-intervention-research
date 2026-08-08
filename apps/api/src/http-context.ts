@@ -42,8 +42,18 @@ export function requestContextMiddleware(authMode: string) {
       const v = req.headers[name.toLowerCase()];
       return typeof v === 'string' && v !== '' ? v : undefined;
     };
-    const actorId = authMode === 'dev-header' ? header('x-actor-id') : undefined;
-    const strength = header('x-auth-strength');
+    // Both the identity and its strength are stub input, and both stop
+    // being read the moment the stub is off. The strength header used to
+    // be read in every mode, which meant the strong-authentication tier —
+    // approving an intervention version, deciding an export — would still
+    // have been satisfied by a client saying 'mfa' about itself after the
+    // stub was replaced. A real implementation has to take it from the
+    // token's own claims; leaving the header live would have let the
+    // weaker answer keep working, which is the way this kind of thing
+    // survives a migration nobody re-reads.
+    const stub = authMode === 'dev-header';
+    const actorId = stub ? header('x-actor-id') : undefined;
+    const strength = stub ? header('x-auth-strength') : undefined;
     (req as PlatformRequest).platformCtx = createRequestContext({
       ...(header('x-request-id') !== undefined ? { requestId: header('x-request-id')! } : {}),
       ...(actorId !== undefined ? { actor: { type: 'user', id: actorId } } : {}),
