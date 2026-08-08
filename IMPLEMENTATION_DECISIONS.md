@@ -15,7 +15,7 @@ ADR-001…060 全部按 Accepted/Deferred/Prohibited 原样遵从；实现不启
 | ADR-103 | 托管平台 | **合成数据概念原型环境**采用 Cloud Run（单服务，CI 绿后自动部署，见 DEPLOYMENT.md）；容器化+12-factor 保持可移植；**真实/识别数据的生产托管决定仍待批**——该部署不预决生产选型 | Adopted for Implementation（仅原型环境；生产待批） | ATR-021 |
 | ADR-104 | 身份供应商 | 开发期 Keycloak(OIDC)；M01 为 UserAccount 权威；OIDC ACL 隔离 | Proposed（生产 IdP 待批） | ATR-003 |
 | ADR-105 | 托管 PostgreSQL | 本地/CI 用 PG16 容器；概念原型环境用 Neon（HADI_DATABASE_URL，迁移每次部署前执行）；真实数据的生产托管服务待批 | Adopted for Implementation（仅原型环境；生产待批） | ATR-019 |
-| ADR-106 | 对象存储 | **Cloudflare R2**（S3 兼容 API）——所有者裁定 2026-08-07，与实现方建议的 GCS 相反（平台已在 GCP 上、已有 WIF，用 GCS 不需长期凭据、不增加第二家个人数据处理方）。代码侧已落 `BlobStore` 端口 + 两个适配器；**四个设置全有才用 R2，全无用 Postgres 模拟器，半配置直接拒绝启动**（D-58）。**尚未接通**：账户/桶/密钥未提供，当前部署仍在跑模拟器；首次真实往返未验证 | **Adopted for Implementation（供应商已定，接入待配置）** | ATR-021 |
+| ADR-106 | 对象存储 | **Cloudflare R2**（S3 兼容 API）——所有者裁定 2026-08-07，与实现方建议的 GCS 相反（平台已在 GCP 上、已有 WIF，用 GCS 不需长期凭据、不增加第二家个人数据处理方）。代码侧已落 `BlobStore` 端口 + 两个适配器；**四个设置全有才用 R2，全无用 Postgres 模拟器，半配置直接拒绝启动**（D-58）。**已接通**（2026-08-08）：账户/桶/密钥四项齐备，运行中的版本在 `/ready` 自报 `fileStorage: object-store`。**但配置接通不等于跑通过——首次真实往返仍未验证**：至今没有任何一个字节从真实浏览器会话进过这个桶 | **Adopted for Implementation（供应商已定、已接通；真实往返待验证）** | ATR-021 |
 | ADR-107 | 队列/调度 | pg-boss（PG 持久队列+cron），按工作负载分队列；与 outbox 同库事务语义 | Adopted for Implementation | ATR-023 |
 | ADR-108 | Search/Vector | PG 全文检索；pgvector 可选且默认关闭；派生投影再授权 | Adopted for Implementation | ATR-015/016 |
 | ADR-109 | AI 供应商/网关栈 | Model Gateway+Provider Registry+别名先行；确定性本地模拟 Provider；真实供应商接入以批准为前提 | Pending External Approval | ATR-018 |
@@ -39,7 +39,7 @@ ADR-001…060 全部按 Accepted/Deferred/Prohibited 原样遵从；实现不启
 
 ## 未决批准依赖汇总
 
-伦理与试点（ADR-048/049、ATR-025）、供应商合同（ADR-103/104/105/109/111/114/126；**ADR-106 对象存储已定为 Cloudflare R2，但尚未接通**）、政策值（ADR-119/120/121/123/124/125）、匹配与排序政策（ADR-112/113）、分析环境（ADR-115）、加密策略（ADR-117）。全部按「接口+模拟器先行、配置驱动、fail closed、不伪造批准」处理，不阻塞无关工作流。
+伦理与试点（ADR-048/049、ATR-025）、供应商合同（ADR-103/104/105/109/111/114/126；**ADR-106 对象存储已定为 Cloudflare R2 并已接通，首次真实往返待验证**）、政策值（ADR-119/120/121/123/124/125）、匹配与排序政策（ADR-112/113）、分析环境（ADR-115）、加密策略（ADR-117）。全部按「接口+模拟器先行、配置驱动、fail closed、不伪造批准」处理，不阻塞无关工作流。
 
 ---
 
