@@ -132,6 +132,20 @@ jobs:
           # Real Knowledge Graph integration (ADR-052/110): the deployed
           # platform talks to the live MCP endpoint.
           ENVVARS="$ENVVARS,KNOWLEDGE_PLATFORM_MODE=mcp,KNOWLEDGE_MCP_URL=${{ vars.KNOWLEDGE_MCP_URL || 'https://knowledge-graph.internal.example' }}"
+          # The staff workspace's addresses are compiled into the web
+          # bundle, because the browser is what decides which surface it
+          # is showing. Written as Vite's own env file rather than a
+          # build argument, because `gcloud run deploy --source .` hands
+          # Cloud Build the source and takes no --build-arg. Unset means
+          # one address with every door — the split is a deployment
+          # choice, not a code change.
+          if [ -n "${{ vars.STAFF_HOSTS }}" ]; then
+            echo "VITE_STAFF_HOSTS=${{ vars.STAFF_HOSTS }}" > apps/web/.env.production
+            echo "::notice::staff workspace served on: ${{ vars.STAFF_HOSTS }}"
+          else
+            rm -f apps/web/.env.production
+            echo "::notice::STAFF_HOSTS not set — one address serves every workspace, with the staff and supporter doors on the participant sign-in screen."
+          fi
           gcloud run deploy "${{ vars.CLOUD_RUN_SERVICE || 'hadi-platform' }}" \
             --source . \
             --project "$PROJECT" \

@@ -92,4 +92,44 @@ describe('participant sign-in', () => {
     });
     expect(screen.getByLabelText('Participant identifier')).toBeTruthy();
   });
+
+  /**
+   * The participant entrance, on a deployment where the surfaces have
+   * their own addresses.
+   *
+   * A participant used to be shown "Staff workspace" and "Supporter
+   * workspace" beside their own way in. Pressing either granted nothing
+   * — the permission engine decides every data path on the server — but
+   * an older adult opening this for the first time should not be facing
+   * two doors that are not theirs.
+   *
+   * What this test does NOT claim is that staff work is unreachable from
+   * here. Both addresses are one deployment behind one shared token and
+   * identity is still whatever `x-actor-id` says (ADR-104), so such a
+   * claim would be untrue. This is about what a participant is offered.
+   */
+  it('offers no door into somebody else’s workspace once the addresses are split', async () => {
+    vi.stubEnv('VITE_STAFF_HOSTS', 'admin.example.org');
+    await act(async () => {
+      render(<App />);
+    });
+    expect(screen.queryByRole('button', { name: 'Staff workspace' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Supporter workspace' })).toBeNull();
+    // Their own way in is still there.
+    expect(screen.getByRole('button', { name: /Continue/ })).toBeTruthy();
+    vi.unstubAllEnvs();
+  });
+
+  /**
+   * With no addresses configured the app is one entrance with every
+   * door, which is what local development runs. Removing them there
+   * would leave no way to reach the staff workspace at all.
+   */
+  it('keeps both doors when one address serves everything', async () => {
+    await act(async () => {
+      render(<App />);
+    });
+    expect(screen.getByRole('button', { name: 'Staff workspace' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Supporter workspace' })).toBeTruthy();
+  });
 });

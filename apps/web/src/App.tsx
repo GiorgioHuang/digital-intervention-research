@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { StaffApp } from './StaffApp.js';
+import { currentSurface } from './surface.js';
 import { SupporterApp } from './SupporterApp.js';
 import { AccessTokenGate } from './components/AccessTokenGate.js';
 import { AssistedMode } from './components/AssistedMode.js';
@@ -67,7 +68,18 @@ export function App() {
   const [form, setForm] = useState({ actorId: '', participantId: '' });
   const [signInProblem, setSignInProblem] = useState('');
   const [checking, setChecking] = useState(false);
-  const [mode, setMode] = useState<'participant' | 'staff' | 'supporter'>('participant');
+  /*
+   * Which surface this address serves. On a configured deployment the
+   * address decides and there is nothing to switch: a participant is
+   * never shown a door into somebody else's workspace. With no
+   * configuration the app is one address with both doors, which is what
+   * local development and the test suite run. See surface.ts for what
+   * this separation is and — more importantly — what it is not.
+   */
+  const surface = currentSurface();
+  const [mode, setMode] = useState<'participant' | 'staff' | 'supporter'>(
+    surface === 'staff' ? 'staff' : 'participant',
+  );
   /**
    * Who is sitting with the participant, if anyone (decision D-15). Held
    * here so the banner is on every screen rather than only where it was
@@ -123,7 +135,7 @@ export function App() {
   }, [session, mode]);
 
   if (mode === 'staff') {
-    return <StaffApp onExit={() => setMode('participant')} />;
+    return <StaffApp onExit={surface === 'staff' ? undefined : () => setMode('participant')} />;
   }
   if (mode === 'supporter') {
     return <SupporterApp onExit={() => setMode('participant')} />;
@@ -236,12 +248,21 @@ export function App() {
           <button type="submit" disabled={checking}>
             {checking ? 'Checking…' : 'Continue'}
           </button>{' '}
-          <button type="button" onClick={() => setMode('supporter')}>
-            Supporter workspace
-          </button>{' '}
-          <button type="button" onClick={() => setMode('staff')}>
-            Staff workspace
-          </button>
+          {/*
+            Only where one address serves everything. Where the surfaces
+            have their own addresses, a participant is never offered a
+            way into somebody else's workspace.
+          */}
+          {surface === 'single-host' && (
+            <>
+              <button type="button" onClick={() => setMode('supporter')}>
+                Supporter workspace
+              </button>{' '}
+              <button type="button" onClick={() => setMode('staff')}>
+                Staff workspace
+              </button>
+            </>
+          )}
         </form>
       </main>
     );

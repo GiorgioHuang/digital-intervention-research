@@ -29,7 +29,12 @@ const SCREENS: { key: StaffScreen; label: string }[] = [
  * the dev login stub to mirror the X-Auth-Strength header (OIDC pending
  * ADR-104); MFA-tier actions are labelled in each panel.
  */
-export function StaffApp({ onExit }: { onExit: () => void }) {
+/**
+ * `onExit` is absent when this address serves only the staff workspace:
+ * there is no participant workspace here to go back to, and a control
+ * that took somebody nowhere would be worse than none.
+ */
+export function StaffApp({ onExit }: { onExit?: (() => void) | undefined }) {
   const [session, setSession] = useState<StaffSession | null>(null);
   const [screen, setScreen] = useState<StaffScreen>('coordinator');
   const [form, setForm] = useState({
@@ -81,9 +86,11 @@ export function StaffApp({ onExit }: { onExit: () => void }) {
             </select>
           </p>
           <button type="submit">Continue</button>{' '}
-          <button type="button" onClick={onExit}>
-            Back to the participant sign-in
-          </button>
+          {onExit !== undefined && (
+            <button type="button" onClick={onExit}>
+              Back to the participant sign-in
+            </button>
+          )}
         </form>
       </main>
     );
@@ -103,9 +110,11 @@ export function StaffApp({ onExit }: { onExit: () => void }) {
               </button>
             </li>
           ))}
-          <li>
-            <button onClick={onExit}>Leave the staff workspace</button>
-          </li>
+          {onExit !== undefined && (
+            <li>
+              <button onClick={onExit}>Leave the staff workspace</button>
+            </li>
+          )}
         </ul>
       </nav>
       <main id="staff-main">

@@ -1389,3 +1389,19 @@
     - packages/modules/m16-integration/test/storage-pipeline.integration.test.ts
     - apps/web/test/my-life-story.test.tsx
   status: implemented
+
+- implementation_id: IMP-WEB-SURFACES-BY-ADDRESS-001
+  module: WEB
+  summary: A participant's sign-in screen offered two doors into workspaces that were not theirs. The workspace was chosen by a button, so somebody opening the platform for the first time - an older adult, on the participant entrance - was shown a staff workspace and a supporter workspace beside their own way in. Pressing either granted nothing, because the permission engine decides every data path on the server, but putting somebody else's workspace in front of a participant is not a neutral thing to do. The surfaces are now separated by address on the owner's ruling of two hostnames served by one deployment. Hostnames listed in the deploy variable serve the staff workspace and everything else serves the participant workspace, so the participant entrance carries only their own way in, and the staff side no longer shows a control for returning to a participant sign-in that does not exist there. What this is not, stated in the code, in the deployment notes and in the decision record alike, is access control. Both hostnames are one deployment behind one shared access token and identity is still the development stub in which it is whatever the actor header says, so anybody who can reach one address can reach the other and can claim any identity at either. What the split gives is an uncluttered entrance and per-origin token storage in the browser; what protects staff work is the permission engine, exactly as before. The tests deliberately do not assert that staff work is unreachable from the participant address, because that assertion would be false. Hostnames match whole, never as prefix or suffix, so an address an outsider controls cannot claim to be the staff entrance. With nothing configured the app stays one address with every door, which is what local development and the suite run - removing them there would leave no way into the staff workspace at all. The deploy writes Vite's env file rather than passing a build argument, since deploying from source hands Cloud Build the source and takes no build argument, and it clears that file when the variable is unset so a deployment cannot keep serving a split nobody asked for
+  trace_ids: [ATR-013]
+  adr_ids: [ADR-104]
+  docs: ["DEPLOYMENT.md", "design/DESIGN_DECISIONS.md D-66"]
+  code:
+    - apps/web/src/surface.ts
+    - apps/web/src/App.tsx
+    - apps/web/src/StaffApp.tsx
+    - .github/workflows/deploy.yml
+  tests:
+    - apps/web/test/surface.test.ts
+    - apps/web/test/sign-in.test.tsx
+  status: implemented
