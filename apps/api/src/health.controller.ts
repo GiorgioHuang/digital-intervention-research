@@ -4,18 +4,31 @@ import type { BlobStore } from '@platform/m16-integration';
 
 export const PG_POOL = 'PG_POOL';
 export const BLOB_STORE = 'BLOB_STORE';
+export const AUTH_MODE = 'AUTH_MODE';
 
 @Controller()
 export class HealthController {
   constructor(
     @Inject(PG_POOL) private readonly pool: Pool,
     @Inject(BLOB_STORE) private readonly blobs: BlobStore,
+    @Inject(AUTH_MODE) private readonly authMode: string,
   ) {}
 
-  /** Liveness: the process is up. Carries no dependency state. */
+  /**
+   * Liveness: the process is up. Carries no dependency state.
+   *
+   * It also reports how people sign in, for the same reason /ready reports
+   * where files go: the web app has to know which entrance to draw, and
+   * the alternative was configuring the answer a second time in the
+   * bundle, where it can disagree with the server for a week before
+   * anybody notices. This is not a disclosure — anyone can learn it by
+   * pressing the sign-in button once — and naming 'dev-header' out loud
+   * is a feature, because a deployment answering that is a deployment
+   * where identity is whatever a header says.
+   */
   @Get('health')
-  health(): { status: string } {
-    return { status: 'ok' };
+  health(): { status: string; authMode: string } {
+    return { status: 'ok', authMode: this.authMode };
   }
 
   /**

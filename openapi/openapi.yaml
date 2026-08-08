@@ -7,14 +7,37 @@ info:
   title: Healthy Aging Digital Intervention Research Platform API
   version: 0.1.0
   description: >
-    Pilot MVP surface. Authentication: dev-header stub only (X-Actor-Id,
-    X-Auth-Strength) — production OIDC pending ADR-104. Context headers:
-    X-Organisation-Id, X-Research-Project-Id, X-Purpose-Code, X-Request-Id.
+    Pilot MVP surface. Authentication (ADR-104) is one of two modes.
+    AUTH_MODE=google: Sign in with Google, exchanged at /v1/auth/session for
+    an HttpOnly session cookie; X-Actor-Id and X-Auth-Strength are IGNORED,
+    and state-changing requests must carry X-Platform-Client. AUTH_MODE=
+    dev-header: a development and synthetic-pilot stub in which the actor is
+    whatever X-Actor-Id says. Context headers, read in both modes and
+    granting nothing by themselves: X-Organisation-Id, X-Research-Project-Id,
+    X-Purpose-Code, X-Request-Id.
 paths:
   /health:
     get: { summary: Liveness, responses: { '200': { description: ok } } }
   /ready:
     get: { summary: Readiness (DB reachable), responses: { '200': { description: ready }, '503': { description: not ready } } }
+  /v1/auth/nonce:
+    get:
+      summary: A short-lived signed nonce for a sign-in attempt (AUTH_MODE=google)
+      responses: { '200': { description: nonce and OAuth client id } }
+  /v1/auth/session:
+    get:
+      summary: Who this browser is signed in as (AUTH_MODE=google)
+      responses: { '200': { description: session }, '401': { description: not signed in } }
+    post:
+      summary: Exchange a verified Google ID token for a session cookie
+      responses: { '200': { description: signed in }, '401': { description: token rejected }, '403': { description: not invited } }
+    delete:
+      summary: Sign out and revoke the session server-side
+      responses: { '200': { description: signed out } }
+  /v1/auth/step-up:
+    post:
+      summary: Raise a session to step-up with a fresh Google re-authentication
+      responses: { '200': { description: raised }, '401': { description: not fresh enough }, '403': { description: different Google account } }
   /v1/participants/{participantId}/consents:
     post:
       summary: Record a granular consent decision (owner-only; M03, ADR-018)

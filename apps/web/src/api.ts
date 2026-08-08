@@ -65,6 +65,20 @@ export function captureAccessToken(): void {
   }
 }
 
+/**
+ * Sent on every request, and it is not decoration.
+ *
+ * Under Sign in with Google the session is an HttpOnly cookie, which the
+ * browser attaches by itself — including to a request made by a form on
+ * somebody else's page. A cross-site form cannot set a header, so this is
+ * how the server tells a request this app made from one merely aimed at
+ * it. The server refuses to authenticate a state-changing request without
+ * it (see http-context.ts).
+ */
+export function platformClientHeader(): Record<string, string> {
+  return { 'x-platform-client': 'web' };
+}
+
 export function accessTokenHeader(): Record<string, string> {
   const token = readAccessToken();
   return token === '' ? {} : { 'x-access-token': token };
@@ -87,7 +101,12 @@ export function raiseApiError(json: { error?: ApiError }, status: number): never
 async function post<T>(session: Session, path: string, body: object): Promise<T> {
   const res = await fetch(path, {
     method: 'POST',
-    headers: { 'content-type': 'application/json', 'x-actor-id': session.actorId, ...accessTokenHeader() },
+    headers: {
+      'content-type': 'application/json',
+      'x-actor-id': session.actorId,
+      ...platformClientHeader(),
+      ...accessTokenHeader(),
+    },
     body: JSON.stringify(body),
   });
   const json = (await res.json()) as T & { error?: ApiError };
@@ -96,7 +115,9 @@ async function post<T>(session: Session, path: string, body: object): Promise<T>
 }
 
 async function get<T>(session: Session, path: string): Promise<T> {
-  const res = await fetch(path, { headers: { 'x-actor-id': session.actorId, ...accessTokenHeader() } });
+  const res = await fetch(path, {
+    headers: { 'x-actor-id': session.actorId, ...platformClientHeader(), ...accessTokenHeader() },
+  });
   const json = (await res.json()) as T & { error?: ApiError };
   if (!res.ok) raiseApiError(json, res.status);
   return json;

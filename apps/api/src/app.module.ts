@@ -11,11 +11,22 @@ import { createKnowledgePlatformMcpClient, createKnowledgePlatformSimulator } fr
 import { createBlobStore } from '@platform/m16-integration';
 import { createBlockQuery } from '@platform/m18-community-social';
 import type { ApiConfig } from './config.js';
-import { BLOB_STORE, HealthController, PG_POOL } from './health.controller.js';
+import { AUTH_MODE, BLOB_STORE, HealthController, PG_POOL } from './health.controller.js';
 import { API_DEPS, CommandController, type ApiDeps } from './controllers.js';
 import { StaffCommandController } from './staff-controllers.js';
 import { PlatformErrorFilter } from './error-filter.js';
 import { accessTokenMiddleware, requestContextMiddleware } from './http-context.js';
+import { AUTH_DEPS, AuthController, type AuthDeps } from './auth/auth.controller.js';
+import { createGoogleVerifier } from './auth/google-token.js';
+import { createSessionStore } from './auth/session-store.js';
+
+/** Comma-separated domain lists, lowercased; empty entries dropped. */
+function splitDomains(raw: string | undefined): string[] {
+  return (raw ?? '')
+    .split(',')
+    .map((d) => d.trim().toLowerCase())
+    .filter((d) => d !== '');
+}
 
 export function buildAppModule(config: ApiConfig) {
   const pool = createPool({ connectionString: config.DATABASE_URL, applicationName: 'api' });
@@ -73,13 +84,56 @@ export function buildAppModule(config: ApiConfig) {
     m18: { ...moduleDeps, participants: createParticipantQuery(pool) },
   };
 
+  /*
+   * Sign in with Google (ADR-104), built only in the mode that uses it.
+   * Under the dev-header stub there is no session store and no verifier at
+   * all, so the stub cannot be handed a real session and a real session
+   * cannot be satisfied by a header.
+   */
+  const google =
+    config.AUTH_MODE === 'google'
+      ? (() => {
+          const sessions = createSessionStore({
+            pool,
+            sessionTtlMinutes: config.SESSION_TTL_MINUTES,
+            stepUpTtlMinutes: config.STEP_UP_TTL_MINUTES,
+            mfaDomains: splitDomains(config.GOOGLE_MFA_DOMAINS),
+          });
+          const authDeps: AuthDeps = {
+            verifier: createGoogleVerifier({
+              clientId: config.GOOGLE_CLIENT_ID!,
+              allowedDomains: splitDomains(config.GOOGLE_ALLOWED_DOMAINS),
+            }),
+            sessions,
+            findParticipantIdByAccount: (id: string) =>
+              createParticipantQuery(pool).findParticipantIdByAccount(id),
+            findDisplayName: async (id: string) =>
+              (await createAccountNameQuery(pool).findDisplayNames([id])).get(id),
+            sessionSecret: config.SESSION_SECRET!,
+            clientId: config.GOOGLE_CLIENT_ID!,
+            // Plain HTTP is local development only. A Secure cookie there
+            // is never stored and sign-in silently fails to stick.
+            secureCookies: config.COOKIE_SECURE,
+            stepUpMaxAgeSeconds: config.STEP_UP_MAX_AGE_SECONDS,
+          };
+          return { sessions, authDeps };
+        })()
+      : undefined;
+
   @Module({
-    controllers: [HealthController, CommandController, StaffCommandController],
+    controllers: [
+      HealthController,
+      CommandController,
+      StaffCommandController,
+      ...(google !== undefined ? [AuthController] : []),
+    ],
     providers: [
       { provide: PG_POOL, useValue: pool },
       { provide: BLOB_STORE, useValue: blobs },
+      { provide: AUTH_MODE, useValue: config.AUTH_MODE },
       { provide: API_DEPS, useValue: deps },
       { provide: APP_FILTER, useClass: PlatformErrorFilter },
+      ...(google !== undefined ? [{ provide: AUTH_DEPS, useValue: google.authDeps }] : []),
     ],
   })
   class AppModule implements NestModule {
@@ -87,7 +141,16 @@ export function buildAppModule(config: ApiConfig) {
       if (config.ACCESS_TOKEN !== undefined) {
         consumer.apply(accessTokenMiddleware(config.ACCESS_TOKEN)).forRoutes('*');
       }
-      consumer.apply(requestContextMiddleware(config.AUTH_MODE)).forRoutes('*');
+      consumer
+        .apply(
+          requestContextMiddleware({
+            authMode: config.AUTH_MODE,
+            ...(google !== undefined
+              ? { resolveSession: (token: string) => google.sessions.resolve(token) }
+              : {}),
+          }),
+        )
+        .forRoutes('*');
     }
   }
   return AppModule;

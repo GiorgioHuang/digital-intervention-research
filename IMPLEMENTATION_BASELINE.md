@@ -43,8 +43,8 @@
 
 ## 5. API / 事件 / 认证授权 / 测试 / CI / 基础设施现状
 
-- API：`/health`、`/ready` + v1 命令端点（consent 记录/撤回、thread/message/confirm-send），Doc 15 错误信封与稳定错误码，OpenAPI 于 `openapi/openapi.yaml`；认证为显式 dev-header 桩（生产 OIDC Pending ADR-104）。其余模块命令按同一模式增量暴露。
-- 认证：无；开发期 Keycloak OIDC，M01 保持 UserAccount 权威（Pending ADR-104）。授权：Effective Permission 引擎 Implemented（packages/policy，M03 PermissionService 落 PolicyDecision）。
+- API：`/health`、`/ready` + v1 命令端点（consent 记录/撤回、thread/message/confirm-send），Doc 15 错误信封与稳定错误码，OpenAPI 于 `openapi/openapi.yaml`；认证有两种模式（ADR-104）：`google` 为生产认证（Google OIDC，会话为服务端可撤销的 HttpOnly cookie），`dev-header` 为显式开发/合成试点桩。其余模块命令按同一模式增量暴露。
+- 认证：Implemented（ADR-104 已裁定为 Sign in with Google，取代此前设想的 Keycloak）。身份匹配 `(issuer, sub)`，邮箱仅用于一次性认领邀请；无自助注册；`mfa` 层由重新认证（step-up）满足。M01 保持 UserAccount 权威。授权：Effective Permission 引擎 Implemented（packages/policy，M03 PermissionService 落 PolicyDecision）。
 - 测试：vitest 单元 + 集成（testcontainers 式，用本地 docker PG）；CI：GitHub Actions（build/typecheck/lint/depcruise/迁移演练/测试/备份恢复演练）。
 - 部署假设：容器化、单区域、托管平台待批（ADR-103/119/121 Pending External Approval）。
 

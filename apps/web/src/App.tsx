@@ -18,6 +18,8 @@ import { SafetyPanel } from './components/SafetyPanel.js';
 import { SessionGuard } from './components/SessionGuard.js';
 import { SharedDeviceBar } from './components/SharedDeviceBar.js';
 import { api, PlatformApiError, type Session } from './api.js';
+import { completeRedirect, currentSession, detectAuthMode, signOut, type AuthMode } from './auth.js';
+import { GoogleSignIn } from './components/GoogleSignIn.js';
 import { endVisit, isSharedDevice, setSharedDevice } from './device-mode.js';
 import { applyPreferences, loadPreferences } from './preferences.js';
 
@@ -103,6 +105,12 @@ export function App() {
    * did.
    */
   const [endedByTimeout, setEndedByTimeout] = useState(false);
+  /**
+   * How people sign in here, asked of the server (ADR-104). `undefined`
+   * while the question is outstanding, and the screen says nothing in the
+   * meantime rather than flashing up the wrong entrance and replacing it.
+   */
+  const [authMode, setAuthMode] = useState<AuthMode | undefined>(undefined);
   const navRef = useRef<HTMLElement | null>(null);
 
   /*
@@ -114,6 +122,44 @@ export function App() {
    */
   useEffect(() => {
     applyPreferences(loadPreferences());
+  }, []);
+
+  /**
+   * Sign-in, on the way in and on the way back from Google.
+   *
+   * Three things happen here in one pass because they are one question:
+   * which entrance does this deployment have, is this page load the return
+   * leg of a sign-in, and is there already a session. Asking them
+   * separately would let the participant see a sign-in button for a moment
+   * while already signed in.
+   */
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const detected = await detectAuthMode();
+      if (cancelled) return;
+      setAuthMode(detected);
+      if (detected !== 'google') return;
+
+      const redirect = await completeRedirect();
+      if (cancelled) return;
+      if (redirect?.error !== undefined) setSignInProblem(redirect.error);
+      const found = redirect?.session ?? (await currentSession().catch(() => undefined));
+      if (cancelled || found === undefined) return;
+      // A staff account with no participant record is not a participant,
+      // and giving it an empty participant identifier would send every
+      // screen looking for a person who does not exist.
+      if (found.participantId === undefined) {
+        setSignInProblem(
+          'You are signed in, but this account is not a participant account. If you are staff, use the staff address.',
+        );
+        return;
+      }
+      setSession({ actorId: found.actorId, participantId: found.participantId });
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   /**
@@ -156,11 +202,13 @@ export function App() {
             again to carry on.
           </p>
         )}
-        <p>
-          Development sign-in stub: enter the identifiers issued for this synthetic environment. Both belong to the
-          same person — the account identifier and the participant identifier are two names for one demo participant.
-          Nothing here verifies who you are — real authentication is the pending OIDC work (ADR-104).
-        </p>
+        {authMode === 'dev-header' && (
+          <p>
+            Development sign-in stub: enter the identifiers issued for this synthetic environment. Both belong to the
+            same person — the account identifier and the participant identifier are two names for one demo participant.
+            Nothing here verifies who you are — this is not authentication (ADR-104).
+          </p>
+        )}
         {/*
           The two identifiers have to belong to the same person. Nothing
           used to check that, so an unpaired combination signed in happily
@@ -205,18 +253,26 @@ export function App() {
               .finally(() => setChecking(false));
           }}
         >
-          <p>
-            <label htmlFor="actor-id">Account identifier (actor id)</label>{' '}
-            <input id="actor-id" value={form.actorId} onChange={(e) => setForm({ ...form, actorId: e.target.value })} />
-          </p>
-          <p>
-            <label htmlFor="participant-id">Participant identifier</label>{' '}
-            <input
-              id="participant-id"
-              value={form.participantId}
-              onChange={(e) => setForm({ ...form, participantId: e.target.value })}
-            />
-          </p>
+          {authMode === 'dev-header' && (
+            <>
+              <p>
+                <label htmlFor="actor-id">Account identifier (actor id)</label>{' '}
+                <input
+                  id="actor-id"
+                  value={form.actorId}
+                  onChange={(e) => setForm({ ...form, actorId: e.target.value })}
+                />
+              </p>
+              <p>
+                <label htmlFor="participant-id">Participant identifier</label>{' '}
+                <input
+                  id="participant-id"
+                  value={form.participantId}
+                  onChange={(e) => setForm({ ...form, participantId: e.target.value })}
+                />
+              </p>
+            </>
+          )}
           {/*
             §D.6: switched on by hand, never detected. The consequences are
             listed because "shared device" on its own does not tell anyone
@@ -245,9 +301,21 @@ export function App() {
             </small>
           </p>
           {signInProblem !== '' && <p role="alert">{signInProblem}</p>}
-          <button type="submit" disabled={checking}>
-            {checking ? 'Checking…' : 'Continue'}
-          </button>{' '}
+          {/*
+            Nothing is offered until the server has said which entrance
+            this deployment has. Drawing one and swapping it a moment
+            later would put a button under a person's finger and then
+            move it.
+          */}
+          {authMode === undefined && <p>One moment…</p>}
+          {authMode === 'google' && <GoogleSignIn onError={setSignInProblem} />}
+          {authMode === 'dev-header' && (
+            <>
+              <button type="submit" disabled={checking}>
+                {checking ? 'Checking…' : 'Continue'}
+              </button>{' '}
+            </>
+          )}
           {/*
             Only where one address serves everything. Where the surfaces
             have their own addresses, a participant is never offered a
@@ -278,8 +346,12 @@ export function App() {
           identity={session.participantId}
           onSwitchUser={() => {
             // "Switch user" has to mean nothing of this visit is left, not
-            // just that the screen changed (§D.6).
+            // just that the screen changed (§D.6). On a shared tablet at a
+            // community centre that includes the session on the SERVER:
+            // clearing it only in this tab would leave the next person one
+            // back button away from the last person's account.
             endVisit();
+            void signOut();
             setSession(null);
             setScreen('home');
             setEndedByTimeout(false);
@@ -315,6 +387,7 @@ export function App() {
           shared={shared}
           onSignOut={() => {
             if (shared) endVisit();
+            void signOut();
             setSession(null);
             setScreen('home');
             setEndedByTimeout(true);
@@ -431,6 +504,7 @@ export function App() {
                 <button
                   onClick={() => {
                     if (shared) endVisit();
+                    void signOut();
                     setSession(null);
                     setScreen('home');
                   }}

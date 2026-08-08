@@ -101,18 +101,25 @@ export function AuthStrengthNote({
   action,
 }: {
   needsMfa: boolean;
-  authStrength: 'password' | 'mfa';
+  authStrength: 'password' | 'mfa' | 'step-up';
   action: string;
 }) {
   if (!needsMfa) {
     return <p role="note">{action} needs your confirmation only — it is not in the strong-authentication tier.</p>;
   }
+  // Both tiers satisfy the requirement, and the engine ranks a fresh
+  // re-authentication ABOVE a second factor — it answers a harder
+  // question. Naming which one is met keeps the note honest about what
+  // the person actually did.
+  const met = authStrength === 'mfa' || authStrength === 'step-up';
   return (
     <p role="note">
       {action} needs strong authentication.{' '}
-      {authStrength === 'mfa'
-        ? 'You are signed in at that level.'
-        : 'You are signed in at password level, so the server will refuse it until you sign in again with strong authentication.'}
+      {met
+        ? authStrength === 'step-up'
+          ? 'You confirmed it was you a moment ago, which meets it.'
+          : 'You are signed in at that level.'
+        : 'You are signed in at password level, so the server will refuse it until you confirm it is you — use “Confirm it is you” at the top of the workspace.'}
     </p>
   );
 }

@@ -1,4 +1,4 @@
-import { accessTokenHeader, raiseApiError, type ApiError } from './api.js';
+import { accessTokenHeader, platformClientHeader, raiseApiError, type ApiError } from './api.js';
 
 /**
  * Staff-side HTTP client. Same boundary rules as the participant client:
@@ -10,7 +10,12 @@ import { accessTokenHeader, raiseApiError, type ApiError } from './api.js';
  */
 export interface StaffSession {
   actorId: string;
-  authStrength: 'password' | 'mfa';
+  /**
+   * 'step-up' outranks 'mfa' in the permission engine: it is a fresh
+   * re-authentication, which answers a harder question than "was a second
+   * factor used at some point today".
+   */
+  authStrength: 'password' | 'mfa' | 'step-up';
   /**
    * Organisation the staff member is acting in. Scoped reads use it, and
    * the server takes it from the request context rather than a query
@@ -43,6 +48,7 @@ async function post<T>(session: StaffSession, path: string, body: object): Promi
       'x-actor-id': session.actorId,
       'x-auth-strength': session.authStrength,
       ...orgHeader(session),
+      ...platformClientHeader(),
       ...accessTokenHeader(),
     },
     body: JSON.stringify(body),
@@ -59,6 +65,7 @@ async function get<T>(session: StaffSession, path: string, purpose?: string): Pr
       'x-auth-strength': session.authStrength,
       ...orgHeader(session),
       ...purposeHeader(purpose),
+      ...platformClientHeader(),
       ...accessTokenHeader(),
     },
   });

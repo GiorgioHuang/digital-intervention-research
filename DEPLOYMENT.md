@@ -1,6 +1,6 @@
 # DEPLOYMENT
 
-> Cloud Run + Neon 部署与 CI/CD 说明。沿用 aging-knowledge-graph 在同一 GCP 项目验证过的模式（WIF 无密钥认证、Secret Manager、`gcloud run deploy --source .`）。**该部署环境仅承载合成数据的概念研究原型**（ADR-061/062）：dev-header 身份仍是开发桩，访问令牌门是补偿性边界而非身份认证；接入任何真实用户前必须先完成 OIDC（ADR-104）。
+> Cloud Run + Neon 部署与 CI/CD 说明。沿用 aging-knowledge-graph 在同一 GCP 项目验证过的模式（WIF 无密钥认证、Secret Manager、`gcloud run deploy --source .`）。**该部署环境仅承载合成数据的概念研究原型**（ADR-061/062）。认证有两种模式（ADR-104）：`AUTH_MODE=google` 是真实认证（见下节「开启 Google 登录」），`AUTH_MODE=dev-header` 是开发/合成试点桩，身份即 `x-actor-id` 所声称者。**当前部署跑在桩上**，访问令牌门是补偿性边界而非身份认证。
 
 ## 架构
 
@@ -55,6 +55,72 @@ PORT=8099 WEB_DIST_DIR=$PWD/apps/web/dist ACCESS_TOKEN=local-smoke-token-0123456
 # 期望：/health 200；/ 返回 SPA；/v1 无令牌 401 标准错误封装；带令牌走正常权限引擎
 ```
 
+## 开启 Google 登录（ADR-104）
+
+真实用户接入的前提。做完这一节，`x-actor-id` 就再也不被读，身份来自服务端签发、可撤销的会话 cookie。
+
+### 1. 在 Google Cloud 控制台建一个 OAuth 客户端
+
+**API 和服务 → 凭据 → 创建凭据 → OAuth 客户端 ID → Web 应用**。
+
+- **已获授权的 JavaScript 来源**：每一个对外主机名各一条，例如 `https://workspace.test`、`https://staff.internal.example`。
+- **已获授权的重定向 URI**：同样每个主机名一条，**指向站点根路径**：`https://workspace.test/`、`https://staff.internal.example/`。参与者入口和工作人员入口是同一个服务的两个域名（D-66），**两个都要登记**——漏一个，那一侧的登录会停在 Google 的错误页上，而且报错只出现在 Google 那边，本平台的日志里什么都看不到。
+
+记下客户端 ID（形如 `…apps.googleusercontent.com`）。它不是机密——它会随页面发给浏览器。
+
+### 2. 配置服务
+
+| 变量 | 必填 | 说明 |
+|---|---|---|
+| `AUTH_MODE` | 是 | 设为 `google`。设成已废弃的 `oidc` 会被拒绝启动并提示新名字 |
+| `GOOGLE_CLIENT_ID` | 是 | 上一步的客户端 ID；ID token 的 `aud` 按它校验 |
+| `SESSION_SECRET` | 是 | ≥32 字符随机串，放 Secret Manager。用于签名登录 nonce |
+| `GOOGLE_ALLOWED_DOMAINS` | 否 | 逗号分隔，限制只有这些 Workspace 域可登录。**按 `hd` 断言判定，不看邮箱 `@` 后面的字符** |
+| `GOOGLE_MFA_DOMAINS` | 否 | 逗号分隔。**这是运营者的一句断言**：该 Workspace 域已强制开启两步验证。见下方「关于强认证」 |
+| `SESSION_TTL_MINUTES` | 否 | 默认 720（12 小时） |
+| `STEP_UP_TTL_MINUTES` | 否 | 默认 10。一次重新认证算数多久 |
+| `STEP_UP_MAX_AGE_SECONDS` | 否 | 默认 120。Google 必须在多久之内刚认证过 |
+| `COOKIE_SECURE` | 否 | 默认 `true`。**只有 http://localhost 才该设 false**——Secure cookie 在明文 HTTP 上根本不会被浏览器保存，表现就是「点了登录什么也没发生」 |
+
+缺 `GOOGLE_CLIENT_ID` 或 `SESSION_SECRET` 时进程**拒绝启动**：一个起来了却谁也认证不了的平台，和一个坏掉的平台长得一模一样。
+
+### 3. 发出第一封邀请
+
+**没有自助注册。** 一个从没见过的 Google 账号，即使 token 完全合法，也拿不到任何东西——否则「谁放这个人进来的」就没有答案了。
+
+账号先由有权创建的人创建（`Invited` 态），再为它登记一封邀请：
+
+```sql
+INSERT INTO identity_org.account_invitations
+  (id, user_account_id, issuer, invited_email, expires_at)
+VALUES (
+  'invite_' || replace(gen_random_uuid()::text, '-', ''),
+  '<user_account_id>',
+  'https://accounts.google.com',
+  'someone@example.org',
+  now() + interval '14 days'
+);
+```
+
+该邮箱**只决定一件事、且只决定一次**：哪一封待认领的邀请可以被首次登录认领。认领之后，这个人就是他的 Google `sub`，邮箱再改、再被管理员分配给别人，都与账号归属无关。**邮箱不是身份**——按邮箱查账号，等于把离职协调员对参与者的全部访问交给继任者。
+
+引导账号（第一个管理员）没有邀请可发给自己，需要直接为它插一行 `account_invitations`，或沿用 `seed:demo` 的引导路径。
+
+### 关于强认证（10 个动作依赖它）
+
+审批干预版本、裁决导出、锁定数据集、创建安全事件等 10 个动作要求 `mfa` 层。**Google 的 ID token 里没有 `amr`**，所以「这个人用了第二因子」这件事，从 token 里读不出来。
+
+平台因此这样做：
+
+- 普通 Google 登录一律记为 `password`。
+- 需要强认证时，界面上出现「确认是你本人」，走一次 `prompt=login` 的重新认证，换来 `step-up`。权限引擎里 step-up(3) **高于** mfa(2)，所以这 10 个动作全部可达。它回答的是更难的问题：不是「今天某个时刻用过第二因子吗」，而是「这个人现在还在键盘前吗」。
+- `GOOGLE_MFA_DOMAINS` 是唯一会记 `mfa` 的路径，而它信的是**你的断言**，不是 Google 的证明。填之前请确认该域确实强制开启了两步验证；不填也完全能用，只是这些动作每次都要点一下「确认是你本人」。
+
+### 回滚
+
+把 `AUTH_MODE` 改回 `dev-header` 即可，数据不受影响：已建立的 Google 绑定、邀请、会话都留在库里，改回 `google` 就继续有效。桩模式下不要对外开放。
+
+
 ## 演示账号（合成数据）
 
 部署环境的数据库初始为空——dev-header 登录桩要求 actor/participant 在库中真实存在。运行一次种子即可：
@@ -63,7 +129,7 @@ PORT=8099 WEB_DIST_DIR=$PWD/apps/web/dist ACCESS_TOKEN=local-smoke-token-0123456
 
 种子内容（全部合成，ADR-062）：一个组织；九个角色账号（组织管理员/研究员/审批人/证据评审/安全评审/隐私评审/社区审核/协调员/支持者）；两位参与者（安 Ann、本 Ben，已授予 study-participation、open-matching、participant-messaging、community-participation、supporter-involvement、supporter-contribution 同意）；社区「园艺角」含版本化规则与两人各一条已发布帖子；匹配 → 互相接受 → 连接 → 一条已确认发送的消息；一条 AI 起草并经本人确认为 Testimony 的生命故事条目（可见性 Selected People）；一条经参与者批准的支持者关系。
 
-登录方式：首页「参与者」填 actor id + participant id；「员工入口」只填 actor id（审批类 MFA 动作在员工页勾选强认证）；「支持者入口」填支持者 actor id。
+登录方式（**仅 `AUTH_MODE=dev-header` 下**；开启 Google 登录后这些输入框不再出现，界面改为「使用 Google 登录」，参与者标识由服务端查出、不再需要任何人手输）：首页「参与者」填 actor id + participant id；「员工入口」只填 actor id（审批类 MFA 动作在员工页勾选强认证）；「支持者入口」填支持者 actor id。
 
 访问口令：首次用 `<url>/?token=<令牌>` 打开会存入本机浏览器并从地址栏剥离（因此历史记录里的地址不含令牌）。若清过站点数据或换了设备，任一请求会返回 401，界面顶部会出现「需要此环境的访问口令」横幅，直接在那里重新输入即可——不必再去翻带 token 的链接。
 

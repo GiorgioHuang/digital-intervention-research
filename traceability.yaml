@@ -1417,3 +1417,52 @@
   tests:
     - apps/api/test/auth-mode.test.ts
   status: implemented
+- implementation_id: IMP-API-GOOGLE-SIGN-IN-001
+  module: API
+  summary: >-
+    Sign in with Google for staff and participants alike (owner's ruling, 2026-08-08), closing ADR-104.
+    Four places where what Google can prove and what the platform needs are not the same thing.
+    (1) Google proves "holder of Google account sub" - no platform account, no role, no permission.
+    The only path from one to the other is an invitation addressed to a verified email; there is no
+    self-signup, because on a platform holding older adults' health data "who let this person in"
+    must always have an answer. (2) An email address is not an identity - matching is on (issuer, sub)
+    always, because an address can be renamed by its owner and reassigned by a Workspace administrator
+    to a departed coordinator's replacement, and email-based lookup would hand the second holder the
+    first one's access to participants. (3) A domain restriction is checked against the hd claim and
+    never against the text after an @, since a personal account can be named to end in almost anything.
+    (4) Google ID tokens carry no amr, so a second factor cannot be read from a token - and ten actions
+    require mfa (approving an intervention version, deciding an export, locking a dataset, raising a
+    safety event). Recording a plain sign-in as mfa would be the platform lying to its own permission
+    engine, so a sign-in is password and the strong tier is satisfied by step-up - a prompt=login
+    re-authentication whose token must be minutes old - which the engine ranks above mfa and which
+    answers a harder question. mfa is recorded only where an operator asserts in configuration that a
+    Workspace domain enforces 2-Step Verification, with hosted_domain stored so the derivation stays
+    auditable. Sessions are server-side and revocable because suspension is a safety action that must
+    take effect now; the cookie is HttpOnly, SameSite=Lax, stored only as SHA-256, with a custom header
+    as a second lock against cross-site forgery. The OIDC redirect flow is used rather than Google's
+    button script - the participants include older adults on borrowed tablets and slow connections, a
+    redirect works anywhere a browser works, and no third-party code runs on an origin rendering health
+    information.
+  trace_ids: [ATR-003]
+  adr_ids: [ADR-104]
+  docs: ["design/DESIGN_DECISIONS.md D-68", "DEPLOYMENT.md 开启 Google 登录"]
+  code:
+    - packages/database/migrations/1753800000027_google-identity.sql
+    - apps/api/src/auth/google-token.ts
+    - apps/api/src/auth/session-store.ts
+    - apps/api/src/auth/auth.controller.ts
+    - apps/api/src/auth/cookies.ts
+    - apps/api/src/http-context.ts
+    - apps/api/src/config.ts
+    - apps/api/src/app.module.ts
+    - apps/api/src/health.controller.ts
+    - apps/web/src/auth.ts
+    - apps/web/src/components/GoogleSignIn.tsx
+    - apps/web/src/App.tsx
+    - apps/web/src/StaffApp.tsx
+  tests:
+    - apps/api/test/google-token.test.ts
+    - apps/api/test/session-store.integration.test.ts
+    - apps/api/test/auth-mode.test.ts
+    - apps/web/test/google-sign-in.test.tsx
+  status: implemented

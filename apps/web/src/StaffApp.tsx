@@ -1,5 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { StaffSession } from './staff-api.js';
+import { beginSignIn, completeRedirect, currentSession, detectAuthMode, signOut, type AuthMode } from './auth.js';
+import { GoogleSignIn } from './components/GoogleSignIn.js';
 import { AccessTokenGate } from './components/AccessTokenGate.js';
 import { AuditAccess } from './components/AuditAccess.js';
 import { StaffAdminPanel } from './components/StaffAdminPanel.js';
@@ -42,15 +44,62 @@ export function StaffApp({ onExit }: { onExit?: (() => void) | undefined }) {
     organisationId: '',
     authStrength: 'password' as 'password' | 'mfa',
   });
+  const [authMode, setAuthMode] = useState<AuthMode | undefined>(undefined);
+  const [signInProblem, setSignInProblem] = useState('');
+
+  /** See App.tsx: one pass, because it is one question. */
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const detected = await detectAuthMode();
+      if (cancelled) return;
+      setAuthMode(detected);
+      if (detected !== 'google') return;
+      const redirect = await completeRedirect();
+      if (cancelled) return;
+      if (redirect?.error !== undefined) setSignInProblem(redirect.error);
+      const found = redirect?.session ?? (await currentSession().catch(() => undefined));
+      if (cancelled || found === undefined) return;
+      setSession({
+        actorId: found.actorId,
+        authStrength: found.authStrength,
+        // Staff act inside an organisation. It is not in the sign-in
+        // token — membership is the platform's own record — so it stays
+        // a field the person sets, and the server re-evaluates it on
+        // every request rather than taking it as a grant (Doc 14).
+        organisationId: '',
+      });
+      // A re-authentication that has just landed leaves the session at
+      // step-up; nothing else to do but let the screen show it.
+      if (redirect?.stepUpStrength !== undefined) {
+        setSession((prev) =>
+          prev === null ? prev : { ...prev, authStrength: 'step-up' },
+        );
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   if (session === null) {
     return (
       <main>
         <h1>Staff workspace (development environment)</h1>
         <p>
-          Development sign-in stub: enter an account identifier and choose the authentication strength. Opening a
-          workspace is not permission — every action is judged by the server&apos;s permission engine.
+          {authMode === 'google'
+            ? 'Opening a workspace is not permission — every action is judged by the server\u2019s permission engine.'
+            : 'Development sign-in stub: enter an account identifier and choose the authentication strength. Opening a workspace is not permission — every action is judged by the server\u2019s permission engine.'}
         </p>
+        {signInProblem !== '' && <p role="alert">{signInProblem}</p>}
+        {authMode === undefined && <p>One moment…</p>}
+        {authMode === 'google' && (
+          <GoogleSignIn
+            description="You will be taken to Google to sign in, then brought straight back here."
+            onError={setSignInProblem}
+          />
+        )}
+        {authMode === 'dev-header' && (
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -85,13 +134,14 @@ export function StaffApp({ onExit }: { onExit?: (() => void) | undefined }) {
               <option value="mfa">Strong authentication</option>
             </select>
           </p>
-          <button type="submit">Continue</button>{' '}
-          {onExit !== undefined && (
-            <button type="button" onClick={onExit}>
-              Back to the participant sign-in
-            </button>
-          )}
+          <button type="submit">Continue</button>
         </form>
+        )}
+        {onExit !== undefined && (
+          <button type="button" onClick={onExit}>
+            Back to the participant sign-in
+          </button>
+        )}
       </main>
     );
   }
@@ -120,8 +170,42 @@ export function StaffApp({ onExit }: { onExit?: (() => void) | undefined }) {
       <main id="staff-main">
         <AccessTokenGate />
         <p>
-          Signed in as {session.actorId} ({session.authStrength === 'mfa' ? 'strong authentication' : 'password'})
+          Signed in as {session.actorId} ({strengthLabel(session.authStrength)}){' '}
+          {/*
+            Staff on a dedicated staff address had no way out at all — the
+            only exit was "back to the participant sign-in", which does not
+            exist there and would not have ended the session if it did. A
+            workstation in a shared office needs one.
+          */}
+          {authMode === 'google' && (
+            <button
+              type="button"
+              onClick={() => {
+                void signOut();
+                setSession(null);
+              }}
+            >
+              Sign out
+            </button>
+          )}
         </p>
+        {/*
+          Approving an intervention version and deciding an export need
+          more than a sign-in from this morning. The button is here rather
+          than only inside those screens because a person who has just
+          been refused needs the way forward in front of them, not a
+          message telling them a thing they cannot act on.
+        */}
+        {authMode === 'google' && session.authStrength !== 'step-up' && (
+          <p>
+            <button type="button" onClick={() => void beginSignIn('step-up')}>
+              Confirm it is you
+            </button>{' '}
+            <small>
+              Needed before approving or releasing anything. You will be asked to sign in to Google again.
+            </small>
+          </p>
+        )}
         {screen === 'coordinator' && <StaffCoordinatorPanel session={session} />}
         {screen === 'researcher' && <StaffResearcherPanel session={session} />}
         {screen === 'approver' && <StaffApproverPanel session={session} />}
@@ -133,4 +217,17 @@ export function StaffApp({ onExit }: { onExit?: (() => void) | undefined }) {
       </main>
     </div>
   );
+}
+
+/**
+ * Named for what it establishes, not for the mechanism. 'step-up' is a
+ * re-authentication that happened minutes ago; 'mfa' is an operator's
+ * assertion about how a Google Workspace domain is administered. Calling
+ * them both "strong" would hide the difference from the person relying
+ * on it.
+ */
+function strengthLabel(strength: 'password' | 'mfa' | 'step-up'): string {
+  if (strength === 'step-up') return 'confirmed just now';
+  if (strength === 'mfa') return 'strong authentication';
+  return 'password';
 }
