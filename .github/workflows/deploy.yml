@@ -97,17 +97,22 @@ jobs:
         run: |
           PROJECT="${{ vars.GCP_PROJECT_ID }}"
           SECRETS="DATABASE_URL=HADI_DATABASE_URL:latest"
-          # Fail closed on exposure (THREAT_MODEL: the dev-header auth stub
-          # must never be publicly reachable unguarded): with the
-          # HADI_ACCESS_TOKEN secret present the service is public behind
-          # the X-Access-Token gate; without it, ingress stays IAM-only.
+          # Fail closed on exposure (THREAT_MODEL). The rule is about the
+          # STUB, not about the token: what must never be publicly
+          # reachable unguarded is a deployment where identity is whatever
+          # a header says. So the token is one way to be guarded and real
+          # authentication is the other, and this used to know only the
+          # first — written when it was the only one there was.
+          #
+          # Leaving it that way meant that deleting the access token to
+          # open self-signup, which is the documented way to open it, took
+          # the site to IAM-only and off the internet. The compensating
+          # control was holding the door open for the thing that replaced
+          # it.
+          ACCESS_TOKEN_PRESENT=false
           if gcloud secrets describe HADI_ACCESS_TOKEN --project "$PROJECT" >/dev/null 2>&1; then
+            ACCESS_TOKEN_PRESENT=true
             SECRETS="$SECRETS,ACCESS_TOKEN=HADI_ACCESS_TOKEN:latest"
-            AUTH_FLAG="--allow-unauthenticated"
-            echo "::notice::HADI_ACCESS_TOKEN found — public ingress behind the access-token gate."
-          else
-            AUTH_FLAG="--no-allow-unauthenticated"
-            echo "::notice::HADI_ACCESS_TOKEN secret not found — deploying with IAM-only ingress (fail closed). Create the secret to open the token-gated public URL."
           fi
           # Sign in with Google (ADR-104), switched on by the presence of
           # its configuration rather than by a flag day. Both halves or
@@ -127,6 +132,15 @@ jobs:
             echo "::warning::GOOGLE_CLIENT_ID is set but the HADI_SESSION_SECRET secret is missing — staying on the dev-header stub. Create the secret to switch on Sign in with Google."
           else
             echo "::notice::GOOGLE_CLIENT_ID not set — deploying on the dev-header stub (identity is whatever a header says). See DEPLOYMENT.md 开启 Google 登录."
+          fi
+          # Guarded either by real authentication or by the shared token;
+          # unguarded only when neither, and that stays off the internet.
+          if [ "$AUTH_MODE" = google ] || [ "$ACCESS_TOKEN_PRESENT" = true ]; then
+            AUTH_FLAG="--allow-unauthenticated"
+            echo "::notice::public ingress — guarded by AUTH_MODE=$AUTH_MODE, access-token gate present: $ACCESS_TOKEN_PRESENT."
+          else
+            AUTH_FLAG="--no-allow-unauthenticated"
+            echo "::notice::dev-header stub with no access token — IAM-only ingress (fail closed). Configure Sign in with Google, or create HADI_ACCESS_TOKEN, to open the public URL."
           fi
           # Object storage (Cloudflare R2, S3-compatible). All four
           # settings or none: the platform refuses to start on a partial
@@ -154,6 +168,7 @@ jobs:
           fi
           # Carried to the smoke step, which is a separate shell.
           echo "R2_PRESENT=$R2_PRESENT" >> "$GITHUB_ENV"
+          echo "AUTH_MODE_DEPLOYED=$AUTH_MODE" >> "$GITHUB_ENV"
           # Real Knowledge Graph integration (ADR-052/110): the deployed
           # platform talks to the live MCP endpoint.
           ENVVARS="$ENVVARS,KNOWLEDGE_PLATFORM_MODE=mcp,KNOWLEDGE_MCP_URL=${{ vars.KNOWLEDGE_MCP_URL || 'https://knowledge-graph.internal.example' }}"
@@ -179,8 +194,8 @@ jobs:
             --port 8080 \
             --cpu 1 --memory 1Gi \
             --min-instances "${{ vars.MIN_INSTANCES || '0' }}" --max-instances 3 \
-            --update-secrets "$SECRETS" \
-            --update-env-vars "$ENVVARS"
+            --set-secrets "$SECRETS" \
+            --set-env-vars "$ENVVARS"
 
       - name: Cloud Build log (on failure)
         # `gcloud run deploy --source` only prints "check build logs for

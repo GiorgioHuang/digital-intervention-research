@@ -1575,3 +1575,30 @@
     - apps/web/test/accounts-and-roles.test.tsx
     - apps/web/test/staff-admin.test.tsx
   status: implemented
+- implementation_id: IMP-DEPLOY-INGRESS-AND-SECRET-REMOVAL-001
+  module: API
+  summary: >-
+    Two deploy bugs that only fired once real authentication replaced the stub, both found by the
+    deploy failing after the access-token secret was deleted - which is the documented way to open
+    self-signup. First, the ingress rule was written about the TOKEN when it was always about the STUB.
+    "Public only if HADI_ACCESS_TOKEN exists, IAM-only otherwise" was correct while a shared passphrase
+    was the only thing standing in front of an auth stub; with AUTH_MODE=google the platform has real
+    authentication, so deleting the token to open registration took the site off the internet entirely.
+    The compensating control was holding the door open for the thing that replaced it. Now a deployment
+    is public when guarded by EITHER real authentication or the token, and IAM-only only when neither -
+    which is what the threat model actually says. Second, the deploy used --update-secrets and
+    --update-env-vars, which add and change but never remove: the service kept its ACCESS_TOKEN binding
+    to a secret that no longer existed, so the new revision referenced a missing secret and failed to
+    create, and the previous revision would have failed its next cold start for the same reason. Both
+    are now --set-*, so the workflow states the complete desired configuration every deploy and removing
+    a secret actually removes it. The smoke test also now proves authentication is refusing in google
+    mode - an unauthenticated /v1 request carrying an x-actor-id header, exactly what the stub would
+    have believed, must come back 401.
+  trace_ids: [ATR-003]
+  adr_ids: [ADR-104]
+  docs: ["DEPLOYMENT.md 要开放自助注册，访问令牌门得先撤掉", "THREAT_MODEL.md"]
+  code:
+    - .github/workflows/deploy.yml
+  tests:
+    - packages/modules/m16-integration/test/blob-store.test.ts
+  status: implemented
