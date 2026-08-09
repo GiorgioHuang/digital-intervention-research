@@ -1,6 +1,12 @@
 import { useEffect, useState } from 'react';
 import { staffActionError, staffLoadError } from '../errors.js';
-import { staffApi, type AccountItem, type RoleAssignmentItem, type StaffSession } from '../staff-api.js';
+import {
+  staffApi,
+  type AccountItem,
+  type InvitationItem,
+  type RoleAssignmentItem,
+  type StaffSession,
+} from '../staff-api.js';
 
 /**
  * Who holds what, and taking it back (G3).
@@ -41,11 +47,37 @@ const ROLE_STATE_WORDING: Record<string, string> = {
   Rejected: 'rejected',
 };
 
+/**
+ * Roles an administrator may hand out from this screen. Deliberately not
+ * every role in the catalogue: SystemAdministrator is platform-wide and
+ * not an organisation's to give, so it stays a deliberate act elsewhere
+ * rather than an option in a dropdown beside ordinary ones.
+ */
+const GRANTABLE_ROLES = [
+  'ResearchCoordinator',
+  'Researcher',
+  'DataAnalyst',
+  'ResearchApprover',
+  'EvidenceReviewer',
+  'SafetyReviewer',
+  'PrivacyReviewer',
+  'Moderator',
+  'OrganisationAdministrator',
+  'Supporter',
+] as const;
+
 export function AccountsAndRoles({ session }: { session: StaffSession }) {
   const [accounts, setAccounts] = useState<AccountItem[] | null>(null);
   const [error, setError] = useState('');
   const [announcement, setAnnouncement] = useState('');
   const [revoking, setRevoking] = useState<{ account: AccountItem; role: RoleAssignmentItem } | null>(null);
+  const [invitations, setInvitations] = useState<InvitationItem[]>([]);
+  const [invite, setInvite] = useState({ displayName: '', email: '' });
+  const [inviting, setInviting] = useState(false);
+  /** The address and expiry of the invitation just created, to pass on by
+   *  hand — the platform sends nothing. */
+  const [justInvited, setJustInvited] = useState<{ email: string; expiresAt: string } | null>(null);
+  const [grantingRole, setGrantingRole] = useState<Record<string, string>>({});
 
   const load = async () => {
     try {
@@ -55,6 +87,15 @@ export function AccountsAndRoles({ session }: { session: StaffSession }) {
       // that screen down with it.
       setAccounts(res.data.map((a) => ({ ...a.attributes, roles: a.attributes.roles ?? [] })));
       setError('');
+      try {
+        const pending = await staffApi.listInvitations(session);
+        setInvitations(pending.data.map((i) => i.attributes));
+      } catch {
+        // An invitation list that cannot load must not take the accounts
+        // list down with it — they answer different questions and only one
+        // of them is on the critical path.
+        setInvitations([]);
+      }
     } catch (err) {
       setError(staffLoadError(err, 'the accounts in this organisation'));
     }
@@ -92,8 +133,9 @@ export function AccountsAndRoles({ session }: { session: StaffSession }) {
     <section aria-labelledby="accounts-heading">
       <h2 id="accounts-heading">Accounts and roles</h2>
       <p>
-        Everyone holding a role in this organisation, and what that role is. A role is what somebody may do; taking it
-        back stops that at the next thing they try.
+        Everyone in this organisation, and what they may do. A role is what somebody may do; taking it back stops that
+        at the next thing they try. Somebody who has just claimed an invitation appears here with no role at all —
+        that is the state they arrive in, and giving them one is the next step.
       </p>
       {/*
         Said before the list, because the absence is the dangerous part: an
@@ -121,7 +163,7 @@ export function AccountsAndRoles({ session }: { session: StaffSession }) {
       )}
       {error !== '' && <p role="alert">{error}</p>}
       {accounts !== null && accounts.length === 0 && (
-        <p>No accounts hold a role in this organisation. Accounts are created outside this product for now.</p>
+        <p>Nobody is in this organisation yet. Invite somebody below.</p>
       )}
 
       {(accounts ?? []).map((a) => {
@@ -136,10 +178,47 @@ export function AccountsAndRoles({ session }: { session: StaffSession }) {
             </p>
             {active.length === 0 && (
               <p>
-                Holds no role that is in force. They can sign in, and every action will be refused — the platform has
-                no way to stop them signing in.
+                Holds no role that is in force. They can sign in and see nothing but their own account; every other
+                action is refused.
               </p>
             )}
+            {/*
+              An account with no role could be listed and never given one:
+              assigning was a command with no route and no screen, so every
+              new colleague meant somebody writing a row by hand.
+            */}
+            <p>
+              <label htmlFor={`grant-${a.userAccountId}`}>Give a role</label>{' '}
+              <select
+                id={`grant-${a.userAccountId}`}
+                value={grantingRole[a.userAccountId] ?? ''}
+                onChange={(e) => setGrantingRole({ ...grantingRole, [a.userAccountId]: e.target.value })}
+              >
+                <option value="">Choose a role…</option>
+                {GRANTABLE_ROLES.map((r) => (
+                  <option key={r} value={r}>
+                    {r}
+                  </option>
+                ))}
+              </select>{' '}
+              <button
+                disabled={(grantingRole[a.userAccountId] ?? '') === ''}
+                onClick={() => {
+                  const role = grantingRole[a.userAccountId] ?? '';
+                  if (role === '') return;
+                  void staffApi
+                    .assignRole(session, a.userAccountId, role)
+                    .then(async () => {
+                      setGrantingRole({ ...grantingRole, [a.userAccountId]: '' });
+                      setAnnouncement(`${a.displayName} now holds ${role}.`);
+                      await load();
+                    })
+                    .catch((err: unknown) => setAnnouncement(staffActionError(err, 'That role')));
+                }}
+              >
+                Give this role
+              </button>
+            </p>
             <ul>
               {a.roles.map((r) => (
                 <li key={r.roleAssignmentId}>
@@ -166,6 +245,106 @@ export function AccountsAndRoles({ session }: { session: StaffSession }) {
           </article>
         );
       })}
+
+      <section aria-labelledby="invite-heading">
+        <h3 id="invite-heading">Invite somebody</h3>
+        {/*
+          Stated first and plainly. Every other product that shows this form
+          sends a message, so an administrator will assume this one does;
+          somebody would then sit waiting for an email that was never going
+          to arrive, on both sides.
+        */}
+        <p>
+          <strong>This does not send an email.</strong> It creates the account and records the invitation. You pass the
+          address on yourself — tell them to open this platform and sign in with that exact Google account.
+        </p>
+        <p>
+          The address decides one thing only: which invitation their first sign-in may claim. After that they are their
+          Google account, so a later change of address does not lock them out — and does not let anybody else in.
+        </p>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (invite.displayName.trim() === '' || invite.email.trim() === '') return;
+            setInviting(true);
+            setJustInvited(null);
+            void staffApi
+              .inviteToPlatform(session, { displayName: invite.displayName.trim(), email: invite.email.trim() })
+              .then(async (res) => {
+                setJustInvited({
+                  email: res.data.attributes.invitedEmail,
+                  expiresAt: res.data.attributes.expiresAt,
+                });
+                setInvite({ displayName: '', email: '' });
+                setAnnouncement(`Invitation recorded for ${res.data.attributes.invitedEmail}.`);
+                await load();
+              })
+              .catch((err: unknown) => setAnnouncement(staffActionError(err, 'That invitation')))
+              .finally(() => setInviting(false));
+          }}
+        >
+          <p>
+            <label htmlFor="invite-name">Their name</label>{' '}
+            <input
+              id="invite-name"
+              value={invite.displayName}
+              onChange={(e) => setInvite({ ...invite, displayName: e.target.value })}
+            />
+          </p>
+          <p>
+            <label htmlFor="invite-email">Their Google account address</label>{' '}
+            <input
+              id="invite-email"
+              type="email"
+              value={invite.email}
+              onChange={(e) => setInvite({ ...invite, email: e.target.value })}
+            />
+          </p>
+          <button type="submit" disabled={inviting || !scoped}>
+            {inviting ? 'Recording…' : 'Record invitation'}
+          </button>
+        </form>
+        {justInvited !== null && (
+          <p role="status">
+            Invitation recorded for <strong>{justInvited.email}</strong>, valid until{' '}
+            {new Date(justInvited.expiresAt).toLocaleDateString()}. Nothing has been sent — tell them yourself.
+          </p>
+        )}
+
+        <h4>Waiting to be claimed</h4>
+        {invitations.length === 0 ? (
+          <p>Nothing outstanding.</p>
+        ) : (
+          <ul>
+            {invitations.map((i) => (
+              <li key={i.invitationId}>
+                <strong>{i.invitedEmail}</strong>
+                {i.displayName === null ? '' : ` — ${i.displayName}`} · expires{' '}
+                {new Date(i.expiresAt).toLocaleDateString()}{' '}
+                <button
+                  onClick={() => {
+                    void staffApi
+                      .revokeInvitation(session, i.invitationId)
+                      .then(async () => {
+                        setAnnouncement(`The invitation to ${i.invitedEmail} has been withdrawn.`);
+                        await load();
+                      })
+                      .catch((err: unknown) => setAnnouncement(staffActionError(err, 'That invitation')));
+                  }}
+                >
+                  Withdraw
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+        <p>
+          <small>
+            An invitation that is never claimed expires on its own. Withdrawing one only works while it is still
+            waiting — once somebody has signed in with it, taking their roles back is what stops them.
+          </small>
+        </p>
+      </section>
 
       {revoking !== null && (
         <div role="alertdialog" aria-labelledby="revoke-confirm">

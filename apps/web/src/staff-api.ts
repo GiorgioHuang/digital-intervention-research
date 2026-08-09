@@ -8,6 +8,16 @@ import { accessTokenHeader, platformClientHeader, raiseApiError, type ApiError }
  * MFA-tier actions are honestly represented (production OIDC pending
  * ADR-104).
  */
+export interface InvitationItem {
+  invitationId: string;
+  userAccountId: string | null;
+  displayName: string | null;
+  invitedEmail: string;
+  expiresAt: string;
+  invitedBy: string | null;
+  createdAt: string;
+}
+
 export interface StaffSession {
   actorId: string;
   /**
@@ -511,6 +521,18 @@ export const staffApi = {
   /** Version-bound: a role that changed underneath is refused, not merged. */
   revokeRole: (s: StaffSession, roleAssignmentId: string, expectedVersion: number) =>
     post<Id>(s, `/v1/role-assignments/${roleAssignmentId}/revoke`, { expectedVersion, confirmed: true }),
+  inviteToPlatform: (s: StaffSession, input: { displayName: string; email: string; expiresInDays?: number }) =>
+    post<{ data: { id: string; attributes: { userAccountId: string; invitedEmail: string; expiresAt: string } } }>(
+      s,
+      '/v1/account-invitations',
+      input,
+    ),
+  listInvitations: (s: StaffSession) =>
+    get<{ data: { id: string; attributes: InvitationItem }[] }>(s, '/v1/account-invitations'),
+  revokeInvitation: (s: StaffSession, invitationId: string) =>
+    post<Id>(s, `/v1/account-invitations/${invitationId}/revoke`, { confirmed: true }),
+  assignRole: (s: StaffSession, userAccountId: string, role: string) =>
+    post<Id>(s, `/v1/user-accounts/${userAccountId}/role-assignments`, { role, confirmed: true }),
 
   listInterventions: (s: StaffSession) => get<List<InterventionItem>>(s, '/v1/interventions'),
   createIntervention: (s: StaffSession, interventionCode: string, name: string) =>

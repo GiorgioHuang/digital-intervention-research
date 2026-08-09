@@ -75,8 +75,19 @@ describe('administrative participant list', () => {
     expect(listing?.headers['x-purpose-code']).toBe('platform-administration');
 
     expect(screen.getByText('Ann')).toBeTruthy();
-    // No free-text field exists that could be used to test an identifier.
-    expect(screen.queryByRole('textbox')).toBeNull();
+    /*
+     * No free-text field exists that could be used to test an identifier.
+     *
+     * This used to assert that the panel had NO textbox at all, which was
+     * a fair proxy while it had none. The invite form on the accounts
+     * section beside it has two, so the assertion is now made against what
+     * it was always about: nothing here takes a participant or account
+     * identifier and tells you whether it exists. The invite fields are a
+     * person's name and the address to invite them at — neither is looked
+     * up, and both are refused or recorded regardless of who exists.
+     */
+    const textboxes = screen.queryAllByRole('textbox').map((el) => el.getAttribute('id'));
+    expect(textboxes.sort()).toEqual(['invite-email', 'invite-name']);
   });
 
   it('says what the list is not, so it is not read as a complete roll', async () => {

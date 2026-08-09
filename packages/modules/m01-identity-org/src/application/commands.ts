@@ -275,3 +275,170 @@ export async function seedBootstrapAdministrator(
   });
   return { userAccountId };
 }
+
+/**
+ * Inviting somebody onto the platform (ADR-104, D-68/D-69).
+ *
+ * Until this existed, an invitation could only be written by hand, straight
+ * into the database of a running deployment — which is how you end up with
+ * an expiry nobody set, an address nobody lowercased, and an account state
+ * that does not match the invitation beside it. It is one transaction
+ * because it is one act: the account, its membership, and the invitation
+ * that lets its holder claim it.
+ *
+ * WHAT THIS DOES NOT DO: send an email. The platform has no mail sender and
+ * this does not pretend otherwise — it returns the address and the expiry
+ * so whoever invited can pass them on themselves. A function called
+ * "invite" that silently posts nothing anywhere is worse than one that says
+ * it is only recording the invitation.
+ */
+export async function inviteToPlatform(
+  deps: M01Deps,
+  ctx: RequestContext,
+  input: {
+    displayName: string;
+    email: string;
+    organisationId?: string;
+    /** Default two weeks. An invitation that never expires is a permanent
+     *  unclaimed way into an account, sitting in somebody's mailbox. */
+    expiresInDays?: number;
+  },
+): Promise<{ userAccountId: string; invitationId: string; expiresAt: Date; invitedEmail: string }> {
+  const actorId = requireActor(ctx);
+  const decision = await deps.checkPermission(ctx, {
+    action: 'user.invite',
+    resource: {
+      type: 'UserAccount',
+      id: 'new',
+      state: 'Draft',
+      protectedExistence: false,
+      ...(input.organisationId !== undefined ? { organisationId: input.organisationId } : {}),
+    },
+  });
+  assertAllowed(decision, false);
+
+  const email = input.email.trim().toLowerCase();
+  // Not a validator so much as a refusal to record something that cannot
+  // possibly be claimed: the claim matches on the token's verified email,
+  // so an address with no `@` is an invitation that can only ever expire.
+  if (email === '' || !email.includes('@') || email.startsWith('@') || email.endsWith('@')) {
+    throw new PlatformError('VALIDATION_ERROR', 'A valid email address is required to invite somebody');
+  }
+  const days = input.expiresInDays ?? 14;
+  if (!Number.isInteger(days) || days < 1 || days > 90) {
+    throw new PlatformError('VALIDATION_ERROR', 'An invitation may last between 1 and 90 days');
+  }
+
+  const userAccountId = newId('actor');
+  const invitationId = newId('invite');
+  const now = deps.clock.now();
+  const expiresAt = new Date(now.getTime() + days * 24 * 60 * 60 * 1000);
+
+  await withTransaction(deps.pool, async (client) => {
+    // 'Invited', not 'Active': the account exists but nobody holds it yet,
+    // and the sign-in path is what turns it Active on a successful claim.
+    await client.query(
+      `INSERT INTO identity_org.user_accounts (id, display_name, account_state, origin)
+       VALUES ($1, $2, 'Invited', 'invitation')`,
+      [userAccountId, input.displayName],
+    );
+    if (input.organisationId !== undefined) {
+      await insertMembership(client, {
+        id: newId('mem'),
+        organisationId: input.organisationId,
+        userAccountId,
+      });
+    }
+    try {
+      await client.query(
+        `INSERT INTO identity_org.account_invitations
+           (id, user_account_id, issuer, invited_email, expires_at, invited_by)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [invitationId, userAccountId, GOOGLE_ISSUER, email, expiresAt, actorId],
+      );
+    } catch (error) {
+      // The partial unique index on (issuer, lower(invited_email)) where
+      // Pending. Two live invitations to one address would mean a first
+      // sign-in facing two candidate accounts, so the second is refused
+      // here rather than resolved arbitrarily later.
+      if (typeof error === 'object' && error !== null && (error as { code?: string }).code === '23505') {
+        throw new PlatformError(
+          'RESOURCE_CONFLICT',
+          'That address already has an invitation waiting. Revoke it before sending another.',
+        );
+      }
+      throw error;
+    }
+    await appendToOutbox(client, ctx, {
+      eventCategory: 'Domain',
+      eventType: M01_EVENTS.UserAccountCreated,
+      sourceModule: 'M01',
+      aggregateType: 'UserAccount',
+      aggregateId: userAccountId,
+      occurredAt: now,
+    });
+    await recordAuditEvent(client, ctx, {
+      action: 'user.invite',
+      targetType: 'UserAccount',
+      targetId: userAccountId,
+      result: 'Succeeded',
+      policyDecision: decision.outcome,
+      policyVersion: decision.policyVersion,
+      source: 'm01.inviteToPlatform',
+      occurredAt: now,
+    });
+  });
+
+  return { userAccountId, invitationId, expiresAt, invitedEmail: email };
+}
+
+/** Google's issuer string, matching what the sign-in path records. */
+const GOOGLE_ISSUER = 'https://accounts.google.com';
+
+/**
+ * Withdrawing an invitation that has not been claimed. Needed because an
+ * invitation is a live way into an account: a colleague who never joined,
+ * an address typed wrong, somebody who left before their first day.
+ */
+export async function revokeInvitation(
+  deps: M01Deps,
+  ctx: RequestContext,
+  input: { invitationId: string; confirmed: boolean },
+): Promise<void> {
+  requireActor(ctx);
+  const decision = await deps.checkPermission(ctx, {
+    action: 'user.invite',
+    resource: { type: 'UserAccount', id: input.invitationId, state: 'Invited', protectedExistence: false },
+  });
+  assertAllowed(decision, input.confirmed);
+
+  const now = deps.clock.now();
+  await withTransaction(deps.pool, async (client) => {
+    const result = await client.query(
+      `UPDATE identity_org.account_invitations
+          SET invitation_state = 'Revoked', record_version = record_version + 1, updated_at = now()
+        WHERE id = $1 AND invitation_state = 'Pending'`,
+      [input.invitationId],
+    );
+    // A claimed invitation cannot be revoked — the person is already in,
+    // and pretending otherwise would leave an administrator believing they
+    // had closed a door that is open. Suspending the account is the action
+    // that actually stops them.
+    if (result.rowCount === 0) {
+      throw new PlatformError(
+        'INVALID_STATE_TRANSITION',
+        'That invitation is no longer pending. If it was claimed, suspend the account instead.',
+      );
+    }
+    await recordAuditEvent(client, ctx, {
+      action: 'user.invite',
+      targetType: 'AccountInvitation',
+      targetId: input.invitationId,
+      result: 'Succeeded',
+      policyDecision: decision.outcome,
+      policyVersion: decision.policyVersion,
+      source: 'm01.revokeInvitation',
+      occurredAt: now,
+    });
+  });
+}

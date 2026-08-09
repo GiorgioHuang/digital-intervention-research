@@ -1537,3 +1537,41 @@
     - apps/api/test/api.e2e.test.ts
     - apps/web/test/access-token-gate.test.tsx
   status: implemented
+- implementation_id: IMP-API-ACCOUNT-INVITATIONS-001
+  module: M01
+  summary: >-
+    Inviting somebody, and giving them a role, from the screen rather than by hand. The first real
+    question after go-live was how to send an invitation, and the answer was a hand-written row in a
+    running deployment's database - acceptable once for the first administrator, and as the standing
+    answer to "how do I add a coordinator" a guarantee that expiries go unset and addresses go
+    unlowercased. Three instances of the same shape the codebase already names about revokeRole: a
+    command written with its permission check, scope, confirmation and audit, and no route and no
+    screen. assignRole had been there since M01 was written; user.invite was in the permission
+    catalogue, granted to both administrator roles, and called by nothing. Access could be taken back
+    through the UI and only ever granted by hand. The worst part only appears when they are joined up -
+    listOrganisationAccounts decided "belongs to this organisation" from role assignments alone, its
+    comment asserting "there is no membership table" when organisation_memberships exists and every
+    account this platform creates is written into it. Harmless while accounts arrived with their roles
+    attached; not harmless once people could be invited, because somebody who had just claimed an
+    invitation held a membership and no role, and therefore did not appear on the one screen that could
+    give them a role - on the platform and unreachable by the person meant to administer them. The
+    screen states in its first line that no email is sent, because every comparable product's version
+    of this form does send one and an administrator will assume this one does, leaving two people
+    waiting for a message that was never coming. The mutation check on the listing fix was invalid on
+    the first attempt - the test imports the package's build output and only the source had changed, so
+    the mutation ran against a stale dist and stayed green; rebuilding made it fail as intended.
+  trace_ids: [ATR-003]
+  adr_ids: [ADR-104]
+  docs: ["design/DESIGN_DECISIONS.md D-70", "DEPLOYMENT.md 自助注册与邀请"]
+  code:
+    - packages/modules/m01-identity-org/src/application/commands.ts
+    - packages/modules/m01-identity-org/src/application/queries.ts
+    - packages/modules/m01-identity-org/src/index.ts
+    - apps/api/src/staff-controllers.ts
+    - apps/web/src/staff-api.ts
+    - apps/web/src/components/AccountsAndRoles.tsx
+  tests:
+    - apps/api/test/session-store.integration.test.ts
+    - apps/web/test/accounts-and-roles.test.tsx
+    - apps/web/test/staff-admin.test.tsx
+  status: implemented

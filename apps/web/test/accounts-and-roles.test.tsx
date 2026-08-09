@@ -119,7 +119,16 @@ describe('accounts and roles', () => {
     });
     expect(screen.queryByRole('button', { name: 'Take back this role' })).toBeNull();
     expect(screen.getByText(/taken back by actor_admin/)).toBeTruthy();
-    // And the consequence of holding nothing is stated rather than implied.
-    expect(screen.getByText(/the platform has no way to stop them signing in/i)).toBeTruthy();
+    /*
+     * The consequence of holding nothing is stated rather than implied.
+     *
+     * The wording changed with ADR-104. It used to say the platform had no
+     * way to stop somebody signing in, which was true of the dev-header
+     * stub and is not true now: suspending an account refuses the next
+     * sign-in AND kills the session in flight. Leaving the old sentence up
+     * would have told an administrator they were powerless over exactly
+     * the thing they had just been given power over.
+     */
+    expect(screen.getByText(/see nothing but their own account/i)).toBeTruthy();
   });
 });

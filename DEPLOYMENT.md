@@ -128,21 +128,13 @@ HADI_SESSION_SECRET = <≥32 字符随机串>
 
 自注册的人拿到的是：一个账号、一份属于自己的参与者记录，**以及一个谁也看不见的视野**。这不是靠登录代码客气，是结构性的——权限引擎第 2 步对没有角色的 actor 一律 `no-granting-role` 拒绝，只剩「自己是资源所有者」这一条路；Open Matching 要求**双方**都已开启，社区要 `community-participation` 同意，而新账号两样都没有。**所以自注册的人是一个人待在平台上的**，直到有人邀请他，或他自己同意了什么。
 
-**邀请是唯一会授予东西的通路。** 它有两种形状：
+**邀请是唯一会授予东西的通路。**
 
-**（甲）指向一个预先建好的账号**——工作人员入职：管理员先建账号、挂好角色，邀请是账号持有者认领它的方式。
+**工作人员邀请现在在界面里做**：工作人员工作区 → 管理 → 「账户与角色」→「邀请某人」，填姓名和对方的 Google 账号邮箱即可；下面「等待认领」一栏列出还没被认领的，可以撤回。认领之后那个人会出现在账户列表里、**且不带任何角色**，在同一张卡片上给他一个角色。
 
-```sql
-INSERT INTO identity_org.account_invitations
-  (id, user_account_id, issuer, invited_email, expires_at)
-VALUES (
-  'invite_' || replace(gen_random_uuid()::text, '-', ''),
-  '<user_account_id>', 'https://accounts.google.com',
-  'staff@example.org', now() + interval '14 days'
-);
-```
+**注意：平台不会发邮件。** 它没有邮件发送能力，界面上也这么写着——邀请只是被记录下来，地址和有效期回显给你，由你自己转告对方。一个叫「邀请」却什么也不发的按钮，比一个明说自己只是登记的按钮更坏。
 
-**（乙）不指向账号，只携带一段关系**——参与者邀请女儿来看自己的生命故事。认领的人若还没有账号就自动获得一个；关系带作用域动作，认领即 `Active`（发邀请的参与者本人就是那份批准），此后随时可在「谁能看到我」撤销。
+参与者邀请自己的支持者（「让女儿看我的生命故事」）目前**还没有界面**，只能写 SQL：
 
 ```sql
 INSERT INTO identity_org.account_invitations
@@ -155,6 +147,8 @@ VALUES (
   '<inviter_participant_id>', 'FamilyMember', ARRAY['life-story.contribute']
 );
 ```
+
+认领的人若还没有账号就自动获得一个；关系带作用域动作、认领即 `Active`（发邀请的参与者本人就是那份批准），此后随时可在「谁能看到我」撤销。
 
 **被邀请的支持者不会被登记成参与者**——被邀请来帮某人，不等于被纳入一项研究；要让认领者同时成为参与者，显式设 `creates_participant = true`。
 

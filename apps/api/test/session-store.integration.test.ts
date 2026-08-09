@@ -3,9 +3,10 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { createPool, migrate, type Pool } from '@platform/database';
 import { FixedClock, createRequestContext, newId } from '@platform/kernel';
 import { POLICY_V1 } from '@platform/policy';
-import { createRoleAssignmentQuery } from '@platform/m01-identity-org';
+import { createRoleAssignmentQuery, listOrganisationAccounts } from '@platform/m01-identity-org';
 import { createParticipantQuery } from '@platform/m02-participant';
 import { createPermissionService } from '@platform/m03-consent-permission';
+import { inviteToPlatform, listPendingInvitations, revokeInvitation } from '@platform/m01-identity-org';
 import { createSessionStore, hashToken, type SessionStore } from '../src/auth/session-store.js';
 import type { GoogleIdentity } from '../src/auth/google-token.js';
 
@@ -420,6 +421,155 @@ describe.skipIf(!dbAvailable)('sessions, invitations, and who a Google account t
       [inviterParticipant],
     );
     expect(relationships.rows[0]?.count).toBe('1');
+  });
+
+
+  /* ---------------------------------------------------------------- */
+  /* Inviting somebody, from the screen rather than by hand            */
+  /* ---------------------------------------------------------------- */
+
+  /**
+   * The whole round trip: an administrator records an invitation, and the
+   * person it names signs in and lands on the account it made for them.
+   *
+   * Worth asserting as one arc rather than two halves, because the halves
+   * were written days apart and the thing that binds them is a lowercased
+   * email in one place matching a verified email in another. That is
+   * exactly the kind of seam that holds in unit tests and parts in
+   * production.
+   */
+  describe('inviting from the administrator screen', () => {
+    let adminCtx: ReturnType<typeof createRequestContext>;
+    let m01: { pool: Pool; clock: FixedClock; checkPermission: typeof permissions.evaluate };
+    let organisationId: string;
+
+    beforeEach(async () => {
+      await pool.query('DELETE FROM identity_org.organisation_memberships');
+      await pool.query('DELETE FROM identity_org.role_assignments');
+      organisationId = newId('org');
+      await pool.query(`INSERT INTO identity_org.organisations (id, name) VALUES ($1, 'Test Org')`, [
+        organisationId,
+      ]);
+      const admin = await makeAccount('Admin', 'Active');
+      await pool.query(
+        `INSERT INTO identity_org.role_assignments
+           (id, user_account_id, role, organisation_id, assignment_state, assigned_by_actor_id)
+         VALUES ($1, $2, 'OrganisationAdministrator', $3, 'Active', 'system-bootstrap')`,
+        [newId('ra'), admin, organisationId],
+      );
+      adminCtx = createRequestContext({
+        actor: { type: 'user', id: admin },
+        organisationId,
+        purposeCode: 'platform-administration',
+      });
+      m01 = { pool, clock: new FixedClock('2026-08-09T12:00:00Z'), checkPermission: permissions.evaluate.bind(permissions) };
+    });
+
+    it('records an invitation the named person can then claim', async () => {
+      const invitation = await inviteToPlatform(m01, adminCtx, {
+        displayName: 'Sam',
+        email: 'Sam@Example.org',
+        organisationId,
+      });
+      // Lowercased on the way in, because the claim matches on lower(email)
+      // and an address typed with capitals would otherwise never match.
+      expect(invitation.invitedEmail).toBe('sam@example.org');
+
+      const signedIn = await sessions.signIn(
+        identity({ subject: 'google-sub-sam', email: 'sam@example.org' }),
+        nextNonce(),
+      );
+      expect(signedIn.userAccountId).toBe(invitation.userAccountId);
+
+      const account = await pool.query<{ account_state: string; origin: string }>(
+        `SELECT account_state, origin FROM identity_org.user_accounts WHERE id = $1`,
+        [invitation.userAccountId],
+      );
+      expect(account.rows[0]?.account_state).toBe('Active');
+      expect(account.rows[0]?.origin).toBe('invitation');
+    });
+
+    /**
+     * The claimed person has a membership and no role. They must still be
+     * visible to the administrator — otherwise they are on the platform
+     * and unreachable by the person meant to give them a role.
+     */
+    it('shows a claimed invitee on the accounts screen before they hold any role', async () => {
+      const invitation = await inviteToPlatform(m01, adminCtx, {
+        displayName: 'Sam',
+        email: 'sam@example.org',
+        organisationId,
+      });
+      await sessions.signIn(identity({ subject: 'google-sub-sam', email: 'sam@example.org' }), nextNonce());
+
+      const accounts = await listOrganisationAccounts(m01, adminCtx);
+      const sam = accounts.find((a) => a.userAccountId === invitation.userAccountId);
+      expect(sam, 'a claimed invitee with no role must still be listed').toBeDefined();
+      expect(sam?.roles.filter((r) => r.assignmentState === 'Active')).toEqual([]);
+    });
+
+    it('lists what is outstanding and stops listing it once claimed', async () => {
+      await inviteToPlatform(m01, adminCtx, { displayName: 'Sam', email: 'sam@example.org', organisationId });
+      expect((await listPendingInvitations(m01, adminCtx)).map((i) => i.invitedEmail)).toEqual([
+        'sam@example.org',
+      ]);
+
+      await sessions.signIn(identity({ subject: 'google-sub-sam', email: 'sam@example.org' }), nextNonce());
+      expect(await listPendingInvitations(m01, adminCtx)).toEqual([]);
+    });
+
+    /**
+     * Two live invitations to one address would mean a first sign-in facing
+     * two candidate accounts. Refused at the point of asking, with a
+     * message that says what to do, rather than resolved arbitrarily later.
+     */
+    it('refuses a second live invitation to the same address', async () => {
+      await inviteToPlatform(m01, adminCtx, { displayName: 'Sam', email: 'sam@example.org', organisationId });
+      await expect(
+        inviteToPlatform(m01, adminCtx, { displayName: 'Sam again', email: 'SAM@example.org', organisationId }),
+      ).rejects.toThrow(/already has an invitation waiting/);
+    });
+
+    it('lets a withdrawn invitation no longer be claimed', async () => {
+      const invitation = await inviteToPlatform(m01, adminCtx, {
+        displayName: 'Sam',
+        email: 'sam@example.org',
+        organisationId,
+      });
+      await revokeInvitation(m01, adminCtx, { invitationId: invitation.invitationId, confirmed: true });
+
+      const signedIn = await sessions.signIn(
+        identity({ subject: 'google-sub-sam', email: 'sam@example.org' }),
+        nextNonce(),
+      );
+      // Self-signup means they still get in — as a stranger with their own
+      // account, not as the person the withdrawn invitation named.
+      expect(signedIn.userAccountId).not.toBe(invitation.userAccountId);
+    });
+
+    it('refuses to withdraw an invitation that has already been claimed', async () => {
+      const invitation = await inviteToPlatform(m01, adminCtx, {
+        displayName: 'Sam',
+        email: 'sam@example.org',
+        organisationId,
+      });
+      await sessions.signIn(identity({ subject: 'google-sub-sam', email: 'sam@example.org' }), nextNonce());
+      await expect(
+        revokeInvitation(m01, adminCtx, { invitationId: invitation.invitationId, confirmed: true }),
+      ).rejects.toThrow(/no longer pending/);
+    });
+
+    /** `user.invite` is granted to administrators only. */
+    it('refuses to invite anybody on behalf of somebody with no standing', async () => {
+      const stranger = await sessions.signIn(identity(), nextNonce());
+      const strangerCtx = createRequestContext({
+        actor: { type: 'user', id: stranger.userAccountId },
+        organisationId,
+      });
+      await expect(
+        inviteToPlatform(m01, strangerCtx, { displayName: 'Sam', email: 'sam@example.org', organisationId }),
+      ).rejects.toThrow();
+    });
   });
 
   /* ---------------------------------------------------------------- */

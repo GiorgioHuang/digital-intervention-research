@@ -24,7 +24,14 @@ import {
   startScreening,
   withdrawParticipant,
 } from '@platform/m05-enrolment';
-import { listOrganisationAccounts, revokeRole } from '@platform/m01-identity-org';
+import {
+  listOrganisationAccounts,
+  revokeRole,
+  inviteToPlatform,
+  revokeInvitation,
+  listPendingInvitations,
+  assignRole,
+} from '@platform/m01-identity-org';
 import { listInterventionSessions, recordInterventionSession } from '@platform/m07-delivery';
 import {
   activateInterventionVersion,
@@ -608,6 +615,96 @@ export class StaffCommandController {
     const ctx = requireActor(req);
     const items = await listOrganisationAccounts(this.deps.m01, ctx);
     return { data: items.map((a) => ({ type: 'UserAccount', id: a.userAccountId, attributes: a })) };
+  }
+
+  /**
+   * Inviting somebody onto the platform (ADR-104).
+   *
+   * Before this route, the only way to invite anybody was to write a row
+   * into the database of a running deployment by hand. That is fine once,
+   * for the first administrator; as the standing answer to "how do I add a
+   * coordinator" it is a way of guaranteeing that expiries go unset and
+   * addresses go unlowercased.
+   *
+   * It does NOT send an email — the platform has no mail sender. The
+   * address and the expiry come back so whoever invited can pass them on,
+   * and the screen says so rather than letting somebody assume a message
+   * went out.
+   */
+  @Post('account-invitations')
+  async inviteToPlatformAccount(
+    @Req() req: Request,
+    @Body() body: { displayName: string; email: string; expiresInDays?: number },
+  ) {
+    const ctx = requireActor(req);
+    const result = await inviteToPlatform(this.deps.m01, ctx, {
+      displayName: body.displayName,
+      email: body.email,
+      // From the request context, never from the body: an organisation
+      // taken as an argument is a way of asking which organisations exist,
+      // and of writing an account into one the caller has no standing in.
+      ...(ctx.organisationId !== undefined ? { organisationId: ctx.organisationId } : {}),
+      ...(body.expiresInDays !== undefined ? { expiresInDays: body.expiresInDays } : {}),
+    });
+    return {
+      data: {
+        type: 'AccountInvitation',
+        id: result.invitationId,
+        attributes: {
+          userAccountId: result.userAccountId,
+          invitedEmail: result.invitedEmail,
+          expiresAt: result.expiresAt.toISOString(),
+        },
+      },
+    };
+  }
+
+  /** What is still outstanding. An invited account holds no role yet, so it
+   *  does not appear in the accounts listing — without this, an unclaimed
+   *  invitation is invisible until it stops mattering. */
+  @Get('account-invitations')
+  async accountInvitations(@Req() req: Request) {
+    const ctx = requireActor(req);
+    const items = await listPendingInvitations(this.deps.m01, ctx);
+    return {
+      data: items.map((i) => ({ type: 'AccountInvitation', id: i.invitationId, attributes: i })),
+    };
+  }
+
+  @Post('account-invitations/:invitationId/revoke')
+  async revokeAccountInvitation(
+    @Req() req: Request,
+    @Param('invitationId') invitationId: string,
+    @Body() body: { confirmed: boolean },
+  ) {
+    const ctx = requireActor(req);
+    await revokeInvitation(this.deps.m01, ctx, { invitationId, confirmed: body.confirmed === true });
+    return { data: { type: 'AccountInvitation', id: invitationId, meta: { state: 'Revoked' } } };
+  }
+
+  /**
+   * Giving somebody a role.
+   *
+   * `assignRole` has been in M01 since it was written — permission check,
+   * scope, confirmation, audit — with no route and no screen, exactly like
+   * `revokeRole` before it. Access could be taken back through the UI and
+   * never given, so every new colleague meant another hand-written row.
+   */
+  @Post('user-accounts/:userAccountId/role-assignments')
+  async assignRoleToAccount(
+    @Req() req: Request,
+    @Param('userAccountId') userAccountId: string,
+    @Body() body: { role: string; confirmed: boolean; expiresAt?: string },
+  ) {
+    const ctx = requireActor(req);
+    const result = await assignRole(this.deps.m01, ctx, {
+      userAccountId,
+      role: body.role as Parameters<typeof assignRole>[2]['role'],
+      ...(ctx.organisationId !== undefined ? { organisationId: ctx.organisationId } : {}),
+      ...(body.expiresAt !== undefined ? { expiresAt: new Date(body.expiresAt) } : {}),
+      confirmed: body.confirmed === true,
+    });
+    return { data: { type: 'RoleAssignment', id: result.roleAssignmentId } };
   }
 
   /** Taking a role back. Confirmed, and version-bound so a role that

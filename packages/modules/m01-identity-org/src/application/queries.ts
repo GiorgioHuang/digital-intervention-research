@@ -63,15 +63,28 @@ export async function listOrganisationAccounts(deps: M01Deps, ctx: RequestContex
     throw new PlatformError('ORGANISATION_CONTEXT_REQUIRED', 'An organisation context is required to list accounts');
   }
 
-  // Accounts reachable from this organisation are those holding a role in
-  // it. There is no membership table: a role assignment scoped to the
-  // organisation is what "belongs to" means here, and inventing a wider
-  // answer would list accounts the caller has no standing over.
+  // Belonging to an organisation is membership OR a role scoped to it.
+  //
+  // This used to be roles alone, on the stated grounds that "there is no
+  // membership table" — and there is: `organisation_memberships`, written
+  // by every account this platform creates. Reading only roles meant an
+  // account with a membership and no role was invisible here, which was
+  // harmless while accounts arrived with their roles already attached and
+  // stopped being harmless the moment people could be invited: somebody
+  // who claimed an invitation had a membership, no role, and therefore no
+  // row on the one screen that can give them a role. They were on the
+  // platform and unreachable by the person meant to be administering them.
+  //
+  // Still scoped: both halves are conditioned on this organisation, so
+  // this lists nobody the caller lacks standing over.
   const res = await deps.pool.query(
     `SELECT DISTINCT a.id, a.display_name, a.account_state, a.actor_type
        FROM identity_org.user_accounts a
-       JOIN identity_org.role_assignments r ON r.user_account_id = a.id
-      WHERE r.organisation_id = $1
+       LEFT JOIN identity_org.role_assignments r
+              ON r.user_account_id = a.id AND r.organisation_id = $1
+       LEFT JOIN identity_org.organisation_memberships m
+              ON m.user_account_id = a.id AND m.organisation_id = $1
+      WHERE r.id IS NOT NULL OR m.id IS NOT NULL
       ORDER BY a.display_name ASC`,
     [organisationId],
   );
@@ -107,5 +120,69 @@ export async function listOrganisationAccounts(deps: M01Deps, ctx: RequestContex
     accountState: a.account_state as string,
     actorType: a.actor_type as string,
     roles: byAccount.get(a.id as string) ?? [],
+  }));
+}
+
+export interface PendingInvitationView {
+  invitationId: string;
+  userAccountId: string | null;
+  displayName: string | null;
+  invitedEmail: string;
+  expiresAt: string;
+  invitedBy: string | null;
+  createdAt: string;
+}
+
+/**
+ * Invitations still waiting to be claimed.
+ *
+ * Needed as its own listing rather than a column on the accounts screen,
+ * because an invited account holds no role yet and the accounts listing
+ * derives membership FROM roles — so an invited colleague is invisible
+ * there until the moment they no longer need chasing. An administrator
+ * who cannot see what is outstanding re-sends invitations that already
+ * exist, and the partial unique index then refuses them, which reads as
+ * the platform being broken.
+ *
+ * Scoped by organisation through the account's role/membership, and
+ * invitations that belong to no organisation are visible to the
+ * platform-wide administrator only.
+ */
+export async function listPendingInvitations(
+  deps: M01Deps,
+  ctx: RequestContext,
+): Promise<PendingInvitationView[]> {
+  const decision = await deps.checkPermission(ctx, {
+    action: 'user.view',
+    resource: { type: 'UserAccount', id: 'all', state: 'Invited', protectedExistence: false },
+  });
+  assertAllowed(decision, false);
+  const organisationId = ctx.organisationId;
+  if (organisationId === undefined) {
+    throw new PlatformError(
+      'ORGANISATION_CONTEXT_REQUIRED',
+      'An organisation context is required to list invitations',
+    );
+  }
+  const res = await deps.pool.query(
+    `SELECT i.id, i.user_account_id, a.display_name, i.invited_email,
+            i.expires_at, i.invited_by, i.created_at
+       FROM identity_org.account_invitations i
+       LEFT JOIN identity_org.user_accounts a ON a.id = i.user_account_id
+       JOIN identity_org.organisation_memberships m ON m.user_account_id = i.user_account_id
+      WHERE i.invitation_state = 'Pending'
+        AND i.expires_at > now()
+        AND m.organisation_id = $1
+      ORDER BY i.created_at DESC`,
+    [organisationId],
+  );
+  return res.rows.map((r: Record<string, unknown>) => ({
+    invitationId: r['id'] as string,
+    userAccountId: (r['user_account_id'] as string | null) ?? null,
+    displayName: (r['display_name'] as string | null) ?? null,
+    invitedEmail: r['invited_email'] as string,
+    expiresAt: (r['expires_at'] as Date).toISOString(),
+    invitedBy: (r['invited_by'] as string | null) ?? null,
+    createdAt: (r['created_at'] as Date).toISOString(),
   }));
 }
