@@ -184,6 +184,9 @@ describe.skipIf(!dbAvailable)('HTTP API (e2e)', () => {
     });
     expect(res.status).toBe(401);
     const body = (await res.json()) as { error: { code: string; requestId: string; retryable: boolean } };
+    // Nobody was signed in — distinct from the environment gate's refusal,
+    // which is AUTHENTICATION_FAILED and means "this deployment has a
+    // passphrase and you did not send it".
     expect(body.error.code).toBe('AUTHENTICATION_REQUIRED');
     expect(body.error.requestId).toBeDefined();
     expect(body.error.retryable).toBe(false);
@@ -1153,7 +1156,7 @@ describe.skipIf(!dbAvailable)('HTTP API (e2e)', () => {
         headers: { 'x-actor-id': patAcc },
       });
       expect(noToken.status).toBe(401);
-      expect(((await noToken.json()) as { error: { code: string } }).error.code).toBe('AUTHENTICATION_REQUIRED');
+      expect(((await noToken.json()) as { error: { code: string } }).error.code).toBe('AUTHENTICATION_FAILED');
 
       // A wrong token of the same length is rejected too.
       const wrong = await fetch(`${gatedUrl}/v1/participants/${patId}/community-spaces`, {

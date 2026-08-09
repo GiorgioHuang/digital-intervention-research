@@ -1504,3 +1504,36 @@
   tests:
     - apps/api/test/session-store.integration.test.ts
   status: implemented
+- implementation_id: IMP-DEPLOY-GOOGLE-SWITCHOVER-001
+  module: API
+  summary: >-
+    Turning Sign in with Google on, and one bug that only became reachable once sessions were real.
+    The deploy workflow now detects the configuration rather than carrying a flag day, matching how the
+    access-token gate and R2 already work: GOOGLE_CLIENT_ID (a repository variable - the client ID is
+    not a secret, it ships in the page) together with the HADI_SESSION_SECRET secret switches
+    AUTH_MODE to google on the next deploy; either one alone stays on the dev-header stub and says in
+    the deploy summary which half is missing. The client secret is deliberately NOT wired anywhere -
+    the OIDC redirect flow with response_type=id_token never uses one, so it is a credential to delete
+    rather than store. The bug - two different 401s were indistinguishable to the browser. The
+    access-token gate ("this environment has a passphrase and you did not send it") and requireActor
+    ("your sign-in ended") both returned AUTHENTICATION_REQUIRED, which was harmless while the only
+    authentication was a header and stopped being harmless the moment sessions could expire: an expired
+    session raised a banner telling the person to go and find an access passphrase, which is an
+    afternoon spent looking for the wrong thing. The environment gate now returns AUTHENTICATION_FAILED
+    and the web shell listens for that alone, with a separate signal for a session that ended. Also
+    documented, because it decides whether the owner's self-signup ruling is real in practice: the
+    ACCESS_TOKEN gate covers ALL of /v1 including /v1/auth, so while it is set nobody can even begin to
+    sign in without the shared passphrase and "self-signup" quietly means "signup for whoever holds the
+    token" - the gate exists as a compensating control for the stub and its job is done once real
+    authentication is on.
+  trace_ids: [ATR-003]
+  adr_ids: [ADR-104]
+  docs: ["DEPLOYMENT.md 开启 Google 登录"]
+  code:
+    - .github/workflows/deploy.yml
+    - apps/api/src/http-context.ts
+    - apps/web/src/api.ts
+  tests:
+    - apps/api/test/api.e2e.test.ts
+    - apps/web/test/access-token-gate.test.tsx
+  status: implemented

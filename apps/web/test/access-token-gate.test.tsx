@@ -37,7 +37,7 @@ describe('access-token recovery after a 401', () => {
         async () =>
           new Response(
             JSON.stringify({
-              error: { code: 'AUTHENTICATION_REQUIRED', message: 'Access token required', requestId: 'r', retryable: false },
+              error: { code: 'AUTHENTICATION_FAILED', message: 'Access token required', requestId: 'r', retryable: false },
             }),
             { status: 401 },
           ),

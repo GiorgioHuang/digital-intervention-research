@@ -32,6 +32,8 @@ export interface Session {
  */
 const TOKEN_KEY = 'platformAccessToken';
 export const AUTH_REQUIRED_EVENT = 'platform-auth-required';
+/** The session ended — a different problem, with a different fix. */
+export const SESSION_ENDED_EVENT = 'platform-session-ended';
 
 export function readAccessToken(): string {
   try {
@@ -85,15 +87,20 @@ export function accessTokenHeader(): Record<string, string> {
 }
 
 /**
- * A rejected access token is an environment problem, not a permission
- * decision about the signed-in person, so it is announced once for the
- * shell to handle rather than surfaced as an error code inside whichever
- * panel happened to make the call.
+ * Two 401s, two different problems, two different things to do about them.
+ *
+ * AUTHENTICATION_FAILED is the environment's shared passphrase — nothing to
+ * do with the person or their permissions. AUTHENTICATION_REQUIRED is the
+ * sign-in itself having ended. Announcing them as the same thing sent
+ * somebody whose session had merely expired off to hunt for a passphrase.
  */
 export function raiseApiError(json: { error?: ApiError }, status: number): never {
   const error = json.error as ApiError;
-  if (status === 401 && error?.code === 'AUTHENTICATION_REQUIRED') {
+  if (status === 401 && error?.code === 'AUTHENTICATION_FAILED') {
     window.dispatchEvent(new CustomEvent(AUTH_REQUIRED_EVENT));
+  }
+  if (status === 401 && error?.code === 'AUTHENTICATION_REQUIRED') {
+    window.dispatchEvent(new CustomEvent(SESSION_ENDED_EVENT));
   }
   throw new PlatformApiError(error, status);
 }

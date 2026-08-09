@@ -63,12 +63,49 @@ PORT=8099 WEB_DIST_DIR=$PWD/apps/web/dist ACCESS_TOKEN=local-smoke-token-0123456
 
 **API 和服务 → 凭据 → 创建凭据 → OAuth 客户端 ID → Web 应用**。
 
-- **已获授权的 JavaScript 来源**：每一个对外主机名各一条，例如 `https://workspace.test`、`https://staff.internal.example`。
-- **已获授权的重定向 URI**：同样每个主机名一条，**指向站点根路径**：`https://workspace.test/`、`https://staff.internal.example/`。参与者入口和工作人员入口是同一个服务的两个域名（D-66），**两个都要登记**——漏一个，那一侧的登录会停在 Google 的错误页上，而且报错只出现在 Google 那边，本平台的日志里什么都看不到。
+**已获授权的 JavaScript 来源**（每个对外主机名一条）：
 
-记下客户端 ID（形如 `…apps.googleusercontent.com`）。它不是机密——它会随页面发给浏览器。
+```
+https://participants.internal.example
+https://staff.internal.example
+```
 
-### 2. 配置服务
+**已获授权的重定向 URI —— 这一栏必须填，而且是根路径带结尾斜杠**：
+
+```
+https://participants.internal.example/
+https://staff.internal.example/
+```
+
+**只填了 JavaScript 来源、重定向 URI 留空，登录一定失败**，报 `redirect_uri_mismatch`。而且这个错只出现在 Google 那一页上——本平台的日志里干干净净，什么都看不到，因为浏览器根本没回来过。参与者入口和工作人员入口是同一个服务的两个域名（D-66），**两个都要登记**，漏一个就是那一侧整个进不去。
+
+本实现用的是 OIDC 重定向流（`response_type=id_token`），回跳地址即 `window.location.origin + '/'`，所以登记的必须是根路径。
+
+**客户端密钥（client secret）本平台完全不用**，`response_type=id_token` 不需要它。不要把它放进 Secret Manager，不要放进仓库——建完直接把它删掉/轮换掉最省事，少一样需要保管的东西。
+
+### 2. 发布同意屏幕（否则只有你列的测试用户能登录）
+
+**Google Auth Platform → 目标对象（Audience）**：发布状态若是 **Testing**，则**只有显式列出的测试用户能登录**，其他人一律被 Google 拒在门外——自助注册在这个状态下等于不存在。
+
+本平台只申请 `openid email profile` 三个**非敏感**范围，所以：
+
+- 建客户端时那句「OAuth is limited to 100 **sensitive scope** logins until verified」**与本平台无关**——我们没有申请任何敏感范围。
+- 因此发布到 **In production** **不需要**走 Google 的验证审核。
+
+要开放自助注册，就把它发布出去；要先做封闭测试，就留在 Testing 并把参与者逐个加进测试用户列表。
+
+### 3. 配置服务
+
+部署工作流按「配置齐了就切换」的方式识别，和访问令牌门、R2 是同一套做法——**不设旗标日**：`GOOGLE_CLIENT_ID` 仓库变量与 `HADI_SESSION_SECRET` 密钥**两样都在**时，下一次部署自动切到 `AUTH_MODE=google`；缺任一样则留在 dev-header 桩，并在部署摘要里说明缺的是哪一样。
+
+```
+# 仓库变量（Settings → Secrets and variables → Actions → Variables）
+GOOGLE_CLIENT_ID    = 000000000000-….apps.googleusercontent.com
+# 可选：GOOGLE_ALLOWED_DOMAINS / GOOGLE_MFA_DOMAINS / ALLOW_SELF_SIGNUP
+
+# Secret Manager
+HADI_SESSION_SECRET = <≥32 字符随机串>
+```
 
 | 变量 | 必填 | 说明 |
 |---|---|---|
@@ -85,7 +122,7 @@ PORT=8099 WEB_DIST_DIR=$PWD/apps/web/dist ACCESS_TOKEN=local-smoke-token-0123456
 
 缺 `GOOGLE_CLIENT_ID` 或 `SESSION_SECRET` 时进程**拒绝启动**：一个起来了却谁也认证不了的平台，和一个坏掉的平台长得一模一样。
 
-### 3. 自助注册与邀请
+### 4. 自助注册与邀请
 
 **任何 Google 账号都可以自助注册**（`ALLOW_SELF_SIGNUP`，默认 `true`；固定队列的部署可设 `false` 改为纯邀请制）。
 
@@ -143,7 +180,7 @@ VALUES (
 
 引导账号（第一个管理员）没有邀请可发给自己，需要直接为它插一行 `account_invitations`，或沿用 `seed:demo` 的引导路径。
 
-### 关于强认证（10 个动作依赖它）
+### 5. 关于强认证（10 个动作依赖它）
 
 审批干预版本、裁决导出、锁定数据集、创建安全事件等 10 个动作要求 `mfa` 层。**Google 的 ID token 里没有 `amr`**，所以「这个人用了第二因子」这件事，从 token 里读不出来。
 
@@ -153,7 +190,16 @@ VALUES (
 - 需要强认证时，界面上出现「确认是你本人」，走一次 `prompt=login` 的重新认证，换来 `step-up`。权限引擎里 step-up(3) **高于** mfa(2)，所以这 10 个动作全部可达。它回答的是更难的问题：不是「今天某个时刻用过第二因子吗」，而是「这个人现在还在键盘前吗」。
 - `GOOGLE_MFA_DOMAINS` 是唯一会记 `mfa` 的路径，而它信的是**你的断言**，不是 Google 的证明。填之前请确认该域确实强制开启了两步验证；不填也完全能用，只是这些动作每次都要点一下「确认是你本人」。
 
-### 回滚
+### 6. 要开放自助注册，访问令牌门得先撤掉
+
+`ACCESS_TOKEN` 拦的是**全部** `/v1`，包括 `/v1/auth/nonce` 和 `/v1/auth/session`。也就是说**只要它还在，没有口令的人连登录都发起不了**——自助注册在事实上不存在，「注册」变成了「先拿到共享口令的人才能注册」。
+
+这不是缺陷：那道门当初的存在理由，代码注释里写得很清楚——它是**身份还是桩**时的补偿性边界。真身份一上，它的差事就办完了。
+
+- **要开放注册**：删掉 `HADI_ACCESS_TOKEN` 密钥（部署工作流会自动继续以公开 ingress 部署，因为此时把守的是真认证）。
+- **想先做封闭测试**：留着它，此时「自助注册」实际等价于「持口令者注册」，这也是一种合理的过渡状态——只要知道自己处在哪一种。
+
+### 7. 回滚
 
 把 `AUTH_MODE` 改回 `dev-header` 即可，数据不受影响：已建立的 Google 绑定、邀请、会话都留在库里，改回 `google` 就继续有效。桩模式下不要对外开放。
 

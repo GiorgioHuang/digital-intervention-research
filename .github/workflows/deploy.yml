@@ -83,7 +83,7 @@ jobs:
           NUM=$(gcloud projects describe "$PROJECT" --format='value(projectNumber)' 2>/dev/null || true)
           [ -z "$NUM" ] && { echo "::warning::could not resolve project number; skipping secret IAM"; exit 0; }
           RUNTIME_SA="${NUM}-compute@developer.gserviceaccount.com"
-          for S in HADI_DATABASE_URL HADI_ACCESS_TOKEN HADI_R2_ACCESS_KEY_ID HADI_R2_SECRET_ACCESS_KEY; do
+          for S in HADI_DATABASE_URL HADI_ACCESS_TOKEN HADI_SESSION_SECRET HADI_R2_ACCESS_KEY_ID HADI_R2_SECRET_ACCESS_KEY; do
             if gcloud secrets describe "$S" --project "$PROJECT" >/dev/null 2>&1; then
               gcloud secrets add-iam-policy-binding "$S" --project "$PROJECT" \
                 --member "serviceAccount:${RUNTIME_SA}" \
@@ -109,6 +109,25 @@ jobs:
             AUTH_FLAG="--no-allow-unauthenticated"
             echo "::notice::HADI_ACCESS_TOKEN secret not found — deploying with IAM-only ingress (fail closed). Create the secret to open the token-gated public URL."
           fi
+          # Sign in with Google (ADR-104), switched on by the presence of
+          # its configuration rather than by a flag day. Both halves or
+          # neither: the client ID has nothing to verify against without
+          # the nonce-signing secret, and the API refuses to start on half
+          # a configuration anyway — better to notice that here, where the
+          # notice is read, than in a container that will not boot.
+          #
+          # Until both exist the deployment stays on the dev-header stub,
+          # which is the state this has always been in and is honest about.
+          AUTH_MODE=dev-header
+          if [ -n "${{ vars.GOOGLE_CLIENT_ID }}" ] && gcloud secrets describe HADI_SESSION_SECRET --project "$PROJECT" >/dev/null 2>&1; then
+            AUTH_MODE=google
+            SECRETS="$SECRETS,SESSION_SECRET=HADI_SESSION_SECRET:latest"
+            echo "::notice::AUTH_MODE=google — real authentication (ADR-104). The dev-header stub is off; x-actor-id is ignored."
+          elif [ -n "${{ vars.GOOGLE_CLIENT_ID }}" ]; then
+            echo "::warning::GOOGLE_CLIENT_ID is set but the HADI_SESSION_SECRET secret is missing — staying on the dev-header stub. Create the secret to switch on Sign in with Google."
+          else
+            echo "::notice::GOOGLE_CLIENT_ID not set — deploying on the dev-header stub (identity is whatever a header says). See DEPLOYMENT.md 开启 Google 登录."
+          fi
           # Object storage (Cloudflare R2, S3-compatible). All four
           # settings or none: the platform refuses to start on a partial
           # configuration rather than writing participants' files into a
@@ -119,13 +138,19 @@ jobs:
             gcloud secrets describe "$S" --project "$PROJECT" >/dev/null 2>&1 || R2_PRESENT=false
           done
           [ -n "${{ vars.R2_ACCOUNT_ID }}" ] && [ -n "${{ vars.R2_BUCKET }}" ] || R2_PRESENT=false
-          ENVVARS="AUTH_MODE=dev-header,WEB_DIST_DIR=/app/apps/web/dist,RUN_JOBS=${{ vars.RUN_JOBS || 'true' }},COMMIT_SHA=${{ github.event.workflow_run.head_sha || github.sha }}"
+          ENVVARS="AUTH_MODE=$AUTH_MODE,WEB_DIST_DIR=/app/apps/web/dist,RUN_JOBS=${{ vars.RUN_JOBS || 'true' }},COMMIT_SHA=${{ github.event.workflow_run.head_sha || github.sha }}"
           if [ "$R2_PRESENT" = true ]; then
             SECRETS="$SECRETS,R2_ACCESS_KEY_ID=HADI_R2_ACCESS_KEY_ID:latest,R2_SECRET_ACCESS_KEY=HADI_R2_SECRET_ACCESS_KEY:latest"
             ENVVARS="$ENVVARS,R2_ACCOUNT_ID=${{ vars.R2_ACCOUNT_ID }},R2_BUCKET=${{ vars.R2_BUCKET }}"
             echo "::notice::R2 configured — uploaded bytes go to the object store."
           else
             echo "::notice::R2 not configured — uploaded bytes stay in the Postgres simulator. Set the R2_ACCOUNT_ID and R2_BUCKET variables and the HADI_R2_ACCESS_KEY_ID and HADI_R2_SECRET_ACCESS_KEY secrets to use the object store." 
+          fi
+          if [ "$AUTH_MODE" = google ]; then
+            ENVVARS="$ENVVARS,GOOGLE_CLIENT_ID=${{ vars.GOOGLE_CLIENT_ID }}"
+            [ -n "${{ vars.GOOGLE_ALLOWED_DOMAINS }}" ] && ENVVARS="$ENVVARS,GOOGLE_ALLOWED_DOMAINS=${{ vars.GOOGLE_ALLOWED_DOMAINS }}"
+            [ -n "${{ vars.GOOGLE_MFA_DOMAINS }}" ] && ENVVARS="$ENVVARS,GOOGLE_MFA_DOMAINS=${{ vars.GOOGLE_MFA_DOMAINS }}"
+            [ -n "${{ vars.ALLOW_SELF_SIGNUP }}" ] && ENVVARS="$ENVVARS,ALLOW_SELF_SIGNUP=${{ vars.ALLOW_SELF_SIGNUP }}"
           fi
           # Carried to the smoke step, which is a separate shell.
           echo "R2_PRESENT=$R2_PRESENT" >> "$GITHUB_ENV"

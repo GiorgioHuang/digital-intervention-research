@@ -18,8 +18,20 @@ export function accessTokenMiddleware(token: string) {
     const presented = req.headers['x-access-token'];
     const buf = typeof presented === 'string' ? Buffer.from(presented) : Buffer.alloc(0);
     if (buf.length === expected.length && timingSafeEqual(buf, expected)) return next();
+    /*
+     * Its own code, not AUTHENTICATION_REQUIRED.
+     *
+     * Two completely different 401s reach the same browser: "this
+     * environment has a passphrase and you did not send it", and "your
+     * sign-in ended". They used to be indistinguishable, which was
+     * harmless while the only authentication was a header — and stopped
+     * being harmless the moment sessions became real, because an expired
+     * session then raised a banner telling the person to go and find an
+     * access passphrase. That is an afternoon of somebody's life spent
+     * looking for the wrong thing.
+     */
     res.status(401).json({
-      error: { code: 'AUTHENTICATION_REQUIRED', message: 'Access token required', requestId: 'unknown', retryable: false },
+      error: { code: 'AUTHENTICATION_FAILED', message: 'Access token required', requestId: 'unknown', retryable: false },
     });
   };
 }
