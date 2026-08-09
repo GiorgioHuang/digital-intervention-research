@@ -98,6 +98,7 @@ export function buildAppModule(config: ApiConfig) {
             sessionTtlMinutes: config.SESSION_TTL_MINUTES,
             stepUpTtlMinutes: config.STEP_UP_TTL_MINUTES,
             mfaDomains: splitDomains(config.GOOGLE_MFA_DOMAINS),
+            allowSelfSignup: config.ALLOW_SELF_SIGNUP,
           });
           const authDeps: AuthDeps = {
             verifier: createGoogleVerifier({

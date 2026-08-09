@@ -1,7 +1,11 @@
 import pg from 'pg';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { createPool, migrate, type Pool } from '@platform/database';
-import { newId } from '@platform/kernel';
+import { FixedClock, createRequestContext, newId } from '@platform/kernel';
+import { POLICY_V1 } from '@platform/policy';
+import { createRoleAssignmentQuery } from '@platform/m01-identity-org';
+import { createParticipantQuery } from '@platform/m02-participant';
+import { createPermissionService } from '@platform/m03-consent-permission';
 import { createSessionStore, hashToken, type SessionStore } from '../src/auth/session-store.js';
 import type { GoogleIdentity } from '../src/auth/google-token.js';
 
@@ -41,6 +45,9 @@ function identity(overrides: Partial<GoogleIdentity> = {}): GoogleIdentity {
 describe.skipIf(!dbAvailable)('sessions, invitations, and who a Google account turns out to be', () => {
   let pool: Pool;
   let sessions: SessionStore;
+  /** Invitation-only, for the tests about refusing an uninvited account. */
+  let closedSessions: SessionStore;
+  let permissions: ReturnType<typeof createPermissionService>;
   let nonceSeq = 0;
 
   const nextNonce = (): string => `nonce-${(nonceSeq += 1)}`;
@@ -55,6 +62,14 @@ describe.skipIf(!dbAvailable)('sessions, invitations, and who a Google account t
       [id, displayName, state],
     );
     return id;
+  }
+
+  async function expectStillPending(accountId: string): Promise<void> {
+    const row = await pool.query<{ invitation_state: string }>(
+      `SELECT invitation_state FROM identity_org.account_invitations WHERE user_account_id = $1`,
+      [accountId],
+    );
+    expect(row.rows[0]?.invitation_state).toBe('Pending');
   }
 
   async function invite(accountId: string, email: string, expiresInMinutes = 60): Promise<string> {
@@ -75,6 +90,21 @@ describe.skipIf(!dbAvailable)('sessions, invitations, and who a Google account t
       sessionTtlMinutes: 60,
       stepUpTtlMinutes: 10,
       mfaDomains: ['mfa-enforced.test'],
+      allowSelfSignup: true,
+    });
+    closedSessions = createSessionStore({
+      pool,
+      sessionTtlMinutes: 60,
+      stepUpTtlMinutes: 10,
+      mfaDomains: [],
+      allowSelfSignup: false,
+    });
+    permissions = createPermissionService({
+      pool,
+      clock: new FixedClock('2026-08-08T12:00:00Z'),
+      policy: POLICY_V1,
+      roleAssignments: createRoleAssignmentQuery(pool),
+      participantIdentity: createParticipantQuery(pool),
     });
   });
 
@@ -86,6 +116,7 @@ describe.skipIf(!dbAvailable)('sessions, invitations, and who a Google account t
     await pool.query('DELETE FROM identity_org.auth_sessions');
     await pool.query('DELETE FROM identity_org.account_invitations');
     await pool.query('DELETE FROM identity_org.external_identities');
+    await pool.query('DELETE FROM consent_permission.relationships');
   });
 
   /* ---------------------------------------------------------------- */
@@ -93,12 +124,45 @@ describe.skipIf(!dbAvailable)('sessions, invitations, and who a Google account t
   /* ---------------------------------------------------------------- */
 
   /**
-   * The default answer. Anybody in the world can obtain a Google account
-   * and present a perfectly valid token; if that were enough, the platform
-   * would be open to everyone with a browser.
+   * Self-signup is on (owner's ruling). What an uninvited account gets is
+   * an account and a participant record of its own — and, as the tests
+   * further down establish, a view of nobody.
    */
-  it('refuses a Google account nobody invited', async () => {
-    await expect(sessions.signIn(identity(), nextNonce())).rejects.toThrow(/not been invited/);
+  it('lets an uninvited Google account register itself', async () => {
+    const result = await sessions.signIn(identity(), nextNonce());
+    const account = await pool.query<{ origin: string; account_state: string }>(
+      `SELECT origin, account_state FROM identity_org.user_accounts WHERE id = $1`,
+      [result.userAccountId],
+    );
+    expect(account.rows[0]?.origin).toBe('self-registered');
+    expect(account.rows[0]?.account_state).toBe('Active');
+  });
+
+  it('gives a self-registered account a participant record of its own', async () => {
+    const result = await sessions.signIn(identity(), nextNonce());
+    const participant = await pool.query(
+      `SELECT 1 FROM participant_profile.participants WHERE user_account_id = $1`,
+      [result.userAccountId],
+    );
+    expect(participant.rowCount).toBe(1);
+  });
+
+  it('recognises a self-registered person on their second visit rather than making another account', async () => {
+    const first = await sessions.signIn(identity(), nextNonce());
+    const second = await sessions.signIn(identity(), nextNonce());
+    expect(second.userAccountId).toBe(first.userAccountId);
+    const accounts = await pool.query<{ count: string }>(
+      `SELECT count(*)::text AS count FROM identity_org.external_identities`,
+    );
+    expect(accounts.rows[0]?.count).toBe('1');
+  });
+
+  /**
+   * Where the population is a fixed cohort rather than an open service,
+   * the flag closes the door and the old refusal is the whole behaviour.
+   */
+  it('still refuses an uninvited account where self-signup is off', async () => {
+    await expect(closedSessions.signIn(identity(), nextNonce())).rejects.toThrow(/not been invited/);
   });
 
   it('lets an invited account sign in, and marks the account active', async () => {
@@ -124,15 +188,238 @@ describe.skipIf(!dbAvailable)('sessions, invitations, and who a Google account t
   it('refuses to claim an invitation with an unverified email', async () => {
     const account = await makeAccount('Pat');
     await invite(account, 'pat@example.org');
-    await expect(
-      sessions.signIn(identity({ emailVerified: false }), nextNonce()),
-    ).rejects.toThrow(/not been invited/);
+    // Self-signup means they are not turned away — they become a stranger
+    // with an account of their own. The point is that they do not become
+    // Pat, which is what an unverified address would otherwise buy.
+    const result = await sessions.signIn(identity({ emailVerified: false }), nextNonce());
+    expect(result.userAccountId).not.toBe(account);
+    await expectStillPending(account);
   });
 
   it('refuses an invitation that has expired', async () => {
     const account = await makeAccount('Pat');
     await invite(account, 'pat@example.org', -1);
-    await expect(sessions.signIn(identity(), nextNonce())).rejects.toThrow(/not been invited/);
+    const result = await sessions.signIn(identity(), nextNonce());
+    expect(result.userAccountId).not.toBe(account);
+  });
+
+
+  /* ---------------------------------------------------------------- */
+  /* What registering gets you, and what an invitation adds            */
+  /* ---------------------------------------------------------------- */
+
+  /**
+   * The ruling this whole path rests on: "registering does not show you
+   * anybody else's information."
+   *
+   * It is not enforced by anything in the sign-in code, and that is the
+   * point — it falls out of the permission engine. A self-registered
+   * account holds no role assignments, so step 2 denies with
+   * 'no-granting-role' for every action on a resource it does not own.
+   * Asserted here against the REAL permission service rather than by
+   * reasoning about it, because this is the sentence the decision was
+   * made on and it should fail loudly if it ever stops being true.
+   */
+  it('leaves a self-registered account unable to reach another participant', async () => {
+    const stranger = await sessions.signIn(identity(), nextNonce());
+    const otherAccount = await makeAccount('Ann', 'Active');
+    const otherParticipant = newId('pt');
+    await pool.query(
+      `INSERT INTO participant_profile.participants (id, user_account_id, display_name)
+       VALUES ($1, $2, 'Ann')`,
+      [otherParticipant, otherAccount],
+    );
+
+    const decision = await permissions.evaluate(
+      createRequestContext({ actor: { type: 'user', id: stranger.userAccountId } }),
+      {
+        action: 'life-story.contribute',
+        resource: {
+          type: 'LifeStoryItem',
+          id: newId('lsi'),
+          state: 'Active',
+          ownerParticipantId: otherParticipant,
+          protectedExistence: true,
+        },
+      },
+    );
+    // Not merely denied — the existence of the item is hidden too
+    // (ADR-050): a stranger asking after somebody else's life story does
+    // not get to learn that there is one.
+    expect(decision.outcome).toBe('DenyAndHideExistence');
+    // The reason is asserted, not just the refusal. An action name that is
+    // not in the catalogue also denies — with 'unknown-action' — so a test
+    // checking only the outcome would keep passing after a rename and
+    // would be proving nothing about roles at all. (It did, briefly.)
+    expect(decision.reason).toBe('no-granting-role');
+  });
+
+  /**
+   * And the other half: "somebody who arrived on an invitation sees the
+   * person who invited them." The invitation carries the relationship, so
+   * claiming it is what opens the door — scoped to named actions, and
+   * still re-decided by the engine on every request.
+   */
+  it('gives an invited supporter the relationship that lets them see the person who invited them', async () => {
+    const inviterAccount = await makeAccount('Ann', 'Active');
+    const inviterParticipant = newId('pt');
+    await pool.query(
+      `INSERT INTO participant_profile.participants (id, user_account_id, display_name)
+       VALUES ($1, $2, 'Ann')`,
+      [inviterParticipant, inviterAccount],
+    );
+    await pool.query(
+      `INSERT INTO identity_org.account_invitations
+         (id, issuer, invited_email, expires_at, invited_by,
+          relationship_participant_id, relationship_type, relationship_permitted_actions)
+       VALUES ($1, $2, $3, now() + interval '1 hour', $4, $5, 'FamilyMember', $6)`,
+      [
+        newId('invite'),
+        ISSUER,
+        'daughter@example.org',
+        inviterAccount,
+        inviterParticipant,
+        ['life-story.contribute'],
+      ],
+    );
+
+    const daughter = await sessions.signIn(
+      identity({ subject: 'google-sub-daughter', email: 'daughter@example.org' }),
+      nextNonce(),
+    );
+
+    const relationship = await pool.query<{ relationship_state: string; permitted_actions: string[] }>(
+      `SELECT relationship_state, permitted_actions
+         FROM consent_permission.relationships
+        WHERE participant_id = $1 AND related_actor_id = $2`,
+      [inviterParticipant, daughter.userAccountId],
+    );
+    expect(relationship.rows[0]?.relationship_state).toBe('Active');
+    expect(relationship.rows[0]?.permitted_actions).toEqual(['life-story.contribute']);
+
+    // And what that is worth at the engine. The stranger above stopped at
+    // 'no-granting-role'; the daughter gets past the role and relationship
+    // steps and stops at consent, which is exactly where an invitation is
+    // supposed to leave somebody — an invitation opens a door, it does not
+    // stand in for the participant's consent.
+    await pool.query(
+      `INSERT INTO identity_org.role_assignments
+         (id, user_account_id, role, assignment_state, assigned_by_actor_id)
+       VALUES ($1, $2, 'Supporter', 'Active', $3)`,
+      [newId('ra'), daughter.userAccountId, inviterAccount],
+    );
+    const decision = await permissions.evaluate(
+      createRequestContext({ actor: { type: 'user', id: daughter.userAccountId } }),
+      {
+        action: 'life-story.contribute',
+        resource: {
+          type: 'LifeStoryItem',
+          id: newId('lsi'),
+          state: 'Active',
+          ownerParticipantId: inviterParticipant,
+          protectedExistence: true,
+        },
+      },
+    );
+    expect(decision.reason).toBe('consent-missing');
+  });
+
+  /**
+   * A supporter invited to help somebody is not thereby enrolled in a
+   * study. Creating a participant record for them would put a person into
+   * research that nobody consented on their behalf to.
+   */
+  it('does not enrol an invited supporter as a participant', async () => {
+    const inviterAccount = await makeAccount('Ann', 'Active');
+    const inviterParticipant = newId('pt');
+    await pool.query(
+      `INSERT INTO participant_profile.participants (id, user_account_id, display_name)
+       VALUES ($1, $2, 'Ann')`,
+      [inviterParticipant, inviterAccount],
+    );
+    await pool.query(
+      `INSERT INTO identity_org.account_invitations
+         (id, issuer, invited_email, expires_at,
+          relationship_participant_id, relationship_type, relationship_permitted_actions)
+       VALUES ($1, $2, $3, now() + interval '1 hour', $4, 'FamilyMember', $5)`,
+      [newId('invite'), ISSUER, 'daughter@example.org', inviterParticipant, ['life-story.contribute']],
+    );
+
+    const daughter = await sessions.signIn(
+      identity({ subject: 'google-sub-daughter', email: 'daughter@example.org' }),
+      nextNonce(),
+    );
+    const participant = await pool.query(
+      `SELECT 1 FROM participant_profile.participants WHERE user_account_id = $1`,
+      [daughter.userAccountId],
+    );
+    expect(participant.rowCount).toBe(0);
+  });
+
+  /**
+   * The gap self-signup opened.
+   *
+   * Before, an invitation was only ever looked for when the Google account
+   * was unknown. Once anybody can register, the ordinary case is that the
+   * daughter ALREADY signed up last week out of curiosity — and her
+   * mother's invitation would then have sat unclaimed forever, doing
+   * nothing, with no error on either side.
+   */
+  it('applies an invitation to somebody who had already registered', async () => {
+    const daughterIdentity = identity({ subject: 'google-sub-daughter', email: 'daughter@example.org' });
+    const daughter = await sessions.signIn(daughterIdentity, nextNonce());
+
+    const inviterAccount = await makeAccount('Ann', 'Active');
+    const inviterParticipant = newId('pt');
+    await pool.query(
+      `INSERT INTO participant_profile.participants (id, user_account_id, display_name)
+       VALUES ($1, $2, 'Ann')`,
+      [inviterParticipant, inviterAccount],
+    );
+    await pool.query(
+      `INSERT INTO identity_org.account_invitations
+         (id, issuer, invited_email, expires_at,
+          relationship_participant_id, relationship_type, relationship_permitted_actions)
+       VALUES ($1, $2, $3, now() + interval '1 hour', $4, 'FamilyMember', $5)`,
+      [newId('invite'), ISSUER, 'daughter@example.org', inviterParticipant, ['life-story.contribute']],
+    );
+
+    const again = await sessions.signIn(daughterIdentity, nextNonce());
+    expect(again.userAccountId).toBe(daughter.userAccountId);
+
+    const relationship = await pool.query(
+      `SELECT 1 FROM consent_permission.relationships
+        WHERE participant_id = $1 AND related_actor_id = $2 AND relationship_state = 'Active'`,
+      [inviterParticipant, daughter.userAccountId],
+    );
+    expect(relationship.rowCount).toBe(1);
+  });
+
+  it('spends an invitation once, not on every subsequent sign-in', async () => {
+    const inviterAccount = await makeAccount('Ann', 'Active');
+    const inviterParticipant = newId('pt');
+    await pool.query(
+      `INSERT INTO participant_profile.participants (id, user_account_id, display_name)
+       VALUES ($1, $2, 'Ann')`,
+      [inviterParticipant, inviterAccount],
+    );
+    await pool.query(
+      `INSERT INTO identity_org.account_invitations
+         (id, issuer, invited_email, expires_at,
+          relationship_participant_id, relationship_type, relationship_permitted_actions)
+       VALUES ($1, $2, $3, now() + interval '1 hour', $4, 'FamilyMember', $5)`,
+      [newId('invite'), ISSUER, 'daughter@example.org', inviterParticipant, ['life-story.contribute']],
+    );
+    const who = identity({ subject: 'google-sub-daughter', email: 'daughter@example.org' });
+    await sessions.signIn(who, nextNonce());
+    await sessions.signIn(who, nextNonce());
+
+    const relationships = await pool.query<{ count: string }>(
+      `SELECT count(*)::text AS count FROM consent_permission.relationships
+        WHERE participant_id = $1`,
+      [inviterParticipant],
+    );
+    expect(relationships.rows[0]?.count).toBe('1');
   });
 
   /* ---------------------------------------------------------------- */
@@ -153,9 +440,14 @@ describe.skipIf(!dbAvailable)('sessions, invitations, and who a Google account t
     await invite(account, 'pat@example.org');
     await sessions.signIn(identity(), nextNonce());
 
-    await expect(
-      sessions.signIn(identity({ subject: 'google-sub-somebody-else' }), nextNonce()),
-    ).rejects.toThrow(/not been invited/);
+    // Under self-signup the stranger is not turned away, which makes the
+    // assertion sharper rather than weaker: they get an account, and it is
+    // emphatically not Pat's.
+    const stranger = await sessions.signIn(
+      identity({ subject: 'google-sub-somebody-else' }),
+      nextNonce(),
+    );
+    expect(stranger.userAccountId).not.toBe(account);
   });
 
   /**

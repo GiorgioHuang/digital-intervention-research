@@ -1466,3 +1466,41 @@
     - apps/api/test/auth-mode.test.ts
     - apps/web/test/google-sign-in.test.tsx
   status: implemented
+- implementation_id: IMP-API-SELF-SIGNUP-001
+  module: API
+  summary: >-
+    Self-signup (owner's ruling, 2026-08-08), superseding the no-self-signup part of D-68. The ruling
+    stands or falls on whether "registering shows you nobody else" is structurally true in this
+    permission engine rather than a matter of careful sign-in code, so that was verified before
+    implementing: the engine denies at step 2 with no-granting-role for any actor holding no role
+    assignments, leaving only the owner path; Open Matching requires BOTH sides to have an Active
+    preference; a community requires a consent scope a new account has not granted. A self-registered
+    account is therefore alone on the platform until somebody invites it or it consents to something.
+    That is pinned by a test against the real permission service, asserting the REASON and not merely
+    the refusal - an action absent from the catalogue also denies, with unknown-action, so an
+    outcome-only test would survive a rename while proving nothing. It did exactly that at first: the
+    initial version used life-story.read, which is not in the catalogue, and passed vacuously; switching
+    to life-story.contribute and asserting no-granting-role made it real, and incidentally showed the
+    true outcome is DenyAndHideExistence, since a stranger must not learn that somebody's life story
+    exists at all (ADR-050). Invitations become the only thing that grants anything, in two shapes: one
+    naming a pre-created account (staff onboarding, roles already assigned) and one naming no account at
+    all but carrying a scoped relationship (a participant inviting their daughter), created Active
+    because the participant who sent it IS the approval and revocable from "who has access to me". An
+    invited supporter is deliberately NOT enrolled as a participant. Self-signup also opened a gap that
+    is closed here: invitations were previously looked for only when the Google account was unknown, so
+    an invitation to somebody who had already registered would have sat unclaimed forever, silently, with
+    no error on either side; pending invitations are now applied on every sign-in and claiming is
+    idempotent within the transaction. user_accounts.origin records how each account came to exist,
+    because once self-signup exists "who let this person in" stops having one answer for everybody.
+  trace_ids: [ATR-003]
+  adr_ids: [ADR-104]
+  docs: ["design/DESIGN_DECISIONS.md D-69", "DEPLOYMENT.md 自助注册与邀请"]
+  code:
+    - packages/database/migrations/1753800000028_self-signup-and-invitation-grants.sql
+    - apps/api/src/auth/session-store.ts
+    - apps/api/src/config.ts
+    - apps/web/src/components/GoogleSignIn.tsx
+    - apps/web/src/App.tsx
+  tests:
+    - apps/api/test/session-store.integration.test.ts
+  status: implemented

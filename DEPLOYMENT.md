@@ -77,6 +77,7 @@ PORT=8099 WEB_DIST_DIR=$PWD/apps/web/dist ACCESS_TOKEN=local-smoke-token-0123456
 | `SESSION_SECRET` | 是 | ≥32 字符随机串，放 Secret Manager。用于签名登录 nonce |
 | `GOOGLE_ALLOWED_DOMAINS` | 否 | 逗号分隔，限制只有这些 Workspace 域可登录。**按 `hd` 断言判定，不看邮箱 `@` 后面的字符** |
 | `GOOGLE_MFA_DOMAINS` | 否 | 逗号分隔。**这是运营者的一句断言**：该 Workspace 域已强制开启两步验证。见下方「关于强认证」 |
+| `ALLOW_SELF_SIGNUP` | 否 | 默认 `true`（所有者裁定）。设 `false` 则未受邀的 Google 账号被拒 |
 | `SESSION_TTL_MINUTES` | 否 | 默认 720（12 小时） |
 | `STEP_UP_TTL_MINUTES` | 否 | 默认 10。一次重新认证算数多久 |
 | `STEP_UP_MAX_AGE_SECONDS` | 否 | 默认 120。Google 必须在多久之内刚认证过 |
@@ -84,11 +85,47 @@ PORT=8099 WEB_DIST_DIR=$PWD/apps/web/dist ACCESS_TOKEN=local-smoke-token-0123456
 
 缺 `GOOGLE_CLIENT_ID` 或 `SESSION_SECRET` 时进程**拒绝启动**：一个起来了却谁也认证不了的平台，和一个坏掉的平台长得一模一样。
 
-### 3. 发出第一封邀请
+### 3. 自助注册与邀请
 
-**没有自助注册。** 一个从没见过的 Google 账号，即使 token 完全合法，也拿不到任何东西——否则「谁放这个人进来的」就没有答案了。
+**任何 Google 账号都可以自助注册**（`ALLOW_SELF_SIGNUP`，默认 `true`；固定队列的部署可设 `false` 改为纯邀请制）。
 
-账号先由有权创建的人创建（`Invited` 态），再为它登记一封邀请：
+自注册的人拿到的是：一个账号、一份属于自己的参与者记录，**以及一个谁也看不见的视野**。这不是靠登录代码客气，是结构性的——权限引擎第 2 步对没有角色的 actor 一律 `no-granting-role` 拒绝，只剩「自己是资源所有者」这一条路；Open Matching 要求**双方**都已开启，社区要 `community-participation` 同意，而新账号两样都没有。**所以自注册的人是一个人待在平台上的**，直到有人邀请他，或他自己同意了什么。
+
+**邀请是唯一会授予东西的通路。** 它有两种形状：
+
+**（甲）指向一个预先建好的账号**——工作人员入职：管理员先建账号、挂好角色，邀请是账号持有者认领它的方式。
+
+```sql
+INSERT INTO identity_org.account_invitations
+  (id, user_account_id, issuer, invited_email, expires_at)
+VALUES (
+  'invite_' || replace(gen_random_uuid()::text, '-', ''),
+  '<user_account_id>', 'https://accounts.google.com',
+  'staff@example.org', now() + interval '14 days'
+);
+```
+
+**（乙）不指向账号，只携带一段关系**——参与者邀请女儿来看自己的生命故事。认领的人若还没有账号就自动获得一个；关系带作用域动作，认领即 `Active`（发邀请的参与者本人就是那份批准），此后随时可在「谁能看到我」撤销。
+
+```sql
+INSERT INTO identity_org.account_invitations
+  (id, issuer, invited_email, expires_at, invited_by,
+   relationship_participant_id, relationship_type, relationship_permitted_actions)
+VALUES (
+  'invite_' || replace(gen_random_uuid()::text, '-', ''),
+  'https://accounts.google.com', 'daughter@example.org',
+  now() + interval '14 days', '<inviter_user_account_id>',
+  '<inviter_participant_id>', 'FamilyMember', ARRAY['life-story.contribute']
+);
+```
+
+**被邀请的支持者不会被登记成参与者**——被邀请来帮某人，不等于被纳入一项研究；要让认领者同时成为参与者，显式设 `creates_participant = true`。
+
+**邀请对「已经注册过的人」同样生效**：每次登录都会检查待认领邀请。（这一点是自助注册开出来的坑：此前只有陌生账号才会去找邀请，于是一位上周已注册的女儿，她母亲发的邀请会永远躺着不生效，两边都不报错。）
+
+`user_accounts.origin` 记录每个账号是怎么来的（`self-registered` / `invitation` / `created-by-administrator`）——一旦允许自助注册，「谁放这个人进来的」就不再对所有账号都是同一个答案，而事后要分清，就得在当时写下来。
+
+历史写法（账号先建为 `Invited` 态再发邀请）仍然有效：
 
 ```sql
 INSERT INTO identity_org.account_invitations

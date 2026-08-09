@@ -37,6 +37,15 @@ const envSchema = z.object({
   // actions then ask for a fresh re-authentication instead, which is a
   // stronger answer anyway and needs no assertion from anyone.
   GOOGLE_MFA_DOMAINS: z.string().optional(),
+  // Whether an uninvited Google account may register itself (owner's
+  // ruling, 2026-08-08: yes). A self-registered account holds no roles and
+  // no relationships, so it reaches nothing but its own resources — the
+  // permission engine, not this flag, is what makes that true. Turn it off
+  // for a deployment whose population is a fixed cohort.
+  ALLOW_SELF_SIGNUP: z
+    .enum(['true', 'false'])
+    .default('true')
+    .transform((v) => v === 'true'),
   SESSION_TTL_MINUTES: z.coerce.number().int().min(5).max(43200).default(720),
   // Secure cookies by default, and turning them off is a deliberate act
   // that only makes sense on http://localhost — a Secure cookie is simply

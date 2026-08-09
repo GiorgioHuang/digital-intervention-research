@@ -150,8 +150,13 @@ export function App() {
       // and giving it an empty participant identifier would send every
       // screen looking for a person who does not exist.
       if (found.participantId === undefined) {
+        // Reached by somebody invited as a supporter rather than enrolled
+        // as a participant — they have an account and a relationship, but
+        // no participant record of their own, so there is no participant
+        // workspace to show them. Naming both other entrances beats a dead
+        // end that says only "no".
         setSignInProblem(
-          'You are signed in, but this account is not a participant account. If you are staff, use the staff address.',
+          'You are signed in, but this account does not have a participant workspace. If you were invited to support someone, use the supporter entrance; if you are staff, use the staff address.',
         );
         return;
       }
@@ -308,7 +313,7 @@ export function App() {
             move it.
           */}
           {authMode === undefined && <p>One moment…</p>}
-          {authMode === 'google' && <GoogleSignIn onError={setSignInProblem} />}
+          {authMode === 'google' && <GoogleSignIn registers onError={setSignInProblem} />}
           {authMode === 'dev-header' && (
             <>
               <button type="submit" disabled={checking}>
