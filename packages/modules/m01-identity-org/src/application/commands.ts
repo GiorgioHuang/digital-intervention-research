@@ -63,6 +63,28 @@ export async function createOrganisation(
   const now = deps.clock.now();
   await withTransaction(deps.pool, async (client) => {
     await insertOrganisation(client, { id: organisationId, name: input.name });
+    /*
+     * Creating an organisation deliberately grants NOTHING inside it.
+     *
+     * The first version of this handed the creator OrganisationAdministrator,
+     * to fix a real dead end: a bootstrapped SystemAdministrator creates an
+     * organisation and then cannot open a screen in it, because that role is
+     * narrow by design (Doc 4: administration only) and carries
+     * `role.assign` but not `user.view`.
+     *
+     * An existing test refused it, and was right to. Doc 4's separation is
+     * that administering the software and seeing the people in a study are
+     * different jobs — so a platform operator must not acquire visibility
+     * of a study population as a SIDE EFFECT of an administrative act.
+     * Automatic is the whole problem: nobody decided it and nothing records
+     * a decision.
+     *
+     * The dead end is real and is fixed on the way in instead: the
+     * organisation chooser offers to grant the role, which goes through
+     * `assignRole` — confirmed, audited, and visible afterwards as
+     * somebody having taken it. Same end state where it is wanted, and an
+     * audit trail that can tell the two apart.
+     */
     await appendToOutbox(client, ctx, {
       eventCategory: 'Domain',
       eventType: M01_EVENTS.OrganisationCreated,
@@ -163,15 +185,29 @@ export async function assignRole(
   const roleAssignmentId = newId('ra');
   const now = deps.clock.now();
   await withTransaction(deps.pool, async (client) => {
-    await insertRoleAssignment(client, {
-      id: roleAssignmentId,
-      userAccountId: input.userAccountId,
-      role: input.role,
-      ...(input.organisationId !== undefined ? { organisationId: input.organisationId } : {}),
-      ...(input.researchProjectId !== undefined ? { researchProjectId: input.researchProjectId } : {}),
-      ...(input.expiresAt !== undefined ? { expiresAt: input.expiresAt } : {}),
-      assignedByActorId: actorId,
-    });
+    /*
+     * A role somebody already holds is now something a person can ask for
+     * by accident: the accounts screen has a "give this role" control, and
+     * two clicks used to surface a raw duplicate-key error from Postgres.
+     * The partial unique index is right — one active assignment per role
+     * and scope — so this says so in words instead.
+     */
+    try {
+      await insertRoleAssignment(client, {
+        id: roleAssignmentId,
+        userAccountId: input.userAccountId,
+        role: input.role,
+        ...(input.organisationId !== undefined ? { organisationId: input.organisationId } : {}),
+        ...(input.researchProjectId !== undefined ? { researchProjectId: input.researchProjectId } : {}),
+        ...(input.expiresAt !== undefined ? { expiresAt: input.expiresAt } : {}),
+        assignedByActorId: actorId,
+      });
+    } catch (error) {
+      if (typeof error === 'object' && error !== null && (error as { code?: string }).code === '23505') {
+        throw new PlatformError('RESOURCE_CONFLICT', 'That person already holds this role here.');
+      }
+      throw error;
+    }
     await appendToOutbox(client, ctx, {
       eventCategory: 'Domain',
       eventType: M01_EVENTS.RoleAssigned,

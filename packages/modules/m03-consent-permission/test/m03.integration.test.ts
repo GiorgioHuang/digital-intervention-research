@@ -94,6 +94,9 @@ describe.skipIf(!dbAvailable)('M01+M03 identity, consent and permission (integra
       organisationId: orgId,
     }));
     // OrganisationAdministrator for org, then role assignments in scope.
+    // Creating the organisation grants nothing inside it (D-72): a
+    // platform operator must not acquire a study population by having
+    // made the folder it sits in.
     await assignRole(m01, adminCtx, { userAccountId: adminId, role: 'OrganisationAdministrator', organisationId: orgId, confirmed: true });
     await assignRole(m01, adminCtx, { userAccountId: participantId, role: 'Participant', confirmed: true });
     await assignRole(m01, adminCtx, {
@@ -279,11 +282,18 @@ describe.skipIf(!dbAvailable)('M01+M03 identity, consent and permission (integra
     ).rejects.toMatchObject({ code: 'VERSION_CONFLICT' });
   });
 
-  it('duplicate active role assignment in the same scope is rejected by the database', async () => {
+  /**
+   * The partial unique index is what makes one active assignment per role
+   * and scope true, and it still is. What changed is who has to read the
+   * result: giving a role is now a control on a screen, so two clicks used
+   * to put Postgres's own duplicate-key text in front of an administrator.
+   * The constraint is unchanged; the sentence is.
+   */
+  it('a role somebody already holds is refused in words, not in Postgres error text', async () => {
     const adminCtx = ctxFor(adminId, { organisationId: orgId });
     await expect(
       assignRole(m01, adminCtx, { userAccountId: participantId, role: 'Participant', confirmed: true }),
-    ).rejects.toThrow(/duplicate key/i);
+    ).rejects.toThrow(/already holds this role/i);
   });
 
   it('unknown actor gets deny (no roles), and unauthenticated context denies', async () => {

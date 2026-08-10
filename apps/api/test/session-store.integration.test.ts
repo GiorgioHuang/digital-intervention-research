@@ -7,6 +7,8 @@ import { createRoleAssignmentQuery, listOrganisationAccounts } from '@platform/m
 import { createParticipantQuery } from '@platform/m02-participant';
 import { createPermissionService } from '@platform/m03-consent-permission';
 import {
+  assignRole,
+  createOrganisation,
   inviteExistingAccount,
   inviteSupporter,
   inviteToPlatform,
@@ -756,6 +758,99 @@ describe.skipIf(!dbAvailable)('sessions, invitations, and who a Google account t
       await expect(
         inviteExistingAccount(m01, adminCtx, { userAccountId: stranded, email: 'someone.else@example.org' }),
       ).rejects.toThrow(/already belongs to somebody/);
+    });
+
+
+    /**
+     * The dead end, and the shape of the fix.
+     *
+     * A bootstrapped SystemAdministrator creates an organisation and can
+     * then open nothing inside it: the role is narrow by design (Doc 4 —
+     * administration only), carrying `organisation.create` and
+     * `role.assign` but NOT `user.view`, and the accounts screen is the
+     * only place a role is handed out. They hold the permission that would
+     * fix it and no route to reach it.
+     *
+     * Creating the organisation deliberately does NOT grant it. Doc 4's
+     * separation is that administering the software and seeing the people
+     * in a study are different jobs, so a platform operator must not
+     * acquire a study population as a side effect of an administrative
+     * act. Taking the role is an explicit, confirmed, audited step — and
+     * the chooser offers it, so the dead end is still not a dead end.
+     */
+    it('grants nothing inside an organisation merely by creating it', async () => {
+      const sysAdmin = await makeAccount('Owner', 'Active');
+      await pool.query(
+        `INSERT INTO identity_org.role_assignments
+           (id, user_account_id, role, assignment_state, assigned_by_actor_id)
+         VALUES ($1, $2, 'SystemAdministrator', 'Active', 'system-bootstrap')`,
+        [newId('ra'), sysAdmin],
+      );
+      const sysCtx = createRequestContext({
+        actor: { type: 'user', id: sysAdmin },
+        purposeCode: 'platform-administration',
+      });
+      const created = await createOrganisation(m01, sysCtx, { name: 'A New Org' });
+      const inNewOrg = createRequestContext({
+        actor: { type: 'user', id: sysAdmin },
+        organisationId: created.organisationId,
+        purposeCode: 'platform-administration',
+      });
+
+      // user.view is not theirs, so the accounts screen refuses.
+      await expect(listOrganisationAccounts(m01, inNewOrg)).rejects.toMatchObject({
+        code: 'AUTHORISATION_DENIED',
+      });
+    });
+
+    /**
+     * And the way out, which is the chooser's "Make me its administrator":
+     * an explicit `role.assign` that the operator already holds. Same end
+     * state as granting it automatically, with the difference that
+     * somebody decided and the audit trail says so.
+     */
+    it('lets a platform administrator take the role explicitly, and then the organisation opens', async () => {
+      const sysAdmin = await makeAccount('Owner', 'Active');
+      await pool.query(
+        `INSERT INTO identity_org.role_assignments
+           (id, user_account_id, role, assignment_state, assigned_by_actor_id)
+         VALUES ($1, $2, 'SystemAdministrator', 'Active', 'system-bootstrap')`,
+        [newId('ra'), sysAdmin],
+      );
+      const sysCtx = createRequestContext({
+        actor: { type: 'user', id: sysAdmin },
+        purposeCode: 'platform-administration',
+      });
+      const created = await createOrganisation(m01, sysCtx, { name: 'A New Org' });
+      const inNewOrg = createRequestContext({
+        actor: { type: 'user', id: sysAdmin },
+        organisationId: created.organisationId,
+        purposeCode: 'platform-administration',
+      });
+
+      await assignRole(m01, inNewOrg, {
+        userAccountId: sysAdmin,
+        role: 'OrganisationAdministrator',
+        organisationId: created.organisationId,
+        confirmed: true,
+      });
+
+      const accounts = await listOrganisationAccounts(m01, inNewOrg);
+      expect(accounts.find((a) => a.userAccountId === sysAdmin)?.roles.map((r) => r.role)).toContain(
+        'OrganisationAdministrator',
+      );
+    });
+
+    /** Two clicks on "give this role" must not surface Postgres's own text. */
+    it('refuses a role somebody already holds in words', async () => {
+      await expect(
+        assignRole(m01, adminCtx, {
+          userAccountId: adminAccount,
+          role: 'OrganisationAdministrator',
+          organisationId,
+          confirmed: true,
+        }),
+      ).rejects.toThrow(/already holds this role/i);
     });
 
     it('lists the organisations an actor may act in, and no others', async () => {

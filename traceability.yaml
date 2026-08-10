@@ -1643,3 +1643,39 @@
   tests:
     - apps/api/test/session-store.integration.test.ts
   status: implemented
+- implementation_id: IMP-M01-ORGANISATION-CREATOR-ADMINISTERS-001
+  module: M01
+  summary: >-
+    Reported by the first real administrator after go-live: every screen answered AUTHORISATION_DENIED.
+    The first attempt at this fix was wrong and an existing M05 test refused it, correctly. That test
+    defends Doc 4's separation - administering the software and seeing the people in a study are
+    different jobs - and granting the creator OrganisationAdministrator automatically meant a platform
+    operator acquired visibility of a study population as a SIDE EFFECT of an administrative act, with
+    nobody having decided it and nothing recording a decision. Automatic was the whole problem. The
+    dead end is instead fixed at the entrance, explicitly.
+    Nothing was broken - the permissions were right and the path was missing. SystemAdministrator is
+    deliberately narrow (Doc 4: administration only, no content, approval or consent authority). It
+    carries organisation.create and role.assign but NOT user.view and not
+    participant.list-administrative. So a bootstrapped administrator could create an organisation and
+    then open nothing inside it, and the one screen that hands out roles - accounts and roles - is
+    gated on user.view. They held the permission that would have fixed it and had no route to reach
+    it. The catalogue already stated the intent, in a comment saying role.assign exists "to bootstrap
+    the first OrganisationAdministrator"; that bootstrap was never built. Whoever creates an
+    organisation now becomes its member and its OrganisationAdministrator in the same transaction,
+    scoped to the organisation just created rather than widening SystemAdministrator for everyone.
+    Organisations that already exist are repaired from the organisation chooser, where an entry listed
+    by platform-wide standing - which is exactly the condition "holds no role inside it" - offers to
+    grant it, with a line saying that being able to see an organisation is not the same as holding a
+    role in one. Verified against the real permission service rather than against what the command
+    wrote, and mutation-checked by removing the grant.
+  trace_ids: [ATR-003]
+  adr_ids: [ADR-104]
+  docs: ["design/DESIGN_DECISIONS.md D-72"]
+  code:
+    - packages/modules/m01-identity-org/src/application/commands.ts
+    - apps/web/src/StaffApp.tsx
+  tests:
+    - apps/api/test/session-store.integration.test.ts
+    - packages/modules/m03-consent-permission/test/m03.integration.test.ts
+    - packages/modules/m05-enrolment/test/m05.integration.test.ts
+  status: implemented

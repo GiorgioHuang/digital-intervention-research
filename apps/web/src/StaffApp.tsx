@@ -232,9 +232,56 @@ export function StaffApp({ onExit }: { onExit?: (() => void) | undefined }) {
                 <button onClick={() => setSession({ ...session, organisationId: o.organisationId })}>
                   {o.name}
                 </button>
+                {/*
+                  Listed by platform-wide standing means holding no role
+                  IN it — and a platform administrator's role is narrow by
+                  design (administration only): it carries role.assign but
+                  not user.view, so opening that organisation would refuse
+                  every screen including the one that hands out roles.
+                  Organisations created from now on give their creator this
+                  automatically; this is for the ones that already exist.
+                */}
+                {o.standing === 'platform-administrator' && (
+                  <>
+                    {' '}
+                    <button
+                      onClick={() => {
+                        void staffApi
+                          .assignRole(
+                            { ...session, organisationId: o.organisationId },
+                            session.actorId,
+                            'OrganisationAdministrator',
+                          )
+                          .then(async () => {
+                            const orgs = await staffApi.listOrganisations(session);
+                            setOrganisations(orgs.data.map((x) => x.attributes));
+                            setSession({ ...session, organisationId: o.organisationId });
+                          })
+                          .catch((err: unknown) =>
+                            setSignInProblem(
+                              err instanceof Error
+                                ? err.message
+                                : 'That role could not be given. Nothing changed.',
+                            ),
+                          );
+                      }}
+                    >
+                      Make me its administrator
+                    </button>
+                  </>
+                )}
               </li>
             ))}
           </ul>
+        )}
+        {(organisations ?? []).some((o) => o.standing === 'platform-administrator') && (
+          <p>
+            <small>
+              You can see these because you administer the platform, which is not the same as holding a role inside
+              one. Opening an organisation you hold no role in will refuse every screen — give yourself the
+              administrator role there first.
+            </small>
+          </p>
         )}
         {signInProblem !== '' && <p role="alert">{signInProblem}</p>}
         <p>
