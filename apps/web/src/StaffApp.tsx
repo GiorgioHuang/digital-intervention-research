@@ -37,6 +37,26 @@ const SCREENS: { key: StaffScreen; label: string }[] = [
  * there is no participant workspace here to go back to, and a control
  * that took somebody nowhere would be worse than none.
  */
+/**
+ * The one organisation to open without asking — if there is one.
+ *
+ * A choice of one is not a choice, so it used to skip the chooser whenever
+ * exactly one organisation came back. That was wrong for the case it most
+ * needed to be right for: a platform administrator sees every organisation
+ * by platform-wide standing, which is precisely the state of holding NO
+ * role inside one. With a single organisation they were dropped straight
+ * into a workspace where every screen refuses — and the control that fixes
+ * it lives on the chooser they had just been skipped past. The one person
+ * who needed that screen was the one person who never saw it.
+ *
+ * So skipping requires standing INSIDE the organisation, not merely being
+ * able to see it.
+ */
+function soleUsableOrganisation(items: OrganisationItem[]): OrganisationItem | undefined {
+  const usable = items.filter((o) => o.standing !== 'platform-administrator');
+  return usable.length === 1 ? usable[0] : undefined;
+}
+
 export function StaffApp({ onExit }: { onExit?: (() => void) | undefined }) {
   const [session, setSession] = useState<StaffSession | null>(null);
   const [screen, setScreen] = useState<StaffScreen>('coordinator');
@@ -84,9 +104,8 @@ export function StaffApp({ onExit }: { onExit?: (() => void) | undefined }) {
         if (cancelled) return;
         const items = orgs.data.map((o) => o.attributes);
         setOrganisations(items);
-        if (items.length === 1) {
-          setSession({ ...signedIn, organisationId: items[0]!.organisationId });
-        }
+        const only = soleUsableOrganisation(items);
+        if (only !== undefined) setSession({ ...signedIn, organisationId: only.organisationId });
       } catch {
         setOrganisations([]);
       }
@@ -199,9 +218,8 @@ export function StaffApp({ onExit }: { onExit?: (() => void) | undefined }) {
                     const orgs = await staffApi.listOrganisations(session);
                     const items = orgs.data.map((o) => o.attributes);
                     setOrganisations(items);
-                    if (items.length === 1) {
-                      setSession({ ...session, organisationId: items[0]!.organisationId });
-                    }
+                    const only = soleUsableOrganisation(items);
+                    if (only !== undefined) setSession({ ...session, organisationId: only.organisationId });
                   })
                   .catch((err: unknown) =>
                     setSignInProblem(

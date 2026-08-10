@@ -1674,8 +1674,10 @@
   code:
     - packages/modules/m01-identity-org/src/application/commands.ts
     - apps/web/src/StaffApp.tsx
+    - apps/web/src/staff-api.ts
   tests:
     - apps/api/test/session-store.integration.test.ts
+    - apps/web/test/organisation-chooser.test.tsx
     - packages/modules/m03-consent-permission/test/m03.integration.test.ts
     - packages/modules/m05-enrolment/test/m05.integration.test.ts
   status: implemented
