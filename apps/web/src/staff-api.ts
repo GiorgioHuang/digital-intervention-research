@@ -8,6 +8,13 @@ import { accessTokenHeader, platformClientHeader, raiseApiError, type ApiError }
  * MFA-tier actions are honestly represented (production OIDC pending
  * ADR-104).
  */
+export interface OrganisationItem {
+  organisationId: string;
+  name: string;
+  organisationState: string;
+  standing: 'platform-administrator' | 'role' | 'membership';
+}
+
 export interface InvitationItem {
   invitationId: string;
   userAccountId: string | null;
@@ -190,6 +197,7 @@ export interface RoleAssignmentItem {
 }
 
 export interface AccountItem {
+  hasSignIn?: boolean;
   userAccountId: string;
   displayName: string;
   /** Returned verbatim; nothing in the platform ever writes it. */
@@ -521,6 +529,15 @@ export const staffApi = {
   /** Version-bound: a role that changed underneath is refused, not merged. */
   revokeRole: (s: StaffSession, roleAssignmentId: string, expectedVersion: number) =>
     post<Id>(s, `/v1/role-assignments/${roleAssignmentId}/revoke`, { expectedVersion, confirmed: true }),
+  listOrganisations: (s: StaffSession) =>
+    get<{ data: { id: string; attributes: OrganisationItem }[] }>(s, '/v1/organisations'),
+  createOrganisation: (s: StaffSession, name: string) => post<Id>(s, '/v1/organisations', { name }),
+  inviteExistingAccountHolder: (s: StaffSession, userAccountId: string, email: string) =>
+    post<{ data: { attributes: { invitedEmail: string; expiresAt: string } } }>(
+      s,
+      `/v1/user-accounts/${userAccountId}/invitations`,
+      { email },
+    ),
   inviteToPlatform: (s: StaffSession, input: { displayName: string; email: string; expiresInDays?: number }) =>
     post<{ data: { id: string; attributes: { userAccountId: string; invitedEmail: string; expiresAt: string } } }>(
       s,

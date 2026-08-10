@@ -46,6 +46,18 @@ const envSchema = z.object({
     .enum(['true', 'false'])
     .default('true')
     .transform((v) => v === 'true'),
+  // The first administrator, and the only way to get one without opening
+  // a SQL client against a running deployment.
+  //
+  // The account whose VERIFIED Google email matches this is granted
+  // SystemAdministrator on sign-in — but only while the platform has no
+  // administrator at all. That condition is what stops it being a standing
+  // back door: once somebody holds the role, this value does nothing, and
+  // changing it later does nothing either. It fails closed by being unset.
+  //
+  // It is not a secret and does not need to be: it grants nothing to
+  // anybody who cannot also prove to Google that they hold that address.
+  BOOTSTRAP_ADMIN_EMAIL: z.string().optional(),
   SESSION_TTL_MINUTES: z.coerce.number().int().min(5).max(43200).default(720),
   // Secure cookies by default, and turning them off is a deliberate act
   // that only makes sense on http://localhost — a Secure cookie is simply

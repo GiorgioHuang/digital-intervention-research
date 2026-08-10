@@ -21,6 +21,17 @@ export interface AccountView {
   userAccountId: string;
   displayName: string;
   /**
+   * Whether anybody can actually sign in as this account — that is,
+   * whether a Google identity is linked to it.
+   *
+   * Not cosmetic. An account with roles and no linked identity belongs to
+   * nobody: it looks staffed on this screen and is unreachable in fact,
+   * which is the state every account created before Sign in with Google is
+   * in. The administrator needs to be able to see that and invite its
+   * holder, rather than wondering why a colleague says they cannot get in.
+   */
+  hasSignIn: boolean;
+  /**
    * Returned verbatim. Nothing in the platform writes this column, so
    * every account carries the default and 'Active' means "no code has
    * ever set this" rather than "somebody checked". The screen has to say
@@ -78,7 +89,9 @@ export async function listOrganisationAccounts(deps: M01Deps, ctx: RequestContex
   // Still scoped: both halves are conditioned on this organisation, so
   // this lists nobody the caller lacks standing over.
   const res = await deps.pool.query(
-    `SELECT DISTINCT a.id, a.display_name, a.account_state, a.actor_type
+    `SELECT DISTINCT a.id, a.display_name, a.account_state, a.actor_type,
+            EXISTS (SELECT 1 FROM identity_org.external_identities e
+                     WHERE e.user_account_id = a.id) AS has_sign_in
        FROM identity_org.user_accounts a
        LEFT JOIN identity_org.role_assignments r
               ON r.user_account_id = a.id AND r.organisation_id = $1
@@ -117,6 +130,7 @@ export async function listOrganisationAccounts(deps: M01Deps, ctx: RequestContex
   return res.rows.map((a) => ({
     userAccountId: a.id as string,
     displayName: a.display_name as string,
+    hasSignIn: a.has_sign_in === true,
     accountState: a.account_state as string,
     actorType: a.actor_type as string,
     roles: byAccount.get(a.id as string) ?? [],
@@ -184,5 +198,76 @@ export async function listPendingInvitations(
     expiresAt: (r['expires_at'] as Date).toISOString(),
     invitedBy: (r['invited_by'] as string | null) ?? null,
     createdAt: (r['created_at'] as Date).toISOString(),
+  }));
+}
+
+export interface OrganisationView {
+  organisationId: string;
+  name: string;
+  organisationState: string;
+  /** Why this one is listed — membership, a role, or platform-wide standing. */
+  standing: 'platform-administrator' | 'role' | 'membership';
+}
+
+/**
+ * The organisations this actor may act in.
+ *
+ * A question about the caller, not about the world — which is why it needs
+ * no `organisation.view` action and does not have one. "Which organisations
+ * exist" is a probe and stays unanswerable; this returns only the ones the
+ * asker already belongs to, so it discloses nothing they did not already
+ * know by being in them.
+ *
+ * The exception is a platform-wide SystemAdministrator, who holds a role
+ * scoped to no organisation and would otherwise belong to none and see an
+ * empty list — the one person who most needs to pick one.
+ */
+export async function listOrganisationsForActor(
+  deps: M01Deps,
+  ctx: RequestContext,
+): Promise<OrganisationView[]> {
+  const actorId = ctx.actor?.id;
+  if (actorId === undefined) {
+    throw new PlatformError('AUTHENTICATION_REQUIRED', 'Authentication required');
+  }
+  const platformWide = await deps.pool.query(
+    `SELECT 1 FROM identity_org.role_assignments
+      WHERE user_account_id = $1 AND role = 'SystemAdministrator'
+        AND assignment_state = 'Active' AND organisation_id IS NULL
+      LIMIT 1`,
+    [actorId],
+  );
+  if (platformWide.rowCount !== 0) {
+    const all = await deps.pool.query(
+      `SELECT id, name, organisation_state FROM identity_org.organisations
+        WHERE organisation_state <> 'Archived'
+        ORDER BY name ASC`,
+    );
+    return all.rows.map((r: Record<string, unknown>) => ({
+      organisationId: r['id'] as string,
+      name: r['name'] as string,
+      organisationState: r['organisation_state'] as string,
+      standing: 'platform-administrator' as const,
+    }));
+  }
+
+  const res = await deps.pool.query(
+    `SELECT o.id, o.name, o.organisation_state,
+            CASE WHEN r.id IS NOT NULL THEN 'role' ELSE 'membership' END AS standing
+       FROM identity_org.organisations o
+       LEFT JOIN identity_org.role_assignments r
+              ON r.organisation_id = o.id AND r.user_account_id = $1 AND r.assignment_state = 'Active'
+       LEFT JOIN identity_org.organisation_memberships m
+              ON m.organisation_id = o.id AND m.user_account_id = $1
+      WHERE (r.id IS NOT NULL OR m.id IS NOT NULL)
+        AND o.organisation_state <> 'Archived'
+      ORDER BY o.name ASC`,
+    [actorId],
+  );
+  return res.rows.map((r: Record<string, unknown>) => ({
+    organisationId: r['id'] as string,
+    name: r['name'] as string,
+    organisationState: r['organisation_state'] as string,
+    standing: r['standing'] as 'role' | 'membership',
   }));
 }

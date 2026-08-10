@@ -1602,3 +1602,44 @@
   tests:
     - packages/modules/m16-integration/test/blob-store.test.ts
   status: implemented
+- implementation_id: IMP-PLATFORM-NO-MORE-SQL-001
+  module: M01
+  summary: >-
+    Everything that still required a SQL client against a running deployment, made into screens
+    (owner's instruction). Four things - bootstrapping the first administrator, creating and choosing
+    an organisation, inviting the holder of an account nobody can sign in as, and a participant
+    inviting somebody into their own circle. The one worth recording is which permission the
+    participant-side invitation hangs off. It was written first against relationship.propose and the
+    tests went red immediately: the Participant role is granted relationship.approve and .revoke and
+    deliberately NOT propose, because in this platform's model proposing a relationship belongs to
+    coordinators and the participant is the one who says yes. So the correct action is
+    relationship.approve - a participant inviting their daughter is not arranging somebody else's
+    access, it is approving in advance a relationship that comes into force when she joins. Granting
+    participants propose instead would have widened the existing propose-a-relationship route for
+    every participant at the same time, a policy change nobody asked for. It is also owner-only, so
+    the ENGINE decides whether this is the caller's own circle using the actor-to-participant mapping
+    it resolves itself, and the hand-written ownership check behind it becomes a second lock on the
+    identifier this code supplies rather than the only one. The administrator bootstrap is gated on
+    the platform having no administrator at all, which is what makes it a bootstrap rather than a
+    standing back door - once anybody holds the role the configured address does nothing, including
+    for the person named in it - and requires a Google-verified email, without which anyone learning
+    the address could register an account asserting it and become the platform's administrator. The
+    accounts screen now reports whether anybody can actually sign in as each account, because accounts
+    created before Sign in with Google carry roles and history and no linked identity: they look
+    staffed and are unreachable.
+  trace_ids: [ATR-003]
+  adr_ids: [ADR-104]
+  docs: ["design/DESIGN_DECISIONS.md D-71", "DEPLOYMENT.md 第一个管理员"]
+  code:
+    - packages/modules/m01-identity-org/src/application/commands.ts
+    - packages/modules/m01-identity-org/src/application/queries.ts
+    - apps/api/src/auth/session-store.ts
+    - apps/api/src/config.ts
+    - apps/api/src/controllers.ts
+    - apps/api/src/staff-controllers.ts
+    - apps/web/src/StaffApp.tsx
+    - apps/web/src/components/AccountsAndRoles.tsx
+    - apps/web/src/components/InviteSomeone.tsx
+  tests:
+    - apps/api/test/session-store.integration.test.ts
+  status: implemented

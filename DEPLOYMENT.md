@@ -115,6 +115,7 @@ HADI_SESSION_SECRET = <≥32 字符随机串>
 | `GOOGLE_ALLOWED_DOMAINS` | 否 | 逗号分隔，限制只有这些 Workspace 域可登录。**按 `hd` 断言判定，不看邮箱 `@` 后面的字符** |
 | `GOOGLE_MFA_DOMAINS` | 否 | 逗号分隔。**这是运营者的一句断言**：该 Workspace 域已强制开启两步验证。见下方「关于强认证」 |
 | `ALLOW_SELF_SIGNUP` | 否 | 默认 `true`（所有者裁定）。设 `false` 则未受邀的 Google 账号被拒 |
+| `BOOTSTRAP_ADMIN_EMAIL` | 否 | 第一个管理员的 Google 邮箱。**仅在平台尚无任何管理员时生效**，用完自动失效 |
 | `SESSION_TTL_MINUTES` | 否 | 默认 720（12 小时） |
 | `STEP_UP_TTL_MINUTES` | 否 | 默认 10。一次重新认证算数多久 |
 | `STEP_UP_MAX_AGE_SECONDS` | 否 | 默认 120。Google 必须在多久之内刚认证过 |
@@ -122,59 +123,41 @@ HADI_SESSION_SECRET = <≥32 字符随机串>
 
 缺 `GOOGLE_CLIENT_ID` 或 `SESSION_SECRET` 时进程**拒绝启动**：一个起来了却谁也认证不了的平台，和一个坏掉的平台长得一模一样。
 
-### 4. 自助注册与邀请
+### 4. 第一个管理员
+
+设一个仓库变量：
+
+```
+BOOTSTRAP_ADMIN_EMAIL = you@example.org
+```
+
+用那个 Google 账号登录一次，即获得 `SystemAdministrator`。**只在平台还没有任何管理员时生效**——一旦有人持有该角色，这个变量就什么也不做了，包括对变量里写的那个人。这就是它是「引导」而不是「后门」的原因。邮箱必须是 Google 已验证的，否则任何知道这个地址的人都能注册一个声称该地址的 Google 账号、然后成为平台管理员。
+
+之后的一切都在界面里：进工作人员工作区 → 选组织（没有组织时可以直接建一个）→「账户与角色」。
+
+### 5. 自助注册与邀请（都在界面里）
 
 **任何 Google 账号都可以自助注册**（`ALLOW_SELF_SIGNUP`，默认 `true`；固定队列的部署可设 `false` 改为纯邀请制）。
 
-自注册的人拿到的是：一个账号、一份属于自己的参与者记录，**以及一个谁也看不见的视野**。这不是靠登录代码客气，是结构性的——权限引擎第 2 步对没有角色的 actor 一律 `no-granting-role` 拒绝，只剩「自己是资源所有者」这一条路；Open Matching 要求**双方**都已开启，社区要 `community-participation` 同意，而新账号两样都没有。**所以自注册的人是一个人待在平台上的**，直到有人邀请他，或他自己同意了什么。
+自注册的人拿到的是：一个账号、一份属于自己的参与者记录，**以及一个谁也看不见的视野**。这不是靠登录代码客气，是结构性的——权限引擎第 2 步对没有角色的 actor 一律 `no-granting-role` 拒绝，只剩「自己是资源所有者」这一条路；Open Matching 要求**双方**都已开启，社区要 `community-participation` 同意，而新账号两样都没有。
 
-**邀请是唯一会授予东西的通路。**
+**邀请是唯一会授予东西的通路**，三种都在界面上：
 
-**工作人员邀请现在在界面里做**：工作人员工作区 → 管理 → 「账户与角色」→「邀请某人」，填姓名和对方的 Google 账号邮箱即可；下面「等待认领」一栏列出还没被认领的，可以撤回。认领之后那个人会出现在账户列表里、**且不带任何角色**，在同一张卡片上给他一个角色。
+| 要做的事 | 在哪里 |
+|---|---|
+| 邀请一位同事加入 | 工作人员 →「账户与角色」→ 邀请某人 |
+| 让一个**已存在但没人能登录**的账号（迁移前建的、种子建的）重新有人 | 同一屏，该账号卡片上的「邀请其持有者」 |
+| 给某人角色 | 同一屏，账号卡片上的角色下拉 |
+| 参与者邀请自己的支持者（女儿看生命故事） | 参与者 →「谁能看到我」→「邀请某人看我的东西」 |
+| 新建组织 | 选组织那一屏（需平台管理员） |
 
-**注意：平台不会发邮件。** 它没有邮件发送能力，界面上也这么写着——邀请只是被记录下来，地址和有效期回显给你，由你自己转告对方。一个叫「邀请」却什么也不发的按钮，比一个明说自己只是登记的按钮更坏。
+**平台不会发邮件。** 它没有邮件发送能力，三处界面都在第一行这么写——邀请只是被记录，地址和有效期回显给你，由你自己转告对方。一个叫「邀请」却什么也不发的按钮，比一个明说自己只是登记的按钮更坏。
 
-参与者邀请自己的支持者（「让女儿看我的生命故事」）目前**还没有界面**，只能写 SQL：
+**邀请对「已经注册过的人」同样生效**：每次登录都会检查待认领邀请。
 
-```sql
-INSERT INTO identity_org.account_invitations
-  (id, issuer, invited_email, expires_at, invited_by,
-   relationship_participant_id, relationship_type, relationship_permitted_actions)
-VALUES (
-  'invite_' || replace(gen_random_uuid()::text, '-', ''),
-  'https://accounts.google.com', 'daughter@example.org',
-  now() + interval '14 days', '<inviter_user_account_id>',
-  '<inviter_participant_id>', 'FamilyMember', ARRAY['life-story.contribute']
-);
-```
+`user_accounts.origin` 记录每个账号是怎么来的（`self-registered` / `invitation` / `created-by-administrator`）。
 
-认领的人若还没有账号就自动获得一个；关系带作用域动作、认领即 `Active`（发邀请的参与者本人就是那份批准），此后随时可在「谁能看到我」撤销。
-
-**被邀请的支持者不会被登记成参与者**——被邀请来帮某人，不等于被纳入一项研究；要让认领者同时成为参与者，显式设 `creates_participant = true`。
-
-**邀请对「已经注册过的人」同样生效**：每次登录都会检查待认领邀请。（这一点是自助注册开出来的坑：此前只有陌生账号才会去找邀请，于是一位上周已注册的女儿，她母亲发的邀请会永远躺着不生效，两边都不报错。）
-
-`user_accounts.origin` 记录每个账号是怎么来的（`self-registered` / `invitation` / `created-by-administrator`）——一旦允许自助注册，「谁放这个人进来的」就不再对所有账号都是同一个答案，而事后要分清，就得在当时写下来。
-
-历史写法（账号先建为 `Invited` 态再发邀请）仍然有效：
-
-```sql
-INSERT INTO identity_org.account_invitations
-  (id, user_account_id, issuer, invited_email, expires_at)
-VALUES (
-  'invite_' || replace(gen_random_uuid()::text, '-', ''),
-  '<user_account_id>',
-  'https://accounts.google.com',
-  'someone@example.org',
-  now() + interval '14 days'
-);
-```
-
-该邮箱**只决定一件事、且只决定一次**：哪一封待认领的邀请可以被首次登录认领。认领之后，这个人就是他的 Google `sub`，邮箱再改、再被管理员分配给别人，都与账号归属无关。**邮箱不是身份**——按邮箱查账号，等于把离职协调员对参与者的全部访问交给继任者。
-
-引导账号（第一个管理员）没有邀请可发给自己，需要直接为它插一行 `account_invitations`，或沿用 `seed:demo` 的引导路径。
-
-### 5. 关于强认证（10 个动作依赖它）
+### 6. 关于强认证（10 个动作依赖它）
 
 审批干预版本、裁决导出、锁定数据集、创建安全事件等 10 个动作要求 `mfa` 层。**Google 的 ID token 里没有 `amr`**，所以「这个人用了第二因子」这件事，从 token 里读不出来。
 
@@ -184,7 +167,7 @@ VALUES (
 - 需要强认证时，界面上出现「确认是你本人」，走一次 `prompt=login` 的重新认证，换来 `step-up`。权限引擎里 step-up(3) **高于** mfa(2)，所以这 10 个动作全部可达。它回答的是更难的问题：不是「今天某个时刻用过第二因子吗」，而是「这个人现在还在键盘前吗」。
 - `GOOGLE_MFA_DOMAINS` 是唯一会记 `mfa` 的路径，而它信的是**你的断言**，不是 Google 的证明。填之前请确认该域确实强制开启了两步验证；不填也完全能用，只是这些动作每次都要点一下「确认是你本人」。
 
-### 6. 要开放自助注册，访问令牌门得先撤掉
+### 7. 要开放自助注册，访问令牌门得先撤掉
 
 `ACCESS_TOKEN` 拦的是**全部** `/v1`，包括 `/v1/auth/nonce` 和 `/v1/auth/session`。也就是说**只要它还在，没有口令的人连登录都发起不了**——自助注册在事实上不存在，「注册」变成了「先拿到共享口令的人才能注册」。
 
@@ -193,7 +176,7 @@ VALUES (
 - **要开放注册**：删掉 `HADI_ACCESS_TOKEN` 密钥，**然后重新部署一次**（Actions → Deploy to Cloud Run → Run workflow）。删除密钥本身不触发部署，而且服务上一版仍绑定着那个密钥——不重新部署，下一次冷启动会因为引用了不存在的密钥而起不来。
 - **想先做封闭测试**：留着它，此时「自助注册」实际等价于「持口令者注册」，这也是一种合理的过渡状态——只要知道自己处在哪一种。
 
-### 7. 回滚
+### 8. 回滚
 
 把 `AUTH_MODE` 改回 `dev-header` 即可，数据不受影响：已建立的 Google 绑定、邀请、会话都留在库里，改回 `google` 就继续有效。桩模式下不要对外开放。
 

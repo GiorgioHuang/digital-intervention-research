@@ -6,7 +6,16 @@ import { POLICY_V1 } from '@platform/policy';
 import { createRoleAssignmentQuery, listOrganisationAccounts } from '@platform/m01-identity-org';
 import { createParticipantQuery } from '@platform/m02-participant';
 import { createPermissionService } from '@platform/m03-consent-permission';
-import { inviteToPlatform, listPendingInvitations, revokeInvitation } from '@platform/m01-identity-org';
+import {
+  inviteExistingAccount,
+  inviteSupporter,
+  inviteToPlatform,
+  listOrganisationsForActor,
+  listPendingInvitations,
+  listSupporterInvitations,
+  revokeInvitation,
+  withdrawSupporterInvitation,
+} from '@platform/m01-identity-org';
 import { createSessionStore, hashToken, type SessionStore } from '../src/auth/session-store.js';
 import type { GoogleIdentity } from '../src/auth/google-token.js';
 
@@ -569,6 +578,312 @@ describe.skipIf(!dbAvailable)('sessions, invitations, and who a Google account t
       await expect(
         inviteToPlatform(m01, strangerCtx, { displayName: 'Sam', email: 'sam@example.org', organisationId }),
       ).rejects.toThrow();
+    });
+  });
+
+
+  /* ---------------------------------------------------------------- */
+  /* The first administrator                                          */
+  /* ---------------------------------------------------------------- */
+
+  /**
+   * Otherwise the only answer to "how do I get an administrator" is to
+   * open a SQL client against a running deployment — which is a fine
+   * answer once and a terrible one as a standing instruction.
+   */
+  describe('bootstrapping the first administrator', () => {
+    const bootstrapEmail = 'owner@example.org';
+    let bootstrapSessions: SessionStore;
+
+    beforeEach(async () => {
+      await pool.query('DELETE FROM identity_org.role_assignments');
+      bootstrapSessions = createSessionStore({
+        pool,
+        sessionTtlMinutes: 60,
+        stepUpTtlMinutes: 10,
+        mfaDomains: [],
+        allowSelfSignup: true,
+        bootstrapAdminEmail: bootstrapEmail,
+      });
+    });
+
+    const adminCount = async (accountId: string): Promise<number> => {
+      const r = await pool.query<{ count: string }>(
+        `SELECT count(*)::text AS count FROM identity_org.role_assignments
+          WHERE user_account_id = $1 AND role = 'SystemAdministrator' AND assignment_state = 'Active'`,
+        [accountId],
+      );
+      return Number(r.rows[0]?.count ?? '0');
+    };
+
+    it('grants the configured address the administrator role on first sign-in', async () => {
+      const signedIn = await bootstrapSessions.signIn(
+        identity({ subject: 'google-sub-owner', email: bootstrapEmail }),
+        nextNonce(),
+      );
+      expect(await adminCount(signedIn.userAccountId)).toBe(1);
+    });
+
+    /**
+     * The condition that turns this from a back door into a bootstrap.
+     * Once anybody holds the role, the configured address stops meaning
+     * anything — including for the person named in it.
+     */
+    it('does nothing once the platform already has an administrator', async () => {
+      const existing = await makeAccount('Somebody', 'Active');
+      await pool.query(
+        `INSERT INTO identity_org.role_assignments
+           (id, user_account_id, role, assignment_state, assigned_by_actor_id)
+         VALUES ($1, $2, 'SystemAdministrator', 'Active', 'system-bootstrap')`,
+        [newId('ra'), existing],
+      );
+
+      const signedIn = await bootstrapSessions.signIn(
+        identity({ subject: 'google-sub-owner', email: bootstrapEmail }),
+        nextNonce(),
+      );
+      expect(await adminCount(signedIn.userAccountId)).toBe(0);
+    });
+
+    /**
+     * Otherwise anybody who learned the configured address could make a
+     * Google account asserting it and become the platform's administrator.
+     */
+    it('refuses an unverified email even when it matches', async () => {
+      const signedIn = await bootstrapSessions.signIn(
+        identity({ subject: 'google-sub-liar', email: bootstrapEmail, emailVerified: false }),
+        nextNonce(),
+      );
+      expect(await adminCount(signedIn.userAccountId)).toBe(0);
+    });
+
+    it('grants nothing to a different address', async () => {
+      const signedIn = await bootstrapSessions.signIn(
+        identity({ subject: 'google-sub-other', email: 'someone.else@example.org' }),
+        nextNonce(),
+      );
+      expect(await adminCount(signedIn.userAccountId)).toBe(0);
+    });
+
+    it('grants nothing when no address is configured', async () => {
+      const signedIn = await sessions.signIn(
+        identity({ subject: 'google-sub-owner', email: bootstrapEmail }),
+        nextNonce(),
+      );
+      expect(await adminCount(signedIn.userAccountId)).toBe(0);
+    });
+
+    it('does not grant it twice when that person signs in again', async () => {
+      const who = identity({ subject: 'google-sub-owner', email: bootstrapEmail });
+      const first = await bootstrapSessions.signIn(who, nextNonce());
+      await bootstrapSessions.signIn(who, nextNonce());
+      expect(await adminCount(first.userAccountId)).toBe(1);
+    });
+  });
+
+
+  /* ---------------------------------------------------------------- */
+  /* The remaining things that used to need SQL                       */
+  /* ---------------------------------------------------------------- */
+
+  describe('reaching accounts and circles without a SQL client', () => {
+    let adminAccount: string;
+    let adminCtx: ReturnType<typeof createRequestContext>;
+    let m01: { pool: Pool; clock: FixedClock; checkPermission: typeof permissions.evaluate };
+    let organisationId: string;
+
+    beforeEach(async () => {
+      await pool.query('DELETE FROM identity_org.organisation_memberships');
+      await pool.query('DELETE FROM identity_org.role_assignments');
+      organisationId = newId('org');
+      await pool.query(`INSERT INTO identity_org.organisations (id, name) VALUES ($1, 'Test Org')`, [
+        organisationId,
+      ]);
+      adminAccount = await makeAccount('Admin', 'Active');
+      await pool.query(
+        `INSERT INTO identity_org.role_assignments
+           (id, user_account_id, role, organisation_id, assignment_state, assigned_by_actor_id)
+         VALUES ($1, $2, 'OrganisationAdministrator', $3, 'Active', 'system-bootstrap')`,
+        [newId('ra'), adminAccount, organisationId],
+      );
+      adminCtx = createRequestContext({
+        actor: { type: 'user', id: adminAccount },
+        organisationId,
+        purposeCode: 'platform-administration',
+      });
+      m01 = {
+        pool,
+        clock: new FixedClock('2026-08-09T12:00:00Z'),
+        checkPermission: permissions.evaluate.bind(permissions),
+      };
+    });
+
+    /**
+     * The accounts made before Sign in with Google — roles, history, and
+     * nobody able to sign in as them.
+     */
+    it('lets an administrator invite the holder of an account that already exists', async () => {
+      const stranded = await makeAccount('Seeded Coordinator', 'Active');
+      await pool.query(
+        `INSERT INTO identity_org.organisation_memberships (id, organisation_id, user_account_id)
+         VALUES ($1, $2, $3)`,
+        [newId('mem'), organisationId, stranded],
+      );
+
+      const accountsBefore = await listOrganisationAccounts(m01, adminCtx);
+      expect(accountsBefore.find((a) => a.userAccountId === stranded)?.hasSignIn).toBe(false);
+
+      await inviteExistingAccount(m01, adminCtx, { userAccountId: stranded, email: 'coord@example.org' });
+      const signedIn = await sessions.signIn(
+        identity({ subject: 'google-sub-coord', email: 'coord@example.org' }),
+        nextNonce(),
+      );
+      expect(signedIn.userAccountId).toBe(stranded);
+
+      const accountsAfter = await listOrganisationAccounts(m01, adminCtx);
+      expect(accountsAfter.find((a) => a.userAccountId === stranded)?.hasSignIn).toBe(true);
+    });
+
+    /**
+     * Once an account has a holder, inviting somebody to it would be a way
+     * of handing over somebody else's identity and history.
+     */
+    it('refuses to invite a holder to an account that already has one', async () => {
+      const stranded = await makeAccount('Seeded Coordinator', 'Active');
+      await inviteExistingAccount(m01, adminCtx, { userAccountId: stranded, email: 'coord@example.org' });
+      await sessions.signIn(identity({ subject: 'google-sub-coord', email: 'coord@example.org' }), nextNonce());
+
+      await expect(
+        inviteExistingAccount(m01, adminCtx, { userAccountId: stranded, email: 'someone.else@example.org' }),
+      ).rejects.toThrow(/already belongs to somebody/);
+    });
+
+    it('lists the organisations an actor may act in, and no others', async () => {
+      const outsider = await sessions.signIn(identity(), nextNonce());
+      const otherOrg = newId('org');
+      await pool.query(`INSERT INTO identity_org.organisations (id, name) VALUES ($1, 'Elsewhere')`, [otherOrg]);
+
+      expect((await listOrganisationsForActor(m01, adminCtx)).map((o) => o.organisationId)).toEqual([
+        organisationId,
+      ]);
+      const outsiderCtx = createRequestContext({ actor: { type: 'user', id: outsider.userAccountId } });
+      expect(await listOrganisationsForActor(m01, outsiderCtx)).toEqual([]);
+    });
+
+    /** The one person who belongs to none and most needs to choose one. */
+    it('shows every organisation to a platform-wide administrator', async () => {
+      const sysAdmin = await makeAccount('Sys', 'Active');
+      await pool.query(
+        `INSERT INTO identity_org.role_assignments
+           (id, user_account_id, role, assignment_state, assigned_by_actor_id)
+         VALUES ($1, $2, 'SystemAdministrator', 'Active', 'system-bootstrap')`,
+        [newId('ra'), sysAdmin],
+      );
+      const ctx = createRequestContext({ actor: { type: 'user', id: sysAdmin } });
+      expect((await listOrganisationsForActor(m01, ctx)).length).toBeGreaterThanOrEqual(1);
+    });
+
+    /* -------------------------------------------------------------- */
+
+    async function participantWithAccount(email: string, subject: string): Promise<{ account: string; participant: string }> {
+      const signedIn = await sessions.signIn(identity({ subject, email }), nextNonce());
+      const p = await pool.query<{ id: string }>(
+        `SELECT id FROM participant_profile.participants WHERE user_account_id = $1`,
+        [signedIn.userAccountId],
+      );
+      return { account: signedIn.userAccountId, participant: p.rows[0]!.id };
+    }
+
+    it('lets a participant invite somebody into their own circle', async () => {
+      const ann = await participantWithAccount('ann@example.org', 'google-sub-ann');
+      const annCtx = createRequestContext({ actor: { type: 'user', id: ann.account } });
+
+      await inviteSupporter(m01, annCtx, {
+        participantId: ann.participant,
+        email: 'daughter@example.org',
+        relationshipType: 'FamilyMember',
+        permittedActions: ['life-story.contribute'],
+      });
+      expect((await listSupporterInvitations(m01, annCtx, { participantId: ann.participant })).length).toBe(1);
+
+      const daughter = await sessions.signIn(
+        identity({ subject: 'google-sub-daughter', email: 'daughter@example.org' }),
+        nextNonce(),
+      );
+      const rel = await pool.query(
+        `SELECT 1 FROM consent_permission.relationships
+          WHERE participant_id = $1 AND related_actor_id = $2 AND relationship_state = 'Active'`,
+        [ann.participant, daughter.userAccountId],
+      );
+      expect(rel.rowCount).toBe(1);
+    });
+
+    /**
+     * The check that matters. Without it, anybody able to propose a
+     * relationship could hand out access to somebody else's life story
+     * simply by naming their participant identifier.
+     */
+    it('refuses to invite somebody into a circle that is not yours', async () => {
+      const ann = await participantWithAccount('ann@example.org', 'google-sub-ann');
+      const ben = await participantWithAccount('ben@example.org', 'google-sub-ben');
+      const benCtx = createRequestContext({ actor: { type: 'user', id: ben.account } });
+
+      await expect(
+        inviteSupporter(m01, benCtx, {
+          participantId: ann.participant,
+          email: 'accomplice@example.org',
+          relationshipType: 'FamilyMember',
+          permittedActions: ['life-story.contribute'],
+        }),
+        // Refused by the permission engine before this function's own
+        // check is reached: `relationship.approve` is owner-only, so the
+        // engine compares the caller against the resource owner using the
+        // actor→participant mapping it resolves itself. The hand-written
+        // check behind it stays as a second lock on the identifier this
+        // code supplies.
+      ).rejects.toThrow(/not-resource-owner|your own circle/);
+    });
+
+    it('refuses an invitation that permits nothing', async () => {
+      const ann = await participantWithAccount('ann@example.org', 'google-sub-ann');
+      const annCtx = createRequestContext({ actor: { type: 'user', id: ann.account } });
+      await expect(
+        inviteSupporter(m01, annCtx, {
+          participantId: ann.participant,
+          email: 'daughter@example.org',
+          relationshipType: 'FamilyMember',
+          permittedActions: [],
+        }),
+      ).rejects.toThrow(/at least one thing/);
+    });
+
+    it('lets a participant withdraw one, and refuses to withdraw somebody else\'s', async () => {
+      const ann = await participantWithAccount('ann@example.org', 'google-sub-ann');
+      const ben = await participantWithAccount('ben@example.org', 'google-sub-ben');
+      const annCtx = createRequestContext({ actor: { type: 'user', id: ann.account } });
+      const benCtx = createRequestContext({ actor: { type: 'user', id: ben.account } });
+
+      const invitation = await inviteSupporter(m01, annCtx, {
+        participantId: ann.participant,
+        email: 'daughter@example.org',
+        relationshipType: 'FamilyMember',
+        permittedActions: ['life-story.contribute'],
+      });
+
+      await expect(
+        withdrawSupporterInvitation(m01, benCtx, {
+          participantId: ann.participant,
+          invitationId: invitation.invitationId,
+          confirmed: true,
+        }),
+      ).rejects.toThrow();
+
+      await withdrawSupporterInvitation(m01, annCtx, {
+        participantId: ann.participant,
+        invitationId: invitation.invitationId,
+        confirmed: true,
+      });
+      expect(await listSupporterInvitations(m01, annCtx, { participantId: ann.participant })).toEqual([]);
     });
   });
 

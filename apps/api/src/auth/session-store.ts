@@ -63,6 +63,8 @@ export interface SessionStoreOptions {
    * cohort rather than an open service.
    */
   allowSelfSignup: boolean;
+  /** See config: the first administrator, while there is no other. */
+  bootstrapAdminEmail?: string | undefined;
   now?: () => Date;
 }
 
@@ -142,6 +144,8 @@ export function createSessionStore(options: SessionStoreOptions): SessionStore {
             WHERE id = $1`,
           [identityRow.id, identity.email ?? null],
         );
+
+        await maybeBootstrapAdministrator(client, identity, identityRow.user_account_id, options.bootstrapAdminEmail);
 
         const baseStrength: 'password' | 'mfa' =
           identity.hostedDomain !== undefined && mfaDomains.includes(identity.hostedDomain.toLowerCase())
@@ -488,6 +492,47 @@ async function ensureParticipant(
     `INSERT INTO participant_profile.participants (id, user_account_id, display_name)
      VALUES ($1, $2, $3)`,
     [newId('pt'), accountId, account.rows[0]?.display_name ?? 'New member'],
+  );
+}
+
+/**
+ * Granting the first administrator, so that the answer to "how do I get an
+ * administrator" is not "open a SQL client against production".
+ *
+ * Three conditions, and the third is the one that matters: the address must
+ * be configured, the token's email must be VERIFIED and equal to it, and
+ * the platform must currently have no administrator at all. That last one
+ * turns a standing back door into a one-time bootstrap — once anybody
+ * holds the role, this function stops doing anything, including for
+ * whoever is named in the configuration.
+ *
+ * Unverified email is refused for the obvious reason: otherwise anyone who
+ * learned the configured address could make a Google account asserting it
+ * and become the administrator of the platform.
+ */
+async function maybeBootstrapAdministrator(
+  client: { query: Pool['query'] },
+  identity: GoogleIdentity,
+  userAccountId: string,
+  configuredEmail: string | undefined,
+): Promise<void> {
+  if (configuredEmail === undefined || configuredEmail.trim() === '') return;
+  if (!identity.emailVerified || identity.email === undefined) return;
+  if (identity.email.trim().toLowerCase() !== configuredEmail.trim().toLowerCase()) return;
+
+  const existing = await client.query(
+    `SELECT 1 FROM identity_org.role_assignments
+      WHERE role = 'SystemAdministrator' AND assignment_state = 'Active'
+      LIMIT 1`,
+  );
+  if (existing.rowCount !== 0) return;
+
+  await client.query(
+    `INSERT INTO identity_org.role_assignments
+       (id, user_account_id, role, assignment_state, assigned_by_actor_id)
+     VALUES ($1, $2, 'SystemAdministrator', 'Active', 'system-bootstrap')
+     ON CONFLICT DO NOTHING`,
+    [newId('ra'), userAccountId],
   );
 }
 

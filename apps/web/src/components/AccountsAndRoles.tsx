@@ -78,6 +78,7 @@ export function AccountsAndRoles({ session }: { session: StaffSession }) {
    *  hand — the platform sends nothing. */
   const [justInvited, setJustInvited] = useState<{ email: string; expiresAt: string } | null>(null);
   const [grantingRole, setGrantingRole] = useState<Record<string, string>>({});
+  const [inviteHolder, setInviteHolder] = useState<Record<string, string>>({});
 
   const load = async () => {
     try {
@@ -181,6 +182,49 @@ export function AccountsAndRoles({ session }: { session: StaffSession }) {
                 Holds no role that is in force. They can sign in and see nothing but their own account; every other
                 action is refused.
               </p>
+            )}
+            {/*
+              An account nobody can sign in as. Every account made before
+              Sign in with Google is in this state — with its roles, its
+              history, and no holder. It looks staffed here and is
+              unreachable in fact, so the way to reach it belongs next to
+              the fact.
+            */}
+            {a.hasSignIn === false && (
+              <>
+                <p>
+                  <strong>Nobody can sign in as this account.</strong> No Google account is linked to it, so its
+                  roles are held by no one. Invite whoever should hold it.
+                </p>
+                <p>
+                  <label htmlFor={`hold-${a.userAccountId}`}>Their Google account address</label>{' '}
+                  <input
+                    id={`hold-${a.userAccountId}`}
+                    type="email"
+                    value={inviteHolder[a.userAccountId] ?? ''}
+                    onChange={(e) => setInviteHolder({ ...inviteHolder, [a.userAccountId]: e.target.value })}
+                  />{' '}
+                  <button
+                    disabled={(inviteHolder[a.userAccountId] ?? '').trim() === ''}
+                    onClick={() => {
+                      const email = (inviteHolder[a.userAccountId] ?? '').trim();
+                      if (email === '') return;
+                      void staffApi
+                        .inviteExistingAccountHolder(session, a.userAccountId, email)
+                        .then(async (res) => {
+                          setInviteHolder({ ...inviteHolder, [a.userAccountId]: '' });
+                          setAnnouncement(
+                            `Invitation recorded for ${res.data.attributes.invitedEmail}. Nothing has been sent — tell them yourself.`,
+                          );
+                          await load();
+                        })
+                        .catch((err: unknown) => setAnnouncement(staffActionError(err, 'That invitation')));
+                    }}
+                  >
+                    Invite its holder
+                  </button>
+                </p>
+              </>
             )}
             {/*
               An account with no role could be listed and never given one:

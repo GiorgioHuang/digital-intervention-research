@@ -13,6 +13,7 @@ import { MyDataCopy } from './components/MyDataCopy.js';
 import { MyLifeStory } from './components/MyLifeStory.js';
 import { MyResearchPart } from './components/MyResearchPart.js';
 import { WhoHasAccess } from './components/WhoHasAccess.js';
+import { InviteSomeone } from './components/InviteSomeone.js';
 import { WaitingForYou } from './components/WaitingForYou.js';
 import { SafetyPanel } from './components/SafetyPanel.js';
 import { SessionGuard } from './components/SessionGuard.js';
@@ -471,7 +472,17 @@ export function App() {
           </section>
         )}
         {screen === 'consent' && <ConsentPanel session={session} assistedBy={helper} />}
-        {screen === 'access' && <WhoHasAccess session={session} />}
+        {screen === 'access' && (
+          <>
+            <WhoHasAccess session={session} />
+            {/*
+              Beside who already has access, because they are one question:
+              somebody looking at "who can see my things" is exactly the
+              person who wants to add or remove one.
+            */}
+            <InviteSomeone session={session} />
+          </>
+        )}
         {screen === 'message' && (
           <MessagesScreen session={session} onGetHelp={() => setScreen('help')} assistedBy={helper} />
         )}

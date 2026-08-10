@@ -25,9 +25,12 @@ import {
   withdrawParticipant,
 } from '@platform/m05-enrolment';
 import {
+  createOrganisation,
   listOrganisationAccounts,
+  listOrganisationsForActor,
   revokeRole,
   inviteToPlatform,
+  inviteExistingAccount,
   revokeInvitation,
   listPendingInvitations,
   assignRole,
@@ -618,6 +621,29 @@ export class StaffCommandController {
   }
 
   /**
+   * The organisations this person may act in.
+   *
+   * Staff used to type an organisation identifier into a box on the
+   * sign-in screen, which meant finding it with a SQL query first. It is
+   * a value the server has always known and the person never should have
+   * had to.
+   */
+  @Get('organisations')
+  async organisations(@Req() req: Request) {
+    const ctx = requireActor(req);
+    const items = await listOrganisationsForActor(this.deps.m01, ctx);
+    return { data: items.map((o) => ({ type: 'Organisation', id: o.organisationId, attributes: o })) };
+  }
+
+  /** Creating one. `createOrganisation` was another command with no route. */
+  @Post('organisations')
+  async createOrganisationRoute(@Req() req: Request, @Body() body: { name: string }) {
+    const ctx = requireActor(req);
+    const result = await createOrganisation(this.deps.m01, ctx, { name: body.name });
+    return { data: { type: 'Organisation', id: result.organisationId } };
+  }
+
+  /**
    * Inviting somebody onto the platform (ADR-104).
    *
    * Before this route, the only way to invite anybody was to write a row
@@ -655,6 +681,33 @@ export class StaffCommandController {
           invitedEmail: result.invitedEmail,
           expiresAt: result.expiresAt.toISOString(),
         },
+      },
+    };
+  }
+
+  /**
+   * Inviting the holder of an account that already exists — the ones made
+   * before Sign in with Google, or by a seed. Without this they are
+   * stranded: on the accounts screen, with roles, and nobody able to sign
+   * in as them.
+   */
+  @Post('user-accounts/:userAccountId/invitations')
+  async inviteExistingAccountHolder(
+    @Req() req: Request,
+    @Param('userAccountId') userAccountId: string,
+    @Body() body: { email: string; expiresInDays?: number },
+  ) {
+    const ctx = requireActor(req);
+    const result = await inviteExistingAccount(this.deps.m01, ctx, {
+      userAccountId,
+      email: body.email,
+      ...(body.expiresInDays !== undefined ? { expiresInDays: body.expiresInDays } : {}),
+    });
+    return {
+      data: {
+        type: 'AccountInvitation',
+        id: result.invitationId,
+        attributes: { invitedEmail: result.invitedEmail, expiresAt: result.expiresAt.toISOString() },
       },
     };
   }

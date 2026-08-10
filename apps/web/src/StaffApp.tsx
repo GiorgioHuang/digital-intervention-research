@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { StaffSession } from './staff-api.js';
 import { beginSignIn, completeRedirect, currentSession, detectAuthMode, signOut, type AuthMode } from './auth.js';
+import { staffApi, type OrganisationItem } from './staff-api.js';
 import { GoogleSignIn } from './components/GoogleSignIn.js';
 import { AccessTokenGate } from './components/AccessTokenGate.js';
 import { AuditAccess } from './components/AuditAccess.js';
@@ -46,6 +47,14 @@ export function StaffApp({ onExit }: { onExit?: (() => void) | undefined }) {
   });
   const [authMode, setAuthMode] = useState<AuthMode | undefined>(undefined);
   const [signInProblem, setSignInProblem] = useState('');
+  /**
+   * The organisations this person may act in, asked of the server. Staff
+   * used to type an identifier into a box, which meant finding it with a
+   * SQL query first — a value the server has always known and nobody
+   * should ever have had to look up.
+   */
+  const [organisations, setOrganisations] = useState<OrganisationItem[] | null>(null);
+  const [newOrganisation, setNewOrganisation] = useState('');
 
   /** See App.tsx: one pass, because it is one question. */
   useEffect(() => {
@@ -60,15 +69,27 @@ export function StaffApp({ onExit }: { onExit?: (() => void) | undefined }) {
       if (redirect?.error !== undefined) setSignInProblem(redirect.error);
       const found = redirect?.session ?? (await currentSession().catch(() => undefined));
       if (cancelled || found === undefined) return;
-      setSession({
+      const signedIn = {
         actorId: found.actorId,
         authStrength: found.authStrength,
-        // Staff act inside an organisation. It is not in the sign-in
-        // token — membership is the platform's own record — so it stays
-        // a field the person sets, and the server re-evaluates it on
-        // every request rather than taking it as a grant (Doc 14).
+        // Chosen below from what the server says this person may act in,
+        // and still re-evaluated by the server on every request rather
+        // than taken as a grant (Doc 14).
         organisationId: '',
-      });
+      };
+      setSession(signedIn);
+      // One organisation is not a choice, so it is not presented as one.
+      try {
+        const orgs = await staffApi.listOrganisations(signedIn);
+        if (cancelled) return;
+        const items = orgs.data.map((o) => o.attributes);
+        setOrganisations(items);
+        if (items.length === 1) {
+          setSession({ ...signedIn, organisationId: items[0]!.organisationId });
+        }
+      } catch {
+        setOrganisations([]);
+      }
       // A re-authentication that has just landed leaves the session at
       // step-up; nothing else to do but let the screen show it.
       if (redirect?.stepUpStrength !== undefined) {
@@ -142,6 +163,91 @@ export function StaffApp({ onExit }: { onExit?: (() => void) | undefined }) {
             Back to the participant sign-in
           </button>
         )}
+      </main>
+    );
+  }
+
+  /*
+   * Which organisation this person is acting in. Asked once, here, rather
+   * than typed into the sign-in screen — and skipped entirely when there
+   * is only one, because a choice of one is not a choice.
+   *
+   * Almost everything staff-side is scoped by organisation and refuses
+   * without one (ORGANISATION_CONTEXT_REQUIRED), so entering the workspace
+   * without having chosen would be entering a workspace where every panel
+   * says the same unhelpful thing.
+   */
+  if (authMode === 'google' && session.organisationId === '') {
+    return (
+      <main>
+        <h1>Choose an organisation</h1>
+        {organisations === null && <p>One moment…</p>}
+        {organisations !== null && organisations.length === 0 && (
+          <>
+            <p>
+              You are signed in, but you are not in any organisation yet. Staff work is scoped to one, so there is
+              nothing to open until you belong to one or create one.
+            </p>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (newOrganisation.trim() === '') return;
+                void staffApi
+                  .createOrganisation(session, newOrganisation.trim())
+                  .then(async () => {
+                    setNewOrganisation('');
+                    const orgs = await staffApi.listOrganisations(session);
+                    const items = orgs.data.map((o) => o.attributes);
+                    setOrganisations(items);
+                    if (items.length === 1) {
+                      setSession({ ...session, organisationId: items[0]!.organisationId });
+                    }
+                  })
+                  .catch((err: unknown) =>
+                    setSignInProblem(
+                      err instanceof Error ? err.message : 'That organisation could not be created.',
+                    ),
+                  );
+              }}
+            >
+              <p>
+                <label htmlFor="new-organisation">Name a new organisation</label>{' '}
+                <input
+                  id="new-organisation"
+                  value={newOrganisation}
+                  onChange={(e) => setNewOrganisation(e.target.value)}
+                />
+              </p>
+              {/* Only a platform administrator may; anybody else gets a
+                  refusal from the server, which is the honest place for it
+                  to come from. */}
+              <button type="submit">Create it</button>
+            </form>
+          </>
+        )}
+        {(organisations ?? []).length > 0 && (
+          <ul>
+            {(organisations ?? []).map((o) => (
+              <li key={o.organisationId}>
+                <button onClick={() => setSession({ ...session, organisationId: o.organisationId })}>
+                  {o.name}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+        {signInProblem !== '' && <p role="alert">{signInProblem}</p>}
+        <p>
+          <button
+            type="button"
+            onClick={() => {
+              void signOut();
+              setSession(null);
+            }}
+          >
+            Sign out
+          </button>
+        </p>
       </main>
     );
   }

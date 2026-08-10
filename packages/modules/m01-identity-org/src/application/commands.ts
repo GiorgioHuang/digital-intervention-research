@@ -23,7 +23,15 @@ export type PermissionCheck = (
   ctx: RequestContext,
   request: {
     action: string;
-    resource: { type: string; id: string; state: string; protectedExistence: boolean; organisationId?: string };
+    resource: {
+      type: string;
+      id: string;
+      state: string;
+      protectedExistence: boolean;
+      organisationId?: string;
+      /** Needed by owner-permitted actions, which the engine decides on. */
+      ownerParticipantId?: string;
+    };
     confirmed?: boolean;
   },
 ) => Promise<PolicyDecisionResult>;
@@ -317,17 +325,8 @@ export async function inviteToPlatform(
   });
   assertAllowed(decision, false);
 
-  const email = input.email.trim().toLowerCase();
-  // Not a validator so much as a refusal to record something that cannot
-  // possibly be claimed: the claim matches on the token's verified email,
-  // so an address with no `@` is an invitation that can only ever expire.
-  if (email === '' || !email.includes('@') || email.startsWith('@') || email.endsWith('@')) {
-    throw new PlatformError('VALIDATION_ERROR', 'A valid email address is required to invite somebody');
-  }
-  const days = input.expiresInDays ?? 14;
-  if (!Number.isInteger(days) || days < 1 || days > 90) {
-    throw new PlatformError('VALIDATION_ERROR', 'An invitation may last between 1 and 90 days');
-  }
+  const email = normaliseInviteEmail(input.email);
+  const days = normaliseInviteDays(input.expiresInDays);
 
   const userAccountId = newId('actor');
   const invitationId = newId('invite');
@@ -394,6 +393,323 @@ export async function inviteToPlatform(
 
 /** Google's issuer string, matching what the sign-in path records. */
 const GOOGLE_ISSUER = 'https://accounts.google.com';
+
+/**
+ * Inviting the holder of an account that already exists.
+ *
+ * The case this is for: accounts created before Sign in with Google, or by
+ * a seed. They have roles and history and no way for anybody to reach
+ * them, because nothing links them to a Google identity. Without this they
+ * are stranded — visible on the accounts screen, belonging to a person who
+ * cannot sign in as them.
+ *
+ * Refused once an identity IS linked, because then the account has a
+ * holder and this would be a way of handing it to somebody else.
+ */
+export async function inviteExistingAccount(
+  deps: M01Deps,
+  ctx: RequestContext,
+  input: { userAccountId: string; email: string; expiresInDays?: number },
+): Promise<{ invitationId: string; expiresAt: Date; invitedEmail: string }> {
+  const actorId = requireActor(ctx);
+  const decision = await deps.checkPermission(ctx, {
+    action: 'user.invite',
+    resource: { type: 'UserAccount', id: input.userAccountId, state: 'Invited', protectedExistence: false },
+  });
+  assertAllowed(decision, false);
+
+  const email = normaliseInviteEmail(input.email);
+  const days = normaliseInviteDays(input.expiresInDays);
+  const invitationId = newId('invite');
+  const now = deps.clock.now();
+  const expiresAt = new Date(now.getTime() + days * 24 * 60 * 60 * 1000);
+
+  await withTransaction(deps.pool, async (client) => {
+    const linked = await client.query(
+      `SELECT 1 FROM identity_org.external_identities WHERE user_account_id = $1`,
+      [input.userAccountId],
+    );
+    if (linked.rowCount !== 0) {
+      throw new PlatformError(
+        'RESOURCE_CONFLICT',
+        'That account already belongs to somebody who can sign in. Take their roles back instead.',
+      );
+    }
+    try {
+      await client.query(
+        `INSERT INTO identity_org.account_invitations
+           (id, user_account_id, issuer, invited_email, expires_at, invited_by)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [invitationId, input.userAccountId, GOOGLE_ISSUER, email, expiresAt, actorId],
+      );
+    } catch (error) {
+      if (typeof error === 'object' && error !== null && (error as { code?: string }).code === '23505') {
+        throw new PlatformError(
+          'RESOURCE_CONFLICT',
+          'That address already has an invitation waiting. Revoke it before sending another.',
+        );
+      }
+      throw error;
+    }
+    await recordAuditEvent(client, ctx, {
+      action: 'user.invite',
+      targetType: 'UserAccount',
+      targetId: input.userAccountId,
+      result: 'Succeeded',
+      policyDecision: decision.outcome,
+      policyVersion: decision.policyVersion,
+      source: 'm01.inviteExistingAccount',
+      occurredAt: now,
+    });
+  });
+  return { invitationId, expiresAt, invitedEmail: email };
+}
+
+/**
+ * A participant inviting somebody into their own circle — the daughter who
+ * should be able to read a life story, the neighbour who helps with
+ * messages.
+ *
+ * The relationship is carried by the invitation and created when it is
+ * claimed, so the person being invited does not need an account first.
+ * That is the whole difference from `proposeRelationship`, which requires
+ * an actor identifier the participant would have no way to know.
+ *
+ * Scoped to named actions, and revocable from "who has access to me" the
+ * moment it looks wrong.
+ */
+export async function inviteSupporter(
+  deps: M01Deps,
+  ctx: RequestContext,
+  input: {
+    participantId: string;
+    email: string;
+    relationshipType: string;
+    permittedActions: readonly string[];
+    expiresInDays?: number;
+  },
+): Promise<{ invitationId: string; expiresAt: Date; invitedEmail: string }> {
+  const actorId = requireActor(ctx);
+  /*
+   * `relationship.approve`, not `relationship.propose`.
+   *
+   * Proposing belongs to coordinators in this platform's model — the
+   * Participant role is granted approve and revoke, and deliberately not
+   * propose, because the participant is the one who says yes to access
+   * rather than the one who arranges it. A participant inviting their own
+   * daughter is not arranging somebody else's access; it is approving, in
+   * advance, a relationship that will exist the moment she joins. Granting
+   * participants `propose` instead would have widened the existing
+   * propose-a-relationship route for every participant at the same time,
+   * which is a policy change nobody asked for.
+   *
+   * It is owner-only, so the ENGINE enforces that this is the caller's own
+   * circle, against the actor→participant mapping it resolves itself.
+   */
+  const decision = await deps.checkPermission(ctx, {
+    action: 'relationship.approve',
+    resource: {
+      type: 'Relationship',
+      id: 'new',
+      state: 'Draft',
+      protectedExistence: false,
+      ownerParticipantId: input.participantId,
+    },
+    confirmed: true,
+  });
+  assertAllowed(decision, true);
+
+  // Belt and braces on top of the engine's owner-only check, because the
+  // owner identifier above is supplied by this function: if a caller could
+  // ever reach here with somebody else's participant id, this is what
+  // still refuses.
+  const owns = await deps.pool.query(
+    `SELECT 1 FROM participant_profile.participants
+      WHERE id = $1 AND user_account_id = $2`,
+    [input.participantId, actorId],
+  );
+  if (owns.rowCount === 0) {
+    throw new PlatformError('AUTHORISATION_DENIED', 'You may only invite somebody into your own circle');
+  }
+  if (input.permittedActions.length === 0) {
+    throw new PlatformError('VALIDATION_ERROR', 'Choose at least one thing this person may do');
+  }
+
+  const email = normaliseInviteEmail(input.email);
+  const days = normaliseInviteDays(input.expiresInDays);
+  const invitationId = newId('invite');
+  const now = deps.clock.now();
+  const expiresAt = new Date(now.getTime() + days * 24 * 60 * 60 * 1000);
+
+  await withTransaction(deps.pool, async (client) => {
+    try {
+      await client.query(
+        `INSERT INTO identity_org.account_invitations
+           (id, issuer, invited_email, expires_at, invited_by,
+            relationship_participant_id, relationship_type, relationship_permitted_actions)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+        [
+          invitationId,
+          GOOGLE_ISSUER,
+          email,
+          expiresAt,
+          actorId,
+          input.participantId,
+          input.relationshipType,
+          [...input.permittedActions],
+        ],
+      );
+    } catch (error) {
+      if (typeof error === 'object' && error !== null && (error as { code?: string }).code === '23505') {
+        throw new PlatformError(
+          'RESOURCE_CONFLICT',
+          'That address already has an invitation waiting. Withdraw it before sending another.',
+        );
+      }
+      throw error;
+    }
+    await recordAuditEvent(client, ctx, {
+      action: 'relationship.approve',
+      targetType: 'AccountInvitation',
+      targetId: invitationId,
+      participantId: input.participantId,
+      result: 'Succeeded',
+      policyDecision: decision.outcome,
+      policyVersion: decision.policyVersion,
+      source: 'm01.inviteSupporter',
+      occurredAt: now,
+    });
+  });
+  return { invitationId, expiresAt, invitedEmail: email };
+}
+
+/** What a participant sees under "who I have invited". */
+export interface SupporterInvitationView {
+  invitationId: string;
+  invitedEmail: string;
+  relationshipType: string | null;
+  permittedActions: string[];
+  expiresAt: string;
+  createdAt: string;
+}
+
+export async function listSupporterInvitations(
+  deps: M01Deps,
+  ctx: RequestContext,
+  input: { participantId: string },
+): Promise<SupporterInvitationView[]> {
+  const actorId = requireActor(ctx);
+  const owns = await deps.pool.query(
+    `SELECT 1 FROM participant_profile.participants WHERE id = $1 AND user_account_id = $2`,
+    [input.participantId, actorId],
+  );
+  if (owns.rowCount === 0) {
+    throw new PlatformError('AUTHORISATION_DENIED', 'You may only see invitations you sent');
+  }
+  const res = await deps.pool.query(
+    `SELECT id, invited_email, relationship_type, relationship_permitted_actions, expires_at, created_at
+       FROM identity_org.account_invitations
+      WHERE relationship_participant_id = $1 AND invitation_state = 'Pending' AND expires_at > now()
+      ORDER BY created_at DESC`,
+    [input.participantId],
+  );
+  return res.rows.map((r: Record<string, unknown>) => ({
+    invitationId: r['id'] as string,
+    invitedEmail: r['invited_email'] as string,
+    relationshipType: (r['relationship_type'] as string | null) ?? null,
+    permittedActions: (r['relationship_permitted_actions'] as string[] | null) ?? [],
+    expiresAt: (r['expires_at'] as Date).toISOString(),
+    createdAt: (r['created_at'] as Date).toISOString(),
+  }));
+}
+
+/**
+ * Withdrawing one a participant sent.
+ *
+ * `relationship.revoke`, matching the action that removes access once it
+ * exists — withdrawing an invitation is removing access before it starts,
+ * and it is the same decision by the same person. Owner-only, so the
+ * engine decides whose circle this is.
+ *
+ * Audited, because it changes who can reach somebody's information and
+ * "when did that stop" is a question the audit trail has to be able to
+ * answer. It recorded nothing at first, and the repository's own guard
+ * test — which enumerates commands that change something and write no
+ * audit entry — caught it.
+ */
+export async function withdrawSupporterInvitation(
+  deps: M01Deps,
+  ctx: RequestContext,
+  input: { participantId: string; invitationId: string; confirmed: boolean },
+): Promise<void> {
+  const actorId = requireActor(ctx);
+  const decision = await deps.checkPermission(ctx, {
+    action: 'relationship.revoke',
+    resource: {
+      type: 'Relationship',
+      id: input.invitationId,
+      state: 'Proposed',
+      protectedExistence: false,
+      ownerParticipantId: input.participantId,
+    },
+    confirmed: input.confirmed,
+  });
+  assertAllowed(decision, input.confirmed);
+
+  const now = deps.clock.now();
+  await withTransaction(deps.pool, async (client) => {
+    const result = await client.query(
+      `UPDATE identity_org.account_invitations i
+          SET invitation_state = 'Revoked', record_version = i.record_version + 1, updated_at = now()
+         FROM participant_profile.participants p
+        WHERE i.id = $1
+          AND i.relationship_participant_id = p.id
+          AND p.id = $2
+          AND p.user_account_id = $3
+          AND i.invitation_state = 'Pending'`,
+      [input.invitationId, input.participantId, actorId],
+    );
+    if (result.rowCount === 0) {
+      throw new PlatformError(
+        'INVALID_STATE_TRANSITION',
+        'That invitation is no longer waiting. If it was accepted, remove their access under who has access to me.',
+      );
+    }
+    await recordAuditEvent(client, ctx, {
+      action: 'relationship.revoke',
+      targetType: 'AccountInvitation',
+      targetId: input.invitationId,
+      participantId: input.participantId,
+      result: 'Succeeded',
+      policyDecision: decision.outcome,
+      policyVersion: decision.policyVersion,
+      source: 'm01.withdrawSupporterInvitation',
+      occurredAt: now,
+    });
+  });
+}
+
+/**
+ * Not a validator so much as a refusal to record something that can never
+ * be claimed: the claim matches on the token's verified email, so an
+ * address with no `@` is an invitation whose only possible future is to
+ * expire.
+ */
+function normaliseInviteEmail(raw: string): string {
+  const email = raw.trim().toLowerCase();
+  if (email === '' || !email.includes('@') || email.startsWith('@') || email.endsWith('@')) {
+    throw new PlatformError('VALIDATION_ERROR', 'A valid email address is required to invite somebody');
+  }
+  return email;
+}
+
+function normaliseInviteDays(raw: number | undefined): number {
+  const days = raw ?? 14;
+  if (!Number.isInteger(days) || days < 1 || days > 90) {
+    throw new PlatformError('VALIDATION_ERROR', 'An invitation may last between 1 and 90 days');
+  }
+  return days;
+}
 
 /**
  * Withdrawing an invitation that has not been claimed. Needed because an

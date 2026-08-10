@@ -17,6 +17,15 @@ export class PlatformApiError extends Error {
   }
 }
 
+export interface SupporterInvitationItem {
+  invitationId: string;
+  invitedEmail: string;
+  relationshipType: string | null;
+  permittedActions: string[];
+  expiresAt: string;
+  createdAt: string;
+}
+
 export interface Session {
   actorId: string;
   participantId: string;
@@ -283,6 +292,24 @@ export const api = {
   /** Version-bound: approving something that changed under you is refused, not merged. */
   approveRelationship: (s: Session, relationshipId: string, expectedVersion: number) =>
     post(s, `/v1/relationships/${relationshipId}/approve`, { expectedVersion, confirmed: true }),
+  inviteSupporter: (
+    s: Session,
+    input: { email: string; relationshipType: string; permittedActions: string[] },
+  ) =>
+    post<{ data: { attributes: { invitedEmail: string; expiresAt: string } } }>(
+      s,
+      `/v1/participants/${s.participantId}/supporter-invitations`,
+      input,
+    ),
+  listSupporterInvitations: (s: Session) =>
+    get<{ data: { id: string; attributes: SupporterInvitationItem }[] }>(
+      s,
+      `/v1/participants/${s.participantId}/supporter-invitations`,
+    ),
+  withdrawSupporterInvitation: (s: Session, invitationId: string) =>
+    post(s, `/v1/participants/${s.participantId}/supporter-invitations/${invitationId}/withdraw`, {
+      confirmed: true,
+    }),
   revokeRelationship: (s: Session, relationshipId: string, expectedVersion: number) =>
     post(s, `/v1/relationships/${relationshipId}/revoke`, { expectedVersion }),
   listMyExportRequests: (s: Session) =>

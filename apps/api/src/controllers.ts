@@ -2,7 +2,13 @@ import { Body, Controller, Get, Inject, Param, Post, Query, Req } from '@nestjs/
 import type { Request } from 'express';
 import { PlatformError, type Clock } from '@platform/kernel';
 import type { Pool } from '@platform/database';
-import type { AccountNameQueryPort, M01Deps } from '@platform/m01-identity-org';
+import {
+  inviteSupporter,
+  listSupporterInvitations,
+  withdrawSupporterInvitation,
+  type AccountNameQueryPort,
+  type M01Deps,
+} from '@platform/m01-identity-org';
 import type { M02Deps } from '@platform/m02-participant';
 import {
   approveRelationship,
@@ -671,6 +677,61 @@ export class CommandController {
     if (body.expiresAt !== undefined) input.expiresAt = new Date(body.expiresAt);
     const result = await proposeRelationship(this.deps.m03, ctx, input);
     return { data: { type: 'Relationship', id: result.relationshipId, meta: { state: 'Proposed' } } };
+  }
+
+  /**
+   * Inviting somebody who is not on the platform yet into your circle.
+   *
+   * `POST /relationships` needs an actor identifier, which a participant
+   * has no way of knowing for a daughter who has never signed in — so the
+   * only way to bring somebody new in was for an administrator to write a
+   * row by hand. This records the relationship on an invitation instead,
+   * and it comes into force when they claim it.
+   */
+  @Post('participants/:participantId/supporter-invitations')
+  async inviteSupporterRoute(
+    @Req() req: Request,
+    @Param('participantId') participantId: string,
+    @Body() body: { email: string; relationshipType: string; permittedActions: string[]; expiresInDays?: number },
+  ) {
+    const ctx = requireActor(req);
+    const result = await inviteSupporter(this.deps.m01, ctx, {
+      participantId,
+      email: body.email,
+      relationshipType: body.relationshipType,
+      permittedActions: body.permittedActions ?? [],
+      ...(body.expiresInDays !== undefined ? { expiresInDays: body.expiresInDays } : {}),
+    });
+    return {
+      data: {
+        type: 'SupporterInvitation',
+        id: result.invitationId,
+        attributes: { invitedEmail: result.invitedEmail, expiresAt: result.expiresAt.toISOString() },
+      },
+    };
+  }
+
+  @Get('participants/:participantId/supporter-invitations')
+  async supporterInvitations(@Req() req: Request, @Param('participantId') participantId: string) {
+    const ctx = requireActor(req);
+    const items = await listSupporterInvitations(this.deps.m01, ctx, { participantId });
+    return { data: items.map((i) => ({ type: 'SupporterInvitation', id: i.invitationId, attributes: i })) };
+  }
+
+  @Post('participants/:participantId/supporter-invitations/:invitationId/withdraw')
+  async withdrawSupporterInvitationRoute(
+    @Req() req: Request,
+    @Param('participantId') participantId: string,
+    @Param('invitationId') invitationId: string,
+    @Body() body: { confirmed: boolean },
+  ) {
+    const ctx = requireActor(req);
+    await withdrawSupporterInvitation(this.deps.m01, ctx, {
+      participantId,
+      invitationId,
+      confirmed: body.confirmed === true,
+    });
+    return { data: { type: 'SupporterInvitation', id: invitationId, meta: { state: 'Revoked' } } };
   }
 
   @Post('relationships/:relationshipId/approve')
