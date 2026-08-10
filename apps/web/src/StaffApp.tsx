@@ -372,8 +372,20 @@ export function StaffApp({ onExit }: { onExit?: (() => void) | undefined }) {
             <button type="button" onClick={() => void beginSignIn('step-up')}>
               Confirm it is you
             </button>{' '}
+            {/*
+              The wording carried the rule and not the reason, and the
+              first person to use it asked the obvious question: why, when
+              I have only just signed in? Because signing in did not
+              necessarily ask them anything — Google can and does hand back
+              a token from a session opened hours ago without a prompt.
+              That proves who holds the account, not who is sitting here.
+              Saying so is the difference between a step that looks
+              redundant and one that is understood.
+            */}
             <small>
-              Needed before approving or releasing anything. You will be asked to sign in to Google again.
+              Not needed yet — only before approving or releasing something. Signing in proves you hold this Google
+              account; it does not ask Google to check you are here now, because it can hand back a session opened
+              hours ago without prompting you. This asks it to. Lasts a few minutes.
             </small>
           </p>
         )}
