@@ -180,6 +180,41 @@ export function DisplayPreferencesPanel() {
         )}
       </fieldset>
 
+      {/*
+        Less colour.
+
+        Offered here rather than as a "simple view" because it takes nothing
+        away: every state on this platform is said in words and marked with
+        an icon, and colour is only ever the third cue. Removing the tinted
+        panels therefore removes no information — which is exactly why a
+        setting like this can be offered honestly, and why it could not be
+        if any screen relied on a colour to mean something.
+      */}
+      <fieldset>
+        <legend>Colour</legend>
+        <p>
+          <label>
+            <input
+              type="checkbox"
+              checked={prefs.stimulation === 'low'}
+              onChange={(e) =>
+                change(
+                  { stimulation: e.target.checked ? 'low' : 'standard' },
+                  e.target.checked ? 'Less colour.' : 'Standard colour.',
+                )
+              }
+            />{' '}
+            Use less colour
+          </label>
+        </p>
+        <p>
+          <small>
+            Removes the coloured panels behind messages. Nothing is hidden: every message still says what it is in
+            words, and still carries its own mark.
+          </small>
+        </p>
+      </fieldset>
+
       <p>
         <button type="button" onClick={() => change(DEFAULT_PREFERENCES, 'Everything is back to standard.')}>
           Put everything back to standard

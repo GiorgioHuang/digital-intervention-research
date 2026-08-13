@@ -233,7 +233,7 @@
    深色下把颜色**朝白色插值**变亮（浅色下是朝黑等比变暗）：色相角保持不变，
    饱和度自然下降——这正是深色界面需要的，高饱和亮色在暗底上会晕。 */
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) {
+  :root {
     --color-surface-page: #12181a;
     --color-surface-raised: #1a2224;
     --color-surface-sunken: #0c1113;
@@ -305,69 +305,6 @@
     --elevation-3: 0 0 0 1px var(--color-border-strong), 0 10px 28px rgb(0 0 0 / 0.7);
   }
 }
-/* 用户显式选择 dark（与上方同值；属性选择器胜出于媒体查询默认） */
-:root[data-theme='dark'] {
-  --color-surface-page: #12181a;
-  --color-surface-raised: #1a2224;
-  --color-surface-sunken: #0c1113;
-  --color-surface-inverse: #e6ecea;
-  --color-surface-scrim: rgb(4 8 8 / 0.66);
-  --color-text-primary: #e6ecea;
-  --color-text-secondary: #a9b5b2;
-  --color-text-inverse: #12181a;
-  --color-text-link: #6fc3bc;
-  --color-border-subtle: #2a3335;
-  --color-border-default: #616e6b;
-  --color-border-strong: #a5adab;
-  --color-action-primary-bg: #3a958f;
-  --color-action-primary-fg: #0a1112;
-  --color-action-primary-bg-hover: #55a9a3;
-  --color-action-primary-bg-active: #74bcb7;
-  --color-action-secondary-fg: #6fc3bc;
-  --color-action-secondary-border: #3a958f;
-  --color-action-secondary-bg-hover: #16302e;
-  --color-focus-ring: #eef6f4;
-  --color-focus-halo: #06090a;
-  --color-info-bg: #13253a;
-  --color-info-fg: #678eb3;
-  --color-info-border: #5a83aa;
-  --color-success-bg: #122a20;
-  --color-success-fg: #5a987d;
-  --color-success-border: #4a8b6e;
-  --color-warning-bg: #2c2209;
-  --color-warning-fg: #ba7e27;
-  --color-warning-border: #b7791f;
-  --color-danger-bg: #2e1817;
-  --color-danger-fg: #c66e6e;
-  --color-danger-border: #bd5a5a;
-  --color-danger-solid-bg: #c66e6e;
-  --color-danger-solid-fg: #1a0808;
-  --color-safety-bg: #16233a;
-  --color-safety-fg: #7796bd;
-  --color-safety-border: #6a8cb6;
-  --color-moderation-bg: #102b2a;
-  --color-moderation-fg: #56a5a0;
-  --color-moderation-border: #479c97;
-  --color-ai-bg: #201f2e;
-  --color-ai-fg: #8682b2;
-  --color-ai-border: #7d79ab;
-  --color-story-bg: #2a2117;
-  --color-story-fg: #c9955c;
-  --color-story-border: #c08c53;
-  --color-story-surface: #211a12;
-  --color-community-bg: #172519;
-  --color-community-fg: #6e9b78;
-  --color-community-border: #679070;
-  --color-matching-bg: #16222c;
-  --color-matching-fg: #678bab;
-  --color-matching-border: #5f83a4;
-  --color-disabled-bg: #1b2325;
-  --color-disabled-fg: #8a9491;
-  --color-disabled-border: #3d4749;
-  --elevation-1: 0 0 0 1px var(--color-border-default);
-  --elevation-2: 0 0 0 1px var(--color-border-default), 0 4px 12px rgb(0 0 0 / 0.6);
-  --elevation-3: 0 0 0 1px var(--color-border-strong), 0 10px 28px rgb(0 0 0 / 0.7);
-}
 
 /* ---------- 4. 能力自适应模式覆盖 (§C) ---------- */
 /* 绝不按年龄或分组自动判定：这些属性只能由用户显式设置写到 <html> 上。 */
@@ -398,6 +335,26 @@
     --color-action-primary-bg-active: #0e2c2b;
     --color-action-secondary-fg: #16504d;
     --color-action-secondary-border: #20625f;
+    --color-info-bg: #f5f8fb;
+    --color-info-fg: #31577d;              /* 7.06:1 / info-bg（标准模式是 4.59） */
+    --color-success-bg: #f4faf6;
+    --color-success-fg: #246045;           /* 7.00:1（标准 4.50） */
+    --color-warning-bg: #fdf9ef;
+    --color-warning-fg: #754d14;           /* 7.06:1（标准 4.51） */
+    --color-danger-bg: #fcf5f4;
+    --color-danger-fg: #8d3939;            /* 7.02:1（标准 4.50） */
+    --color-safety-bg: #f4f6fa;
+    --color-safety-fg: #2a4470;            /* 8.99:1（标准 8.18） */
+    --color-moderation-bg: #f2f8f8;
+    --color-moderation-fg: #1a5451;        /* 8.05:1（标准 7.40） */
+    --color-ai-bg: #f8f8fc;
+    --color-ai-fg: #545177;                /* 7.03:1（标准 4.52） */
+    --color-story-bg: #fbf5ed;
+    --color-story-fg: #6a4e30;             /* 7.06:1（标准 4.53） */
+    --color-community-bg: #f5f9f6;
+    --color-community-fg: #415b47;         /* 7.03:1（标准 4.55） */
+    --color-matching-bg: #f5f8fa;
+    --color-matching-fg: #3d5771;          /* 7.03:1（标准 4.55） */
     --border-default: 3px;
     --icon-stroke: 2.5;
   }
@@ -415,23 +372,55 @@
   --color-action-primary-bg-active: #0e2c2b;
   --color-action-secondary-fg: #16504d;
   --color-action-secondary-border: #20625f;
+  /* 语义族也必须一起抬。第一版只抬了正文、链接与按钮，十个语义族**一个
+     没动**——于是打开「更高对比」的人，正文从 12.38:1 变成 21:1，而
+     warning / danger / story / ai 四块**原封不动停在 4.50 上下**，也就是
+     整屏最难读的东西一点没变。**选这个模式的人，正是最需要把"被拒绝了"
+     那句话看清楚的人。** 现改为把每一族都推到 AAA（≥7:1）：底更接近白，
+     字沿同一色相继续压暗。断言见 design-tokens.test.ts——高对比模式下
+     每一族都必须**严格高于**标准模式，否则这个模式只是个名字。 */
+  --color-info-bg: #f5f8fb;
+  --color-info-fg: #31577d;              /* 7.06:1 / info-bg（标准模式是 4.59） */
+  --color-success-bg: #f4faf6;
+  --color-success-fg: #246045;           /* 7.00:1（标准 4.50） */
+  --color-warning-bg: #fdf9ef;
+  --color-warning-fg: #754d14;           /* 7.06:1（标准 4.51） */
+  --color-danger-bg: #fcf5f4;
+  --color-danger-fg: #8d3939;            /* 7.02:1（标准 4.50） */
+  --color-safety-bg: #f4f6fa;
+  --color-safety-fg: #2a4470;            /* 8.99:1（标准 8.18） */
+  --color-moderation-bg: #f2f8f8;
+  --color-moderation-fg: #1a5451;        /* 8.05:1（标准 7.40） */
+  --color-ai-bg: #f8f8fc;
+  --color-ai-fg: #545177;                /* 7.03:1（标准 4.52） */
+  --color-story-bg: #fbf5ed;
+  --color-story-fg: #6a4e30;             /* 7.06:1（标准 4.53） */
+  --color-community-bg: #f5f9f6;
+  --color-community-fg: #415b47;         /* 7.03:1（标准 4.55） */
+  --color-matching-bg: #f5f8fa;
+  --color-matching-fg: #3d5771;          /* 7.03:1（标准 4.55） */
   --border-default: 3px;
   --icon-stroke: 2.5;
 }
-:root[data-theme='dark'][data-contrast='high'],
-:root[data-contrast='high'][data-theme='dark'] {
-  --color-surface-page: #000000;
-  --color-text-primary: #ffffff;         /* 21.00:1 / #000000 */
-  --color-text-secondary: #e9ecf2;
-  --color-border-default: #e9ecf2;
-  --color-border-strong: #ffffff;
-  --color-action-primary-bg: #bbd4ff;    /* 13.97:1 与 #000000 前景 */
-  --color-action-primary-fg: #000000;
+/* 深色 + 高对比。跟着上面的媒体查询走，因为深色本身就只由系统设置决定。 */
+@media (prefers-color-scheme: dark) {
+  :root[data-contrast='high'] {
+    --color-surface-page: #000000;
+    --color-text-primary: #ffffff;       /* 21.00:1 / #000000 */
+    --color-text-secondary: #e9ecf2;
+    --color-border-default: #e9ecf2;
+    --color-border-strong: #ffffff;
+    --color-action-primary-bg: #8fd6d0;  /* 12.86:1 与 #000000 前景 */
+    --color-action-primary-fg: #000000;
+  }
 }
 
-/* 简化模式：隐藏次要内容、加大行高。组件用 .optional 标记可省略的内容。 */
-:root[data-simplify='on'] { --type-leading-normal: 1.8; }
-:root[data-simplify='on'] .optional { display: none; }
+/* 简化模式（`data-simplify`）已移除，2026-08-13。
+   它两头都是空的：没有任何代码设过这个属性，而且**全应用没有一个元素带
+   `.optional`**，所以就算设上，它能做的也只有把行高从 1.6 改成 1.8——那件事
+   「行距」偏好本来就在做。给它补一个开关，等于造出一个写着「简化」、按下去
+   只是把行距变宽的控件；照 D-75 的判法，这一类要删，不要建。
+   真要做「一次只做一件事」的简化视图，那是信息架构的工作，不是一条 CSS。 */
 
 /* 低刺激模式：去掉全部 tint 底，只留描边与文字。
    所有者列为优先做的三种模式之一。新增的三个区域色（story/community/

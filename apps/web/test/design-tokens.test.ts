@@ -50,8 +50,16 @@ export const contrast = (a: string, b: string): number => {
 /* ---- Parse the stylesheet into per-selector token maps ---- */
 const withoutComments = CSS.replace(/\/\*[\s\S]*?\*\//g, '');
 
-/** Splits `sel { body }` at the top level, skipping over @media wrappers. */
-function blocks(css: string): Array<{ selector: string; body: string }> {
+/**
+ * Splits `sel { body }`, carrying the enclosing at-rule into the selector.
+ *
+ * The media condition has to be part of the key. Dark mode is now defined
+ * by `:root` inside `@media (prefers-color-scheme: dark)`, which is the
+ * same selector string as the light theme's `:root` — flattening the two
+ * would have merged dark's values into the light theme and quietly made
+ * every light assertion measure the wrong colours.
+ */
+function blocks(css: string, context = ''): Array<{ selector: string; body: string }> {
   const out: Array<{ selector: string; body: string }> = [];
   let i = 0;
   while (i < css.length) {
@@ -67,14 +75,17 @@ function blocks(css: string): Array<{ selector: string; body: string }> {
     }
     const body = css.slice(open + 1, j - 1);
     if (selector.startsWith('@media') || selector.startsWith('@supports')) {
-      out.push(...blocks(body));
+      out.push(...blocks(body, `${context}${selector.replace(/\s+/g, ' ')} `));
     } else {
-      out.push({ selector, body });
+      out.push({ selector: `${context}${selector}`, body });
     }
     i = j;
   }
   return out;
 }
+
+/** The at-rule wrapper the dark theme now lives behind, and its only one. */
+const DARK_CONTEXT = '@media (prefers-color-scheme: dark) ';
 
 const ALL_BLOCKS = blocks(withoutComments);
 
@@ -91,7 +102,12 @@ function declarations(predicate: (selector: string) => boolean): Record<string, 
 
 /** Plain `:root` — the light theme every user gets unless they choose otherwise. */
 const light = declarations((s) => s === ':root');
-const dark = { ...light, ...declarations((s) => s.includes("[data-theme='dark']")) };
+/* Dark has exactly one definition — the prefers-color-scheme block. The
+   duplicate `[data-theme='dark']` copy was deleted: nothing ever set that
+   attribute, so it was forty hex values that had to agree with the live
+   block, with no way to notice when they stopped. */
+const darkOnly = declarations((s) => s === `${DARK_CONTEXT}:root`);
+const dark = { ...light, ...darkOnly };
 const highContrast = {
   ...light,
   ...declarations((s) => s === ":root[data-contrast='high']"),
@@ -320,7 +336,11 @@ describe('the token architecture holds', () => {
        merging" is a habit and this is a build failure. */
     const offenders: string[] = [];
     for (const { selector, body } of ALL_BLOCKS) {
-      const isTokenBlock = selector.startsWith(':root');
+      /* `:root` possibly behind an at-rule wrapper — the dark theme's
+         selector is now `@media (…) :root`, so a startsWith check would
+         have called it a component rule and reported all forty of its
+         values as violations. */
+      const isTokenBlock = /(^|\s):root\b/.test(selector);
       if (isTokenBlock) continue;
       for (const line of body.split('\n')) {
         if (/#[0-9a-f]{3,8}\b/i.test(line) || /\brgb\(/i.test(line)) {
@@ -370,10 +390,63 @@ describe('the token architecture holds', () => {
     expect(offenders, 'inline styles bypass the token layer').toEqual([]);
   });
 
+  it('gives every mode the stylesheet defines a way to be switched on', () => {
+    /* The fifth instance of one defect in this codebase: a capability that
+       is fully built and cannot be invoked. `data-stimulation='low'` had a
+       complete rule block from the first version of this stylesheet and
+       nothing ever set the attribute, so "use less colour" — which the
+       owner ranks above a full dark mode in value — was unreachable. The
+       same was true of `data-simplify`, which additionally had nothing to
+       act on, since no element in the app carries `.optional`.
+       Reasoning by hand found these; a list of attributes cross-checked
+       against the source finds the next one. An attribute set only by the
+       browser (there are none today) would need an exemption here, stated
+       rather than assumed. */
+    const modeAttributes = new Set(
+      [...withoutComments.matchAll(/:root\[(data-[\w-]+)=/g)].map((m) => m[1]!),
+    );
+    expect(modeAttributes.size, 'no mode attributes found — has the selector syntax changed?')
+      .toBeGreaterThan(3);
+    const sources = readdirSync(resolve(process.cwd(), 'src'), {
+      recursive: true,
+      encoding: 'utf8',
+    }).filter((f) => f.endsWith('.ts') || f.endsWith('.tsx'));
+    const appCode = sources
+      .map((f) => readFileSync(resolve(process.cwd(), 'src', f), 'utf8'))
+      .join('\n');
+    const unreachable = [...modeAttributes].filter((attr) => !appCode.includes(`'${attr}'`));
+    expect(unreachable, 'styled modes that nothing in the app can turn on').toEqual([]);
+  });
+
+  it('makes high contrast actually higher, including the state panels', () => {
+    /* The mode raised body text from 12.38:1 to 21:1 and left all ten
+       semantic families untouched at their 4.50 minimum — the faintest
+       things on the page, unchanged, for the one person who said they
+       could not read the page. Every family must now improve, not merely
+       still pass: a mode named for contrast that does not raise it is a
+       label. */
+    for (const [bg, fg] of FAMILIES) {
+      const standard = contrast(hex(light, fg), hex(light, bg));
+      const high = contrast(hex(highContrast, fg), hex(highContrast, bg));
+      expect(high, `${fg} on ${bg} is no better in high contrast`).toBeGreaterThan(standard);
+      expect(high, `${fg} on ${bg} should reach AAA in high contrast`).toBeGreaterThanOrEqual(7);
+    }
+    for (const pair of [
+      ['--color-text-primary', '--color-surface-page'],
+      ['--color-text-secondary', '--color-surface-page'],
+      ['--color-text-link', '--color-surface-page'],
+      ['--color-action-primary-fg', '--color-action-primary-bg'],
+    ] as const) {
+      expect(
+        contrast(hex(highContrast, pair[0]), hex(highContrast, pair[1])),
+        `${pair[0]} on ${pair[1]} is no better in high contrast`,
+      ).toBeGreaterThan(contrast(hex(light, pair[0]), hex(light, pair[1])));
+    }
+  });
+
   it('gives the dark theme a value for every colour the light theme defines', () => {
     /* A token defined only in light silently inherits its light value in
        dark — which is how a white-on-white state block happens. */
-    const darkOnly = declarations((s) => s.includes("[data-theme='dark']"));
     const lightColours = Object.keys(light).filter((k) => k.startsWith('--color-'));
     const missing = lightColours.filter((token) => !(token in darkOnly));
     expect(missing, 'defined in light but never overridden in dark').toEqual([]);

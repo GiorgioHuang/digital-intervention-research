@@ -96,9 +96,46 @@ describe('reading and display preferences', () => {
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Put everything back to standard' }));
     });
-    for (const attr of ['data-font-scale', 'data-density', 'data-contrast', 'data-motion']) {
+    for (const attr of ['data-font-scale', 'data-density', 'data-contrast', 'data-motion', 'data-stimulation']) {
       expect(document.documentElement.hasAttribute(attr)).toBe(false);
     }
+  });
+
+  /**
+   * Less colour, which the stylesheet has been able to do since v0.1 and
+   * nothing could switch on. The assertion is deliberately in two halves:
+   * that ticking it reaches the stylesheet, and that unticking it clears
+   * the attribute rather than writing 'standard' — an explicit 'standard'
+   * would be this app overriding a choice made outside it, which is the
+   * rule every other preference here already follows.
+   */
+  it('less colour reaches the stylesheet and clears back off again', async () => {
+    await act(async () => {
+      render(<DisplayPreferencesPanel />);
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByLabelText('Use less colour'));
+    });
+    expect(document.documentElement.getAttribute('data-stimulation')).toBe('low');
+    expect(screen.getByRole('status').textContent).toContain('Less colour');
+    await act(async () => {
+      fireEvent.click(screen.getByLabelText('Use less colour'));
+    });
+    expect(document.documentElement.hasAttribute('data-stimulation')).toBe(false);
+  });
+
+  /**
+   * What "less colour" must never mean is "less information". Every state
+   * on this platform says what it is in words and carries an icon, so
+   * removing the tints removes nothing — and the screen has to promise
+   * exactly that, because somebody deciding whether it is safe to turn on
+   * has no other way to know.
+   */
+  it('says plainly that turning colour down hides nothing', async () => {
+    await act(async () => {
+      render(<DisplayPreferencesPanel />);
+    });
+    expect(screen.getByText(/Nothing is hidden/i)).toBeTruthy();
   });
 
   /**

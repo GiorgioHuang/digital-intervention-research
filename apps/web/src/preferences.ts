@@ -26,12 +26,25 @@ export type FontScale = 'standard' | 'lg' | 'xl' | 'xxl';
 export type Density = 'standard' | 'spacious';
 export type Contrast = 'standard' | 'high';
 export type Motion = 'system' | 'reduced';
+/**
+ * Less colour: the tinted panels behind states become plain page, leaving
+ * the words, the icon and the edge stripe to carry the meaning.
+ *
+ * The stylesheet has had `data-stimulation='low'` from the start and
+ * nothing ever set it — the fifth time in this codebase that a capability
+ * existed with no way to invoke it, and the owner ranks this mode above a
+ * full dark mode in value. It is safe to offer precisely because state is
+ * never carried by colour alone here: removing every tint removes no
+ * information.
+ */
+export type Stimulation = 'standard' | 'low';
 
 export interface DisplayPreferences {
   fontScale: FontScale;
   density: Density;
   contrast: Contrast;
   motion: Motion;
+  stimulation: Stimulation;
 }
 
 export const DEFAULT_PREFERENCES: DisplayPreferences = {
@@ -39,6 +52,7 @@ export const DEFAULT_PREFERENCES: DisplayPreferences = {
   density: 'standard',
   contrast: 'standard',
   motion: 'system',
+  stimulation: 'standard',
 };
 
 const KEY = 'hadi.display-preferences';
@@ -75,6 +89,7 @@ export function applyPreferences(p: DisplayPreferences): void {
   set('data-density', p.density === 'standard' ? null : p.density);
   set('data-contrast', p.contrast === 'standard' ? null : p.contrast);
   set('data-motion', p.motion === 'system' ? null : p.motion);
+  set('data-stimulation', p.stimulation === 'standard' ? null : p.stimulation);
 }
 
 export function savePreferences(p: DisplayPreferences): void {

@@ -790,16 +790,27 @@ for (let i = 0; i < rects.length; i++)
 
 ## §C 能力自适应模式（C；Doc 20 §286–287）
 
-### C.1 四个可切换维度
+### C.1 五个可切换维度（2026-08-13 核对）
 
 全部以 `<html>` 上的 `data-*` 属性驱动令牌覆盖。**没有任何 JS 逻辑判断"用户是谁"。**
 
-| 维度 | 属性 | 取值 | 令牌覆盖 |
-|---|---|---|---|
-| 字号 | `data-font-scale` | `md`(默认) / `lg` / `xl` / `xxl` | `--scale-font` = 1 / 1.125 / 1.25 / 1.5，作用于 `:root { font-size: calc(112.5% * var(--scale-font)) }` |
-| 密度 | `data-density` | `compact` / `standard` / `spacious`(参与者默认) | `--density` = 0.75 / 1 / 1.25（§A.3） |
-| 对比 | `data-contrast` | `standard`(默认) / `high` | 覆盖 §A.1 的颜色令牌为高对比组；`--border-default` → 3px；`--icon-stroke` → 2.5 |
-| 简化 | `data-simplify` | `off`(默认) / `on` | `--simplify: 1`；配合组件级 `[data-simplify="on"] .optional { display: none }` 与"每屏一个主要动作" |
+| 维度 | 属性 | 取值 | 令牌覆盖 | 有开关吗 |
+|---|---|---|---|---|
+| 字号 | `data-font-scale` | `standard`(默认) / `lg` / `xl` / `xxl` | `--scale-font` = 1 / 1.125 / 1.25 / 1.5 | ✅ |
+| 密度 | `data-density` | `standard`(默认) / `spacious` | `--density` = 1 / 1.25（§A.3） | ✅ |
+| 对比 | `data-contrast` | `standard`(默认) / `high` | 颜色令牌换成高对比组（**含十个语义族，见下**）；`--border-default` → 3px；`--icon-stroke` → 2.5 | ✅ |
+| 动效 | `data-motion` | `system`(默认) / `reduced` | 全部 duration → 0ms | ✅ |
+| 少一点颜色 | `data-stimulation` | `standard`(默认) / `low` | 全部 tint 底 → 页面底；描边、图标、文字不变 | ✅ **2026-08-13 补上** |
+
+**这一栏是这次核对加的，因为它揭出了问题。** `data-stimulation` 从 v0.1 起就有完整的规则块，而**没有任何代码设过这个属性**——所有者明确把「低刺激模式」排在完整深色模式之前，而它一直是打不开的。同一次核对还发现 `data-simplify` 与 `data-theme` 也没有写入方**（处理见下）**。已加一条测试：扫描样式表里所有 `:root[data-*=]` 选择器，逐个到 `src/` 里找写入方，找不到就失败。
+
+**`data-simplify` 已删除。** 它两头都空：没有写入方，而且**全应用没有一个元素带 `.optional`**，所以就算设上，能做的只有把行高 1.6 改成 1.8——那件事「密度」偏好本来就在做。按 D-75 的判法，这一类要删不要建：给它补开关，等于造一个写着「简化」、按下去只把行距变宽的控件。真正的「一次只做一件事」是流程层的工作（见 C.2 的 Step-by-Step 行）。
+
+**`data-theme` 已删除，深色模式改由 `prefers-color-scheme` 单一定义。** 从来没有代码设过 `data-theme`，所以那 40 条 hex 是**第二份副本**：它必须与媒体查询里的那份逐字一致，却没有任何机制能在它们分叉时出声——而先被改坏的多半是媒体查询那份，也就是所有系统深色使用者真正走的那条路。删掉副本之后，深色模式对使用者的行为**一点没变**（仍然跟随系统设置），只是不再有第二份会悄悄过期的值。所有者已定「深色模式不作优先」，所以没有补应用内开关；哪天要补，把属性选择器与写入方一起加回来即可。
+
+#### C.1.1 高对比不是只把正文调黑
+
+第一版高对比只覆盖了正文、次要文字、链接与按钮，**十个语义族一个没动**：正文从 12.38:1 抬到 21:1，而 warning / danger / story / ai 四块**原地停在 4.50 上下**——整屏最难读的东西一点没变。**打开这个模式的人，正是最需要把「被拒绝了」那句话看清楚的人。** 现在每一族都推到 AAA（≥7:1），底更接近白、字沿同一色相继续压暗。断言：高对比下每一族都必须**严格高于**标准模式，否则这个模式只是个名字。
 
 ### C.2 与 Doc 20 §286 八种模式的映射（诚实对照）
 
@@ -807,8 +818,8 @@ for (let i = 0; i < rects.length; i++)
 |---|---|---|
 | Standard | 全部默认值 | ✅ 令牌覆盖 |
 | High Visibility | `data-contrast="high"` + `data-font-scale="xl"` | ✅ 令牌覆盖 |
-| Simple | `data-simplify="on"` | ✅ 令牌 + 组件可见性 |
-| Low Stimulation | `data-simplify="on"` + 强制 reduced-motion + 关闭全部 tint 底色（只留描边与文字） | ✅ 令牌覆盖 |
+| Simple | ❌ **已删除，见 C.1** | 曾以 `data-simplify` 存在，两头都空。真正的简化是流程层的工作，与 Step-by-Step 同属一件事 |
+| Low Stimulation | `data-stimulation="low"`（+ 可与 `data-motion="reduced"` 同开） | ✅ 令牌覆盖，**且已有开关**（2026-08-13 前没有） |
 | Step-by-Step | ❌ **不是令牌能实现的** | 需要流程层拆分（多步表单、每步一个决定）。属 I16 表单族，本文件不覆盖 |
 | Read-Aloud | ❌ **不是令牌能实现的** | 需要 TTS 能力与 §300 多模态同意；见 §I.4 未决 |
 | Supporter-Assisted | ❌ **不是令牌能实现的** | 需要权限模型与"谁在代为操作"的呈现；见 D2/§180–181 |

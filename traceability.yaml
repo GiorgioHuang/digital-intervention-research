@@ -1887,3 +1887,42 @@
     - apps/web/test/matching-panel.test.tsx
     - apps/web/test/community-panel.test.tsx
   status: implemented
+- implementation_id: IMP-WEB-ABILITY-MODES-REACHABLE-001
+  module: WEB
+  summary: >-
+    The two modes the owner ranks above a full dark mode - high contrast light, and low stimulation -
+    opened and looked at rather than assumed. The verification was itself the finding: three styled
+    modes had complete rule blocks in the stylesheet and no code anywhere set their attributes, the
+    fifth appearance of that shape in this codebase. Handled by the rule D-75 established. Low
+    stimulation had a working enforcement side and only wanted a writer, so it got one - a "use less
+    colour" control that drops every tinted panel to plain page while the words, icons and edge
+    stripes stay, which is safe to offer only because no state on this platform is carried by colour
+    alone. Simplify was empty at both ends - no writer, and no element in the app carries .optional,
+    so setting it could only have changed line height from 1.6 to 1.8, which the density preference
+    already does - and was deleted rather than given a control that would read "simpler" and merely
+    widen the leading. data-theme had no writer either, but its media-query path is live, so the
+    duplicated attribute block went and prefers-color-scheme became dark mode's single definition:
+    those forty hex values had to agree with the media query and nothing could report when they
+    stopped agreeing, and the copy more likely to be edited is the one every OS-dark user actually
+    travels. Behaviour for those users is unchanged. Separately, high contrast turned out to raise
+    body text from 12.38:1 to 21:1 while leaving all ten semantic families untouched at their 4.50
+    minimum - the faintest things on the page unchanged, for the one person who has said they cannot
+    read the page. Every family now reaches AAA, asserted as strictly better than standard rather
+    than merely passing, because a mode named for contrast that does not raise it is a label. A
+    general guard now scans the stylesheet for :root[data-*=] selectors and requires each attribute
+    to be written somewhere in src: the shape has been found by hand five times and should be found
+    by a test the sixth.
+  trace_ids: [ATR-003]
+  adr_ids: [ADR-061, ADR-062]
+  docs:
+    - "design/DESIGN_DECISIONS.md D-78"
+    - "design/DESIGN_SYSTEM.md §C.1"
+    - "design/DESIGN_SYSTEM.md §C.1.1"
+  code:
+    - apps/web/src/styles.css
+    - apps/web/src/preferences.ts
+    - apps/web/src/components/DisplayPreferencesPanel.tsx
+  tests:
+    - apps/web/test/design-tokens.test.ts
+    - apps/web/test/display-preferences.test.tsx
+  status: implemented
