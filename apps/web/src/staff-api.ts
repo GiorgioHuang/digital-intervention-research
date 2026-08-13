@@ -452,7 +452,6 @@ export interface ModerationCaseItem {
 export interface AdministeredParticipant {
   participantId: string;
   displayName: string;
-  participantState: string;
   userAccountId: string | null;
   registeredAt: string;
 }

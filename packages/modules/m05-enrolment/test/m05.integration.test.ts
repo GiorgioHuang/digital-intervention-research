@@ -386,10 +386,20 @@ describe.skipIf(!dbAvailable)('P3 research core: project -> protocol -> enrolmen
     const listed = await listParticipantsForOrganisation(m02, orgAdminCtx);
     const pat = listed.find((p) => p.participantId === participantId);
     expect(pat?.displayName).toBe('Pat P.');
-    expect(pat?.participantState).toBe('Active');
+    /*
+     * participantState is deliberately absent.
+     *
+     * It used to be asserted here as 'Active', which it always was —
+     * `participant_state` is a column default that no code has ever
+     * written and nothing anywhere enforces. The administration screen
+     * printed it under the heading "Account state", so a value nobody
+     * maintained was being shown as a checked fact. Whether somebody is
+     * still taking part is tracked per enrolment, which participants set
+     * themselves, and that question already has a real answer.
+     */
     // Administrative facts only — nothing about enrolment or consent.
     expect(Object.keys(pat ?? {}).sort()).toEqual(
-      ['displayName', 'participantId', 'participantState', 'registeredAt', 'userAccountId'].sort(),
+      ['displayName', 'participantId', 'registeredAt', 'userAccountId'].sort(),
     );
 
     // A second organisation the administrator does not hold a role in.

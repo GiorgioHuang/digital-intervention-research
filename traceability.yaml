@@ -1745,3 +1745,31 @@
   tests:
     - packages/modules/m03-consent-permission/test/m03.integration.test.ts
   status: implemented
+- implementation_id: IMP-M02-REMOVE-UNMAINTAINED-PARTICIPANT-STATE-001
+  module: M02
+  summary: >-
+    The third instance of the same shape, and the one where the answer runs the other way. account_state
+    and relationship_state were both enforced everywhere and merely unwritable, so the fix was to build
+    the writer. participant_state is empty at both ends: no code has ever written it, and nothing
+    anywhere reads it to decide anything - no query filters on it, the permission engine never looks at
+    it. Yet it was printed on the administration screen under the heading "Account state", which is
+    wrong twice over: it is not the account state, and it is not a state anybody maintains. A column
+    that always reads the same word looks like a fact somebody checked. So it is removed rather than
+    made to work: adding a writer for an unenforced flag would manufacture a control that appears to do
+    something and does nothing, which is precisely the class of defect these rounds have been clearing.
+    Whether somebody is still taking part already has a real answer - enrolment_state, per enrolment,
+    written by participants themselves when they leave a study and genuinely enforced. participant_state
+    was an emptier copy of it. The field is dropped from the query contract as well as the screen, so
+    the next person cannot print it again. relationship_state = 'Restricted' was considered in the same
+    pass and deliberately left alone: it expresses the same thing as a relationship's own
+    permittedActions, so giving it a writer would add a second overlapping path rather than a capability.
+  trace_ids: [ATR-003]
+  adr_ids: [ADR-018]
+  docs: ["design/DESIGN_DECISIONS.md D-75"]
+  code:
+    - packages/modules/m02-participant/src/application/queries.ts
+    - apps/web/src/components/StaffAdminPanel.tsx
+    - apps/web/src/staff-api.ts
+  tests:
+    - packages/modules/m05-enrolment/test/m05.integration.test.ts
+  status: implemented

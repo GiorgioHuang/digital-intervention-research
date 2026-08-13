@@ -5,7 +5,28 @@ import type { M02Deps } from './commands.js';
 export interface AdministeredParticipant {
   participantId: string;
   displayName: string;
-  participantState: string;
+  /*
+   * participantState is deliberately NOT here.
+   *
+   * `participant_state` carries Active / Paused / Withdrawn / Archived and
+   * no code has ever written any of them, so every row reads 'Active'
+   * because that is the column default. Nothing enforces it either — no
+   * query filters on it and the permission engine never looks at it — so
+   * unlike account_state and relationship_state, which were enforced
+   * everywhere and merely unwritable, this one means nothing at either
+   * end.
+   *
+   * It was being printed on the administration screen under the heading
+   * "Account state", which was wrong twice: it is not the account state,
+   * and it is not a state anybody maintains. A column that always says
+   * the same word looks like a fact that has been checked.
+   *
+   * Leaving somebody in a study or not IS tracked, per enrolment, by
+   * `enrolment_state` — which participants set themselves when they leave
+   * a study, and which the enrolment screens show. That is the real
+   * question and it has a real answer; this field was a second, emptier
+   * copy of it.
+   */
   /** Absent for a participant who has no login (Doc 8 §2.2). */
   userAccountId: string | null;
   registeredAt: string;
@@ -55,7 +76,7 @@ export async function listParticipantsForOrganisation(
   });
   assertAllowed(decision, false);
   const res = await deps.pool.query(
-    `SELECT p.id, p.display_name, p.participant_state, p.user_account_id, p.created_at
+    `SELECT p.id, p.display_name, p.user_account_id, p.created_at
        FROM participant_profile.participants p
        JOIN identity_org.organisation_memberships m
          ON m.user_account_id = p.user_account_id AND m.membership_state = 'Active'
@@ -66,7 +87,6 @@ export async function listParticipantsForOrganisation(
   return res.rows.map((r) => ({
     participantId: r.id as string,
     displayName: r.display_name as string,
-    participantState: r.participant_state as string,
     userAccountId: (r.user_account_id as string | null) ?? null,
     registeredAt: (r.created_at as Date).toISOString(),
   }));

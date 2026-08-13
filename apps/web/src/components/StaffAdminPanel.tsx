@@ -36,9 +36,20 @@ export function StaffAdminPanel({ session }: { session: StaffSession }) {
   return (
     <section aria-labelledby="admin-heading">
       <h1 id="admin-heading">Participants in this organisation</h1>
+      {/*
+        This used to promise "account state" and print `participant_state`
+        under that heading — a column that always read Active, because it
+        is a default no code has ever written and nothing anywhere
+        enforces. A status that never changes looks like a fact somebody
+        checked. Removed rather than made to work: whether a person is
+        still in a study is tracked per enrolment, which participants set
+        themselves when they leave one, and that question already has a
+        real answer elsewhere.
+      */}
       <p>
-        Administrative details only: identifier, name and account state. Nothing here shows what anyone is enrolled in,
-        what they consented to, or anything they have written.
+        Administrative details only: identifier, name and when they registered. Nothing here shows what anyone is
+        enrolled in, what they consented to, or anything they have written — including whether they are still taking
+        part, which belongs to each enrolment rather than to the person.
       </p>
       <p>
         This lists the organisation you are signed in to. A participant registered without a platform account cannot be
@@ -66,7 +77,6 @@ export function StaffAdminPanel({ session }: { session: StaffSession }) {
             <tr>
               <th scope="col">Name</th>
               <th scope="col">Participant identifier</th>
-              <th scope="col">Account state</th>
               <th scope="col">Registered</th>
             </tr>
           </thead>
@@ -77,7 +87,6 @@ export function StaffAdminPanel({ session }: { session: StaffSession }) {
                 <td>
                   <code>{p.participantId}</code>
                 </td>
-                <td>{p.participantState}</td>
                 <td>{new Date(p.registeredAt).toISOString().slice(0, 10)}</td>
               </tr>
             ))}
