@@ -317,7 +317,15 @@ export function App() {
           {authMode === 'google' && <GoogleSignIn registers onError={setSignInProblem} />}
           {authMode === 'dev-header' && (
             <>
-              <button type="submit" disabled={checking}>
+              {/*
+                The one way forward on this screen, so it is the one filled
+                button (Doc 20 §13.2: at most one primary action per screen).
+                It was drawn as an outline like the other two, which left
+                three identical teal outlines side by side and nothing saying
+                which was the way in — a screen where every choice looks
+                equally likely is a screen that has not been designed.
+              */}
+              <button type="submit" className="btn-primary" disabled={checking}>
                 {checking ? 'Checking…' : 'Continue'}
               </button>{' '}
             </>

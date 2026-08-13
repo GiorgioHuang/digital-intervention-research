@@ -82,6 +82,9 @@
   --focus-ring-total: calc(var(--focus-ring-width) + var(--focus-ring-offset));
 
   /* -- 触控目标 (§A.8)：恒定 -- */
+  /* 勾选框/单选钮的方框边长。它不等于 --target-min：方框本身画多大，与
+     手指能点多大是两件事——整行（方框 + 标签）才是触控目标。 */
+  --control-tick-size: 1.5rem;
   --target-min: 2.75rem;
   --target-gap: 0.5rem;
   --target-hit-slop: 0.25rem;
@@ -697,6 +700,46 @@ select {
   color: var(--color-text-primary);
 }
 textarea { min-height: calc(var(--target-min) * 3); line-height: var(--type-leading-normal); }
+
+/* 勾选框与单选钮不是文本输入框。
+   上面那条 `input { width: 100% }` 是给文本框写的，但它对 `type=checkbox`
+   一样生效：勾选框被拉成整行宽、套上 2px 边框与 44px 最小高度，于是屏幕上
+   出现一个**空白的大方框**，而它的标签因为 `label { display: block }` 掉到了
+   下一行。截图之前没人发现——**测试全都是按 label 找控件的，而那条路一直
+   是通的**：`getByLabelText('This is a shared device')` 照样点得到，看起来
+   坏掉的东西在测试里完全正常。
+   这不是观感问题。那个勾选框是「这是共用设备」——勾上它，闲置超时从二十
+   分钟缩到五分钟、每一页出现遮屏与登出、关掉浏览器不留任何东西。一个长者
+   在社区中心的平板上认不出那是个勾选框，就不会去勾，于是把自己的健康数据
+   留在了一台别人也用的机器上。 */
+input[type='checkbox'],
+input[type='radio'] {
+  /* `inline-size` 与 `width` 是同一个属性，后写的赢。第一版在下面又写了
+     一句 `width: auto` 来抵消通用规则的 `width: 100%`，结果连同上面这行
+     一起抵消掉了，方框缩回浏览器默认的十几像素——比正文还小。
+     不需要抵消：`input[type='checkbox']` 的特指度本来就高于 `input`。 */
+  inline-size: var(--control-tick-size);
+  block-size: var(--control-tick-size);
+  min-height: 0;
+  margin: 0;
+  flex: none;
+  accent-color: var(--color-action-primary-bg);
+}
+/* 方框与标签同一行，整行是触控目标（标签有 htmlFor，点标签即勾选）。 */
+p:has(> input[type='checkbox']),
+p:has(> input[type='radio']),
+label:has(> input[type='checkbox']),
+label:has(> input[type='radio']) {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--target-min);
+}
+p:has(> input[type='checkbox']) > label,
+p:has(> input[type='radio']) > label {
+  margin-block-end: 0;
+  max-width: none;
+}
 fieldset {
   border: var(--border-default) solid var(--color-border-default);
   border-radius: var(--radius-2);

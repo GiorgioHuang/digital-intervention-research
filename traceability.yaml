@@ -1844,7 +1844,19 @@
     their border colour from whatever text colour surrounds them. A stylesheet cannot see that, so
     the test reads the component sources too. Dark mode is not a priority per the owner, but the
     product already ships the toggle, so it was retuned to the same teal and held to the same test:
-    not a priority is not the same as allowed to be wrong.
+    not a priority is not the same as allowed to be wrong. Running the app and looking at it then
+    found two more defects that only an eye can find. The "this is a shared device" checkbox was being
+    stretched to full row width by the generic input rule and its label pushed to the line below, so
+    it read as an empty box rather than a tick box - invisible to the tests, because they find
+    controls by label and that path was never broken. That control shortens the idle timeout from
+    twenty minutes to five, puts a cover-the-screen and sign-out action on every page, and keeps
+    nothing on the device after the browser closes; an older adult at a community centre who does not
+    recognise it as a tick box leaves their health data on a machine other people use. And the sign-in
+    screen drew three identical teal outline buttons with nothing saying which one was the way in -
+    .btn-primary already existed and was simply never applied. Fixing the checkbox went wrong once
+    first: `width: auto` and `inline-size` are the same property, so writing the former after the
+    latter cancelled the size too and left the box smaller than the body text. The cancelling
+    declaration was never needed, since the type selector already outranks the generic input rule.
   trace_ids: [ATR-003]
   adr_ids: [ADR-061, ADR-062]
   docs:
