@@ -452,4 +452,42 @@ describe('a participant reading their own life story', () => {
     expect(screen.getByText(/nothing more can be added to it/i)).toBeTruthy();
     expect(screen.getByText(/you can still remove any of it/i)).toBeTruthy();
   });
+
+  /**
+   * The provenance marker, held in place.
+   *
+   * A className is the easiest thing in a codebase to lose: nobody's test
+   * fails, nothing throws, and the screen quietly stops distinguishing a
+   * machine's draft from the participant's own words. The wording is
+   * already asserted elsewhere; this asserts that the distinction is also
+   * visible without reading a paragraph, and — the half that matters more
+   * — that the participant's own entry is NOT given the marker. A screen
+   * that labels everything has labelled nothing.
+   */
+  it('marks a drafting tool\'s suggestion and leaves the participant\'s own words unmarked', async () => {
+    stubFetch({ data: [item({ itemId: 'li_ai', sourceType: 'AIDraft' }), item({ itemId: 'li_me' })] });
+    await act(async () => {
+      render(<MyLifeStory session={session} />);
+    });
+    const drafted = screen.getByText(/a drafting tool suggested this/i);
+    expect(drafted.className).toContain('state--ai');
+    const own = screen.getByText(/^you wrote this\.$/i);
+    expect(own.className).not.toContain('state--ai');
+    expect(own.className).toBe('');
+  });
+
+  /**
+   * Life Story is the one screen the owner asked to feel warm rather than
+   * clinical. The warmth is carried entirely by two class names, so it can
+   * be deleted by accident in a refactor that changes nothing else.
+   */
+  it('renders life story entries inside the warm zone, as cards with a sand edge', async () => {
+    stubFetch({ data: [item()] });
+    const { container } = render(<MyLifeStory session={session} />);
+    await act(async () => {});
+    expect(container.querySelector('section.zone-story')).not.toBeNull();
+    const entry = screen.getByRole('article', { name: 'My garden years' });
+    expect(entry.className).toContain('card');
+    expect(entry.className).toContain('card--story');
+  });
 });

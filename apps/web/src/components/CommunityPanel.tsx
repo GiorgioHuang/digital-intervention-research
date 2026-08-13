@@ -226,7 +226,7 @@ export function CommunityPanel({ session }: { session: Session }) {
         {spaces !== null && spaces.length > 0 && (
           <ul className="list-plain">
             {spaces.map((s) => (
-              <li key={s.spaceId} className="card">
+              <li key={s.spaceId} className="card card--community">
                 <p>
                   <strong>{s.name}</strong>{' '}
                   {s.membershipState === 'Active' ? <span>(you are a member)</span> : <span>(not joined)</span>}

@@ -203,7 +203,7 @@ export function MatchingPanel({ session }: { session: Session }) {
         {candidates !== null && (
           <ul className="list-plain">
             {candidates.map((c) => (
-              <li key={c.candidateId} className="card">
+              <li key={c.candidateId} className="card card--matching">
                 {/* Explanation only — identity is never shown before mutual acceptance. */}
                 <p>{c.explanation}</p>
                 <p>
@@ -230,9 +230,16 @@ export function MatchingPanel({ session }: { session: Session }) {
         )}
       </section>
 
+      {/*
+        Matching is blue because it is still a question; this block is the
+        primary teal because the answer has arrived. They are two different
+        facts on one path, so they must not share a colour — "we both said
+        yes" reading like "here is another suggestion" is the one confusion
+        this screen cannot afford.
+      */}
       {mutualAcceptanceId !== null && (
-        <section aria-labelledby="mutual-heading">
-          <h3 id="mutual-heading">You have both said you are interested</h3>
+        <section className="state state--connection" aria-labelledby="mutual-heading">
+          <h3 id="mutual-heading" className="state__head">You have both said you are interested</h3>
           <p>
             Whether to connect is still your decision. If you do not connect, the other person is not notified.
           </p>

@@ -958,6 +958,18 @@ main:not([data-workspace='staff']) .card { border-radius: var(--radius-3); }
 
 /* 草稿卡片：虚线边框（社区里"还没发出去的帖子"）。形状是第二通道——
    卡片上同时有文字说明它是草稿，虚线只是让它在一列卡片里先被看见。 */
+/* 卡片的区域标记：左侧一条 4px 的色条，不是整块底色。
+   理由是所有者那句"重要状态主要依靠文字、图标和结构，不只依赖颜色"——
+   一条结构线在灰度下、在低刺激模式下、在色觉差异下都还在，一片底色不是。
+   同一张卡片上如果还有状态要报，状态用 .state 块自己说，区域条不参与。
+
+   **必须写在 `.card` 后面。** 第一版写在了 §10（状态呈现）里，也就是
+   `.card` 的**上面**，于是 `.card` 的 `border:` 简写把这三条左边框整个盖掉，
+   截图上三种卡片一模一样——测试全绿，因为测试断言的是 class 名在不在，
+   而 class 一直都在。**同一个属性，后写的赢**，这是这一轮第二次被它咬。 */
+.card--story { border-inline-start: var(--border-emphasis) solid var(--color-story-border); }
+.card--community { border-inline-start: var(--border-emphasis) solid var(--color-community-border); }
+.card--matching { border-inline-start: var(--border-emphasis) solid var(--color-matching-border); }
 .card--draft { border-style: dashed; border-color: var(--color-border-default); }
 
 /* 无符号列表。取代散落在各组件里的 style={{ listStyle:'none', padding:0 }}。 */

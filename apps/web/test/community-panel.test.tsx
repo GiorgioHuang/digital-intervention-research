@@ -218,4 +218,21 @@ describe('CommunityPanel (optional community, versioned rules, chronological fee
     });
     expect(screen.queryByRole('button', { name: 'Report this post' })).toBeNull();
   });
+
+  /**
+   * The community zone marker. Community is the owner's soft green rather
+   * than a bright social feed, and the distinction it has to survive is
+   * with the drafts list directly below it: a published space and a post
+   * nobody has sent yet must not look alike, or "still a draft" becomes
+   * something you find out by reading rather than by looking.
+   */
+  it('marks community spaces with the community zone and keeps drafts looking unsent', async () => {
+    stubFetch({ joined: true, drafts: [DRAFT_POST] });
+    const { container } = render(<CommunityPanel session={session} />);
+    await act(async () => {});
+    const space = container.querySelector('li.card');
+    expect(space, 'no space card rendered').not.toBeNull();
+    expect(space!.className).toContain('card--community');
+    expect(space!.className).not.toContain('card--draft');
+  });
 });

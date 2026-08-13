@@ -1856,7 +1856,14 @@
     .btn-primary already existed and was simply never applied. Fixing the checkbox went wrong once
     first: `width: auto` and `inline-size` are the same property, so writing the former after the
     latter cancelled the size too and left the box smaller than the body text. The cancelling
-    declaration was never needed, since the type selector already outranks the generic input rule.
+    declaration was never needed, since the type selector already outranks the generic input rule. Wiring
+    the zone accents into Life Story, Community and Matching walked into the same trap a second time: the
+    three .card--* edge rules were written above .card, so .card's `border` shorthand overrode all of them
+    and the three kinds of card rendered identically. Four tests stayed green throughout, because what they
+    assert is that the class name is present, and it was. Same property, later declaration wins - twice in
+    one change, both times invisible to tests and visible at a glance. The zone accents are a 4px edge
+    rather than a fill: a structural line survives greyscale, low-stimulation mode and colour vision
+    deficiency, and a wash of colour does not.
   trace_ids: [ATR-003]
   adr_ids: [ADR-061, ADR-062]
   docs:
@@ -1876,4 +1883,7 @@
     - apps/web/src/SupporterApp.tsx
   tests:
     - apps/web/test/design-tokens.test.ts
+    - apps/web/test/my-life-story.test.tsx
+    - apps/web/test/matching-panel.test.tsx
+    - apps/web/test/community-panel.test.tsx
   status: implemented

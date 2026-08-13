@@ -142,4 +142,33 @@ describe('MatchingPanel (opt-in matching over API lists, ADR-036)', () => {
     expect(conn.path).toBe('/v1/mutual-acceptances/ma_1/activate-connection');
     expect(conn.body?.['confirmed']).toBe(true);
   });
+
+  /**
+   * Matching is blue and connection is the primary teal, because they are
+   * two different facts on one path: still a question, and answered. If a
+   * refactor lets them share a colour, "you have both said you are
+   * interested" starts reading like one more suggestion to consider — the
+   * one confusion this screen cannot afford, since the next button on it
+   * hands somebody a way to message you.
+   */
+  it('keeps a suggestion and a mutual acceptance visually different', async () => {
+    const calls = stubFetch('ma_1');
+    const { container } = render(<MatchingPanel session={session} />);
+    await act(async () => {});
+    /* The suggestion has to be read before the decision: choosing
+       "Interested" clears the list, so querying afterwards returns null and
+       `expect(null?.className)` would have asserted nothing at all. */
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Show current suggestions' }));
+    });
+    const suggestion = container.querySelector('li.card');
+    expect(suggestion, 'no suggestion card rendered').not.toBeNull();
+    expect(suggestion!.className).toContain('card--matching');
+
+    await loadAndChooseInterested(calls);
+    const mutual = container.querySelector('section.state');
+    expect(mutual, 'no mutual-acceptance block rendered').not.toBeNull();
+    expect(mutual!.className).toContain('state--connection');
+    expect(mutual!.className).not.toContain('state--matching');
+  });
 });

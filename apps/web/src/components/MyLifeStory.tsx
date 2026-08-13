@@ -214,7 +214,12 @@ export function MyLifeStory({ session }: { session: Session }) {
   };
 
   return (
-    <section aria-labelledby="life-story-heading">
+    /* The one screen the owner asked to feel warm rather than clinical:
+       a cream ground (Sand 50) instead of the neutral page, with each
+       entry a white card carrying a sand edge. The warmth is the room,
+       not the writing — see the note on `.zone-story` in styles.css for
+       why sand is never a foreground here. */
+    <section className="zone-story" aria-labelledby="life-story-heading">
       <h1 id="life-story-heading">My life story</h1>
       <p>
         This is yours. Everything you write here starts private, and stays private until you choose otherwise.
@@ -268,10 +273,22 @@ export function MyLifeStory({ session }: { session: Session }) {
       )}
 
       {(items ?? []).map((item) => (
-        <article key={item.itemId} aria-label={item.title}>
+        <article key={item.itemId} className="card card--story" aria-label={item.title}>
           <h2>{item.title}</h2>
           {item.contentText !== null && <blockquote>{item.contentText}</blockquote>}
-          <p>{SOURCE_WORDING[item.sourceType ?? ''] ?? 'Where this came from is not recorded.'}</p>
+          {/*
+            Where the words came from. A drafting tool's suggestion is
+            marked; everything else is stated in plain text and left
+            unmarked.
+            Marking only the machine is the point. The AI family is a
+            LABEL, never a fill: an entry the participant wrote must not
+            end up looking quieter on their own page than one a model
+            produced (Doc 19 §10). The words still carry it — the marker
+            only makes the distinction survivable at a glance.
+          */}
+          <p className={item.sourceType === 'AIDraft' ? 'state state--ai' : undefined}>
+            {SOURCE_WORDING[item.sourceType ?? ''] ?? 'Where this came from is not recorded.'}
+          </p>
           <p>
             {item.testimonyState === 'ParticipantTestimony'
               ? 'You have confirmed this is in your own words.'
