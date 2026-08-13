@@ -8,6 +8,7 @@ export {
   listSupporterInvitations,
   withdrawSupporterInvitation,
   revokeInvitation,
+  setAccountState,
   type SupporterInvitationView,
   assignRole,
   revokeRole,

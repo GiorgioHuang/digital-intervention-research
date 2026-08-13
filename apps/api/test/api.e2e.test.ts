@@ -921,7 +921,7 @@ describe.skipIf(!dbAvailable)('HTTP API (e2e)', () => {
     );
     await pool.query(
       `INSERT INTO community_social.mutual_acceptances (id, match_candidate_id, participant_a_id, participant_b_id, acceptance_state, policy_version, effective_until, connection_id)
-       VALUES ($1, $2, $3, $4, 'Consumed', 'policy_v0.2.0', now() + interval '7 days', $5)`,
+       VALUES ($1, $2, $3, $4, 'Consumed', 'policy_v0.3.0', now() + interval '7 days', $5)`,
       [maId, candId, patId, otherId, connId],
     );
     await pool.query(

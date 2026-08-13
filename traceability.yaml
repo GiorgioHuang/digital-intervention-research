@@ -1681,3 +1681,36 @@
     - packages/modules/m03-consent-permission/test/m03.integration.test.ts
     - packages/modules/m05-enrolment/test/m05.integration.test.ts
   status: implemented
+- implementation_id: IMP-M01-ACCOUNT-SUSPENSION-001
+  module: M01
+  summary: >-
+    The platform's only real kill switch, which had no handle. account_state has carried 'Suspended'
+    since M01 was written, the sign-in path refuses it, and every request of an already-open session
+    re-checks it - and no code anywhere ever set it. Enforcement complete, unreachable. Meanwhile the
+    accounts screen told administrators in bold that removing every role was the only way to stop
+    somebody, and both halves of that became false once sign-in was real: revoking roles denies what a
+    role grants and leaves the person signed in, able to sign in again, and still holding everything
+    they own - their own records, their own life story. For "this person must not be in here", only
+    suspension is true. Added as user.suspend, granted to both administrator roles, confirmed but
+    deliberately NOT held to the strong-authentication tier: the ten actions that are held there are
+    one-way, the thing leaves, whereas this is reversible from the same screen and is reached when
+    somebody has to be stopped now - a round trip to Google in that moment buys little and costs the
+    minutes that matter. Suspending yourself is refused, because on a one-administrator deployment it
+    locks the only person who could undo it out of the screen that undoes it. Live sessions are revoked
+    in the same transaction; the resolver would refuse them anyway on the next request, so that is not
+    what makes suspension immediate - it is so "who is signed in" stops listing somebody who is not.
+    The test for immediacy initially passed on the revocation alone - deleting the resolver's state
+    check left it green, so it proved half of what its name claimed - and was fixed by clearing
+    revoked_at before asserting, which isolates the two locks and makes both mutation-visible.
+  trace_ids: [ATR-003]
+  adr_ids: [ADR-104]
+  docs: ["design/DESIGN_DECISIONS.md D-73"]
+  code:
+    - packages/policy/src/catalogue.ts
+    - packages/modules/m01-identity-org/src/application/commands.ts
+    - apps/api/src/staff-controllers.ts
+    - apps/web/src/staff-api.ts
+    - apps/web/src/components/AccountsAndRoles.tsx
+  tests:
+    - apps/api/test/session-store.integration.test.ts
+  status: implemented

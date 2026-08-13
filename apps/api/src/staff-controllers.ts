@@ -32,6 +32,7 @@ import {
   inviteToPlatform,
   inviteExistingAccount,
   revokeInvitation,
+  setAccountState,
   listPendingInvitations,
   assignRole,
 } from '@platform/m01-identity-org';
@@ -758,6 +759,27 @@ export class StaffCommandController {
       confirmed: body.confirmed === true,
     });
     return { data: { type: 'RoleAssignment', id: result.roleAssignmentId } };
+  }
+
+  /**
+   * Stopping somebody, and letting them back.
+   *
+   * The only action on this platform that ends a session already in
+   * progress. Every other control here decides what somebody may do next.
+   */
+  @Post('user-accounts/:userAccountId/account-state')
+  async changeAccountState(
+    @Req() req: Request,
+    @Param('userAccountId') userAccountId: string,
+    @Body() body: { state: 'Suspended' | 'Active'; confirmed: boolean },
+  ) {
+    const ctx = requireActor(req);
+    await setAccountState(this.deps.m01, ctx, {
+      userAccountId,
+      state: body.state === 'Suspended' ? 'Suspended' : 'Active',
+      confirmed: body.confirmed === true,
+    });
+    return { data: { type: 'UserAccount', id: userAccountId, meta: { accountState: body.state } } };
   }
 
   /** Taking a role back. Confirmed, and version-bound so a role that

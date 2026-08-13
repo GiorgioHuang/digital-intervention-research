@@ -548,6 +548,8 @@ export const staffApi = {
     get<{ data: { id: string; attributes: InvitationItem }[] }>(s, '/v1/account-invitations'),
   revokeInvitation: (s: StaffSession, invitationId: string) =>
     post<Id>(s, `/v1/account-invitations/${invitationId}/revoke`, { confirmed: true }),
+  setAccountState: (s: StaffSession, userAccountId: string, state: 'Suspended' | 'Active') =>
+    post<Id>(s, `/v1/user-accounts/${userAccountId}/account-state`, { state, confirmed: true }),
   assignRole: (s: StaffSession, userAccountId: string, role: string) =>
     post<Id>(s, `/v1/user-accounts/${userAccountId}/role-assignments`, { role, confirmed: true }),
 

@@ -69,20 +69,41 @@ describe('accounts and roles', () => {
   });
 
   /**
-   * account_state has five values and no writer, so every account reads
-   * Active because that is the column default. An administrator who
-   * believes accounts can be closed thinks they have shut somebody out
-   * when they have not.
+   * This used to assert the opposite — that an account could not be closed
+   * and that removing every role was the only way to stop somebody. That
+   * was true of the development stub and false the moment sign-in became
+   * real: revoking roles leaves the person signed in, able to sign in
+   * again, and holding everything they own. The screen now has to
+   * distinguish the two, because an administrator who reaches for the
+   * wrong one believes they have shut somebody out and has not.
    */
-  it('says an account cannot be closed rather than showing a state nobody maintains', async () => {
+  it('distinguishes taking a role back from stopping somebody', async () => {
     stubFetch();
     await act(async () => {
       render(<AccountsAndRoles session={session} />);
     });
-    expect(screen.getByText(/There is no way to close an account here/i)).toBeTruthy();
-    expect(screen.getByText(/Removing every role is the only way to stop somebody/i)).toBeTruthy();
-    // The unmaintained state is not printed as a status.
-    expect(document.body.textContent).not.toContain('Active');
+    expect(screen.getByText(/removing roles does not stop them signing in/i)).toBeTruthy();
+    expect(screen.getByRole('button', { name: /suspend this account/i })).toBeTruthy();
+  });
+
+  it('asks before ending somebody\'s session, and says that is what it does', async () => {
+    const calls = stubFetch();
+    await act(async () => {
+      render(<AccountsAndRoles session={session} />);
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /suspend this account/i }));
+    });
+    expect(screen.getByText(/signed out immediately/i)).toBeTruthy();
+    // Nothing sent until it is confirmed.
+    expect(calls.some((c) => c.path.includes('/account-state'))).toBe(false);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Suspend them' }));
+    });
+    const call = calls.find((c) => c.path.includes('/account-state'));
+    expect(call).toBeDefined();
+    expect(call?.body).toMatchObject({ state: 'Suspended', confirmed: true });
   });
 
   it('revoking is confirmed, version-bound, and says what it does not undo', async () => {

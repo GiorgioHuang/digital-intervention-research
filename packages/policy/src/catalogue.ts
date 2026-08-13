@@ -7,7 +7,7 @@ import type { PolicyConfiguration } from './types.js';
  * (Master Prompt open-ADR rule 5). Actions absent here are denied.
  */
 export const POLICY_V1: PolicyConfiguration = {
-  policyVersion: 'policy_v0.2.0',
+  policyVersion: 'policy_v0.3.0',
   rolePermissions: {
     SystemAdministrator: [
       // Administration only: no content, approval or consent authority
@@ -15,6 +15,7 @@ export const POLICY_V1: PolicyConfiguration = {
       // OrganisationAdministrator; every assignment is confirmed + audited.
       'organisation.create',
       'user.invite',
+      'user.suspend',
       'role.assign',
       'role.revoke',
       'system.configure',
@@ -26,6 +27,7 @@ export const POLICY_V1: PolicyConfiguration = {
     OrganisationAdministrator: [
       'user.view',
       'user.invite',
+      'user.suspend',
       'role.assign',
       'role.revoke',
       'audit.view',
@@ -168,6 +170,26 @@ export const POLICY_V1: PolicyConfiguration = {
     'organisation.create': {},
     'user.invite': {},
     'user.view': {},
+    /**
+     * Stopping somebody, and letting them back.
+     *
+     * The enforcement for this already existed and nothing could reach it:
+     * a Suspended account is refused at sign-in AND on every request of a
+     * session already open, so it is the platform's only actual kill
+     * switch — and no code wrote that state, so the switch had no handle.
+     * Meanwhile the accounts screen told administrators that removing
+     * every role was the way to stop somebody, which does not stop them
+     * signing in, does not end the session they are in, and leaves them
+     * everything they own.
+     *
+     * Confirmed but NOT held to the strong-authentication tier. The ten
+     * actions that are — approving a version, releasing an export — are
+     * one-way: the thing leaves. This one is reversible by the same
+     * screen, and it is reached when somebody has to be stopped now. A
+     * round trip to Google in that moment buys little and costs the
+     * minutes that matter.
+     */
+    'user.suspend': { confirmationRequired: true },
     'role.assign': { confirmationRequired: true },
     'role.revoke': { confirmationRequired: true },
     'audit.view': {},

@@ -794,3 +794,88 @@ export async function revokeInvitation(
     });
   });
 }
+
+/**
+ * Stopping somebody, and letting them back.
+ *
+ * This is the platform's only real kill switch, and until now it had no
+ * handle: `account_state` has carried 'Suspended' since M01 was written,
+ * the sign-in path refuses it, and every request of an already-open
+ * session re-checks it — and no code anywhere ever set it. So the
+ * enforcement was complete and unreachable, while the accounts screen told
+ * administrators that removing every role was how you stopped somebody.
+ *
+ * Removing every role is not that. It denies the actions a role grants and
+ * leaves the person signed in, still able to sign in again, and still
+ * holding everything they own — their own records, their own life story.
+ * For "this person must not be in here", only suspension is true.
+ *
+ * Live sessions are revoked in the same transaction. The resolver would
+ * refuse them anyway on their next request, so this is not what makes
+ * suspension immediate; it is so that "who is signed in" does not go on
+ * listing somebody who is not.
+ */
+export async function setAccountState(
+  deps: M01Deps,
+  ctx: RequestContext,
+  input: { userAccountId: string; state: 'Suspended' | 'Active'; confirmed: boolean; reason?: string },
+): Promise<void> {
+  const actorId = requireActor(ctx);
+  const decision = await deps.checkPermission(ctx, {
+    action: 'user.suspend',
+    resource: {
+      type: 'UserAccount',
+      id: input.userAccountId,
+      state: input.state,
+      protectedExistence: false,
+    },
+    confirmed: input.confirmed,
+  });
+  assertAllowed(decision, input.confirmed);
+
+  // Suspending yourself locks the only person who could undo it out of the
+  // screen that undoes it — and on a one-administrator deployment that is
+  // the whole platform, recoverable only with a SQL client.
+  if (input.userAccountId === actorId && input.state === 'Suspended') {
+    throw new PlatformError(
+      'INVALID_STATE_TRANSITION',
+      'You cannot suspend your own account — somebody else has to, or there would be nobody left who could undo it.',
+    );
+  }
+
+  const now = deps.clock.now();
+  await withTransaction(deps.pool, async (client) => {
+    const result = await client.query(
+      `UPDATE identity_org.user_accounts
+          SET account_state = $2, record_version = record_version + 1, updated_at = now()
+        WHERE id = $1 AND account_state <> $2`,
+      [input.userAccountId, input.state],
+    );
+    if (result.rowCount === 0) {
+      throw new PlatformError(
+        'INVALID_STATE_TRANSITION',
+        input.state === 'Suspended'
+          ? 'That account is already suspended.'
+          : 'That account is not suspended.',
+      );
+    }
+    if (input.state === 'Suspended') {
+      await client.query(
+        `UPDATE identity_org.auth_sessions
+            SET revoked_at = now(), revoked_reason = 'account-suspended', updated_at = now()
+          WHERE user_account_id = $1 AND revoked_at IS NULL`,
+        [input.userAccountId],
+      );
+    }
+    await recordAuditEvent(client, ctx, {
+      action: 'user.suspend',
+      targetType: 'UserAccount',
+      targetId: input.userAccountId,
+      result: 'Succeeded',
+      policyDecision: decision.outcome,
+      policyVersion: decision.policyVersion,
+      source: input.state === 'Suspended' ? 'm01.suspendAccount' : 'm01.restoreAccount',
+      occurredAt: now,
+    });
+  });
+}

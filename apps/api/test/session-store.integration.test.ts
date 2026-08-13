@@ -16,6 +16,7 @@ import {
   listPendingInvitations,
   listSupporterInvitations,
   revokeInvitation,
+  setAccountState,
   withdrawSupporterInvitation,
 } from '@platform/m01-identity-org';
 import { createSessionStore, hashToken, type SessionStore } from '../src/auth/session-store.js';
@@ -851,6 +852,122 @@ describe.skipIf(!dbAvailable)('sessions, invitations, and who a Google account t
           confirmed: true,
         }),
       ).rejects.toThrow(/already holds this role/i);
+    });
+
+
+    /* ------------------------------------------------------------ */
+    /* Stopping somebody                                            */
+    /* ------------------------------------------------------------ */
+
+    /**
+     * The platform's only kill switch, which had no handle: the sign-in
+     * path and the session resolver have refused 'Suspended' since M01 was
+     * written, and nothing ever set it.
+     */
+    it('ends a session in progress and refuses the next sign-in', async () => {
+      const person = await makeAccount('Pat', 'Active');
+      await pool.query(
+        `INSERT INTO identity_org.organisation_memberships (id, organisation_id, user_account_id)
+         VALUES ($1, $2, $3)`,
+        [newId('mem'), organisationId, person],
+      );
+      await inviteExistingAccount(m01, adminCtx, { userAccountId: person, email: 'pat@example.org' });
+      const { token } = await sessions.signIn(identity(), nextNonce());
+      expect(await sessions.resolve(token)).toBeDefined();
+
+      await setAccountState(m01, adminCtx, { userAccountId: person, state: 'Suspended', confirmed: true });
+
+      // Mid-session, without waiting for anything to expire.
+      expect(await sessions.resolve(token)).toBeUndefined();
+      await expect(sessions.signIn(identity(), nextNonce())).rejects.toThrow(/cannot be used to sign in/);
+
+      /*
+       * Two independent locks, asserted independently.
+       *
+       * Suspension revokes the live sessions AND the resolver refuses a
+       * suspended account on every request. Written the obvious way this
+       * test passed on the revocation alone — removing the resolver's
+       * check left it green — so it was proving half of what its name
+       * claims. Un-revoking the row here isolates the second lock: a
+       * session that somehow survived revocation must still be refused.
+       */
+      await pool.query(
+        `UPDATE identity_org.auth_sessions SET revoked_at = NULL, revoked_reason = NULL
+          WHERE user_account_id = $1`,
+        [person],
+      );
+      expect(
+        await sessions.resolve(token),
+        'a suspended account must be refused even by a session that was never revoked',
+      ).toBeUndefined();
+    });
+
+    it('lets them back in again, because suspension is reversible', async () => {
+      const person = await makeAccount('Pat', 'Active');
+      await inviteExistingAccount(m01, adminCtx, { userAccountId: person, email: 'pat@example.org' });
+      await sessions.signIn(identity(), nextNonce());
+      await setAccountState(m01, adminCtx, { userAccountId: person, state: 'Suspended', confirmed: true });
+      await setAccountState(m01, adminCtx, { userAccountId: person, state: 'Active', confirmed: true });
+
+      const again = await sessions.signIn(identity(), nextNonce());
+      expect(again.userAccountId).toBe(person);
+    });
+
+    /** Revoked in the same transaction, so "who is signed in" stays honest. */
+    it('marks the ended sessions as ended rather than leaving them listed', async () => {
+      const person = await makeAccount('Pat', 'Active');
+      await inviteExistingAccount(m01, adminCtx, { userAccountId: person, email: 'pat@example.org' });
+      await sessions.signIn(identity(), nextNonce());
+      await setAccountState(m01, adminCtx, { userAccountId: person, state: 'Suspended', confirmed: true });
+
+      const live = await pool.query<{ count: string }>(
+        `SELECT count(*)::text AS count FROM identity_org.auth_sessions
+          WHERE user_account_id = $1 AND revoked_at IS NULL`,
+        [person],
+      );
+      expect(live.rows[0]?.count).toBe('0');
+      const reason = await pool.query<{ revoked_reason: string }>(
+        `SELECT revoked_reason FROM identity_org.auth_sessions WHERE user_account_id = $1`,
+        [person],
+      );
+      expect(reason.rows[0]?.revoked_reason).toBe('account-suspended');
+    });
+
+    /**
+     * On a one-administrator deployment this would lock the only person
+     * who could undo it out of the screen that undoes it, leaving a SQL
+     * client as the only way back.
+     */
+    it('refuses to let an administrator suspend themselves', async () => {
+      await expect(
+        setAccountState(m01, adminCtx, { userAccountId: adminAccount, state: 'Suspended', confirmed: true }),
+      ).rejects.toThrow(/cannot suspend your own account/);
+    });
+
+    it('requires confirmation, and refuses somebody with no standing', async () => {
+      const person = await makeAccount('Pat', 'Active');
+      await expect(
+        setAccountState(m01, adminCtx, { userAccountId: person, state: 'Suspended', confirmed: false }),
+      ).rejects.toThrow();
+
+      const stranger = await sessions.signIn(
+        identity({ subject: 'google-sub-stranger', email: 'stranger@example.org' }),
+        nextNonce(),
+      );
+      const strangerCtx = createRequestContext({
+        actor: { type: 'user', id: stranger.userAccountId },
+        organisationId,
+      });
+      await expect(
+        setAccountState(m01, strangerCtx, { userAccountId: person, state: 'Suspended', confirmed: true }),
+      ).rejects.toThrow();
+    });
+
+    it('says so rather than silently doing nothing when the state already matches', async () => {
+      const person = await makeAccount('Pat', 'Active');
+      await expect(
+        setAccountState(m01, adminCtx, { userAccountId: person, state: 'Active', confirmed: true }),
+      ).rejects.toThrow(/not suspended/);
     });
 
     it('lists the organisations an actor may act in, and no others', async () => {

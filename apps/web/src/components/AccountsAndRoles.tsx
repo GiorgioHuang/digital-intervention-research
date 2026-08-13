@@ -25,12 +25,15 @@ import {
  *
  * Two things this screen must not overstate.
  *
- * Revoking a role is not closing an account. `account_state` exists with
- * five values and no code writes any of them, so an account is 'Active'
- * because that is the column default and not because anybody decided it.
- * Showing that as a status would answer a question the platform was never
- * asked, so the screen says the state is not maintained and that removing
- * every role is the only way to stop somebody.
+ * Revoking a role is not stopping somebody. It decides what they may do
+ * next; they stay signed in, can sign in again, and keep everything they
+ * own. For a while this screen said the opposite — that removing every
+ * role was the only way to stop anybody — which was true of the
+ * development stub and false the moment sign-in became real. Suspension is
+ * the only thing that ends a session in progress, and its enforcement had
+ * been in place since M01 was written with nothing anywhere able to reach
+ * it: `account_state` carried 'Suspended', the sign-in path refused it,
+ * every request re-checked it, and no code ever set it.
  *
  * And revoking removes what a person may do next, not what they did. The
  * records they wrote stay, their name stays on their decisions, and the
@@ -79,6 +82,8 @@ export function AccountsAndRoles({ session }: { session: StaffSession }) {
   const [justInvited, setJustInvited] = useState<{ email: string; expiresAt: string } | null>(null);
   const [grantingRole, setGrantingRole] = useState<Record<string, string>>({});
   const [inviteHolder, setInviteHolder] = useState<Record<string, string>>({});
+  /** Confirmed, like taking a role back — it cuts somebody off mid-use. */
+  const [suspending, setSuspending] = useState<AccountItem | null>(null);
 
   const load = async () => {
     try {
@@ -139,14 +144,20 @@ export function AccountsAndRoles({ session }: { session: StaffSession }) {
         that is the state they arrive in, and giving them one is the next step.
       </p>
       {/*
-        Said before the list, because the absence is the dangerous part: an
-        administrator who assumes accounts can be closed will think they
-        have shut somebody out when they have not.
+        This paragraph used to say the opposite — that accounts could not
+        be closed and that removing every role was how you stopped
+        somebody. Both halves were wrong once real sign-in existed:
+        removing roles denies what a role grants and leaves the person
+        signed in, able to sign in again, and still holding everything
+        they own. Suspension is the only thing that ends a session in
+        progress, and the enforcement for it was there all along with
+        nothing able to reach it.
       */}
       <p>
-        <strong>There is no way to close an account here.</strong> The platform records an account state but nothing
-        ever sets it, so every account reads the same whatever has happened. Removing every role is the only way to
-        stop somebody using this platform, and it is what you should do if that is what you mean.
+        <strong>Two different things.</strong> Taking a role back decides what somebody may do next.{' '}
+        <strong>Suspending</strong> stops them now: their session ends mid-use and they cannot sign in again until
+        somebody restores them. If what you mean is &quot;this person must not be in here&quot;, suspend them —
+        removing roles does not stop them signing in and does not touch what they own.
       </p>
       <p>
         Taking a role back does not remove anything the person did. Their name stays on their decisions and the audit
@@ -190,6 +201,29 @@ export function AccountsAndRoles({ session }: { session: StaffSession }) {
               unreachable in fact, so the way to reach it belongs next to
               the fact.
             */}
+            {a.accountState === 'Suspended' ? (
+              <p>
+                <strong>Suspended.</strong> Their session was ended and they cannot sign in.{' '}
+                <button
+                  onClick={() => {
+                    void staffApi
+                      .setAccountState(session, a.userAccountId, 'Active')
+                      .then(async () => {
+                        setAnnouncement(`${a.displayName} can sign in again.`);
+                        await load();
+                      })
+                      .catch((err: unknown) => setAnnouncement(staffActionError(err, 'That account')));
+                  }}
+                >
+                  Let them back in
+                </button>
+              </p>
+            ) : (
+              <p>
+                <button onClick={() => setSuspending(a)}>Suspend this account</button>{' '}
+                <small>Ends their session now and stops them signing in. Reversible.</small>
+              </p>
+            )}
             {a.hasSignIn === false && (
               <>
                 <p>
@@ -389,6 +423,34 @@ export function AccountsAndRoles({ session }: { session: StaffSession }) {
           </small>
         </p>
       </section>
+
+      {suspending !== null && (
+        <div role="alertdialog" aria-labelledby="suspend-confirm">
+          <p id="suspend-confirm">Suspend {suspending.displayName}?</p>
+          <p>
+            They will be signed out immediately — mid-screen, if they are using the platform right now — and cannot
+            sign in again until somebody restores them. Nothing they have already done changes.
+          </p>
+          <p>
+            <button
+              onClick={() => {
+                const target = suspending;
+                setSuspending(null);
+                void staffApi
+                  .setAccountState(session, target.userAccountId, 'Suspended')
+                  .then(async () => {
+                    setAnnouncement(`${target.displayName} has been suspended and signed out.`);
+                    await load();
+                  })
+                  .catch((err: unknown) => setAnnouncement(staffActionError(err, 'That account')));
+              }}
+            >
+              Suspend them
+            </button>{' '}
+            <button onClick={() => setSuspending(null)}>Cancel</button>
+          </p>
+        </div>
+      )}
 
       {revoking !== null && (
         <div role="alertdialog" aria-labelledby="revoke-confirm">
