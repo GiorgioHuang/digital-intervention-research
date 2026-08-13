@@ -1773,3 +1773,41 @@
   tests:
     - packages/modules/m05-enrolment/test/m05.integration.test.ts
   status: implemented
+- implementation_id: IMP-API-PARTICIPANT-JOURNEY-WALKTHROUGH-001
+  module: API
+  summary: >-
+    The participant workspace walked end to end as the person who has the least - an account with no
+    roles, a participant record of their own, no consents, no enrolments, no relationships. All
+    thirteen screens open. community.join and matching.activate are refused, correctly, for
+    consent-missing rather than for want of permission. The part worth recording is the mistake this
+    nearly became: reasoning from the permission catalogue, I found relationship.view-own and
+    contribution.view-own both denied to a role-less account and was about to grant the Participant
+    role to fix it. Both were false alarms - those actions belong to the SUPPORTER's screens, and the
+    participant's own "who has access to me" asks participant.view-own, which is owner-permitted.
+    Testing an action in isolation says nothing about whether a screen opens, so the walk drives the
+    endpoints the participant app actually calls. What the walk did find: GET
+    participants/:participantId/objects declared twice in one controller, forty lines apart, with
+    identical parameters, validation, call and response shape, each carrying its own docstring
+    explaining the same gap. Express matches the first, so the second had never run since the day it
+    was added. Harmless until somebody edits one of them - a change to the live handler that appears to
+    do nothing because the dead one was edited, or a tidy-up that deletes whichever looked like the
+    copy, when only one of the two is safe to delete. Neither failure announces itself: the route keeps
+    answering, with the other body. Merged to one, with a guard that scans controller source for
+    duplicate method-and-path so it fails while the second is being written rather than once the app
+    boots. The journey itself is kept as a regression test. Adding it also made a second, older defect
+    reliable: every test file in the api package migrates and writes to one shared database, but the
+    package ran its files in parallel, so two migrate() calls collided on the migration lock and two
+    suites saw each other's relationship rows. I had seen that failure once before and wrongly called
+    it transient - a third file turned it into every run. The package now passes --no-file-parallelism,
+    the same way m03 already did for the same reason; verified load-bearing by removing the flag, which
+    fails two files.
+  trace_ids: [ATR-003]
+  adr_ids: [ADR-104]
+  docs: ["design/DESIGN_DECISIONS.md D-76"]
+  code:
+    - apps/api/src/controllers.ts
+    - apps/api/package.json
+  tests:
+    - apps/api/test/participant-journey.test.ts
+    - apps/api/test/route-uniqueness.test.ts
+  status: implemented

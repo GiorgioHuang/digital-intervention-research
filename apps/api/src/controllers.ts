@@ -497,6 +497,20 @@ export class CommandController {
    * so a file could be attached to a life-story entry that could never
    * show it.
    */
+  /*
+   * The owning resource is named in the QUERY rather than the path
+   * because M16 knows nothing about life stories, and a route per owning
+   * type would put that knowledge in the wrong module.
+   *
+   * There were two of these — this one and an identical `myAttachedObjects`
+   * forty lines below, same path, same parameters, same validation, same
+   * call, each with its own docstring explaining the same gap. Express
+   * matches the first, so the second had never run since the day it was
+   * added. Harmless until somebody edits one of them: a change to the
+   * live handler that appears to do nothing because they edited the dead
+   * one, or a tidy-up that deletes whichever looked like the copy. There
+   * is now one, and a test that fails if a second appears.
+   */
   @Get('participants/:participantId/objects')
   async listObjectsForResource(
     @Req() req: Request,
@@ -535,38 +549,6 @@ export class CommandController {
     const ctx = requireActor(req);
     const status = await getObjectStatus(this.deps.m16storage, ctx, objectId);
     return { data: { type: 'StoredObject', id: objectId, attributes: status } };
-  }
-
-  /**
-   * What a participant has attached to one of their own records.
-   *
-   * Ownership was recorded only on the object's side, so nothing could
-   * ask the question the other way round: a file attached to a life
-   * story entry could never be found from that entry. The owning
-   * resource is named in the query rather than the path because M16
-   * knows nothing about life stories, and a route per owning type would
-   * put that knowledge in the wrong module.
-   */
-  @Get('participants/:participantId/objects')
-  async myAttachedObjects(
-    @Req() req: Request,
-    @Param('participantId') participantId: string,
-    @Query('owningResourceType') owningResourceType: string,
-    @Query('owningResourceId') owningResourceId: string,
-  ) {
-    const ctx = requireActor(req);
-    if (!owningResourceType || !owningResourceId) {
-      throw new PlatformError(
-        'VALIDATION_ERROR',
-        'Say which record the attachments belong to: owningResourceType and owningResourceId are both required',
-      );
-    }
-    const items = await listObjectsForResource(this.deps.m16storage, ctx, {
-      ownerParticipantId: participantId,
-      owningResourceType,
-      owningResourceId,
-    });
-    return { data: items.map((o) => ({ type: 'StoredObject', id: o.objectId, attributes: o })) };
   }
 
   /**
