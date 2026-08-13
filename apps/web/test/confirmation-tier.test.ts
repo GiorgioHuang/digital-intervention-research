@@ -149,6 +149,13 @@ describe('the confirmation tier is confirmed by a person, not by the api client'
       'components/StaffModeratorPanel.tsx → recordModerationDecision',
       'components/StaffSafetyTriagePanel.tsx → triageSignal',
       'components/WhoHasAccess.tsx → approveRelationship',
+      /*
+       * Resuming paused access is the participant giving it again — the
+       * same decision as approving it the first time, so it carries the
+       * same confirmation. Pausing does NOT appear here, and should not:
+       * stopping something is the direction that needs no ceremony.
+       */
+      'components/WhoHasAccess.tsx → resumeRelationship',
       'components/approver/AnalysisDecisions.tsx → approveAnalysisPlan',
       'components/approver/AnalysisDecisions.tsx → approveInterpretation',
       'components/approver/AnalysisDecisions.tsx → approveResearchFinding',

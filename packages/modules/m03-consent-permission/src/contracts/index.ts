@@ -25,6 +25,8 @@ export const M03_EVENTS = {
   RelationshipProposed: 'RelationshipProposed',
   RelationshipApproved: 'RelationshipApproved',
   RelationshipRevoked: 'RelationshipRevoked',
+  RelationshipPaused: 'RelationshipPaused',
+  RelationshipResumed: 'RelationshipResumed',
   ConsentRecorded: 'ConsentRecorded',
   ConsentWithdrawn: 'ConsentWithdrawn',
   PolicyDecisionRecorded: 'PolicyDecisionRecorded',

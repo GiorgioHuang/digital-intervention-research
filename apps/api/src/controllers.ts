@@ -19,6 +19,8 @@ import {
   recordConsentDecision,
   requireReConsent,
   revokeRelationship,
+  pauseRelationship,
+  resumeRelationship,
   withdrawConsent,
   type M03Deps,
   type PermissionServicePort,
@@ -744,6 +746,41 @@ export class CommandController {
     // Owner-only: nobody can accept a relationship on the participant's
     // behalf, and approval is version-bound explicit confirmation.
     await approveRelationship(this.deps.m03, ctx, {
+      relationshipId,
+      expectedVersion: body.expectedVersion,
+      confirmed: body.confirmed === true,
+    });
+    return { data: { type: 'Relationship', id: relationshipId, meta: { state: 'Active' } } };
+  }
+
+  /**
+   * Pausing, and letting it resume. The difference from revoke is the
+   * whole point: ending access is permanent and getting it back needs the
+   * other person proposed again, which is a negotiation with somebody a
+   * participant may have paused precisely to avoid this week.
+   */
+  @Post('relationships/:relationshipId/pause')
+  async pauseRelationshipRoute(
+    @Req() req: Request,
+    @Param('relationshipId') relationshipId: string,
+    @Body() body: { expectedVersion: number },
+  ) {
+    const ctx = requireActor(req);
+    await pauseRelationship(this.deps.m03, ctx, {
+      relationshipId,
+      expectedVersion: body.expectedVersion,
+    });
+    return { data: { type: 'Relationship', id: relationshipId, meta: { state: 'Suspended' } } };
+  }
+
+  @Post('relationships/:relationshipId/resume')
+  async resumeRelationshipRoute(
+    @Req() req: Request,
+    @Param('relationshipId') relationshipId: string,
+    @Body() body: { expectedVersion: number; confirmed: boolean },
+  ) {
+    const ctx = requireActor(req);
+    await resumeRelationship(this.deps.m03, ctx, {
       relationshipId,
       expectedVersion: body.expectedVersion,
       confirmed: body.confirmed === true,

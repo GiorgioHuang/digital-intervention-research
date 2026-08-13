@@ -428,6 +428,146 @@ export async function approveRelationship(
   });
 }
 
+/**
+ * Pausing somebody's access, and letting it resume.
+ *
+ * Until this existed a participant had exactly one way to stop somebody:
+ * end it, permanently. Getting it back then meant the other person being
+ * proposed again and the participant approving again — a negotiation with
+ * somebody they may have paused precisely because they did not want to
+ * talk to them this week.
+ *
+ * The state was already there and already understood everywhere else. The
+ * schema has carried 'Suspended' since M03 was written, the permission
+ * engine counts only 'Active' relationships when it looks for one, and the
+ * participant's own screen has had the words "Access is paused" waiting on
+ * it. Nothing could ever set it.
+ *
+ * The cases are ordinary: a daughter travelling for a month, a son the
+ * participant has fallen out with, or simply wanting to think. Offering
+ * only the permanent version pushes people either to leave access on when
+ * they would rather not, or to end something they will have to negotiate
+ * to restore. Neither is a choice anybody should have to make about their
+ * own life story.
+ *
+ * `relationship.revoke` is the permission, because pausing is removing
+ * access — a lesser version of the same decision by the same person, and
+ * owner-only so the engine checks whose circle this is.
+ */
+export async function pauseRelationship(
+  deps: M03Deps,
+  ctx: RequestContext,
+  input: { relationshipId: string; expectedVersion: number },
+): Promise<void> {
+  const rel = await findRelationship(deps.pool, input.relationshipId);
+  if (rel === undefined) throw new PlatformError('RESOURCE_NOT_FOUND', 'Relationship not found');
+
+  const decision = await deps.permissions.evaluate(ctx, {
+    action: 'relationship.revoke',
+    resource: {
+      type: 'Relationship',
+      id: rel.id,
+      state: rel.state,
+      protectedExistence: false,
+      ownerParticipantId: rel.participantId,
+    },
+  });
+  assertAllowed(decision, false);
+
+  const now = deps.clock.now();
+  await withTransaction(deps.pool, async (client) => {
+    // Only from Active. Pausing something already revoked would look like
+    // it could be resumed, and pausing a proposal is not a thing anybody
+    // means — declining it is.
+    const ok = await transitionRelationship(client, {
+      id: rel.id,
+      expectedVersion: input.expectedVersion,
+      fromStates: ['Active', 'Restricted'],
+      toState: 'Suspended',
+      now,
+    });
+    if (!ok) throw new PlatformError('VERSION_CONFLICT', 'Relationship changed concurrently');
+    await appendToOutbox(client, ctx, {
+      eventCategory: 'Domain',
+      eventType: M03_EVENTS.RelationshipPaused,
+      sourceModule: 'M03',
+      aggregateType: 'Relationship',
+      aggregateId: rel.id,
+      occurredAt: now,
+    });
+    await recordAuditEvent(client, ctx, {
+      action: 'relationship.revoke',
+      targetType: 'Relationship',
+      targetId: rel.id,
+      participantId: rel.participantId,
+      occurredAt: now,
+      result: 'Succeeded',
+      source: 'M03.pauseRelationship',
+      policyVersion: decision.policyVersion,
+    });
+  });
+}
+
+/**
+ * Letting a paused relationship resume. `relationship.approve`, because
+ * this is the participant giving access again — the same decision they
+ * made the first time, and confirmed for the same reason.
+ */
+export async function resumeRelationship(
+  deps: M03Deps,
+  ctx: RequestContext,
+  input: { relationshipId: string; expectedVersion: number; confirmed: boolean },
+): Promise<void> {
+  const rel = await findRelationship(deps.pool, input.relationshipId);
+  if (rel === undefined) throw new PlatformError('RESOURCE_NOT_FOUND', 'Relationship not found');
+
+  const decision = await deps.permissions.evaluate(ctx, {
+    action: 'relationship.approve',
+    resource: {
+      type: 'Relationship',
+      id: rel.id,
+      state: rel.state,
+      protectedExistence: false,
+      ownerParticipantId: rel.participantId,
+    },
+    confirmed: input.confirmed,
+  });
+  assertAllowed(decision, input.confirmed);
+
+  const now = deps.clock.now();
+  await withTransaction(deps.pool, async (client) => {
+    // Paused only. Resuming something that was ENDED would quietly undo a
+    // permanent decision without the other person being proposed again,
+    // which is the whole difference between the two.
+    const ok = await transitionRelationship(client, {
+      id: rel.id,
+      expectedVersion: input.expectedVersion,
+      fromStates: ['Suspended'],
+      toState: 'Active',
+      now,
+    });
+    if (!ok) throw new PlatformError('VERSION_CONFLICT', 'Relationship changed concurrently');
+    await appendToOutbox(client, ctx, {
+      eventCategory: 'Domain',
+      eventType: M03_EVENTS.RelationshipResumed,
+      sourceModule: 'M03',
+      aggregateType: 'Relationship',
+      aggregateId: rel.id,
+      occurredAt: now,
+    });
+    await recordAuditEvent(client, ctx, {
+      action: 'relationship.approve',
+      targetType: 'Relationship',
+      targetId: rel.id,
+      participantId: rel.participantId,
+      occurredAt: now,
+      result: 'Succeeded',
+      source: 'M03.resumeRelationship',
+      policyVersion: decision.policyVersion,
+    });
+  });
+}
+
 /** Revoke a relationship — prompt effect; access stops on next evaluation. */
 export async function revokeRelationship(
   deps: M03Deps,

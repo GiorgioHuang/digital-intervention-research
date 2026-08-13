@@ -7,6 +7,8 @@ export {
   proposeRelationship,
   approveRelationship,
   revokeRelationship,
+  pauseRelationship,
+  resumeRelationship,
   type M03Deps,
 } from './application/consent-commands.js';
 export {

@@ -16,7 +16,9 @@ import {
 import { createPermissionService } from '../src/application/permission-service.js';
 import {
   approveRelationship,
+  pauseRelationship,
   proposeRelationship,
+  resumeRelationship,
   recordConsentDecision,
   requireReConsent,
   revokeRelationship,
@@ -294,6 +296,147 @@ describe.skipIf(!dbAvailable)('M01+M03 identity, consent and permission (integra
     await expect(
       assignRole(m01, adminCtx, { userAccountId: participantId, role: 'Participant', confirmed: true }),
     ).rejects.toThrow(/already holds this role/i);
+  });
+
+
+  /**
+   * Pausing somebody, and the difference from ending them.
+   *
+   * 'Suspended' has been in the schema since M03 was written, the engine
+   * has always counted only Active relationships, and the participant's
+   * screen has carried the words "Access is paused" — with nothing able to
+   * set it. So a participant could only ever end access permanently, and
+   * getting it back meant the other person being proposed again.
+   */
+  describe('pausing access rather than ending it', () => {
+    let relationshipId: string;
+    let version: number;
+
+    const supporterMayContribute = () =>
+      m03.permissions.evaluate(
+        createRequestContext({ actor: { type: 'user', id: supporterId } }),
+        {
+          action: 'life-story.contribute',
+          resource: {
+            type: 'LifeStoryItem',
+            id: 'lsi_x',
+            state: 'Active',
+            protectedExistence: true,
+            ownerParticipantId: participantId,
+          },
+        },
+      );
+
+    beforeAll(async () => {
+      const proposed = await proposeRelationship(m03, ctxFor(adminId), {
+        participantId,
+        relatedActorId: supporterId,
+        relationshipType: 'FamilyMember',
+        permittedActions: ['life-story.contribute'],
+      });
+      relationshipId = proposed.relationshipId;
+      const rel = await pool.query<{ record_version: number }>(
+        `SELECT record_version FROM consent_permission.relationships WHERE id = $1`,
+        [relationshipId],
+      );
+      await approveRelationship(m03, ctxFor(participantId), {
+        relationshipId,
+        expectedVersion: rel.rows[0]!.record_version,
+        confirmed: true,
+      });
+      await recordConsentDecision(m03, ctxFor(participantId), {
+        participantId,
+        scope: 'supporter-contribution',
+        decision: 'Granted',
+        templateVersion: 'ct_v1',
+      });
+      version = (
+        await pool.query<{ record_version: number }>(
+          `SELECT record_version FROM consent_permission.relationships WHERE id = $1`,
+          [relationshipId],
+        )
+      ).rows[0]!.record_version;
+    });
+
+    const currentVersion = async (): Promise<number> =>
+      (
+        await pool.query<{ record_version: number }>(
+          `SELECT record_version FROM consent_permission.relationships WHERE id = $1`,
+          [relationshipId],
+        )
+      ).rows[0]!.record_version;
+
+    it('takes the access away while it is paused, and gives it back on resume', async () => {
+      expect((await supporterMayContribute()).outcome).toBe('Allow');
+
+      await pauseRelationship(m03, ctxFor(participantId), { relationshipId, expectedVersion: version });
+      // The engine looks for an ACTIVE relationship, so pausing removes
+      // the access without deleting anything.
+      const paused = await supporterMayContribute();
+      expect(paused.outcome).not.toBe('Allow');
+      expect(paused.reason).toBe('relationship-required');
+
+      await resumeRelationship(m03, ctxFor(participantId), {
+        relationshipId,
+        expectedVersion: await currentVersion(),
+        confirmed: true,
+      });
+      expect((await supporterMayContribute()).outcome).toBe('Allow');
+    });
+
+    /**
+     * The distinction the two controls exist to keep. Resuming something
+     * that was ENDED would quietly undo a permanent decision without the
+     * other person ever being proposed again.
+     */
+    it('refuses to resume access that was ended rather than paused', async () => {
+      const fresh = await proposeRelationship(m03, ctxFor(adminId), {
+        participantId,
+        relatedActorId: researcherId,
+        relationshipType: 'ResearchStaff',
+        permittedActions: ['life-story.contribute'],
+      });
+      const v = (
+        await pool.query<{ record_version: number }>(
+          `SELECT record_version FROM consent_permission.relationships WHERE id = $1`,
+          [fresh.relationshipId],
+        )
+      ).rows[0]!.record_version;
+      await revokeRelationship(m03, ctxFor(participantId), {
+        relationshipId: fresh.relationshipId,
+        expectedVersion: v,
+      });
+
+      await expect(
+        resumeRelationship(m03, ctxFor(participantId), {
+          relationshipId: fresh.relationshipId,
+          expectedVersion: v + 1,
+          confirmed: true,
+        }),
+      ).rejects.toThrow();
+    });
+
+    it('only the participant may pause their own circle', async () => {
+      await expect(
+        pauseRelationship(m03, ctxFor(researcherId), {
+          relationshipId,
+          expectedVersion: await currentVersion(),
+        }),
+      ).rejects.toMatchObject({ code: 'AUTHORISATION_DENIED' });
+    });
+
+    it('records the pause in the audit trail', async () => {
+      await pauseRelationship(m03, ctxFor(participantId), {
+        relationshipId,
+        expectedVersion: await currentVersion(),
+      });
+      const audited = await pool.query<{ count: string }>(
+        `SELECT count(*)::text AS count FROM governance_audit.audit_events
+          WHERE target_id = $1 AND source = 'M03.pauseRelationship'`,
+        [relationshipId],
+      );
+      expect(Number(audited.rows[0]?.count ?? '0')).toBeGreaterThanOrEqual(1);
+    });
   });
 
   it('unknown actor gets deny (no roles), and unauthenticated context denies', async () => {

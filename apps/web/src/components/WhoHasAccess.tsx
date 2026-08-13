@@ -190,10 +190,52 @@ export function WhoHasAccess({ session }: { session: Session }) {
               <small>Opens a conversation under Messages.</small>
             </p>
           )}
-          {LIVE.has(r.relationshipState) && (
+          {/*
+            Two ways to stop somebody, and the difference is stated rather
+            than left to the words "pause" and "end" to carry.
+            
+            Only ending was ever possible, and it is permanent: getting it
+            back means the other person being proposed again and this
+            participant approving again — a conversation with somebody they
+            may have stopped precisely because they did not want one this
+            week. A daughter travelling, a son they have fallen out with,
+            or simply wanting to think, all had to be spent as the
+            permanent option or not at all.
+          */}
+          {r.relationshipState === 'Suspended' ? (
             <p>
-              <button onClick={() => setEnding(r)}>End this person's access</button>
+              <strong>Paused.</strong> They cannot do any of this at the moment.{' '}
+              <button
+                onClick={() =>
+                  void run(
+                    () => api.resumeRelationship(session, r.relationshipId, r.recordVersion),
+                    'Access is on again.',
+                  )
+                }
+              >
+                Let them do this again
+              </button>{' '}
+              <button onClick={() => setEnding(r)}>Or end it for good</button>
             </p>
+          ) : (
+            LIVE.has(r.relationshipState) && (
+              <p>
+                <button
+                  onClick={() =>
+                    void run(
+                      () => api.pauseRelationship(session, r.relationshipId, r.recordVersion),
+                      'Paused. You can switch it back on whenever you want.',
+                    )
+                  }
+                >
+                  Pause this for now
+                </button>{' '}
+                <small>Stops it straight away. You can switch it back on yourself, whenever you want.</small>
+                <br />
+                <button onClick={() => setEnding(r)}>End this person&apos;s access</button>{' '}
+                <small>Permanent. To give it back, they would have to ask again.</small>
+              </p>
+            )
           )}
 
           {deciding?.relationshipId === r.relationshipId && (

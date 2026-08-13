@@ -1714,3 +1714,34 @@
   tests:
     - apps/api/test/session-store.integration.test.ts
   status: implemented
+- implementation_id: IMP-M03-PAUSE-RELATIONSHIP-001
+  module: M03
+  summary: >-
+    Another state that was enforced everywhere and writable nowhere. 'Suspended' has been in the
+    relationships CHECK constraint since M03 was written, the permission engine counts only Active
+    relationships when it looks for one, and the participant's own screen has carried the words
+    "Access is paused" and treated it as live - while the entire repository only ever wrote 'Active'
+    and 'Revoked'. So a participant's only way to stop somebody was to end it permanently, and getting
+    it back meant the other person being proposed again and the participant approving again: a
+    negotiation with somebody they may have stopped precisely because they did not want one this week.
+    A daughter travelling for a month, a son they have fallen out with, or simply wanting to think,
+    all had to be spent as the permanent option or not at all. Pausing uses relationship.revoke - the
+    lesser version of the same decision by the same person, owner-only so the engine decides whose
+    circle it is - and resuming uses relationship.approve, because that is the participant giving
+    access again and is confirmed for the same reason it was the first time. Resume accepts only
+    'Suspended' as a from-state: allowing it from 'Revoked' would quietly undo a permanent decision
+    without the other person ever being proposed again, which is the whole difference between the two
+    controls. Both buttons carry a sentence naming that difference rather than leaving the words
+    "pause" and "end" to imply it.
+  trace_ids: [ATR-003]
+  adr_ids: [ADR-018]
+  docs: ["design/DESIGN_DECISIONS.md D-74"]
+  code:
+    - packages/modules/m03-consent-permission/src/application/consent-commands.ts
+    - packages/modules/m03-consent-permission/src/contracts/index.ts
+    - apps/api/src/controllers.ts
+    - apps/web/src/api.ts
+    - apps/web/src/components/WhoHasAccess.tsx
+  tests:
+    - packages/modules/m03-consent-permission/test/m03.integration.test.ts
+  status: implemented

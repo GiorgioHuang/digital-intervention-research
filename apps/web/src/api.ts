@@ -292,6 +292,10 @@ export const api = {
   /** Version-bound: approving something that changed under you is refused, not merged. */
   approveRelationship: (s: Session, relationshipId: string, expectedVersion: number) =>
     post(s, `/v1/relationships/${relationshipId}/approve`, { expectedVersion, confirmed: true }),
+  pauseRelationship: (s: Session, relationshipId: string, expectedVersion: number) =>
+    post(s, `/v1/relationships/${relationshipId}/pause`, { expectedVersion }),
+  resumeRelationship: (s: Session, relationshipId: string, expectedVersion: number) =>
+    post(s, `/v1/relationships/${relationshipId}/resume`, { expectedVersion, confirmed: true }),
   inviteSupporter: (
     s: Session,
     input: { email: string; relationshipType: string; permittedActions: string[] },
