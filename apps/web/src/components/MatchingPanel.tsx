@@ -201,9 +201,9 @@ export function MatchingPanel({ session }: { session: Session }) {
           <button onClick={() => void loadCandidates()}>Show current suggestions</button>
         </p>
         {candidates !== null && (
-          <ul style={{ listStyle: 'none', padding: 0 }}>
+          <ul className="list-plain">
             {candidates.map((c) => (
-              <li key={c.candidateId} style={{ border: '1px solid currentColor', padding: '1rem', marginBlock: '0.75rem' }}>
+              <li key={c.candidateId} className="card">
                 {/* Explanation only — identity is never shown before mutual acceptance. */}
                 <p>{c.explanation}</p>
                 <p>

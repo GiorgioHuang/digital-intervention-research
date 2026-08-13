@@ -81,149 +81,172 @@ Mode / Theme Override（dark、高对比、字号、密度、简化）
 - **大字（≥24px 或 ≥18.66px 粗体）与 UI 组件边界/图形**：≥ 3:1
 - **焦点指示器**：与其两侧相邻颜色均 ≥ 3:1
 
-#### A.1.1 Light 主题
+#### A.1.1 Light 主题 — Calm Teal & Warm Sand
+
+> 主题由所有者定稿（2026-08-13）：温和、可信、理性的人文科技；不做传统医院系统，也不做未来感 AI 产品。
+> **下面两张表由 `apps/web/src/styles.css` 生成，不手抄。** 断言在 `apps/web/test/design-tokens.test.ts`，改动任一色值即失败。
+
+**两层色阶**是这套配色能同时成立的原因。所有者给的调色板里，有几支在页面底上落在 3–4.5:1 之间：作为边框合格，作为正文不合格。同一个色值两用，只能在「边框太淡」和「字看不清」之间二选一，两个都是错的。因此：
+
+| 层 | 门槛 | 用在哪 | 取值方式 |
+|---|---:|---|---|
+| 图形层 | 3:1 | 边框、图标、状态条、色块 | **原样使用所有者给的值** |
+| 文字层 | 4.5:1 | 任何要被读的字 | 同色**等比压暗**（HSL 色相与饱和度不变，只降明度） |
+
+等比压暗不是换一支颜色：`#287C78 → #267571` 的 hsl 由 177/51/32 变为 177/51/30。看得见颜色的那一层，完整保留了所有者的调色板。
 
 | 令牌 | 值 | 前景/背景组合 | 实测对比度 | 门槛 |
 |---|---|---|---:|---|
-| `--color-surface-page` | `#FFFFFF` | 基准背景 | — | — |
-| `--color-surface-raised` | `#F7F8FA` | 卡片/面板 | — | — |
-| `--color-surface-sunken` | `#EEF0F4` | 输入槽/代码块 | — | — |
-| `--color-surface-inverse` | `#1B1F26` | 反色条 | — | — |
-| `--color-surface-scrim` | `rgb(11 18 32 / 0.55)` | 对话框遮罩 | — | — |
-| `--color-text-primary` | `#16191F` | / page | **17.60:1** | 4.5 |
-| ″ | ″ | / raised | **16.57:1** | 4.5 |
-| ″ | ″ | / sunken | **15.43:1** | 4.5 |
-| ″ | ″ | / 任一语义 tint 底（最低 ai-bg） | **15.17:1** | 4.5 |
-| `--color-text-secondary` | `#4A5261` | / page | **7.86:1** | 4.5 |
-| ″ | ″ | / raised | **7.40:1** | 4.5 |
-| ″ | ″ | / 任一语义 tint 底（最低 safety-bg） | **6.77:1** | 4.5 |
-| `--color-text-inverse` | `#FFFFFF` | / surface-inverse | **16.53:1** | 4.5 |
-| `--color-text-link` | `#14448C` | / page | **9.39:1** | 4.5 |
-| ″ | ″ | / raised | **8.84:1** | 4.5 |
-| ″ | ″ | / 任一语义 tint 底（最低 safety-bg） | **8.09:1** | 4.5 |
-| `--color-border-subtle` | `#D5DAE2` | / page（**仅装饰**，1.40:1） | 1.40:1 | 免除¹ |
-| `--color-border-default` | `#767E8C` | / page | **4.09:1** | 3 |
-| ″ | ″ | / raised | **3.85:1** | 3 |
-| ″ | ″ | / 任一语义 tint 底（最低 safety-bg） | **3.52:1** | 3 |
-| `--color-border-strong` | `#414855` | / page | **9.20:1** | 3 |
-| `--color-action-primary-bg` | `#1A4FA0` | / page（组件边界） | **7.87:1** | 3 |
-| `--color-action-primary-fg` | `#FFFFFF` | / action-primary-bg | **7.87:1** | 4.5 |
-| `--color-action-primary-bg-hover` | `#123B7C` | 与 fg `#FFFFFF` | **10.81:1** | 4.5 |
-| `--color-action-primary-bg-active` | `#0D2E62` | 与 fg `#FFFFFF` | **13.16:1** | 4.5 |
-| `--color-action-secondary-fg` | `#14448C` | / page | **9.39:1** | 4.5 |
-| `--color-action-secondary-border` | `#1A4FA0` | / page | **7.87:1** | 3 |
-| `--color-action-secondary-bg-hover` | `#E8EEF8` | 与 secondary-fg | ≥8.2:1 | 4.5 |
-| `--color-focus-ring` | `#12233F` | / page | **15.70:1** | 3 |
-| ″ | ″ | / raised | **14.77:1** | 3 |
-| ″ | ″ | / 任一语义 tint 底（最低 safety-bg） | **13.51:1** | 3 |
-| ″ | ″ | / focus-halo（内侧相邻） | **15.70:1** | 3 |
-| `--color-focus-halo` | `#FFFFFF` | 见上 | — | — |
-| `--color-info-bg` | `#E8F1FA` | — | — | — |
-| `--color-info-fg` | `#0F4C81` | / info-bg | **7.76:1** | 4.5 |
-| ″ | ″ | / page | **8.86:1** | 4.5 |
-| `--color-info-border` | `#1A6BB0` | / page | **5.56:1** | 3 |
-| `--color-success-bg` | `#E6F4EB` | — | — | — |
-| `--color-success-fg` | `#14603A` | / success-bg | **6.69:1** | 4.5 |
-| ″ | ″ | / page | **7.60:1** | 4.5 |
-| `--color-success-border` | `#1F7A4C` | / page | **5.32:1** | 3 |
-| `--color-warning-bg` | `#FBF0DC` | — | — | — |
-| `--color-warning-fg` | `#6E4200` | / warning-bg | **7.62:1** | 4.5 |
-| ″ | ″ | / page | **8.60:1** | 4.5 |
-| `--color-warning-border` | `#A16207` | / page | **4.92:1** | 3 |
-| `--color-danger-bg` | `#FDECEC` | — | — | — |
-| `--color-danger-fg` | `#991B1B` | / danger-bg | **7.28:1** | 4.5 |
-| ″ | ″ | / page | **8.31:1** | 4.5 |
-| `--color-danger-border` | `#C02626` | / page | **5.92:1** | 3 |
-| `--color-danger-solid-bg` | `#9B1C1C` | 与 solid-fg | **8.15:1** | 4.5 |
-| `--color-danger-solid-fg` | `#FFFFFF` | 见上 | — | — |
-| `--color-safety-bg` | `#E9EDFA` | — | — | — |
-| `--color-safety-fg` | `#152A6B` | / safety-bg | **11.40:1** | 4.5 |
-| ″ | ″ | / page | **13.33:1** | 4.5 |
-| `--color-safety-border` | `#2B3F8F` | / page | **9.50:1** | 3 |
-| `--color-moderation-bg` | `#E3F2F2` | — | — | — |
-| `--color-moderation-fg` | `#0C5257` | / moderation-bg | **7.73:1** | 4.5 |
-| ″ | ″ | / page | **8.90:1** | 4.5 |
-| `--color-moderation-border` | `#12747B` | / page | **5.51:1** | 3 |
-| `--color-ai-bg` | `#EFEDF5` | — | — | — |
-| `--color-ai-fg` | `#46405C` | / ai-bg | **8.43:1** | 4.5 |
-| ″ | ″ | / page | **9.78:1** | 4.5 |
-| `--color-ai-border` | `#6A6285` | / page | **5.68:1** | 3 |
-| `--color-disabled-bg` | `#F0F1F4` | — | — | — |
-| `--color-disabled-fg` | `#5F6673` | / disabled-bg | **5.12:1** | 免除² |
-| `--color-disabled-border` | `#A8AEB9` | / page（2.23:1） | 2.23:1 | 免除² |
-
-¹ `border-subtle` 是**装饰性分隔线**，不承载任何状态或分组语义，不受 1.4.11 约束。**禁止**用它作为输入框边框、卡片的唯一分组线、或任何状态容器的描边——那些一律用 `border-default` 及以上。
-² 禁用态在 WCAG 1.4.3/1.4.11 中免除。本系统仍把前景做到 5.12:1，因为禁用按钮的文字必须能读懂"它为什么禁用"。见 §B.1.4。
+| `--color-surface-page` | `#F7F8F6` | 基准面 | — | — |
+| `--color-surface-raised` | `#FFFFFF` | 基准面 | — | — |
+| `--color-surface-sunken` | `#F0F3F1` | 基准面 | — | — |
+| `--color-surface-inverse` | `#243331` | 基准面 | — | — |
+| `--color-text-primary` | `#243331` | / page | **12.38:1** | 4.5 |
+| `--color-text-primary` | `#243331` | / raised | **13.18:1** | 4.5 |
+| `--color-text-primary` | `#243331` | / sunken | **11.80:1** | 4.5 |
+| `--color-text-secondary` | `#566461` | / page | **5.81:1** | 4.5 |
+| `--color-text-secondary` | `#566461` | / raised | **6.19:1** | 4.5 |
+| `--color-text-secondary` | `#566461` | / sunken | **5.54:1** | 4.5 |
+| `--color-text-link` | `#267571` | / page | **5.10:1** | 4.5 |
+| `--color-text-link` | `#267571` | / raised | **5.43:1** | 4.5 |
+| `--color-text-link` | `#267571` | / sunken | **4.86:1** | 4.5 |
+| `--color-text-inverse` | `#FFFFFF` | / surface-inverse | **13.18:1** | 4.5 |
+| `--color-border-subtle` | `#D8DEDB` | / page（**仅装饰**，不承载信息） | 1.28:1 | 免除¹ |
+| `--color-border-default` | `#74817E` | / page（图形，绝不当字用） | **3.80:1** | 3 |
+| `--color-border-strong` | `#566461` | / page | **5.81:1** | 3 |
+| `--color-action-primary-bg` | `#287C78` | / page（组件边界） | **4.64:1** | 3 |
+| `--color-action-primary-bg` | `#287C78` | 与 fg `#FFFFFF` | **4.95:1** | 4.5 |
+| `--color-action-primary-bg-hover` | `#216B67` | 与 fg `#FFFFFF` | **6.24:1** | 4.5 |
+| `--color-action-primary-bg-active` | `#1B5B57` | 与 fg `#FFFFFF` | **7.83:1** | 4.5 |
+| `--color-action-secondary-fg` | `#267571` | / raised | **5.43:1** | 4.5 |
+| `--color-action-secondary-border` | `#287C78` | / page | **4.64:1** | 3 |
+| `--color-action-secondary-bg-hover` | `#DDEEEB` | 与 secondary-fg（选中态底） | **4.53:1** | 4.5 |
+| `--color-focus-ring` | `#142523` | / page | **14.95:1** | 3 |
+| `--color-focus-ring` | `#142523` | / focus-halo（内侧相邻） | **15.93:1** | 3 |
+| `--color-focus-halo` | `#FFFFFF` | / 主按钮填充（外侧相邻） | **4.95:1** | 3 |
+| `--color-info-bg` | `#E8F0F7` | Info：中性告知 | — | — |
+| `--color-info-fg` | `#3E6F9E` | / info-bg | **4.59:1** | 4.5 |
+| `--color-info-fg` | `#3E6F9E` | / page | **4.96:1** | 4.5 |
+| `--color-info-border` | `#3E6F9E` | / page（图形） | **4.96:1** | 3 |
+| `--color-success-bg` | `#E7F3EC` | Success：已完成 | — | — |
+| `--color-success-fg` | `#2E7B59` | / success-bg | **4.50:1** | 4.5 |
+| `--color-success-fg` | `#2E7B59` | / page | **4.82:1** | 4.5 |
+| `--color-success-border` | `#2F7D5B` | / page（图形） | **4.69:1** | 3 |
+| `--color-warning-bg` | `#FBF1DC` | Warning：需注意，未阻断 | — | — |
+| `--color-warning-fg` | `#97641A` | / warning-bg | **4.51:1** | 4.5 |
+| `--color-warning-fg` | `#97641A` | / page | **4.75:1** | 4.5 |
+| `--color-warning-border` | `#B7791F` | / page（图形） | **3.42:1** | 3 |
+| `--color-danger-bg` | `#F9E8E7` | Error：已阻断 | — | — |
+| `--color-danger-fg` | `#B34848` | / danger-bg | **4.50:1** | 4.5 |
+| `--color-danger-fg` | `#B34848` | / page | **5.01:1** | 4.5 |
+| `--color-danger-border` | `#B84A4A` | / page（图形） | **4.79:1** | 3 |
+| `--color-safety-bg` | `#E6ECF4` | Safety：安全信号（非错误） | — | — |
+| `--color-safety-fg` | `#2A4470` | / safety-bg | **8.18:1** | 4.5 |
+| `--color-safety-fg` | `#2A4470` | / page | **9.13:1** | 4.5 |
+| `--color-safety-border` | `#2A4470` | / page（图形） | **9.13:1** | 3 |
+| `--color-moderation-bg` | `#E3F0EF` | Moderation：审核中 | — | — |
+| `--color-moderation-fg` | `#1A5451` | / moderation-bg | **7.40:1** | 4.5 |
+| `--color-moderation-fg` | `#1A5451` | / page | **8.11:1** | 4.5 |
+| `--color-moderation-border` | `#1A5451` | / page（图形） | **8.11:1** | 3 |
+| `--color-ai-bg` | `#F0EFF8` | AI：机器产出的标记 | — | — |
+| `--color-ai-fg` | `#6C6898` | / ai-bg | **4.52:1** | 4.5 |
+| `--color-ai-fg` | `#6C6898` | / page | **4.84:1** | 4.5 |
+| `--color-ai-border` | `#7773A8` | / page（图形） | **4.10:1** | 3 |
+| `--color-story-bg` | `#F5E9D8` | Story：Life Story 与意义内容 | — | — |
+| `--color-story-fg` | `#86633D` | / story-bg | **4.53:1** | 4.5 |
+| `--color-story-fg` | `#86633D` | / page | **5.10:1** | 4.5 |
+| `--color-story-border` | `#B18351` | / page（图形） | **3.16:1** | 3 |
+| `--color-community-bg` | `#E9F1EA` | Community：社区 | — | — |
+| `--color-community-fg` | `#52745A` | / community-bg | **4.55:1** | 4.5 |
+| `--color-community-fg` | `#52745A` | / page | **4.92:1** | 4.5 |
+| `--color-community-border` | `#6B9674` | / page（图形） | **3.16:1** | 3 |
+| `--color-matching-bg` | `#E9EFF4` | Matching：探索与选择 | — | — |
+| `--color-matching-fg` | `#4D6F8F` | / matching-bg | **4.55:1** | 4.5 |
+| `--color-matching-fg` | `#4D6F8F` | / page | **4.95:1** | 4.5 |
+| `--color-matching-border` | `#587FA3` | / page（图形） | **3.96:1** | 3 |
+| `--color-story-surface` | `#FCF8F2` | 与 text-primary（Life Story 区域底） | **12.46:1** | 4.5 |
+| `--color-danger-solid-bg` | `#A03F3F` | 与 `#FFFFFF` | **6.41:1** | 4.5 |
+| `--color-disabled-fg` | `#69706E` | / disabled-bg（本系统不豁免，§B.1.4） | **4.54:1** | 4.5 |
 
 #### A.1.2 Dark 主题
 
+> 所有者定调：本项目**不优先做完整深色模式**（使用者含长者与低数字信心人群；深色下边界、状态与低对比文字更难控制；研究表格与 Life Story 的图文更适合温暖浅色）。优先级给了 Light、高对比 Light 与低刺激模式。
+> 但深色模式**已经在产品里**——偏好面板有开关，系统 `prefers-color-scheme` 也会命中它。「不优先」不等于「可以是坏的」：留一套还配着旧蓝色的深色模式，会让选它的人看到另一个产品。所以按同一支 teal 重配，并交给同一个测试守。
+
+深色下把颜色**朝白色插值**变亮（浅色下是朝黑等比压暗）：色相角不变，饱和度自然下降——高饱和亮色在暗底上会晕。
+
 | 令牌 | 值 | 前景/背景组合 | 实测对比度 | 门槛 |
 |---|---|---|---:|---|
-| `--color-surface-page` | `#0E1116` | 基准背景 | — | — |
-| `--color-surface-raised` | `#161A21` | 卡片/面板 | — | — |
-| `--color-surface-sunken` | `#080A0E` | 输入槽 | — | — |
-| `--color-surface-inverse` | `#E9ECF2` | 反色条 | — | — |
-| `--color-surface-scrim` | `rgb(2 4 8 / 0.66)` | 对话框遮罩 | — | — |
-| `--color-text-primary` | `#E9ECF2` | / page | **15.98:1** | 4.5 |
-| ″ | ″ | / raised | **14.74:1** | 4.5 |
-| ″ | ″ | / 任一语义 tint 底（最低 success-bg） | **12.98:1** | 4.5 |
-| `--color-text-secondary` | `#A8B0BE` | / page | **8.66:1** | 4.5 |
-| ″ | ″ | / raised | **7.99:1** | 4.5 |
-| ″ | ″ | / 任一语义 tint 底（最低 success-bg） | **7.03:1** | 4.5 |
-| `--color-text-inverse` | `#0E1116` | / surface-inverse | **15.98:1** | 4.5 |
-| `--color-text-link` | `#9CC0FF` | / page | **10.26:1** | 4.5 |
-| ″ | ″ | / raised | **9.47:1** | 4.5 |
-| ″ | ″ | / 任一语义 tint 底（最低 success-bg） | **8.33:1** | 4.5 |
-| `--color-border-subtle` | `#2A3039` | / page（**仅装饰**，1.42:1） | 1.42:1 | 免除¹ |
-| `--color-border-default` | `#6D7683` | / page | **4.11:1** | 3 |
-| ″ | ″ | / raised | **3.80:1** | 3 |
-| ″ | ″ | / 任一语义 tint 底（最低 success-bg） | **3.34:1** | 3 |
-| `--color-border-strong` | `#99A2B0` | / page | **7.34:1** | 3 |
-| `--color-action-primary-bg` | `#7FB0FF` | / page（组件边界） | **8.61:1** | 3 |
-| `--color-action-primary-fg` | `#08101F` | / action-primary-bg | **8.65:1** | 4.5 |
-| `--color-action-primary-bg-hover` | `#A6C8FF` | 与 fg `#08101F` | **11.16:1** | 4.5 |
-| `--color-action-primary-bg-active` | `#C2DAFF` | 与 fg `#08101F` | **13.55:1** | 4.5 |
-| `--color-action-secondary-fg` | `#9CC0FF` | / page | **10.26:1** | 4.5 |
-| `--color-action-secondary-border` | `#7FB0FF` | / page | **8.61:1** | 3 |
-| `--color-action-secondary-bg-hover` | `#182231` | 与 secondary-fg | ≥9.1:1 | 4.5 |
-| `--color-focus-ring` | `#F2F6FF` | / page | **17.47:1** | 3 |
-| ″ | ″ | / raised | **16.12:1** | 3 |
-| ″ | ″ | / 任一语义 tint 底（最低 success-bg） | **14.19:1** | 3 |
-| ″ | ″ | / focus-halo（内侧相邻） | **18.63:1** | 3 |
-| `--color-focus-halo` | `#05070B` | 见上 | — | — |
-| `--color-info-bg` | `#10243A` | — | — | — |
-| `--color-info-fg` | `#A9CFF5` | / info-bg | **9.68:1** | 4.5 |
-| ″ | ″ | / page | **11.64:1** | 4.5 |
-| `--color-info-border` | `#4C8FD6` | / page | **5.59:1** | 3 |
-| `--color-success-bg` | `#0E2A1D` | — | — | — |
-| `--color-success-fg` | `#9FD9B7` | / success-bg | **9.57:1** | 4.5 |
-| ″ | ″ | / page | **11.78:1** | 4.5 |
-| `--color-success-border` | `#3D9E6B` | / page | **5.67:1** | 3 |
-| `--color-warning-bg` | `#2E2208` | — | — | — |
-| `--color-warning-fg` | `#F0CE8A` | / warning-bg | **10.31:1** | 4.5 |
-| ″ | ″ | / page | **12.52:1** | 4.5 |
-| `--color-warning-border` | `#C08A2E` | / page | **6.23:1** | 3 |
-| `--color-danger-bg` | `#331515` | — | — | — |
-| `--color-danger-fg` | `#F5AFAF` | / danger-bg | **9.24:1** | 4.5 |
-| ″ | ″ | / page | **10.48:1** | 4.5 |
-| `--color-danger-border` | `#D45C5C` | / page | **4.94:1** | 3 |
-| `--color-danger-solid-bg` | `#F5AFAF` | 与 solid-fg | **10.75:1** | 4.5 |
-| `--color-danger-solid-fg` | `#1A0808` | 见上 | — | — |
-| `--color-safety-bg` | `#131A33` | — | — | — |
-| `--color-safety-fg` | `#BCC9F5` | / safety-bg | **10.47:1** | 4.5 |
-| ″ | ″ | / page | **11.54:1** | 4.5 |
-| `--color-safety-border` | `#7186D6` | / page | **5.48:1** | 3 |
-| `--color-moderation-bg` | `#0B2628` | — | — | — |
-| `--color-moderation-fg` | `#9FD6D8` | / moderation-bg | **9.90:1** | 4.5 |
-| ″ | ″ | / page | **11.78:1** | 4.5 |
-| `--color-moderation-border` | `#3E9EA4` | / page | **5.97:1** | 3 |
-| `--color-ai-bg` | `#21202B` | — | — | — |
-| `--color-ai-fg` | `#C4BEDA` | / ai-bg | **8.98:1** | 4.5 |
-| ″ | ″ | / page | **10.56:1** | 4.5 |
-| `--color-ai-border` | `#857DA5` | / page | **4.93:1** | 3 |
-| `--color-disabled-bg` | `#171B22` | — | — | — |
-| `--color-disabled-fg` | `#8B93A1` | / disabled-bg | **5.58:1** | 免除² |
-| `--color-disabled-border` | `#3A414C` | / page（1.84:1） | 1.84:1 | 免除² |
+| `--color-surface-page` | `#000000` | 基准面 | — | — |
+| `--color-surface-raised` | `#1A2224` | 基准面 | — | — |
+| `--color-surface-sunken` | `#0C1113` | 基准面 | — | — |
+| `--color-surface-inverse` | `#E6ECEA` | 基准面 | — | — |
+| `--color-text-primary` | `#FFFFFF` | / page | **21.00:1** | 4.5 |
+| `--color-text-primary` | `#FFFFFF` | / raised | **16.18:1** | 4.5 |
+| `--color-text-primary` | `#FFFFFF` | / sunken | **19.00:1** | 4.5 |
+| `--color-text-secondary` | `#E9ECF2` | / page | **17.75:1** | 4.5 |
+| `--color-text-secondary` | `#E9ECF2` | / raised | **13.67:1** | 4.5 |
+| `--color-text-secondary` | `#E9ECF2` | / sunken | **16.06:1** | 4.5 |
+| `--color-text-link` | `#6FC3BC` | / page | **10.21:1** | 4.5 |
+| `--color-text-link` | `#6FC3BC` | / raised | **7.86:1** | 4.5 |
+| `--color-text-link` | `#6FC3BC` | / sunken | **9.24:1** | 4.5 |
+| `--color-text-inverse` | `#12181A` | / surface-inverse | **14.98:1** | 4.5 |
+| `--color-border-subtle` | `#2A3335` | / page（**仅装饰**，不承载信息） | 1.62:1 | 免除¹ |
+| `--color-border-default` | `#E9ECF2` | / page（图形，绝不当字用） | **17.75:1** | 3 |
+| `--color-border-strong` | `#FFFFFF` | / page | **21.00:1** | 3 |
+| `--color-action-primary-bg` | `#BBD4FF` | / page（组件边界） | **13.97:1** | 3 |
+| `--color-action-primary-bg` | `#BBD4FF` | 与 fg `#000000` | **13.97:1** | 4.5 |
+| `--color-action-primary-bg-hover` | `#55A9A3` | 与 fg `#000000` | **7.59:1** | 4.5 |
+| `--color-action-primary-bg-active` | `#74BCB7` | 与 fg `#000000` | **9.62:1** | 4.5 |
+| `--color-action-secondary-fg` | `#6FC3BC` | / raised | **7.86:1** | 4.5 |
+| `--color-action-secondary-border` | `#3A958F` | / page | **5.88:1** | 3 |
+| `--color-action-secondary-bg-hover` | `#16302E` | 与 secondary-fg（选中态底） | **6.82:1** | 4.5 |
+| `--color-focus-ring` | `#EEF6F4` | / page | **19.12:1** | 3 |
+| `--color-focus-ring` | `#EEF6F4` | / focus-halo（内侧相邻） | **18.19:1** | 3 |
+| `--color-focus-halo` | `#06090A` | / 主按钮填充（外侧相邻） | **13.29:1** | 3 |
+| `--color-info-bg` | `#13253A` | Info：中性告知 | — | — |
+| `--color-info-fg` | `#678EB3` | / info-bg | **4.50:1** | 4.5 |
+| `--color-info-fg` | `#678EB3` | / page | **6.10:1** | 4.5 |
+| `--color-info-border` | `#5A83AA` | / page（图形） | **5.26:1** | 3 |
+| `--color-success-bg` | `#122A20` | Success：已完成 | — | — |
+| `--color-success-fg` | `#5A987D` | / success-bg | **4.52:1** | 4.5 |
+| `--color-success-fg` | `#5A987D` | / page | **6.22:1** | 4.5 |
+| `--color-success-border` | `#4A8B6E` | / page（图形） | **5.21:1** | 3 |
+| `--color-warning-bg` | `#2C2209` | Warning：需注意，未阻断 | — | — |
+| `--color-warning-fg` | `#BA7E27` | / warning-bg | **4.55:1** | 4.5 |
+| `--color-warning-fg` | `#BA7E27` | / page | **6.10:1** | 4.5 |
+| `--color-warning-border` | `#B7791F` | / page（图形） | **5.77:1** | 3 |
+| `--color-danger-bg` | `#2E1817` | Error：已阻断 | — | — |
+| `--color-danger-fg` | `#C66E6E` | / danger-bg | **4.65:1** | 4.5 |
+| `--color-danger-fg` | `#C66E6E` | / page | **5.86:1** | 4.5 |
+| `--color-danger-border` | `#BD5A5A` | / page（图形） | **4.77:1** | 3 |
+| `--color-safety-bg` | `#16233A` | Safety：安全信号（非错误） | — | — |
+| `--color-safety-fg` | `#7796BD` | / safety-bg | **5.15:1** | 4.5 |
+| `--color-safety-fg` | `#7796BD` | / page | **6.88:1** | 4.5 |
+| `--color-safety-border` | `#6A8CB6` | / page（图形） | **6.04:1** | 3 |
+| `--color-moderation-bg` | `#102B2A` | Moderation：审核中 | — | — |
+| `--color-moderation-fg` | `#56A5A0` | / moderation-bg | **5.20:1** | 4.5 |
+| `--color-moderation-fg` | `#56A5A0` | / page | **7.29:1** | 4.5 |
+| `--color-moderation-border` | `#479C97` | / page（图形） | **6.47:1** | 3 |
+| `--color-ai-bg` | `#201F2E` | AI：机器产出的标记 | — | — |
+| `--color-ai-fg` | `#8682B2` | / ai-bg | **4.51:1** | 4.5 |
+| `--color-ai-fg` | `#8682B2` | / page | **5.85:1** | 4.5 |
+| `--color-ai-border` | `#7D79AB` | / page（图形） | **5.19:1** | 3 |
+| `--color-story-bg` | `#2A2117` | Story：Life Story 与意义内容 | — | — |
+| `--color-story-fg` | `#C9955C` | / story-bg | **5.98:1** | 4.5 |
+| `--color-story-fg` | `#C9955C` | / page | **7.94:1** | 4.5 |
+| `--color-story-border` | `#C08C53` | / page（图形） | **7.12:1** | 3 |
+| `--color-community-bg` | `#172519` | Community：社区 | — | — |
+| `--color-community-fg` | `#6E9B78` | / community-bg | **5.04:1** | 4.5 |
+| `--color-community-fg` | `#6E9B78` | / page | **6.62:1** | 4.5 |
+| `--color-community-border` | `#679070` | / page（图形） | **5.80:1** | 3 |
+| `--color-matching-bg` | `#16222C` | Matching：探索与选择 | — | — |
+| `--color-matching-fg` | `#678BAB` | / matching-bg | **4.51:1** | 4.5 |
+| `--color-matching-fg` | `#678BAB` | / page | **5.86:1** | 4.5 |
+| `--color-matching-border` | `#5F83A4` | / page（图形） | **5.27:1** | 3 |
+| `--color-story-surface` | `#211A12` | 与 text-primary（Life Story 区域底） | **17.20:1** | 4.5 |
+| `--color-danger-solid-bg` | `#C66E6E` | 与 `#1A0808` | **5.41:1** | 4.5 |
+| `--color-disabled-fg` | `#8A9491` | / disabled-bg（本系统不豁免，§B.1.4） | **5.12:1** | 4.5 |
 
 #### A.1.3 语义色的分工（Doc 20 §311，不得混用）
 
@@ -237,8 +260,35 @@ Mode / Theme Override（dark、高对比、字号、密度、简化）
 | **moderation** | 举报、审核决定、申诉 | 安全事务、danger |
 | **ai** | AI 参与标签、AI 草稿容器 | 表示 AI 输出的质量或置信度 |
 | disabled | 当前不可用的控件 | 权限不足的**隐藏**（受保护存在见 §E.9） |
+| **story** | Life Story、回忆卡片、引用、温和提示、空状态 | 主按钮；任何有状态要报的地方 |
+| **community** | 社区空间与其中的内容 | 参与度奖励、热度、鲜艳 Feed |
+| **matching** | 匹配建议与"还在挑"的阶段 | 已建立的连接（那是 connection＝主 teal） |
+| **connection** | 已建立且稳定的关系 | 匹配候选、待确认的关系 |
 
-**danger / safety / moderation 三者必须视觉可分且互不替代**：这是 Doc 20 §311 把 Safety 与 moderation 单列为语义族的原因。红=破坏性动作，**深蓝=安全（人身与福祉）**，青=审核（内容与行为规则）。深蓝与 info 蓝、action 蓝同属蓝族（safety-fg 与 info-fg 相互对比度仅 1.51:1），因此 Safety 的区分**主要靠图标形状与文字，颜色是次要线索**——这正是「颜色不得是唯一状态指示」在本系统中的具体后果，Safety 事务必须始终带 ⬡ 图标与「安全」字样。三者在灰度下靠图标形状（△ / ⬡ / ▢）与文字区分，见 §A.9 与 §B.1。
+**danger / safety / moderation 三者必须视觉可分且互不替代**：这是 Doc 20 §311 把 Safety 与 moderation 单列为语义族的原因。红=破坏性动作，**深蓝=安全（人身与福祉）**，深青=审核（内容与行为规则）。
+
+主色改成 teal 之后，这三支颜色**差点被改坏，而且是被"改对"的动作改坏的**。把每一支都按同一个门槛（4.5:1）压到刚好达标，色相能活下来，明度活不下来——所有颜色都落到同一档亮度上。第一版推导出来的结果：safety、info、matching 三支蓝互相只差 1.25:1；moderation 的描边色与主按钮**逐字节相同**；moderation 的文字色与链接色差 1.07:1。**这些全都通过了对比度测试**——对比度量的是「与背景」，一个字都没说「与兄弟颜色」。
+
+修正后 safety 回到明显更深的藏蓝（与 info 差 1.84:1），moderation 用比主按钮更深的青（与主按钮差 1.75:1），并新增一条断言：任意两个语义族不得共用色值，且没有任何一族可以等于主动作色——**一个状态不该长得像一个按钮**。
+
+即便如此，颜色在本系统里**始终是次要线索**：safety 与 info 仍同属蓝族，灰度下几乎无法区分。因此 Safety 事务必须始终带 ⬡ 图标与「安全」字样；三者在灰度下靠图标形状（△ / ⬡ / ▢）与文字区分，见 §A.9 与 §B.1。
+
+#### A.1.3b 区域色与语义色的关系（新增，2026-08-13）
+
+上表后四行是**区域色**，与前面的语义色**不是同一种东西**，混用会毁掉两者：
+
+- 语义色说的是「这件事处在什么状态」——它随时间变化，是给人**做判断**用的。
+- 区域色说的是「这块内容属于哪个部分」——它不随时间变化，是给人**认路**用的。
+
+**同时成立时，状态赢。** 一个人正在等安全审核，屏幕该告诉他的是这件事，不是他在哪个板块。所以区域色只出现在没有状态要报的地方：一条 Life Story 的引用、一个社区空间的介绍、一张匹配建议卡。
+
+三条具体后果：
+
+1. **Sand 绝不做按钮色。** 按钮的一致性比区域气氛重要——一个人学会「teal 的那个是主要动作」之后，不该在 Life Story 里重新学一遍。Sand 只做底、描边与引用条。
+2. **Matching 与 Connection 故意不同色。** 蓝＝还在挑，主 teal＝已经建立。它们是同一条路上前后两个不同的事实，用同一个颜色会让「已连接」看起来像「又一个候选」。
+3. **AI 只做标记，绝不铺满。** AI 蓝紫用于 AI Draft 标签、来源说明、建议卡的描边。AI 产出**不得**比参与者自己的内容拥有更强的视觉权威（Doc 19 §10）——把 AI 区域做成整片紫，等于用版面告诉人「机器说的更要紧」。
+
+**低刺激模式必须一起覆盖这四支。** 漏掉任何一个，选了「低刺激」的人仍会看到一片色块——而那正是他选它要躲开的东西。
 
 #### A.1.4 可见性色使用（Doc 20 §312）
 

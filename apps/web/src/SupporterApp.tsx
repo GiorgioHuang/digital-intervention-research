@@ -397,10 +397,10 @@ export function SupporterApp({ onExit }: { onExit: () => void }) {
           </button>
         </p>
         {mine !== null && (
-          <ul style={{ listStyle: 'none', padding: 0 }}>
+          <ul className="list-plain">
             {mine.length === 0 && <li>You have not submitted any contributions yet.</li>}
             {mine.map((c) => (
-              <li key={c.contributionId} style={{ border: '1px solid currentColor', padding: '0.5rem', marginBlock: '0.5rem' }}>
+              <li key={c.contributionId} className="card">
                 <p>{c.contentText}</p>
                 <p>State: {STATE_LABELS[c.contributionState] ?? c.contributionState}</p>
               </li>

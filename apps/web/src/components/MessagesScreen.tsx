@@ -141,9 +141,9 @@ export function MessagesScreen({
           {threads.length === 0 && (
             <p>You have no conversations yet. You can start one from your connections below.</p>
           )}
-          <ul style={{ listStyle: 'none', padding: 0 }}>
+          <ul className="list-plain">
             {threads.map((t) => (
-              <li key={t.threadId} style={{ marginBlock: '0.5rem' }}>
+              <li key={t.threadId}>
                 <button onClick={() => setActive(t)}>
                   Conversation with {nameOrGap(t.otherDisplayName)} (
                   {t.threadState === 'Active' ? 'ongoing' : t.threadState})
@@ -190,9 +190,9 @@ export function MessagesScreen({
               both said you are interested.
             </p>
           )}
-          <ul style={{ listStyle: 'none', padding: 0 }}>
+          <ul className="list-plain">
             {connections.map((c) => (
-              <li key={c.connectionId} style={{ marginBlock: '0.5rem' }}>
+              <li key={c.connectionId}>
                 {c.otherDisplayName} ({c.connectionState === 'Active' ? 'connected' : c.connectionState}){' '}
                 {c.connectionState === 'Active' && (
                   <>

@@ -152,11 +152,11 @@ export function ConsentPanel({ session, assistedBy }: { session: Session; assist
       {current === null && loadError === null && <LoadingState label="Loading your current choices…" />}
       {loadError !== null && <ErrorState error={loadError} />}
 
-      <ul style={{ listStyle: 'none', padding: 0 }}>
+      <ul className="list-plain">
         {SCOPES.map(({ scope, label, description, governs }) => {
           const state = current?.[scope];
           return (
-            <li key={scope} style={{ marginBlock: '1rem', border: '1px solid currentColor', padding: '1rem' }}>
+            <li key={scope} className="card">
               <h2>{label}</h2>
               <p>{description}</p>
               <p>
@@ -174,7 +174,7 @@ export function ConsentPanel({ session, assistedBy }: { session: Session; assist
                 not about to.
               */}
               {state?.decision === 'ReConsentRequired' && (
-                <div role="note" style={{ border: '2px solid currentColor', padding: '0.75rem' }}>
+                <div role="note" className="state state--warning">
                   <p>
                     <strong>The wording of this changed, so your agreement to it no longer stands.</strong> Until you
                     agree to the new wording, {governs.charAt(0).toLowerCase() + governs.slice(1)} — that has already
@@ -228,7 +228,7 @@ export function ConsentPanel({ session, assistedBy }: { session: Session; assist
               </button>{' '}
               <button onClick={() => setPendingWithdrawal(scope)}>Withdraw consent for "{label}"</button>
               {pendingWithdrawal === scope && (
-                <div role="alertdialog" aria-labelledby={`wd-${scope}`} style={{ marginTop: '0.5rem' }}>
+                <div role="alertdialog" aria-labelledby={`wd-${scope}`}>
                   <p id={`wd-${scope}`}>
                     After you withdraw, the platform stops using your information for this purpose. Research datasets
                     that are already locked are not rewritten, but no new data of yours is added to them.

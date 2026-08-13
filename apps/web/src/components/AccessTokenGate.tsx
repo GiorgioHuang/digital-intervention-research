@@ -30,7 +30,7 @@ export function AccessTokenGate() {
   if (!needed) return null;
 
   return (
-    <section role="alert" aria-labelledby="token-gate-heading" style={{ border: '0.15rem solid currentColor', padding: '1rem', marginBlock: '0.75rem' }}>
+    <section role="alert" aria-labelledby="token-gate-heading" className="state state--danger">
       <h2 id="token-gate-heading">This environment needs its access passphrase</h2>
       <p>
         The server refused that request because the browser did not send this environment's access passphrase. This is

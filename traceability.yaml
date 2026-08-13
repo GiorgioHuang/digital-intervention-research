@@ -1811,3 +1811,57 @@
     - apps/api/test/participant-journey.test.ts
     - apps/api/test/route-uniqueness.test.ts
   status: implemented
+- implementation_id: IMP-WEB-CALM-TEAL-WARM-SAND-THEME-001
+  module: WEB
+  summary: >-
+    The owner's visual direction - Calm Teal & Warm Sand - applied to a design system whose every
+    colour already carried a measured contrast ratio. Copying the palette in as given would have
+    broken half of it: measured against the surfaces it is actually used on, Warning #B7791F is
+    3.42:1, Sand #C9955C is 2.48:1 and Text Muted #74817E is 3.80:1 - each fine as a border, none of
+    them legible as text. A single value cannot be both, so the choice would have been between a
+    border too faint to see and words too faint to read, and both are wrong. Resolved by splitting
+    every family in two: the graphic tier (3:1, used for borders, icons, state bars) keeps the
+    owner's values exactly, and the text tier (4.5:1) darkens the same colour by uniform RGB scaling,
+    which leaves HSL hue and saturation untouched - #287C78 to #267571 is 177/51/32 to 177/51/30, the
+    owner's teal at a lower lightness rather than a different green. The layer people see as colour
+    is the owner's palette unchanged. The part worth recording is the damage the correct-looking move
+    nearly did. Deriving every colour to the same minimum leaves hue intact and flattens lightness,
+    so everything lands on one rung: the first derivation produced three blues (safety, info,
+    matching) 1.25:1 apart, a moderation border byte-identical to the primary button, and a
+    moderation text colour 1.07:1 from the link colour. All of it passed the contrast tests, because
+    contrast measures a colour against its background and says nothing about its siblings. Safety went
+    back to a deep navy and moderation to a teal deeper than the button, guarded by a new assertion
+    that no two families may share a value and none may equal the primary action colour - a state
+    must not look like a button. Two further pieces. DESIGN_SYSTEM.md has asked since v0.1 for the
+    contrast table to be asserted in a test, calling it the one automation gate the document
+    recommends; it had never been built, and re-palletising is precisely when it becomes
+    load-bearing, since none of the ratios true of the old blue are true of the new teal. It reads
+    the real stylesheet rather than a copy of the values, because a test holding its own colour table
+    would only be asserting that the same hex was typed twice. Scanning the components then turned up
+    23 inline styles - style={{ border '1px solid currentColor', padding '1rem' }} - drawing the
+    community spaces, matching suggestions, message threads and consent scopes as hand-rolled boxes
+    that never thicken to 3px in high contrast, never respond to the density preference, and take
+    their border colour from whatever text colour surrounds them. A stylesheet cannot see that, so
+    the test reads the component sources too. Dark mode is not a priority per the owner, but the
+    product already ships the toggle, so it was retuned to the same teal and held to the same test:
+    not a priority is not the same as allowed to be wrong.
+  trace_ids: [ATR-003]
+  adr_ids: [ADR-061, ADR-062]
+  docs:
+    - "design/DESIGN_DECISIONS.md D-77"
+    - "design/DESIGN_SYSTEM.md §A.1.1"
+    - "design/DESIGN_SYSTEM.md §A.1.2"
+    - "design/DESIGN_SYSTEM.md §A.1.3b"
+  code:
+    - apps/web/src/styles.css
+    - apps/web/src/components/CommunityPanel.tsx
+    - apps/web/src/components/MatchingPanel.tsx
+    - apps/web/src/components/ConsentPanel.tsx
+    - apps/web/src/components/MessagePanel.tsx
+    - apps/web/src/components/MessagesScreen.tsx
+    - apps/web/src/components/AccessTokenGate.tsx
+    - apps/web/src/components/StaffSafetyTriagePanel.tsx
+    - apps/web/src/SupporterApp.tsx
+  tests:
+    - apps/web/test/design-tokens.test.ts
+  status: implemented

@@ -224,9 +224,9 @@ export function CommunityPanel({ session }: { session: Session }) {
           <EmptyState title="There are no open communities yet" detail="When a new community opens, it will appear here." />
         )}
         {spaces !== null && spaces.length > 0 && (
-          <ul style={{ listStyle: 'none', padding: 0 }}>
+          <ul className="list-plain">
             {spaces.map((s) => (
-              <li key={s.spaceId} style={{ border: '1px solid currentColor', padding: '1rem', marginBlock: '0.75rem' }}>
+              <li key={s.spaceId} className="card">
                 <p>
                   <strong>{s.name}</strong>{' '}
                   {s.membershipState === 'Active' ? <span>(you are a member)</span> : <span>(not joined)</span>}
@@ -294,9 +294,9 @@ export function CommunityPanel({ session }: { session: Session }) {
             <EmptyState title="There are no posts in this community yet" detail="You can write the first one below." />
           )}
           {feed !== null && feed.length > 0 && (
-            <ul style={{ listStyle: 'none', padding: 0 }}>
+            <ul className="list-plain">
               {feed.map((p) => (
-                <li key={p.postId} style={{ border: '1px solid currentColor', padding: '1rem', marginBlock: '0.75rem' }}>
+                <li key={p.postId} className="card">
                   <p>{p.contentText}</p>
                   <p>
                     <small>
@@ -352,9 +352,9 @@ export function CommunityPanel({ session }: { session: Session }) {
             Only you can see a draft. Once it is published, members of that community can see it, and staff review it
             against the community rules.
           </p>
-          <ul style={{ listStyle: 'none', padding: 0 }}>
+          <ul className="list-plain">
             {drafts.map((p) => (
-              <li key={p.postId} style={{ border: '1px dashed currentColor', padding: '1rem', marginBlock: '0.75rem' }}>
+              <li key={p.postId} className="card card--draft">
                 <p>{p.contentText}</p>
                 <p>
                   <small>

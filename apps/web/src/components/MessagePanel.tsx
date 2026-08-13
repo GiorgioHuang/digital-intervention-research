@@ -103,9 +103,9 @@ export function MessagePanel({
         <button onClick={() => void loadHistory()}>Refresh message history</button>
       </p>
       {history !== null && history.length > 0 && (
-        <ol style={{ listStyle: 'none', padding: 0 }} aria-label="Message history">
+        <ol className="list-plain" aria-label="Message history">
           {history.map((m) => (
-            <li key={m.messageId} style={{ border: '1px solid currentColor', padding: '0.5rem', marginBlock: '0.5rem' }}>
+            <li key={m.messageId} className="card">
               <p>
                 <strong>{m.senderParticipantId === session.participantId ? 'You' : recipient.displayName}</strong>:{' '}
                 {m.contentText}

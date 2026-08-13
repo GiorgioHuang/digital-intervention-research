@@ -61,9 +61,9 @@ export function StaffSafetyTriagePanel({ session }: { session: StaffSession }) {
         <button onClick={() => void loadQueue()}>View signals waiting for triage</button>
       </p>
       {queue !== null && queue.length > 0 && (
-        <ul style={{ listStyle: 'none', padding: 0 }}>
+        <ul className="list-plain">
           {queue.map((i) => (
-            <li key={i.signalId} style={{ border: '1px solid currentColor', padding: '0.5rem', marginBlock: '0.5rem' }}>
+            <li key={i.signalId} className="card">
               <p>
                 [{i.severity}] {i.category} — {i.description} (source: {i.sourceType}, state: {i.signalState})
               </p>

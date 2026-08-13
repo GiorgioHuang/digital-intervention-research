@@ -11,8 +11,15 @@
   --density: 1;
 
   /* -- 排版 (§A.2) -- */
-  --type-family-ui: system-ui, -apple-system, 'PingFang SC', 'Noto Sans CJK SC',
-    'Microsoft YaHei', sans-serif;
+  /* 所有者推荐 Inter / Source Sans 3 / Atkinson Hyperlegible / Noto Sans。
+     这里按名字优先使用**本机已装**的那几支，但**不下载任何 Web 字体**
+     （§0.3 的硬约束，也是这批使用者的现实：低带宽、旧设备、离线）。
+     一次 woff2 往返换来的字形差异，抵不上首屏文字晚出现几秒——而"字还
+     没出来"对低数字信心的使用者读起来就是"坏了"。
+     没装这些字体的机器落到 system-ui：iOS/macOS 是 SF、Android 是 Roboto、
+     Windows 是 Segoe UI，三支都是人文无衬线，本来就符合所有者的方向。 */
+  --type-family-ui: Inter, 'Source Sans 3', 'Atkinson Hyperlegible', 'Noto Sans', system-ui,
+    -apple-system, 'PingFang SC', 'Noto Sans CJK SC', 'Microsoft YaHei', sans-serif;
   --type-family-mono: ui-monospace, SFMono-Regular, Menlo, 'Noto Sans Mono CJK SC', monospace;
 
   --type-size-0: 0.833rem;
@@ -53,10 +60,15 @@
   --space-9: calc(6rem * var(--density));
 
   /* -- 形状与描边 (§A.4) -- */
+  /* 所有者：圆角 8–12px，参与者卡片 12–16px，"圆角但不过度卡通"。
+     1rem = 18px（根字号 112.5%），所以下面三档在默认字号下分别是
+     9px / 11.25px / 13.5px。
+     上限卡在 13.5px 而不是 16px：§0.2 禁止 ≥16px 的大圆角卡片——参与者
+     是成年人，不是需要被哄的人。两条要求的交集是 12–13.5px，取 0.75rem。 */
   --radius-0: 0;
-  --radius-1: 0.25rem;
-  --radius-2: 0.5rem;
-  --radius-3: 0.75rem;
+  --radius-1: 0.5rem;    /* 控件：按钮、输入框、徽章外的小块 */
+  --radius-2: 0.625rem;  /* 卡片、面板、状态块 */
+  --radius-3: 0.75rem;   /* 参与者卡片、Life Story 区域 */
   --radius-pill: 999rem;
   --border-hairline: 1px;
   --border-default: 2px;
@@ -104,119 +116,185 @@
 }
 
 /* ---------- 2. 令牌：颜色 — Light（默认） (§A.1.1) ---------- */
+/* 主题 "Calm Teal & Warm Sand"（所有者定稿，2026-08-13）。
+   温和、可信、理性的人文科技：不做传统医院系统，也不做未来感 AI 产品。
+
+   两层色阶，是这份主题能同时"好看"和"看得清"的全部原因：
+
+     图形层（≥3:1）   边框、图标、结构条、色块  → 用所有者给的原值
+     文字层（≥4.5:1） 任何要被读的字            → 同色相加深后的值
+
+   文字层不是另换一个颜色，而是把同一个颜色**按 RGB 等比缩放**变暗：HSL
+   的色相与饱和度在等比缩放下完全不变，只有明度降低。所以 teal 文字仍然
+   是所有者那支 teal（#287C78 → #267571，hsl 177/51 完全一致，只有明度
+   32→30），不是"另一支更暗的绿"。
+
+   为什么必须分两层：所有者给的 Warning #B7791F 在页面底上是 3.42:1，
+   作为边框合格，作为字不合格（门槛 4.5）。**同一个色值既当边框又当正文，
+   要么边框太淡、要么字看不清**，二选一都错。分层之后两边都拿到对的值，
+   而看得见的那一层——边框、图标、状态条——原样保留了所有者的调色板。
+
+   实测值见每行注释，脚本 = design/DESIGN_SYSTEM.md §A.1.5，
+   断言 = apps/web/test/design-tokens.test.ts（改动任一色值即失败）。 */
 :root {
-  --color-surface-page: #ffffff;
-  --color-surface-raised: #f7f8fa;
-  --color-surface-sunken: #eef0f4;
-  --color-surface-inverse: #1b1f26;
-  --color-surface-scrim: rgb(11 18 32 / 0.55);
+  /* 页面是温和中性色，卡片是纯白：所有者的 Background / Surface 分工。
+     这与旧版相反（旧版页面纯白、卡片灰），是"轻量 SaaS"观感的来源。 */
+  --color-surface-page: #f7f8f6;
+  --color-surface-raised: #ffffff;
+  --color-surface-sunken: #f0f3f1;
+  --color-surface-inverse: #243331;
+  --color-surface-scrim: rgb(20 37 35 / 0.55);
 
-  --color-text-primary: #16191f;   /* 17.60:1 / page */
-  --color-text-secondary: #4a5261; /*  7.86:1 / page */
-  --color-text-inverse: #ffffff;   /* 16.53:1 / inverse */
-  --color-text-link: #14448c;      /*  9.39:1 / page */
+  --color-text-primary: #243331;   /* 12.38:1 / page，13.18:1 / raised */
+  --color-text-secondary: #566461; /*  5.81:1 / page，6.19:1 / raised */
+  --color-text-inverse: #ffffff;   /* 12.38:1 / inverse */
+  --color-text-link: #267571;      /*  5.10:1 / page，5.43:1 / raised */
 
-  --color-border-subtle: #d5dae2;  /* 装饰专用，1.40:1 */
-  --color-border-default: #767e8c; /*  4.09:1 / page */
-  --color-border-strong: #414855;  /*  9.20:1 / page */
+  --color-border-subtle: #d8dedb;  /* 装饰专用，1.28:1（所有者 Border） */
+  --color-border-default: #74817e; /*  3.80:1 / page — 仅图形，绝不当字 */
+  --color-border-strong: #566461;  /*  5.81:1 / page */
 
-  --color-action-primary-bg: #1a4fa0;        /* 7.87:1 / page */
-  --color-action-primary-fg: #ffffff;        /* 7.87:1 / bg   */
-  --color-action-primary-bg-hover: #123b7c;  /* 10.81:1 / fg  */
-  --color-action-primary-bg-active: #0d2e62; /* 13.16:1 / fg  */
-  --color-action-secondary-fg: #14448c;
-  --color-action-secondary-border: #1a4fa0;
-  --color-action-secondary-bg-hover: #e8eef8;
+  --color-action-primary-bg: #287c78;        /* 4.95:1 与白字（所有者 Primary 600） */
+  --color-action-primary-fg: #ffffff;
+  --color-action-primary-bg-hover: #216b67;  /* 6.24:1 与白字（所有者 Primary Hover） */
+  --color-action-primary-bg-active: #1b5b57; /* 7.83:1 与白字 */
+  --color-action-secondary-fg: #267571;      /* 5.43:1 / raised */
+  --color-action-secondary-border: #287c78;  /* 4.95:1 / raised */
+  --color-action-secondary-bg-hover: #ddeeeb; /* 所有者 Primary 100 */
 
-  --color-focus-ring: #12233f; /* ≥13.51:1 与任一 surface；15.70:1 与 halo */
+  --color-focus-ring: #142523; /* ≥13.9:1 与任一 surface 与 halo */
   --color-focus-halo: #ffffff;
 
-  --color-info-bg: #e8f1fa;
-  --color-info-fg: #0f4c81;        /* 7.76:1 / info-bg */
-  --color-info-border: #1a6bb0;    /* 5.56:1 / page */
-  --color-success-bg: #e6f4eb;
-  --color-success-fg: #14603a;     /* 6.69:1 / success-bg */
-  --color-success-border: #1f7a4c; /* 5.32:1 / page */
-  --color-warning-bg: #fbf0dc;
-  --color-warning-fg: #6e4200;     /* 7.62:1 / warning-bg */
-  --color-warning-border: #a16207; /* 4.92:1 / page */
-  --color-danger-bg: #fdecec;
-  --color-danger-fg: #991b1b;      /* 7.28:1 / danger-bg */
-  --color-danger-border: #c02626;  /* 5.92:1 / page */
-  --color-danger-solid-bg: #9b1c1c;
-  --color-danger-solid-fg: #ffffff; /* 8.15:1 */
-  --color-safety-bg: #e9edfa;
-  --color-safety-fg: #152a6b;      /* 11.40:1 / safety-bg */
-  --color-safety-border: #2b3f8f;  /* 9.50:1 / page */
-  --color-moderation-bg: #e3f2f2;
-  --color-moderation-fg: #0c5257;  /* 7.73:1 / moderation-bg */
-  --color-moderation-border: #12747b; /* 5.51:1 / page */
-  --color-ai-bg: #efedf5;
-  --color-ai-fg: #46405c;          /* 8.43:1 / ai-bg */
-  --color-ai-border: #6a6285;      /* 5.68:1 / page */
+  --color-info-bg: #e8f0f7;
+  --color-info-fg: #3e6f9e;        /* 4.59:1 / info-bg（所有者原值即达标） */
+  --color-info-border: #3e6f9e;    /* 4.96:1 / page */
+  --color-success-bg: #e7f3ec;
+  --color-success-fg: #2e7b59;     /* 4.50:1 / success-bg */
+  --color-success-border: #2f7d5b; /* 4.69:1 / page（所有者 Success） */
+  --color-warning-bg: #fbf1dc;
+  --color-warning-fg: #97641a;     /* 4.51:1 / warning-bg */
+  --color-warning-border: #b7791f; /* 3.42:1 / page（所有者 Warning） */
+  --color-danger-bg: #f9e8e7;
+  --color-danger-fg: #b34848;      /* 4.50:1 / danger-bg */
+  --color-danger-border: #b84a4a;  /* 4.79:1 / page（所有者 Error） */
+  --color-danger-solid-bg: #a03f3f;
+  --color-danger-solid-fg: #ffffff; /* 6.05:1 */
+  /* Safety 保持与 danger 不同的色族（D-8：安全事件不是错误）。这里用比
+     info 更深的蓝，与 Matching 的蓝拉开明度差。 */
+  --color-safety-bg: #e6ecf4;
+  --color-safety-fg: #2a4470;      /* 8.18:1 / safety-bg */
+  --color-safety-border: #2a4470;  /* 9.13:1 / page */
+  --color-moderation-bg: #e3f0ef;
+  --color-moderation-fg: #1a5451;  /* 7.40:1 / moderation-bg */
+  --color-moderation-border: #1a5451; /* 8.11:1 / page */
+  /* AI：低饱和蓝紫，**只做标记**，绝不铺满。Doc 19 §10 与所有者要求一致：
+     AI 产出不得比参与者自己的内容拥有更强的视觉权威。 */
+  --color-ai-bg: #f0eff8;
+  --color-ai-fg: #6c6898;          /* 4.52:1 / ai-bg */
+  --color-ai-border: #7773a8;      /* 4.10:1 / page（所有者 AI Accent） */
 
-  --color-disabled-bg: #f0f1f4;
-  --color-disabled-fg: #5f6673;    /* 5.12:1 / disabled-bg */
-  --color-disabled-border: #a8aeb9;
+  /* -- 区域强调色（所有者按功能区划分） -- */
+  /* Story：Life Story、回忆卡片、引用、温和提示、空状态。
+     Sand 绝不做主按钮色——按钮的一致性比区域气氛重要。 */
+  --color-story-bg: #f5e9d8;
+  --color-story-fg: #86633d;       /* 4.53:1 / story-bg */
+  --color-story-border: #b18351;   /* 3.16:1 / page（所有者 Sand 500 加深至门槛） */
+  --color-story-surface: #fcf8f2;  /* 所有者 Sand 50：Life Story 区域底 */
+  /* Community：主 teal 之上一点柔和绿。不做鲜艳社交 Feed。 */
+  --color-community-bg: #e9f1ea;
+  --color-community-fg: #52745a;   /* 4.55:1 / community-bg，4.92:1 / page */
+  --color-community-border: #6b9674; /* 3.16:1 / page（所有者 Community 加深至门槛） */
+  /* Matching 偏蓝＝探索与选择；Connection 回到主 teal＝关系已稳定。
+     两者故意不同色，因为它们是同一条路上前后两个不同的事实。 */
+  --color-matching-bg: #e9eff4;
+  --color-matching-fg: #4d6f8f;    /* 4.55:1 / matching-bg，4.95:1 / page */
+  --color-matching-border: #587fa3; /* 3.96:1 / page（所有者 Matching Accent） */
+
+  --color-disabled-bg: #f0f3f1;
+  --color-disabled-fg: #69706e;    /* 4.54:1 / disabled-bg */
+  --color-disabled-border: #b6bfbc;
 }
 
 /* ---------- 3. 令牌：颜色 — Dark (§A.1.2) ---------- */
-/* 两套写法并存：媒体查询（无 JS 也生效）+ 属性选择器（用户显式选择优先） */
+/* 所有者定调（2026-08-13）：这个项目**不优先做深色模式**。使用者包含长者
+   与低数字信心人群，深色下的边界、状态与低对比文字更难控制；研究表格与
+   Life Story 的照片和文字也更适合温暖浅色。优先级给了 Light、高对比 Light
+   与低刺激模式。
+
+   那为什么这里还有一整套？因为它**已经在了**——偏好面板有开关、系统
+   `prefers-color-scheme` 也会命中它。「不优先」不等于「可以是坏的」：留一
+   个跟着旧蓝色主题的深色模式，会让选了它的人看到另一个产品。所以按同一
+   支 teal 重新配色，并交给同一个对比度测试守。它不是这一版的重点，但它
+   不许是错的。
+
+   深色下把颜色**朝白色插值**变亮（浅色下是朝黑等比变暗）：色相角保持不变，
+   饱和度自然下降——这正是深色界面需要的，高饱和亮色在暗底上会晕。 */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
-    --color-surface-page: #0e1116;
-    --color-surface-raised: #161a21;
-    --color-surface-sunken: #080a0e;
-    --color-surface-inverse: #e9ecf2;
-    --color-surface-scrim: rgb(2 4 8 / 0.66);
+    --color-surface-page: #12181a;
+    --color-surface-raised: #1a2224;
+    --color-surface-sunken: #0c1113;
+    --color-surface-inverse: #e6ecea;
+    --color-surface-scrim: rgb(4 8 8 / 0.66);
 
-    --color-text-primary: #e9ecf2;   /* 15.98:1 / page */
-    --color-text-secondary: #a8b0be; /*  8.66:1 / page */
-    --color-text-inverse: #0e1116;
-    --color-text-link: #9cc0ff;      /* 10.26:1 / page */
+    --color-text-primary: #e6ecea;   /* 14.98:1 / page */
+    --color-text-secondary: #a9b5b2; /*  8.49:1 / page */
+    --color-text-inverse: #12181a;
+    --color-text-link: #6fc3bc;      /*  8.16:1 / page */
 
-    --color-border-subtle: #2a3039;
-    --color-border-default: #6d7683; /*  4.11:1 / page */
-    --color-border-strong: #99a2b0;  /*  7.34:1 / page */
+    --color-border-subtle: #2a3335;
+    --color-border-default: #616e6b; /*  3.00:1 / page */
+    --color-border-strong: #a5adab;  /*  7.00:1 / page */
 
-    --color-action-primary-bg: #7fb0ff;        /* 8.61:1 / page */
-    --color-action-primary-fg: #08101f;        /* 8.65:1 / bg */
-    --color-action-primary-bg-hover: #a6c8ff;
-    --color-action-primary-bg-active: #c2daff;
-    --color-action-secondary-fg: #9cc0ff;
-    --color-action-secondary-border: #7fb0ff;
-    --color-action-secondary-bg-hover: #182231;
+    --color-action-primary-bg: #3a958f;        /* 5.06:1 / page */
+    --color-action-primary-fg: #0a1112;        /* 5.33:1 / bg */
+    --color-action-primary-bg-hover: #55a9a3;
+    --color-action-primary-bg-active: #74bcb7;
+    --color-action-secondary-fg: #6fc3bc;
+    --color-action-secondary-border: #3a958f;
+    --color-action-secondary-bg-hover: #16302e;
 
-    --color-focus-ring: #f2f6ff; /* ≥14.19:1 与任一 surface；18.63:1 与 halo */
-    --color-focus-halo: #05070b;
+    --color-focus-ring: #eef6f4; /* ≥14.5:1 与任一 surface；15.4:1 与 halo */
+    --color-focus-halo: #06090a;
 
-    --color-info-bg: #10243a;
-    --color-info-fg: #a9cff5;
-    --color-info-border: #4c8fd6;
-    --color-success-bg: #0e2a1d;
-    --color-success-fg: #9fd9b7;
-    --color-success-border: #3d9e6b;
-    --color-warning-bg: #2e2208;
-    --color-warning-fg: #f0ce8a;
-    --color-warning-border: #c08a2e;
-    --color-danger-bg: #331515;
-    --color-danger-fg: #f5afaf;
-    --color-danger-border: #d45c5c;
-    --color-danger-solid-bg: #f5afaf;
+    --color-info-bg: #13253a;
+    --color-info-fg: #678eb3;
+    --color-info-border: #5a83aa;
+    --color-success-bg: #122a20;
+    --color-success-fg: #5a987d;
+    --color-success-border: #4a8b6e;
+    --color-warning-bg: #2c2209;
+    --color-warning-fg: #ba7e27;
+    --color-warning-border: #b7791f;
+    --color-danger-bg: #2e1817;
+    --color-danger-fg: #c66e6e;
+    --color-danger-border: #bd5a5a;
+    --color-danger-solid-bg: #c66e6e;
     --color-danger-solid-fg: #1a0808;
-    --color-safety-bg: #131a33;
-    --color-safety-fg: #bcc9f5;
-    --color-safety-border: #7186d6;
-    --color-moderation-bg: #0b2628;
-    --color-moderation-fg: #9fd6d8;
-    --color-moderation-border: #3e9ea4;
-    --color-ai-bg: #21202b;
-    --color-ai-fg: #c4beda;
-    --color-ai-border: #857da5;
+    --color-safety-bg: #16233a;
+    --color-safety-fg: #7796bd;
+    --color-safety-border: #6a8cb6;
+    --color-moderation-bg: #102b2a;
+    --color-moderation-fg: #56a5a0;
+    --color-moderation-border: #479c97;
+    --color-ai-bg: #201f2e;
+    --color-ai-fg: #8682b2;
+    --color-ai-border: #7d79ab;
 
-    --color-disabled-bg: #171b22;
-    --color-disabled-fg: #8b93a1;
-    --color-disabled-border: #3a414c;
+    --color-story-bg: #2a2117;
+    --color-story-fg: #c9955c;
+    --color-story-border: #c08c53;
+    --color-story-surface: #211a12;
+    --color-community-bg: #172519;
+    --color-community-fg: #6e9b78;
+    --color-community-border: #679070;
+    --color-matching-bg: #16222c;
+    --color-matching-fg: #678bab;
+    --color-matching-border: #5f83a4;
+
+    --color-disabled-bg: #1b2325;
+    --color-disabled-fg: #8a9491;
+    --color-disabled-border: #3d4749;
 
     /* dark 下阴影不可见：改用描边环作为浮层边界（≥3:1） */
     --elevation-1: 0 0 0 1px var(--color-border-default);
@@ -226,53 +304,63 @@
 }
 /* 用户显式选择 dark（与上方同值；属性选择器胜出于媒体查询默认） */
 :root[data-theme='dark'] {
-  --color-surface-page: #0e1116;
-  --color-surface-raised: #161a21;
-  --color-surface-sunken: #080a0e;
-  --color-surface-inverse: #e9ecf2;
-  --color-surface-scrim: rgb(2 4 8 / 0.66);
-  --color-text-primary: #e9ecf2;
-  --color-text-secondary: #a8b0be;
-  --color-text-inverse: #0e1116;
-  --color-text-link: #9cc0ff;
-  --color-border-subtle: #2a3039;
-  --color-border-default: #6d7683;
-  --color-border-strong: #99a2b0;
-  --color-action-primary-bg: #7fb0ff;
-  --color-action-primary-fg: #08101f;
-  --color-action-primary-bg-hover: #a6c8ff;
-  --color-action-primary-bg-active: #c2daff;
-  --color-action-secondary-fg: #9cc0ff;
-  --color-action-secondary-border: #7fb0ff;
-  --color-action-secondary-bg-hover: #182231;
-  --color-focus-ring: #f2f6ff;
-  --color-focus-halo: #05070b;
-  --color-info-bg: #10243a;
-  --color-info-fg: #a9cff5;
-  --color-info-border: #4c8fd6;
-  --color-success-bg: #0e2a1d;
-  --color-success-fg: #9fd9b7;
-  --color-success-border: #3d9e6b;
-  --color-warning-bg: #2e2208;
-  --color-warning-fg: #f0ce8a;
-  --color-warning-border: #c08a2e;
-  --color-danger-bg: #331515;
-  --color-danger-fg: #f5afaf;
-  --color-danger-border: #d45c5c;
-  --color-danger-solid-bg: #f5afaf;
+  --color-surface-page: #12181a;
+  --color-surface-raised: #1a2224;
+  --color-surface-sunken: #0c1113;
+  --color-surface-inverse: #e6ecea;
+  --color-surface-scrim: rgb(4 8 8 / 0.66);
+  --color-text-primary: #e6ecea;
+  --color-text-secondary: #a9b5b2;
+  --color-text-inverse: #12181a;
+  --color-text-link: #6fc3bc;
+  --color-border-subtle: #2a3335;
+  --color-border-default: #616e6b;
+  --color-border-strong: #a5adab;
+  --color-action-primary-bg: #3a958f;
+  --color-action-primary-fg: #0a1112;
+  --color-action-primary-bg-hover: #55a9a3;
+  --color-action-primary-bg-active: #74bcb7;
+  --color-action-secondary-fg: #6fc3bc;
+  --color-action-secondary-border: #3a958f;
+  --color-action-secondary-bg-hover: #16302e;
+  --color-focus-ring: #eef6f4;
+  --color-focus-halo: #06090a;
+  --color-info-bg: #13253a;
+  --color-info-fg: #678eb3;
+  --color-info-border: #5a83aa;
+  --color-success-bg: #122a20;
+  --color-success-fg: #5a987d;
+  --color-success-border: #4a8b6e;
+  --color-warning-bg: #2c2209;
+  --color-warning-fg: #ba7e27;
+  --color-warning-border: #b7791f;
+  --color-danger-bg: #2e1817;
+  --color-danger-fg: #c66e6e;
+  --color-danger-border: #bd5a5a;
+  --color-danger-solid-bg: #c66e6e;
   --color-danger-solid-fg: #1a0808;
-  --color-safety-bg: #131a33;
-  --color-safety-fg: #bcc9f5;
-  --color-safety-border: #7186d6;
-  --color-moderation-bg: #0b2628;
-  --color-moderation-fg: #9fd6d8;
-  --color-moderation-border: #3e9ea4;
-  --color-ai-bg: #21202b;
-  --color-ai-fg: #c4beda;
-  --color-ai-border: #857da5;
-  --color-disabled-bg: #171b22;
-  --color-disabled-fg: #8b93a1;
-  --color-disabled-border: #3a414c;
+  --color-safety-bg: #16233a;
+  --color-safety-fg: #7796bd;
+  --color-safety-border: #6a8cb6;
+  --color-moderation-bg: #102b2a;
+  --color-moderation-fg: #56a5a0;
+  --color-moderation-border: #479c97;
+  --color-ai-bg: #201f2e;
+  --color-ai-fg: #8682b2;
+  --color-ai-border: #7d79ab;
+  --color-story-bg: #2a2117;
+  --color-story-fg: #c9955c;
+  --color-story-border: #c08c53;
+  --color-story-surface: #211a12;
+  --color-community-bg: #172519;
+  --color-community-fg: #6e9b78;
+  --color-community-border: #679070;
+  --color-matching-bg: #16222c;
+  --color-matching-fg: #678bab;
+  --color-matching-border: #5f83a4;
+  --color-disabled-bg: #1b2325;
+  --color-disabled-fg: #8a9491;
+  --color-disabled-border: #3d4749;
   --elevation-1: 0 0 0 1px var(--color-border-default);
   --elevation-2: 0 0 0 1px var(--color-border-default), 0 4px 12px rgb(0 0 0 / 0.6);
   --elevation-3: 0 0 0 1px var(--color-border-strong), 0 10px 28px rgb(0 0 0 / 0.7);
@@ -288,28 +376,42 @@
 :root[data-density='standard'] { --density: 1; }
 :root[data-density='spacious'] { --density: 1.25; }
 
-/* 高对比：OS 信号作初始值，用户显式选择优先 */
+/* 高对比 Light：所有者列为比完整深色模式更值得优先的三种模式之一。
+   做法不是"换一套颜色"，而是把同一支 teal 继续压暗、把中性色推到两端，
+   让高对比与标准模式看起来仍是同一个产品——换掉色相会让切换的人以为
+   自己进错了系统。
+   OS 信号作初始值，用户显式选择优先。 */
 @media (prefers-contrast: more) {
   :root:not([data-contrast='standard']) {
+    --color-surface-page: #ffffff;
     --color-text-primary: #000000;
-    --color-text-secondary: #16191f;
-    --color-border-subtle: #414855;
-    --color-border-default: #16191f;
+    --color-text-secondary: #1b2624;
+    --color-text-link: #16504d;
+    --color-border-subtle: #566461;
+    --color-border-default: #1b2624;
     --color-border-strong: #000000;
-    --color-action-primary-bg: #0b2e6b;
-    --color-action-secondary-fg: #0b2e6b;
+    --color-action-primary-bg: #20625f;
+    --color-action-primary-bg-hover: #164543;
+    --color-action-primary-bg-active: #0e2c2b;
+    --color-action-secondary-fg: #16504d;
+    --color-action-secondary-border: #20625f;
     --border-default: 3px;
     --icon-stroke: 2.5;
   }
 }
 :root[data-contrast='high'] {
+  --color-surface-page: #ffffff;         /* 高对比下页面回到纯白，拉满与文字的差 */
   --color-text-primary: #000000;         /* 21.00:1 / #ffffff */
-  --color-text-secondary: #16191f;
-  --color-border-subtle: #414855;
-  --color-border-default: #16191f;
+  --color-text-secondary: #1b2624;       /* 15.85:1 / #ffffff */
+  --color-text-link: #16504d;            /*  8.15:1 / #ffffff */
+  --color-border-subtle: #566461;
+  --color-border-default: #1b2624;
   --color-border-strong: #000000;
-  --color-action-primary-bg: #0b2e6b;    /* 12.98:1 与 #ffffff 前景 */
-  --color-action-secondary-fg: #0b2e6b;
+  --color-action-primary-bg: #20625f;    /*  7.06:1 与白字 */
+  --color-action-primary-bg-hover: #164543;
+  --color-action-primary-bg-active: #0e2c2b;
+  --color-action-secondary-fg: #16504d;
+  --color-action-secondary-border: #20625f;
   --border-default: 3px;
   --icon-stroke: 2.5;
 }
@@ -328,7 +430,10 @@
 :root[data-simplify='on'] { --type-leading-normal: 1.8; }
 :root[data-simplify='on'] .optional { display: none; }
 
-/* 低刺激模式：去掉全部 tint 底，只留描边与文字 */
+/* 低刺激模式：去掉全部 tint 底，只留描边与文字。
+   所有者列为优先做的三种模式之一。新增的三个区域色（story/community/
+   matching）必须一起列进来——漏掉任何一个，选了"低刺激"的人仍会看到
+   一片色块，而那正是他选它要躲开的东西。 */
 :root[data-stimulation='low'] {
   --color-info-bg: var(--color-surface-page);
   --color-success-bg: var(--color-surface-page);
@@ -337,6 +442,10 @@
   --color-safety-bg: var(--color-surface-page);
   --color-moderation-bg: var(--color-surface-page);
   --color-ai-bg: var(--color-surface-page);
+  --color-story-bg: var(--color-surface-page);
+  --color-story-surface: var(--color-surface-page);
+  --color-community-bg: var(--color-surface-page);
+  --color-matching-bg: var(--color-surface-page);
 }
 
 /* ---------- 5. 基础排版与文档 ---------- */
@@ -389,7 +498,16 @@ code, kbd, samp {
   padding-inline: var(--space-1);
   border-radius: var(--radius-1);
 }
-a { color: var(--color-text-link); }
+/* 下划线是必需的，不是风格选择。实测：链接色 #267571 与正文色 #243331 的
+   对比只有 2.43:1，低于 WCAG 1.4.1 要求的 3:1——也就是说**在一段正文里，
+   只靠颜色分不出哪几个字是链接**。旧的蓝色链接也从未去掉下划线，靠的是
+   浏览器默认值；写成显式声明，是为了下一个想"让它干净一点"的人先看到
+   这句话。要去掉下划线，得先把链接色改到与正文差 3:1 以上。 */
+a {
+  color: var(--color-text-link);
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
 
 /* ---------- 6. 应用外壳与布局 ---------- */
 .app-shell {
@@ -481,7 +599,9 @@ summary {
   padding: var(--space-2) var(--space-4);
   border-radius: var(--radius-1);
   border: var(--border-default) solid var(--color-action-secondary-border);
-  background-color: var(--color-surface-page);
+  /* raised 而不是 page：页面底现在是温和中性色（#F7F8F6），按钮取页面底
+     会在卡片上变成一块比卡片脏的灰。白底按钮在两种底上都读作"控件"。 */
+  background-color: var(--color-surface-raised);
   color: var(--color-action-secondary-fg);
   font-weight: var(--type-weight-semibold);
   text-align: start;
@@ -736,6 +856,11 @@ main ul:not([class]) > li { max-width: var(--measure-default); }
 .state__detail { margin-block-start: var(--space-3); font-size: var(--type-size-1); }
 
 .state--neutral { background-color: var(--color-surface-raised); color: var(--color-text-secondary); border-inline-start-color: var(--color-border-default); }
+/* 区域色（所有者按功能区划分）。它们与语义色**不是一回事**：语义色说的是
+   "这件事处在什么状态"，区域色说的是"这块内容属于哪个部分"。所以区域色
+   只用在没有状态要报的地方——一条 Life Story 的引用、一个社区空间的介绍、
+   一张匹配建议卡。任何时候某样东西同时有状态和区域，状态赢：一个人正在
+   等安全审核，屏幕该告诉他的是这件事，不是他在哪个板块。 */
 .state--info,       .badge--info       { background-color: var(--color-info-bg);       color: var(--color-info-fg);       border-inline-start-color: var(--color-info-border); }
 .state--success,    .badge--success    { background-color: var(--color-success-bg);    color: var(--color-success-fg);    border-inline-start-color: var(--color-success-border); }
 .state--warning,    .badge--warning    { background-color: var(--color-warning-bg);    color: var(--color-warning-fg);    border-inline-start-color: var(--color-warning-border); }
@@ -744,6 +869,26 @@ main ul:not([class]) > li { max-width: var(--measure-default); }
 .state--moderation, .badge--moderation { background-color: var(--color-moderation-bg); color: var(--color-moderation-fg); border-inline-start-color: var(--color-moderation-border); }
 .state--ai,         .badge--ai         { background-color: var(--color-ai-bg);         color: var(--color-ai-fg);         border-inline-start-color: var(--color-ai-border); }
 .state--draft,      .badge--draft      { background-color: var(--color-surface-sunken); color: var(--color-text-secondary); border-inline-start-color: var(--color-border-strong); }
+.state--story,      .badge--story      { background-color: var(--color-story-bg);      color: var(--color-story-fg);      border-inline-start-color: var(--color-story-border); }
+.state--community,  .badge--community  { background-color: var(--color-community-bg);  color: var(--color-community-fg);  border-inline-start-color: var(--color-community-border); }
+.state--matching,   .badge--matching   { background-color: var(--color-matching-bg);   color: var(--color-matching-fg);   border-inline-start-color: var(--color-matching-border); }
+/* Connection 回到主 teal：匹配是"在挑"，连接是"已经建立"。用同一支主色
+   表示"这段关系已经稳定"，与导航当前项、主按钮同色，是有意的——它们说的
+   是同一件事：这里是确定的。 */
+.state--connection, .badge--connection { background-color: var(--color-action-secondary-bg-hover); color: var(--color-action-secondary-fg); border-inline-start-color: var(--color-action-primary-bg); }
+
+/* Life Story 区域底：比页面更暖的奶白，用于承载回忆、引用与照片。
+   只做背景，不做前景——sand 是全系统最暖也最浅的颜色，最容易被拿去写字。 */
+.zone-story {
+  background-color: var(--color-story-surface);
+  border: var(--border-hairline) solid var(--color-story-border);
+  border-radius: var(--radius-3);
+  padding: var(--space-5);
+  margin-block: var(--space-5);
+}
+/* 参与者卡片：更大的圆角与更多留白（所有者：参与者与 Life Story 更温暖，
+   研究工作区信息密度更高）。仍在 §0.2 的 16px 上限之内。 */
+main:not([data-workspace='staff']) .card { border-radius: var(--radius-3); }
 
 /* 骨架：绝不模仿徽章/按钮/对勾的形状 (§E.2) */
 .skeleton {
@@ -754,14 +899,26 @@ main ul:not([class]) > li { max-width: var(--measure-default); }
 }
 
 /* ---------- 11. 卡片、引用、对话框 ---------- */
+/* 卡片描边从 2px border-default 降为 1px border-subtle：所有者要的"轻量、
+   留白、边框优先于阴影"。这**不是**放松无障碍——WCAG 1.4.11 的 3:1 管的是
+   可交互组件的边界，卡片边框是装饰性分隔，卡片里每一个控件仍然是 2px 的
+   border-default。把两者分开之后，控件比容器重，视觉层级才和操作层级一致；
+   之前所有东西都是 2px，屏幕上没有一处比另一处更要紧。 */
 .card {
-  border: var(--border-default) solid var(--color-border-default);
+  border: var(--border-hairline) solid var(--color-border-subtle);
   border-radius: var(--radius-2);
-  padding: var(--space-4);
+  padding: var(--space-5);
   margin-block: var(--space-4);
   background-color: var(--color-surface-raised);
   box-shadow: var(--elevation-0); /* 内容卡片不抬升 */
 }
+
+/* 草稿卡片：虚线边框（社区里"还没发出去的帖子"）。形状是第二通道——
+   卡片上同时有文字说明它是草稿，虚线只是让它在一列卡片里先被看见。 */
+.card--draft { border-style: dashed; border-color: var(--color-border-default); }
+
+/* 无符号列表。取代散落在各组件里的 style={{ listStyle:'none', padding:0 }}。 */
+.list-plain { list-style: none; padding-inline-start: 0; }
 
 blockquote {
   border-inline-start: var(--border-emphasis) solid var(--color-border-strong);
@@ -775,7 +932,8 @@ blockquote {
   border-radius: var(--radius-2);
   padding: var(--space-5);
   margin-block: var(--space-4);
-  background-color: var(--color-surface-page);
+  /* raised：对话框浮在页面之上，取 page 会与背景同色，只剩边框区分。 */
+  background-color: var(--color-surface-raised);
   box-shadow: var(--elevation-2);
   z-index: var(--layer-dialog);
   max-width: var(--measure-narrow);
@@ -851,7 +1009,8 @@ blockquote {
   border: var(--border-emphasis) solid var(--color-border-strong);
   border-radius: var(--radius-2);
   padding: var(--space-4);
-  background-color: var(--color-surface-page);
+  /* 与对话框同理：浮层取 raised，否则与页面同色，只剩边框区分。 */
+  background-color: var(--color-surface-raised);
   box-shadow: var(--elevation-2);
 }
 /* 不加遮罩、也不声明 aria-modal：在它后面点一下就是「人还在」，
