@@ -185,6 +185,43 @@ export function AccountsAndRoles({ session }: { session: StaffSession }) {
             <h3>
               {a.displayName} {a.actorType === 'service-account' && <span>(service account)</span>}
             </h3>
+            {/*
+              What somebody may do, read at a glance.
+
+              This card used to open straight into the controls: a suspend
+              button, a role dropdown, a grant button, then the roles. Six
+              colleagues meant six copies of a role-granting form, and the
+              question the screen exists to answer — who holds what — had
+              to be dug out from between them. The facts come first now and
+              the controls sit behind one disclosure per person, which
+              removes no capability: every button is still here, and still
+              in the DOM for anything reading the page.
+            */}
+            <p className="account-roles">
+              {active.length === 0 ? (
+                <span className="badge badge--draft">
+                  <span aria-hidden="true">○</span> No role in force
+                </span>
+              ) : (
+                active.map((r) => (
+                  <span key={r.roleAssignmentId} className="badge badge--info">
+                    <span aria-hidden="true">●</span> {r.role}
+                    {r.researchProjectId === null ? '' : ' · one project only'}
+                    {r.expiresAt === null ? '' : ` · ends ${new Date(r.expiresAt).toLocaleDateString()}`}
+                  </span>
+                ))
+              )}
+              {a.accountState === 'Suspended' && (
+                <span className="badge badge--warning">
+                  <span aria-hidden="true">△</span> Suspended
+                </span>
+              )}
+              {a.hasSignIn === false && (
+                <span className="badge badge--warning">
+                  <span aria-hidden="true">△</span> Nobody can sign in as this
+                </span>
+              )}
+            </p>
             <p>
               <small>{a.userAccountId}</small>
             </p>
@@ -194,6 +231,8 @@ export function AccountsAndRoles({ session }: { session: StaffSession }) {
                 action is refused.
               </p>
             )}
+            <details className="account-controls">
+              <summary>Change what {a.displayName} may do</summary>
             {/*
               An account nobody can sign in as. Every account made before
               Sign in with Google is in this state — with its roles, its
@@ -320,6 +359,7 @@ export function AccountsAndRoles({ session }: { session: StaffSession }) {
                 </li>
               ))}
             </ul>
+            </details>
           </article>
         );
       })}

@@ -693,6 +693,38 @@ main[data-workspace='staff'] article {
   background-color: var(--color-surface-raised);
 }
 
+/* 「谁持有什么」要能一眼扫过。角色排成一行徽章，而不是一份带日期与授予人的
+   清单——那些细节属于展开之后。徽章之间要能换行：一个人可能有三四个角色。 */
+.account-roles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  max-width: none;
+  margin-block: var(--space-3);
+}
+
+/* 每个人一个折叠区，装着改变他权限的全部控件。
+   **折叠不是隐藏能力**：按钮全都还在 DOM 里，读屏与测试照样找得到，只是不再
+   把六份「授予角色」表单同时铺在一屏上，把这块屏真正要回答的问题——谁持有
+   什么——埋在中间。 */
+.account-controls {
+  margin-block-start: var(--space-4);
+  border-block-start: var(--border-hairline) solid var(--color-border-subtle);
+  padding-block-start: var(--space-3);
+}
+.account-controls > summary {
+  /* summary 在全局规则里已经是 44px 的按钮外观；这里只把它拉成整行左对齐，
+     并去掉边框，让它读作「展开」而不是又一个动作按钮。 */
+  inline-size: 100%;
+  border-color: transparent;
+  padding-inline: 0;
+  font-weight: var(--type-weight-medium);
+}
+.account-controls > summary::marker,
+.account-controls > summary::-webkit-details-marker {
+  color: var(--color-action-secondary-fg);
+}
+
 /* 队列本身也分列。1920px 下四条协议版本原本挤在一条 440px 的柱子里，右边
    空着一千一百像素——「桌面版」如果只是把导航搬到左边，队列还是一条长带，
    那等于没做。 */

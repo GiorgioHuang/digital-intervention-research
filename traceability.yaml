@@ -2150,3 +2150,31 @@
   tests:
     - apps/web/test/design-tokens.test.ts
   status: implemented
+- implementation_id: IMP-WEB-ACCOUNTS-CARD-SUMMARY-001
+  module: WEB
+  summary: >-
+    Accounts and roles rebuilt as a scannable card list on the owner's report that listing everything
+    was unreadable. Looking first showed the cards already existed - the previous round's generic
+    staff rules had turned these articles into a three-column card grid - so the complaint was not
+    about layout. It was about order: each card opened straight into its controls, a suspend button
+    and its explanation, a role dropdown, a grant button, and only then what the person actually
+    holds. Six colleagues meant six identical copies of a role-granting form with the answer to the
+    screen's own question - who holds what - buried between them. The card now leads with the facts:
+    name, the roles in force as marked badges, a badge for suspended or for an account nobody can
+    sign in as, then the identifier. Everything that changes a person's access moved into one
+    disclosure per person. Folding is not hiding: every control is still in the document and still
+    reachable by name, which the tests assert directly, because a disclosure that removed capability
+    would be a worse screen rather than a tidier one. One near-miss worth recording: the screenshot
+    showed "- undefined" in the waiting-to-be-claimed list, which looked like a defect; the server
+    projection always sends displayName as ?? null, so the component's === null check is right and
+    the fixture I had written was missing the key. No code was changed for it.
+  trace_ids: [ATR-003]
+  adr_ids: [ADR-061, ADR-062]
+  docs:
+    - "design/DESIGN_DECISIONS.md D-87"
+  code:
+    - apps/web/src/components/AccountsAndRoles.tsx
+    - apps/web/src/styles.css
+  tests:
+    - apps/web/test/accounts-and-roles.test.tsx
+  status: implemented

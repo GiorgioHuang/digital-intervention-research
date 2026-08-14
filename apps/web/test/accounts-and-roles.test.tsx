@@ -152,4 +152,51 @@ describe('accounts and roles', () => {
      */
     expect(screen.getByText(/see nothing but their own account/i)).toBeTruthy();
   });
+
+  /**
+   * The card has to answer "who holds what" before it offers to change it.
+   *
+   * It used to open straight into the controls — suspend, a role
+   * dropdown, a grant button — so six colleagues meant six copies of a
+   * role-granting form with the roles themselves buried underneath. What
+   * this asserts is the order and the shape: the roles read as marked
+   * badges near the top, and the controls live inside a disclosure.
+   */
+  it('shows what somebody holds as badges, before any control', async () => {
+    stubFetch([role({ role: 'ResearchApprover' })]);
+    render(<AccountsAndRoles session={session} />);
+    await act(async () => {});
+    const card = screen.getByRole('article', { name: 'Account Researcher Rae' });
+    const badge = [...card.querySelectorAll('.badge')].find((b) => b.textContent?.includes('ResearchApprover'));
+    expect(badge, 'the role is not shown as a badge').toBeTruthy();
+    const details = card.querySelector('details');
+    expect(details, 'the controls are not behind a disclosure').not.toBeNull();
+    /* Order matters: the badge must come before the disclosure, or the
+       facts are underneath the machinery again. */
+    expect(badge!.compareDocumentPosition(details!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  /**
+   * Folding is not hiding. Every control that existed before is still in
+   * the document and still reachable by name — a disclosure that removed
+   * capability would be a worse screen, not a tidier one.
+   */
+  it('keeps every control reachable once folded away', async () => {
+    stubFetch([role()]);
+    render(<AccountsAndRoles session={session} />);
+    await act(async () => {});
+    for (const name of [/Suspend this account/, /Give this role/, /Take back this role/]) {
+      expect(screen.getByRole('button', { name }), `${name} has gone`).toBeTruthy();
+    }
+    expect(screen.getByLabelText('Give a role')).toBeTruthy();
+  });
+
+  /** An account with no role in force says so, rather than showing nothing. */
+  it('marks an account that holds nothing', async () => {
+    stubFetch([]);
+    const { container } = render(<AccountsAndRoles session={session} />);
+    await act(async () => {});
+    const badge = [...container.querySelectorAll('.badge')].find((b) => /No role in force/.test(b.textContent ?? ''));
+    expect(badge, 'an account with no role must still say so').toBeTruthy();
+  });
 });
