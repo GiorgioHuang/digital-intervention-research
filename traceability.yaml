@@ -1951,3 +1951,43 @@
     - apps/web/test/design-tokens.test.ts
     - apps/web/test/display-preferences.test.tsx
   status: implemented
+- implementation_id: IMP-WEB-STATUS-VOCABULARY-001
+  module: WEB
+  summary: >-
+    The owner's status-colour rules applied to the screens, and one claim of mine corrected on the
+    way. I had said Delivery Unknown was probably showing as a red error; checking found that no
+    status anywhere carries any colour at all - every one of them is a bare sentence, while the
+    owner's brief asks for a status to be icon, words and colour together. The wording itself was
+    already right (Doc 20 section 161: Provider Accepted means the delivery service took it, not that
+    a person received it); what was wrong is that a screenful of identical grey sentences makes the
+    reader parse each one to find out whether anything needs them, which is the work a status exists
+    to save. Now one table decides tone, mark and words for every state, with each of the owner's
+    rules held by an assertion. Provider Accepted and Delivered do not share a green - accepted is
+    in-progress blue and green is kept for the single state where a person actually received
+    something, because those two are the most confusable and the confusion runs the dangerous way.
+    Delivery Unknown is warning and never danger, because "we do not know" and "it failed" are
+    different facts and showing the first as the second tells somebody their message definitely did
+    not arrive when nobody can say. Draft, Pending and Expired are quiet - none of them is a fault.
+    Blocked is the low-saturation red the palette already uses, drawn as a line rather than a filled
+    panel, because it is a boundary somebody set on purpose rather than an alarm. Wiring it up found
+    a real defect: the supporter's conversation view printed the raw state name, so a supporter read
+    the literal string "Provider Accepted" - exactly the reading the wording table exists to prevent
+    - while the participant's own screen had been careful about it from the start. Two people in one
+    conversation must not be told different things about whether a message arrived. One rule is
+    deliberately not implemented: the owner asks for a confirmed SafetyEvent to use Error, and
+    DESIGN_SYSTEM section A.1.3 with D-8 forbid danger for safety matters, safety having its own
+    family precisely because a safety event is not a system error. That is a direct conflict in
+    safety semantics and is left for the owner to rule on rather than settled quietly.
+  trace_ids: [ATR-003]
+  adr_ids: [ADR-061, ADR-062]
+  docs:
+    - "design/DESIGN_DECISIONS.md D-81"
+  code:
+    - apps/web/src/status.tsx
+    - apps/web/src/components/MessagePanel.tsx
+    - apps/web/src/SupporterApp.tsx
+  tests:
+    - apps/web/test/status-vocabulary.test.ts
+    - apps/web/test/message-panel.test.tsx
+    - apps/web/test/moderator-supporter.test.tsx
+  status: implemented

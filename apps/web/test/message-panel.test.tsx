@@ -75,9 +75,11 @@ describe('MessagePanel (Doc 20 §158–161 send confirmation)', () => {
     const confirm = calls.find((c) => c.path.includes('confirm-send'));
     expect(confirm?.body['expectedMessageVersion']).toBe(1);
     expect(confirm?.body['recipientIds']).toEqual(['pt_recipient']);
-    const status = screen.getByText(/Current status/);
-    expect(status.textContent).toContain(DELIVERY_STATE_LABELS['Queued'] as string);
+    /* The status is now a marked, toned line rather than a bare sentence.
+       What must not change is the claim it makes: queued, not delivered. */
+    const status = screen.getByText(new RegExp(DELIVERY_STATE_LABELS['Queued'] as string));
     expect(status.textContent).not.toContain('Delivered to');
+    expect(status.className, 'a queued message must not be dressed as done').toContain('state--draft');
   });
 
   it('delivery-state wording never overstates: Provider Accepted ≠ received, Unknown ≠ success', () => {

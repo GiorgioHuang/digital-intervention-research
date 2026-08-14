@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { deliveryStatus } from './status.js';
 import { accessTokenHeader, PlatformApiError, raiseApiError, type ApiError } from './api.js';
 import { staffActionError } from './errors.js';
 import { nameOrGap } from './names.js';
@@ -331,7 +332,24 @@ export function SupporterApp({ onExit }: { onExit: () => void }) {
                 <strong>{m.senderParticipantId === session.actorId ? 'You' : nameOrGap(t.otherDisplayName)}:</strong>{' '}
                 {m.contentText}
                 <br />
-                <small>{m.lifecycleState === 'Draft' ? 'Not sent yet — only you can see this' : m.deliveryState}</small>
+                {/*
+                  The raw state used to be printed here: a supporter read
+                  the literal string "Provider Accepted", which is the one
+                  reading the agreed wording exists to prevent — it sounds
+                  like the message arrived, and it means a machine took it.
+                  The participant's own screen has said so carefully all
+                  along; this one bypassed the table entirely.
+                */}
+                <small>
+                  {m.lifecycleState === 'Draft' ? (
+                    'Not sent yet — only you can see this'
+                  ) : (
+                    <>
+                      <span aria-hidden="true">{deliveryStatus(m.deliveryState).mark}</span>{' '}
+                      {deliveryStatus(m.deliveryState).words}
+                    </>
+                  )}
+                </small>
               </p>
             ))}
             {t.threadState === 'Active' && (

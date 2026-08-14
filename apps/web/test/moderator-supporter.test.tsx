@@ -25,7 +25,15 @@ const supported = (over: Record<string, unknown> = {}) => ({
   },
 });
 
-function stubSupporterFetch(opts: { people?: unknown[]; archiveId?: string | null; contributions?: unknown[] } = {}) {
+function stubSupporterFetch(
+  opts: {
+    people?: unknown[];
+    archiveId?: string | null;
+    contributions?: unknown[];
+    threads?: unknown[];
+    messages?: unknown[];
+  } = {},
+) {
   const calls: { path: string; body?: Record<string, unknown> }[] = [];
   vi.stubGlobal(
     'fetch',
@@ -42,6 +50,12 @@ function stubSupporterFetch(opts: { people?: unknown[]; archiveId?: string | nul
           JSON.stringify({ data: { id: opts.archiveId === undefined ? 'arc_1' : opts.archiveId } }),
           { status: 200 },
         );
+      }
+      if (path === '/v1/conversation-threads/mine') {
+        return new Response(JSON.stringify({ data: opts.threads ?? [] }), { status: 200 });
+      }
+      if (path.includes('/messages')) {
+        return new Response(JSON.stringify({ data: opts.messages ?? [] }), { status: 200 });
       }
       if (path === '/v1/life-story/contributions/mine') {
         return new Response(JSON.stringify({ data: opts.contributions ?? [] }), { status: 200 });
@@ -174,5 +188,47 @@ describe('supporter workspace (contribution ≠ testimony)', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Submit contribution' }));
     });
     expect(screen.getByRole('status').textContent).toContain('approved your relationship');
+  });
+
+  /**
+   * The wording table exists so that nobody reads "Provider Accepted" and
+   * believes the message arrived. This screen printed the raw state
+   * instead — the participant's own screen has been careful about this
+   * from the start, and the supporter's, looking at the same message, was
+   * not. The two people in one conversation must not be told different
+   * things about whether it got there.
+   */
+  it('tells a supporter what a delivery state means, never the raw state name', async () => {
+    stubSupporterFetch({
+      threads: [
+        { attributes: { threadId: 'th_1', otherDisplayName: 'Ann', threadState: 'Active' } },
+      ],
+      messages: [
+        {
+          attributes: {
+            messageId: 'msg_1',
+            senderParticipantId: 'actor_sup',
+            contentText: 'Thinking of you',
+            lifecycleState: 'Sent',
+            deliveryState: 'Provider Accepted',
+          },
+        },
+      ],
+    });
+    await signIn();
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'View my conversations' }));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Read it' }));
+    });
+    expect(screen.getByText(/Thinking of you/)).toBeTruthy();
+    /* The mark and the words are separate nodes, so match on the element
+       that holds both rather than on a text node. */
+    const status = screen.getByText(
+      (_content, el) => el?.tagName === 'SMALL' && /not received by the person yet/i.test(el.textContent ?? ''),
+    );
+    expect(status).toBeTruthy();
+    expect(status.textContent).not.toContain('Provider Accepted');
   });
 });

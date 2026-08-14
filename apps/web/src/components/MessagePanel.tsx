@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { api, DELIVERY_STATE_LABELS, type Session, type ThreadMessage } from '../api.js';
+import { api, type Session, type ThreadMessage } from '../api.js';
 import { presentError, type PresentedError } from '../errors.js';
+import { StatusLine, deliveryStatus } from '../status.js';
 import { ErrorState } from './StateBlock.js';
 
 /**
@@ -112,7 +113,7 @@ export function MessagePanel({
               </p>
               {/* Own messages show their truthful delivery state; drafts say so. */}
               {m.senderParticipantId === session.participantId && (
-                <p>Status: {DELIVERY_STATE_LABELS[m.deliveryState] ?? m.deliveryState}</p>
+                <StatusLine status={deliveryStatus(m.deliveryState)} />
               )}
               {/*
                 D-15: the recipient is told that someone was with the
@@ -213,9 +214,7 @@ export function MessagePanel({
         </div>
       )}
       {deliveryState !== null && (
-        <p>
-          Current status: <strong>{DELIVERY_STATE_LABELS[deliveryState] ?? deliveryState}</strong>
-        </p>
+        <StatusLine status={deliveryStatus(deliveryState)} />
       )}
       {actionError !== null && <ErrorState error={actionError} />}
       <p aria-live="polite" role="status">
