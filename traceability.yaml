@@ -2046,6 +2046,40 @@
     - apps/web/src/styles.css
     - apps/web/src/components/StaffAdminPanel.tsx
     - apps/web/src/components/AuditAccess.tsx
+    - apps/web/src/StaffApp.tsx
+  tests:
+    - apps/web/test/design-tokens.test.ts
+  status: implemented
+- implementation_id: IMP-WEB-STAFF-SCREENS-VERIFIED-001
+  module: WEB
+  summary: >-
+    The staff screens run for real - API up, demo data seeded, three staff identities signed in - and
+    photographed, because the previous round had verified tables and nothing else. Two findings. The
+    first is the sixth appearance of one shape: main[data-workspace='staff'] carries four rules - the
+    wider column of Doc 20 section 301, the slightly tighter density, the table height cap, the wider
+    inline padding - and no element in the application has ever carried that attribute. The research
+    workspace has been laid out in the participant's 36rem reading column on a 1280px display, and the
+    density added in the previous round had never applied at all. The second is a regression of my own
+    from that same round: giving p:has(> input[type=checkbox]) a flex row assumed the paragraph held
+    only a box and a label, and on the propose-a-supporter screen each holds a sentence of explanation
+    as well, so three items shared one line, the label was crushed into a narrow column and
+    "participant" broke as "participa/nt" - the identical failure I had fixed in the tables hours
+    earlier, recreated somewhere else. Fixed with flex-wrap and by giving the explanation its own
+    line. The guard meant to catch unreachable styling had narrowed three times, each narrowing hiding
+    a real instance: matching only :root[data-x=] missed the :not() form that implements "always
+    light"; matching only :root missed main[data-workspace]; and looking for a quoted 'data-x' - the
+    shape preferences.ts uses - missed the bare JSX attribute. Loosening it introduced a fourth
+    problem: the mutation passed, because the comment explaining the attribute contained the
+    attribute, so a sentence of prose satisfied the assertion. Comments are now stripped before the
+    scan and the mutation re-run to confirm it fails. A guard a comment can satisfy has documented
+    itself into uselessness.
+  trace_ids: [ATR-003]
+  adr_ids: [ADR-061, ADR-062]
+  docs:
+    - "design/DESIGN_DECISIONS.md D-84"
+  code:
+    - apps/web/src/StaffApp.tsx
+    - apps/web/src/styles.css
   tests:
     - apps/web/test/design-tokens.test.ts
   status: implemented

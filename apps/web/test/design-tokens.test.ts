@@ -405,24 +405,50 @@ describe('the token architecture holds', () => {
        against the source finds the next one. An attribute set only by the
        browser (there are none today) would need an exemption here, stated
        rather than assumed. */
-    /* Matches both `:root[data-x=…]` and `:root:not([data-x=…])`. The
-       second form is how "always light" is implemented, and a scan that
-       only saw the first would have reported the mode as fully wired
-       while the attribute had no writer — the exact failure this test
-       exists to catch, hidden by the test's own regex. */
+    /* Every `data-*` the stylesheet keys off, on any element — not just
+       `:root`. Three narrowings of this pattern have each hidden a real
+       instance:
+         - matching only `:root[data-x=]` missed `:root:not([data-x=])`,
+           which is how "always light" is implemented;
+         - matching only `:root` missed `main[data-workspace='staff']`,
+           four rules deciding the research workspace's column width,
+           density and table height — and no element in the app has ever
+           carried that attribute, so the staff screens were laid out in
+           the participant's 36rem reading column on a 1280px display.
+       The lesson each time is the same: a scan that models the styling
+       too narrowly reports "all wired" about the exact case it cannot
+       see. So this matches any element, any attribute, either form. */
     const modeAttributes = new Set(
-      [...withoutComments.matchAll(/:root(?::not\()?\[(data-[\w-]+)=/g)].map((m) => m[1]!),
+      [...withoutComments.matchAll(/[\w:-]+(?::not\()?\[(data-[\w-]+)=/g)].map((m) => m[1]!),
     );
     expect(modeAttributes.size, 'no mode attributes found — has the selector syntax changed?')
-      .toBeGreaterThan(3);
+      .toBeGreaterThan(4);
     const sources = readdirSync(resolve(process.cwd(), 'src'), {
       recursive: true,
       encoding: 'utf8',
     }).filter((f) => f.endsWith('.ts') || f.endsWith('.tsx'));
+    /* Comments stripped first. The loose match above, applied to raw
+       source, was satisfied by the sentence explaining the attribute:
+       deleting the real `data-workspace="staff"` from the JSX left the
+       comment describing it, and the test stayed green. A guard that a
+       comment can satisfy is a guard that documents itself into
+       uselessness — verified by re-running the mutation after this line
+       was added. */
     const appCode = sources
       .map((f) => readFileSync(resolve(process.cwd(), 'src', f), 'utf8'))
-      .join('\n');
-    const unreachable = [...modeAttributes].filter((attr) => !appCode.includes(`'${attr}'`));
+      .join('\n')
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/^\s*\/\/.*$/gm, '');
+    /* Any mention counts as a writer, quoted or not. Looking for `'data-x'`
+       specifically — the shape `preferences.ts` uses — reported
+       `data-workspace` as unreachable seconds after it had been wired,
+       because JSX writes it bare: `data-workspace="staff"`. That is the
+       third time a too-clever pattern in this one test has produced a
+       confident wrong answer. A loose match can only fail by staying
+       quiet about something already handled; a tight one fails by
+       shouting about something that is fine, and by missing what it was
+       written to find. */
+    const unreachable = [...modeAttributes].filter((attr) => !appCode.includes(attr));
     expect(unreachable, 'styled modes that nothing in the app can turn on').toEqual([]);
   });
 

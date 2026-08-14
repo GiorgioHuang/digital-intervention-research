@@ -847,6 +847,16 @@ label:has(> input[type='radio']) {
   align-items: center;
   gap: var(--space-3);
   min-height: var(--target-min);
+  /* 必须允许换行。这一行是补的：有些勾选框那一段里除了方框和标签，还跟着
+     一句解释（「提议一位支持者」那屏就是），不换行的话三样东西并排挤在一
+     行里，标签被压成一条窄柱，"participant" 断成「participa / nt」——正是
+     几小时前刚在表格里修掉的那种断法，被我自己在这里又造了一次。 */
+  flex-wrap: wrap;
+}
+/* 解释文字自己占一行，不与方框和标签争宽度。 */
+p:has(> input[type='checkbox']) > small,
+p:has(> input[type='radio']) > small {
+  flex-basis: 100%;
 }
 p:has(> input[type='checkbox']) > label,
 p:has(> input[type='radio']) > label {

@@ -338,7 +338,15 @@ export function StaffApp({ onExit }: { onExit?: (() => void) | undefined }) {
           )}
         </ul>
       </nav>
-      <main id="staff-main">
+      {/*
+        `data-workspace="staff"` is what the stylesheet has been waiting for
+        since v0.1: the wider column (Doc 20 §301), the slightly tighter
+        density and the table height cap all key off it, and no element in
+        the app has ever carried it. Four rules, none of them ever matching
+        — so the research workspace has been laid out in the participant's
+        narrow reading column the whole time, at 36rem on a 1280px screen.
+      */}
+      <main id="staff-main" data-workspace="staff">
         <AccessTokenGate />
         <p>
           Signed in as {session.actorId} ({strengthLabel(session.authStrength)}){' '}
