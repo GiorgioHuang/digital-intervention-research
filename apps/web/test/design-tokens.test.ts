@@ -579,6 +579,44 @@ describe('the token architecture holds', () => {
     ).toBeLessThan(rem(reading!));
   });
 
+  it('gives queues and tables the full width of the desktop panel', () => {
+    /* A panel's sections flow into columns, so a section is one column
+       wide by default — and the first version of the desktop layout left
+       the approval queue in that column: four protocol versions stacked in
+       502px on a 1920px screen with a thousand pixels empty beside them.
+       The outer grid had columns and the inner content never received the
+       width. Both the table sections and the queue sections have to be
+       told to span, and they are the two kinds of content the width was
+       widened for in the first place. */
+    const spanning = ALL_BLOCKS.filter(
+      (b) =>
+        b.selector.startsWith("main[data-workspace='staff'] > section > section:has(") &&
+        /grid-column:\s*1\s*\/\s*-1/.test(b.body),
+    ).map((b) => b.selector);
+    expect(spanning.some((s) => s.includes('.scroll-x')), 'table sections no longer span').toBe(true);
+    expect(spanning.some((s) => s.includes('article')), 'queue sections no longer span').toBe(true);
+  });
+
+  it('lets a fact list shrink instead of bursting its card', () => {
+    /* The approval screens describe each artefact with a `dl`, and those
+       lists mix bare dt/dd pairs with pairs wrapped in a `div`. A wrapper
+       lands in the grid as one item, and its max-content width — a label
+       plus a full identifier — took the label column to 377px and left the
+       value column at 0. `display: contents` on the wrapper and explicit
+       column numbers on dt/dd are what make the two shapes lay out alike;
+       lose either and the list bursts its card again. */
+    const dlBlocks = ALL_BLOCKS.filter((b) => b.selector.startsWith("main[data-workspace='staff'] dl"));
+    expect(dlBlocks.length, 'the staff fact-list layout has gone').toBeGreaterThan(0);
+    const wrapper = ALL_BLOCKS.find((b) => b.selector === "main[data-workspace='staff'] dl > div");
+    expect(wrapper?.body, 'wrapped dt/dd pairs must not become one grid item').toContain(
+      'display: contents',
+    );
+    for (const part of ['dt', 'dd']) {
+      const rule = ALL_BLOCKS.find((b) => b.selector === `main[data-workspace='staff'] ${part}`);
+      expect(rule?.body, `${part} lost its explicit column`).toMatch(/grid-column:\s*\d/);
+    }
+  });
+
   it('keeps sand out of the research workspace as anything but an accent', () => {
     /* The owner's split: participant and Life Story screens are warm, the
        research workspace is teal and blue-grey with sand reserved for a

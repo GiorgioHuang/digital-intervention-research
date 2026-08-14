@@ -673,6 +673,76 @@ main[data-workspace='staff'] > section > :not(section) {
 main[data-workspace='staff'] > section > section:has(.scroll-x) {
   grid-column: 1 / -1;
 }
+/* 队列同理，而且这一条是我第一版漏掉的：审批队列的小节本身是外层三列里的
+   **一列**，宽 502px，于是四条协议版本仍旧叠成一条窄柱，右边空着一千像素
+   ——外层分了列，里层却没拿到宽度。含队列项的小节必须先横跨整行，里面的
+   卡片才谈得上分列。 */
+main[data-workspace='staff'] > section > section:has(article) {
+  grid-column: 1 / -1;
+}
+
+/* 队列项。审批屏、安全事件屏、入组屏的每一条都是一个 <article>，此前它们
+   既没有边界也没有底色：四条协议版本在屏幕上首尾相接，读到「Refuse this
+   version」下一行就是下一条的「Type」，**看不出一条到哪里结束**。审阅者要
+   在这里逐条做决定，而决定的第一步是知道自己正在看哪一条。 */
+main[data-workspace='staff'] article {
+  border: var(--border-hairline) solid var(--color-border-subtle);
+  border-radius: var(--radius-2);
+  padding: var(--space-5);
+  margin-block: 0;
+  background-color: var(--color-surface-raised);
+}
+
+/* 队列本身也分列。1920px 下四条协议版本原本挤在一条 440px 的柱子里，右边
+   空着一千一百像素——「桌面版」如果只是把导航搬到左边，队列还是一条长带，
+   那等于没做。 */
+main[data-workspace='staff'] section:has(> article) {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(24rem, 1fr));
+  gap: var(--space-4) var(--space-5);
+  align-items: start;
+}
+main[data-workspace='staff'] section:has(> article) > :not(article) {
+  grid-column: 1 / -1;
+}
+
+/* 事实清单读成「标签｜值」两栏，而不是标签一行、值缩进一行。审阅屏上这些
+   dl 是「这条记录到底是什么」的全部内容，纵向堆叠会让六个事实占掉十二行，
+   而且值和标签的对应关系全靠缩进。 */
+main[data-workspace='staff'] dl {
+  display: grid;
+  /* 标签列取内容宽度但有上限，值列可以收到 0。 */
+  grid-template-columns: minmax(6rem, max-content) minmax(0, 1fr);
+  gap: var(--space-2) var(--space-4);
+  margin-block: var(--space-4);
+}
+/* **这三条是这条规则能成立的全部原因。** `<dl>` 里并不是清一色的 dt/dd 交替：
+   审批屏的事实清单里，前几对是裸的 dt/dd，后面若干对各自包在一个 `<div>` 里。
+   于是那个 div 作为**一个**网格项落进第一列，它的最大内容宽度（标签 + 一串
+   长标识符）把标签列撑到 377px，值列被压成 0px——量出来就是这个数。
+   `display: contents` 让包装 div 自己不生成盒子，里面的 dt/dd 直接参与外层
+   网格；再给 dt/dd 写死列号，无论有没有包装都落在对的列。 */
+main[data-workspace='staff'] dl > div { display: contents; }
+main[data-workspace='staff'] dt { grid-column: 1; }
+main[data-workspace='staff'] dd { grid-column: 2; }
+main[data-workspace='staff'] dt,
+main[data-workspace='staff'] dd {
+  /* 网格项默认 `min-width: auto`，也就是**不肯收窄到内容的最小尺寸以下**。
+     不解除这一条，值列里那种「一段哈希 + 一个按钮」的内容就会把整个 dl 撑
+     出容器——量出来 1920 下溢出 16px、1280 下 57px。
+     这是同一个坑今天第三次：flex 项的 basis、flex 项的 min-inline-size、
+     现在是网格项的 min-width。**默认值都是「宁可溢出也不收窄」**。 */
+  min-inline-size: 0;
+}
+main[data-workspace='staff'] dt {
+  font-weight: var(--type-weight-medium);
+  color: var(--color-text-secondary);
+}
+main[data-workspace='staff'] dd {
+  margin-inline-start: 0;
+  /* 长标识符与哈希在这里必须能断，否则会把值列撑宽、把标签挤没。 */
+  overflow-wrap: anywhere;
+}
 
 /* 桌面外壳：左侧导航竖栏 + 内容区。 */
 @media (min-width: 64rem) {
