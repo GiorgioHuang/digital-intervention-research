@@ -1921,12 +1921,26 @@
     deliberately not offered - that direction would need a second full copy of the dark values, and a
     preference costing forty colours that must agree forever is not the cost of a switch. Following
     the device stays the default: somebody who set their whole phone to dark meant it, and what was
-    missing was the way out, not a different default.
+    missing was the way out, not a different default. The owner then ruled for three options - follow
+    the device, light, dark - each carrying an icon and a word, and the ruling was right: whether
+    somebody can choose matters more than whether I keep one fewer copy to maintain, and I had put my
+    own maintenance cost ahead of the user's choice on the user's own screen. Dark on a light device
+    does need the duplicate palette, so the duplicate is generated from the live block rather than
+    transcribed, and an assertion now compares the two blocks token by token - key set and value -
+    with the same check on the dark-plus-high-contrast pair, which is the copy most likely to be
+    forgotten because it is the combination fewest people will ever open. Icon and word together: the
+    glyph is aria-hidden and the word is the accessible name, since an icon alone makes somebody
+    guess - a half-filled circle means "follow my device" to nobody who has not been told - and the
+    glyphs are set one step larger because a sun or moon character occupies about half its em in most
+    fonts and would otherwise be a dot. The tests query by accessible name rather than visible text,
+    which is both what a screen reader announces and a check that the glyph really is out of the
+    accessibility tree.
   trace_ids: [ATR-003]
   adr_ids: [ADR-061, ADR-062]
   docs:
     - "design/DESIGN_DECISIONS.md D-78"
     - "design/DESIGN_DECISIONS.md D-79"
+    - "design/DESIGN_DECISIONS.md D-80"
     - "design/DESIGN_SYSTEM.md §C.1"
     - "design/DESIGN_SYSTEM.md §C.1.1"
   code:

@@ -426,6 +426,46 @@ describe('the token architecture holds', () => {
     expect(unreachable, 'styled modes that nothing in the app can turn on').toEqual([]);
   });
 
+  it('keeps the two dark definitions identical, token for token', () => {
+    /* Dark is written twice, and has to be: once under
+       prefers-color-scheme so it needs no JavaScript, once under
+       `[data-theme='dark']` so somebody on a light device can ask for it.
+       CSS has no way to put a media condition and an attribute selector
+       into one selector list, so the values are duplicated.
+
+       That duplication is the reason I first argued against offering
+       "always dark" at all; the owner ruled for it, and being able to
+       choose is worth more than my having one fewer copy to keep. But the
+       hazard is real and unguarded duplication is how it bites: change one
+       block, forget the other, and the two halves of dark mode drift apart
+       with nothing to say so — least visibly for OS-dark users, who never
+       touch the attribute path at all.
+
+       So the copies are held equal here rather than by care. */
+    const viaMediaQuery = declarations((s) => s === DARK_SELECTOR);
+    const viaAttribute = declarations((s) => s === ":root[data-theme='dark']");
+    expect(Object.keys(viaMediaQuery).length, 'the media-query dark block vanished').toBeGreaterThan(30);
+    expect(Object.keys(viaAttribute).sort(), 'the two dark blocks define different tokens').toEqual(
+      Object.keys(viaMediaQuery).sort(),
+    );
+    for (const [token, value] of Object.entries(viaAttribute)) {
+      expect(viaMediaQuery[token], `${token} differs between the two dark blocks`).toBe(value);
+    }
+
+    /* Same for dark + high contrast, which is duplicated for the same
+       reason and is the copy most likely to be forgotten, being the
+       combination fewest people will ever look at. */
+    const hcMedia = declarations(
+      (s) => s === `${DARK_CONTEXT}:root[data-contrast='high']:not([data-theme='light'])`,
+    );
+    const hcAttribute = declarations((s) => s === ":root[data-theme='dark'][data-contrast='high']");
+    expect(Object.keys(hcMedia).length).toBeGreaterThan(3);
+    expect(Object.keys(hcAttribute).sort()).toEqual(Object.keys(hcMedia).sort());
+    for (const [token, value] of Object.entries(hcAttribute)) {
+      expect(hcMedia[token], `${token} differs between the two dark high-contrast blocks`).toBe(value);
+    }
+  });
+
   it('makes high contrast actually higher, including the state panels', () => {
     /* The mode raised body text from 12.38:1 to 21:1 and left all ten
        semantic families untouched at their 4.50 minimum — the faintest

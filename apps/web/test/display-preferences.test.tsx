@@ -145,19 +145,49 @@ describe('reading and display preferences', () => {
    * attribute rather than write 'system', or this app would be overriding
    * a choice made outside it.
    */
-  it('always light reaches the stylesheet, and following the device clears it again', async () => {
+  it('light and dark both reach the stylesheet, and following the device clears it again', async () => {
     await act(async () => {
       render(<DisplayPreferencesPanel />);
     });
     expect(document.documentElement.hasAttribute('data-theme')).toBe(false);
     await act(async () => {
-      fireEvent.click(screen.getByLabelText('Always light'));
+      fireEvent.click(screen.getByRole('radio', { name: 'Light' }));
     });
     expect(document.documentElement.getAttribute('data-theme')).toBe('light');
     await act(async () => {
-      fireEvent.click(screen.getByLabelText('Follow my device'));
+      fireEvent.click(screen.getByRole('radio', { name: 'Dark' }));
+    });
+    expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
+    /* Back to the device's own setting has to CLEAR the attribute, not
+       write 'system'. Writing it would make this app the thing deciding,
+       which is the opposite of what the option says. */
+    await act(async () => {
+      fireEvent.click(screen.getByRole('radio', { name: 'Follow my device' }));
     });
     expect(document.documentElement.hasAttribute('data-theme')).toBe(false);
+  });
+
+  /**
+   * Icon and words, never icon alone.
+   *
+   * Queried by accessible name rather than by visible text: that is the
+   * name a screen reader announces, and it is only correct if the glyph is
+   * hidden from the accessibility tree. A sun character read out as "black
+   * sun with rays" in front of every option is noise, and a half-filled
+   * circle means "follow my device" to nobody who has not been told — so
+   * the word has to be there for everyone, and the glyph for no one alone.
+   */
+  it('gives every appearance option a word, with the glyph hidden from the name', async () => {
+    const { container } = render(<DisplayPreferencesPanel />);
+    await act(async () => {});
+    for (const name of ['Follow my device', 'Light', 'Dark']) {
+      expect(screen.getByRole('radio', { name }), `no radio named ${name}`).toBeTruthy();
+    }
+    const glyphs = [...container.querySelectorAll('fieldset span[aria-hidden="true"]')];
+    expect(glyphs.length, 'the options lost their icons').toBeGreaterThanOrEqual(3);
+    for (const glyph of glyphs) {
+      expect(glyph.textContent?.trim().length, 'an icon rendered as nothing').toBeGreaterThan(0);
+    }
   });
 
   /**

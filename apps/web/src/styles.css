@@ -318,6 +318,102 @@
   }
 }
 
+
+/* ---------- 3b. 深色：使用者显式选择（所有者裁定，2026-08-13） ---------- */
+/* 三个选项：跟随系统（默认）、浅色、深色。前两个不需要这一整块——浅色值本来
+   就在 `:root`，"一律浅色"只靠上面那个 `:not([data-theme='light'])` 就成立。
+   **只有"一律深色"需要它**：在浅色设备上强制深色，必须再有一份深色值。
+
+   我先前以"这会多出一份必须永远保持一致的副本"为由没有做这个选项。所有者
+   裁定要做，理由成立——**使用者能不能自己决定，比我少维护一份副本重要**。
+   但那份风险不会因为决定而消失，所以它被管住了：`design-tokens.test.ts` 里
+   有一条断言，逐个令牌比对这一块与上面媒体查询那一块，**键集合与色值必须
+   完全相同**，改一处忘另一处立刻红。
+
+   这也正是这份副本上一次被删掉的原因（D-78）：当时它没有任何写入方，也没有
+   任何东西守着它。现在两样都有了。 */
+:root[data-theme='dark'] {
+  --color-surface-page: #12181a;
+  --color-surface-raised: #1a2224;
+  --color-surface-sunken: #0c1113;
+  --color-surface-inverse: #e6ecea;
+  --color-surface-scrim: rgb(4 8 8 / 0.66);
+
+  --color-text-primary: #e6ecea;   /* 14.98:1 / page */
+  --color-text-secondary: #a9b5b2; /*  8.49:1 / page */
+  --color-text-inverse: #12181a;
+  --color-text-link: #6fc3bc;      /*  8.16:1 / page */
+
+  --color-border-subtle: #2a3335;
+  --color-border-default: #616e6b; /*  3.00:1 / page */
+  --color-border-strong: #a5adab;  /*  7.00:1 / page */
+
+  --color-action-primary-bg: #3a958f;        /* 5.06:1 / page */
+  --color-action-primary-fg: #0a1112;        /* 5.33:1 / bg */
+  --color-action-primary-bg-hover: #55a9a3;
+  --color-action-primary-bg-active: #74bcb7;
+  --color-action-secondary-fg: #6fc3bc;
+  --color-action-secondary-border: #3a958f;
+  --color-action-secondary-bg-hover: #16302e;
+
+  --color-focus-ring: #eef6f4; /* ≥14.5:1 与任一 surface；15.4:1 与 halo */
+  --color-focus-halo: #06090a;
+
+  --color-info-bg: #13253a;
+  --color-info-fg: #678eb3;
+  --color-info-border: #5a83aa;
+  --color-success-bg: #122a20;
+  --color-success-fg: #5a987d;
+  --color-success-border: #4a8b6e;
+  --color-warning-bg: #2c2209;
+  --color-warning-fg: #ba7e27;
+  --color-warning-border: #b7791f;
+  --color-danger-bg: #2e1817;
+  --color-danger-fg: #c66e6e;
+  --color-danger-border: #bd5a5a;
+  --color-danger-solid-bg: #c66e6e;
+  --color-danger-solid-fg: #1a0808;
+  --color-safety-bg: #16233a;
+  --color-safety-fg: #7796bd;
+  --color-safety-border: #6a8cb6;
+  --color-moderation-bg: #102b2a;
+  --color-moderation-fg: #56a5a0;
+  --color-moderation-border: #479c97;
+  --color-ai-bg: #201f2e;
+  --color-ai-fg: #8682b2;
+  --color-ai-border: #7d79ab;
+
+  --color-story-bg: #2a2117;
+  --color-story-fg: #c9955c;
+  --color-story-border: #c08c53;
+  --color-story-surface: #211a12;
+  --color-community-bg: #172519;
+  --color-community-fg: #6e9b78;
+  --color-community-border: #679070;
+  --color-matching-bg: #16222c;
+  --color-matching-fg: #678bab;
+  --color-matching-border: #5f83a4;
+
+  --color-disabled-bg: #1b2325;
+  --color-disabled-fg: #8a9491;
+  --color-disabled-border: #3d4749;
+
+  /* dark 下阴影不可见：改用描边环作为浮层边界（≥3:1） */
+  --elevation-1: 0 0 0 1px var(--color-border-default);
+  --elevation-2: 0 0 0 1px var(--color-border-default), 0 4px 12px rgb(0 0 0 / 0.6);
+  --elevation-3: 0 0 0 1px var(--color-border-strong), 0 10px 28px rgb(0 0 0 / 0.7);
+}
+/* 显式深色 + 高对比。与上面同理，同一条测试一起守。 */
+:root[data-theme='dark'][data-contrast='high'] {
+  --color-surface-page: #000000;
+  --color-text-primary: #ffffff;       /* 21.00:1 / #000000 */
+  --color-text-secondary: #e9ecf2;
+  --color-border-default: #e9ecf2;
+  --color-border-strong: #ffffff;
+  --color-action-primary-bg: #8fd6d0;  /* 12.86:1 与 #000000 前景 */
+  --color-action-primary-fg: #000000;
+}
+
 /* ---------- 4. 能力自适应模式覆盖 (§C) ---------- */
 /* 绝不按年龄或分组自动判定：这些属性只能由用户显式设置写到 <html> 上。 */
 :root[data-font-scale='lg'] { --scale-font: 1.125; }
@@ -972,6 +1068,15 @@ main:not([data-workspace='staff']) .card { border-radius: var(--radius-3); }
 .card--community { border-inline-start: var(--border-emphasis) solid var(--color-community-border); }
 .card--matching { border-inline-start: var(--border-emphasis) solid var(--color-matching-border); }
 .card--draft { border-style: dashed; border-color: var(--color-border-default); }
+
+/* 选项前的图标。放大一档是必需的，不是修饰：☀ 与 ☾ 这类字形在多数字体里
+   只占字面的一半左右，按正文字号画出来就是一个看不清的小点，那样等于只剩
+   文字，图标白加。line-height 压到 1，避免放大后把整行撑高、破坏与相邻选项
+   的等距。 */
+label > span[aria-hidden='true'] {
+  font-size: var(--type-size-3);
+  line-height: 1;
+}
 
 /* 无符号列表。取代散落在各组件里的 style={{ listStyle:'none', padding:0 }}。 */
 .list-plain { list-style: none; padding-inline-start: 0; }

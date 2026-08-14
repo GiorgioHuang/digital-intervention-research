@@ -181,48 +181,44 @@ export function DisplayPreferencesPanel() {
       </fieldset>
 
       {/*
-        Light or the device's own setting.
+        Light, dark, or the device's own setting.
 
-        The platform follows `prefers-color-scheme`, so a phone set to dark
-        showed the dark variant with no way back — and the light design is
-        the one this project was drawn for, on the owner's own reasoning
-        about older adults, research tables and photographs. Following the
-        device stays the default, because a person who set their whole
-        phone to dark meant it; what was missing was the way out.
+        Three options, each an icon and a word, on the owner's ruling. The
+        icon is aria-hidden and the word is the accessible name: an icon
+        alone would make somebody guess, and a half-filled circle means
+        "follow my device" to nobody who has not been told.
 
-        There is no "always dark" here: see the note on `Theme` for why
-        that one costs a duplicate palette and this one costs a selector.
+        Following the device stays the default, because a person who set
+        their whole phone to dark meant it. What the other two add is the
+        ability to disagree with that for this one app — which is the
+        whole point, and was missing.
       */}
       <fieldset>
         <legend>Light or dark</legend>
-        <p>
-          <label>
-            <input
-              type="radio"
-              name="theme"
-              value="system"
-              checked={prefs.theme === 'system'}
-              onChange={() => change({ theme: 'system' }, 'Following your device.')}
-            />{' '}
-            Follow my device
-          </label>
-        </p>
-        <p>
-          <label>
-            <input
-              type="radio"
-              name="theme"
-              value="light"
-              checked={prefs.theme === 'light'}
-              onChange={() => change({ theme: 'light' }, 'Always light.')}
-            />{' '}
-            Always light
-          </label>
-        </p>
+        {(
+          [
+            { value: 'system', icon: '\u25D0', label: 'Follow my device', said: 'Following your device.' },
+            { value: 'light', icon: '\u2600\uFE0E', label: 'Light', said: 'Always light.' },
+            { value: 'dark', icon: '\u263E\uFE0E', label: 'Dark', said: 'Always dark.' },
+          ] as const
+        ).map((option) => (
+          <p key={option.value}>
+            <label>
+              <input
+                type="radio"
+                name="theme"
+                value={option.value}
+                checked={prefs.theme === option.value}
+                onChange={() => change({ theme: option.value }, option.said)}
+              />{' '}
+              <span aria-hidden="true">{option.icon}</span> {option.label}
+            </label>
+          </p>
+        ))}
         <p>
           <small>
-            Your device is set to decide this for every app. Choose &ldquo;Always light&rdquo; if you would rather this
-            one stayed light.
+            &ldquo;Follow my device&rdquo; uses the light or dark setting you have chosen for your phone or computer.
+            The other two apply to this platform only.
           </small>
         </p>
       </fieldset>

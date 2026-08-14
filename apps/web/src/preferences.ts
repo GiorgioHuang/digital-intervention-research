@@ -39,21 +39,22 @@ export type Motion = 'system' | 'reduced';
  */
 export type Stimulation = 'standard' | 'low';
 /**
- * Light or whatever the device asks for.
+ * Light, dark, or whatever the device asks for.
  *
- * There is no 'dark' option, and the omission is the design. Forcing dark
- * on a device set to light would need a second copy of the whole dark
- * palette; keeping to light needs one `:not()` in a selector, because the
- * light values are the base. A preference whose cost is duplicating forty
- * colours that must then agree forever is not the cost of a switch.
+ * Following the device is the default: somebody who set their whole phone
+ * to dark meant it. The other two exist because a default is not a
+ * decision — before them, a person whose device was set to dark had no
+ * route to the light design this project was drawn for, and no way to
+ * ask for dark on a device that was not.
  *
- * Why it exists at all, given the owner deprioritised dark mode: the
- * platform follows `prefers-color-scheme`, so anybody whose phone is set
- * to dark saw the dark variant and had no way back to the light design
- * this project was drawn for. "Do not prioritise dark mode" is a statement
- * about what to build, not a reason to leave somebody stuck in it.
+ * 'light' is nearly free: the light values are the base, so the attribute
+ * only has to stop the dark block matching. 'dark' costs a second copy of
+ * the dark palette, which is a real maintenance hazard and the reason it
+ * was initially left out. The owner ruled otherwise, correctly — whether
+ * somebody can choose matters more than whether I keep one fewer copy —
+ * so the copy exists and a test holds the two in step token by token.
  */
-export type Theme = 'system' | 'light';
+export type Theme = 'system' | 'light' | 'dark';
 
 export interface DisplayPreferences {
   fontScale: FontScale;
