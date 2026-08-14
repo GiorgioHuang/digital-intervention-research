@@ -77,7 +77,15 @@ describe('safety events', () => {
   it('shows severity and category as words', async () => {
     await open();
     expect(screen.getByText(/self-harm risk · severity High/)).toBeTruthy();
-    expect(screen.getByText(/Open — confirmed, nobody has picked it up yet/)).toBeTruthy();
+    /* The state is now a marked, toned line. What it must still do is say
+       in words that this is confirmed and untouched — and it must not be
+       red: a safety event is not a system error (D-8), which is why the
+       owner ruled to keep the blue family rather than escalate to Error. */
+    const state = screen.getByText(
+      (_c, el) => el?.tagName === 'P' && /confirmed .* nobody has picked it up yet/i.test(el.textContent ?? ''),
+    );
+    expect(state.className).toContain('state--safety');
+    expect(state.className).not.toContain('state--danger');
   });
 
   /**

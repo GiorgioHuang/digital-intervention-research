@@ -1977,17 +1977,33 @@
     deliberately not implemented: the owner asks for a confirmed SafetyEvent to use Error, and
     DESIGN_SYSTEM section A.1.3 with D-8 forbid danger for safety matters, safety having its own
     family precisely because a safety event is not a system error. That is a direct conflict in
-    safety semantics and is left for the owner to rule on rather than settled quietly.
+    safety semantics and was put to the owner rather than settled quietly; they ruled for blue. What
+    the rule was reaching for is not lost, only relocated: it wanted an unreviewed report and a
+    confirmed event to stop looking alike, and checking found three quite different situations
+    rendered identically - somebody mentioning a concern, a reviewer confirming it, and a case dealt
+    with weeks ago. The gradation now lives inside the safety family. An unreviewed signal is
+    warning, because nobody has confirmed anything and dressing it as confirmed overstates what is
+    known about a person. A confirmed event that still needs somebody is the safety family at full
+    strength. A resolved or closed one goes quiet, because a list where finished business looks like
+    an open case is a list a reviewer stops reading - while never reading as success, since resolving
+    a record does not resolve a risk, which the screen says in words beside it. Red appears nowhere
+    in the safety table, which is the point of it. Wiring it up also collapsed a duplicate:
+    EVENT_STATE_WORDING held a second copy of the same sentences, one use of which is the dialogue
+    asking whether to move a safety record into a state - it has to quote the words the reviewer just
+    read, not a paraphrase that has drifted from them - so it is now derived from the status table.
   trace_ids: [ATR-003]
   adr_ids: [ADR-061, ADR-062]
   docs:
     - "design/DESIGN_DECISIONS.md D-81"
+    - "design/DESIGN_DECISIONS.md D-82"
   code:
     - apps/web/src/status.tsx
     - apps/web/src/components/MessagePanel.tsx
     - apps/web/src/SupporterApp.tsx
+    - apps/web/src/components/SafetyEvents.tsx
   tests:
     - apps/web/test/status-vocabulary.test.ts
+    - apps/web/test/safety-events.test.tsx
     - apps/web/test/message-panel.test.tsx
     - apps/web/test/moderator-supporter.test.tsx
   status: implemented

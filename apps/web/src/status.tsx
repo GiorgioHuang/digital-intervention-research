@@ -116,3 +116,52 @@ export function StatusLine({ status }: { status: StatusPresentation }) {
 export function deliveryStatus(state: string): StatusPresentation {
   return DELIVERY_STATUS[state] ?? { tone: 'neutral', mark: '·', words: state };
 }
+
+/**
+ * Safety, graded inside its own family rather than escalated into red.
+ *
+ * The owner asked for a confirmed SafetyEvent to use Error. The design
+ * system forbids it (§A.1.3, D-8): danger means a destructive action or a
+ * blocked operation, and safety has its own family precisely so that a
+ * person being unwell never looks like the software breaking. The owner
+ * ruled to keep blue.
+ *
+ * So the gradation the rule was reaching for is built inside the family
+ * instead, which it turns out to need anyway — "somebody mentioned a
+ * concern", "a reviewer confirmed it", and "it was dealt with weeks ago"
+ * are three different situations that were all rendered identically:
+ *
+ * - An unreviewed **signal** is warning. Nobody has confirmed anything
+ *   yet, and dressing an unreviewed concern as a confirmed event would
+ *   overstate what is known about a person.
+ * - A confirmed **event that still needs somebody** is the safety family
+ *   at full strength: blue, marked, and named in words.
+ * - A confirmed event that has been **resolved or closed** goes quiet.
+ *   Leaving it loud makes a screen of finished business look like a
+ *   screen of emergencies, and a reviewer who sees ten alarms every day
+ *   stops seeing any of them.
+ *
+ * Red appears nowhere in this table. That is the point of it.
+ */
+export const SAFETY_SIGNAL_STATUS: StatusPresentation = {
+  tone: 'warning',
+  mark: '△',
+  words: 'Reported, not yet reviewed',
+};
+
+export const SAFETY_EVENT_STATUS: Record<string, StatusPresentation> = {
+  Open: { tone: 'safety', mark: '⬡', words: 'Confirmed — nobody has picked it up yet' },
+  'In Review': { tone: 'safety', mark: '⬡', words: 'Someone is looking at it' },
+  'Action Required': { tone: 'safety', mark: '⬡', words: 'Something needs doing' },
+  Monitoring: { tone: 'safety', mark: '⬡', words: 'Being watched for now' },
+  Reopened: { tone: 'safety', mark: '⬡', words: 'Opened again' },
+  /* Finished business, deliberately quiet — but never "success": nothing
+     here is an achievement, and a resolved record does not mean a
+     resolved risk. The screen says so in words next to this. */
+  Resolved: { tone: 'draft', mark: '○', words: 'Recorded as dealt with' },
+  Closed: { tone: 'draft', mark: '○', words: 'Closed' },
+};
+
+export function safetyEventStatus(state: string): StatusPresentation {
+  return SAFETY_EVENT_STATUS[state] ?? { tone: 'safety', mark: '⬡', words: state };
+}

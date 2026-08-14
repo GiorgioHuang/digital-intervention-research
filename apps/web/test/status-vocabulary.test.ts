@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { DELIVERY_STATE_LABELS } from '../src/api.js';
-import { DELIVERY_STATUS, LIFECYCLE_STATUS, deliveryStatus } from '../src/status.js';
+import {
+  DELIVERY_STATUS,
+  LIFECYCLE_STATUS,
+  SAFETY_EVENT_STATUS,
+  SAFETY_SIGNAL_STATUS,
+  deliveryStatus,
+  safetyEventStatus,
+} from '../src/status.js';
 
 /**
  * The owner's status rules, written down as assertions.
@@ -93,5 +100,53 @@ describe('not-finished-yet is not the same as something-went-wrong', () => {
        a line rather than a filled panel. Somebody blocked another person
        on purpose; the screen should not shout it back at them. */
     expect(LIFECYCLE_STATUS['Blocked']!.tone).toBe('danger');
+  });
+});
+
+describe('safety is graded inside its own family, never escalated into red', () => {
+  it('never paints a safety state in the danger family', () => {
+    /* The owner's brief asked for a confirmed SafetyEvent to use Error and
+       then ruled for blue when the conflict was put to them. The reason is
+       worth keeping next to the assertion: red in this system means a
+       destructive action or a blocked operation, and a person being unwell
+       is neither. A screen where "someone may be at risk" looks identical
+       to "that upload failed" has taught its reader to skim both. */
+    for (const [state, presentation] of Object.entries(SAFETY_EVENT_STATUS)) {
+      expect(presentation.tone, `${state} must not be in the danger family`).not.toBe('danger');
+    }
+    expect(SAFETY_SIGNAL_STATUS.tone).not.toBe('danger');
+    expect(safetyEventStatus('Some Future State').tone).not.toBe('danger');
+  });
+
+  it('separates a report nobody has reviewed from a confirmed event', () => {
+    /* An unreviewed signal is somebody saying something might be wrong; a
+       confirmed event is a reviewer saying it is. Rendering them the same
+       overstates what is known about a person, which on a safety screen is
+       the error that costs most. */
+    expect(SAFETY_SIGNAL_STATUS.tone).toBe('warning');
+    expect(SAFETY_EVENT_STATUS['Open']!.tone).toBe('safety');
+    expect(SAFETY_SIGNAL_STATUS.tone).not.toBe(SAFETY_EVENT_STATUS['Open']!.tone);
+  });
+
+  it('lets finished business go quiet, without ever calling it a success', () => {
+    /* A list where a case closed months ago looks like an open one is a
+       list a reviewer stops reading. But "resolved" must not read as an
+       achievement either: resolving a record does not resolve a risk, and
+       the screen says so in words beside this. */
+    for (const state of ['Resolved', 'Closed']) {
+      expect(SAFETY_EVENT_STATUS[state]!.tone, `${state} should be quiet`).toBe('draft');
+      expect(SAFETY_EVENT_STATUS[state]!.tone).not.toBe('success');
+    }
+    for (const state of ['Open', 'Action Required', 'Reopened']) {
+      expect(SAFETY_EVENT_STATUS[state]!.tone, `${state} still needs somebody`).toBe('safety');
+    }
+  });
+
+  it('shows an unmapped safety state rather than hiding it', () => {
+    /* Falling back to quiet would be the dangerous direction here: an
+       unrecognised safety state must not disappear into grey. */
+    const unknown = safetyEventStatus('Escalated To Clinician');
+    expect(unknown.words).toBe('Escalated To Clinician');
+    expect(unknown.tone).toBe('safety');
   });
 });

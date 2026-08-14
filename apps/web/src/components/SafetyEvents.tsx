@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { staffActionError, staffLoadError } from '../errors.js';
 import { staffApi, type SafetyEventItem, type StaffSession } from '../staff-api.js';
+import { SAFETY_EVENT_STATUS, StatusLine, safetyEventStatus } from '../status.js';
 
 /**
  * Confirmed safety events, and what has been done about each (F5).
@@ -27,16 +28,20 @@ const ACTION_STATES = [
   },
 ];
 
-/** Plain words, and never colour alone (§200). */
-const EVENT_STATE_WORDING: Record<string, string> = {
-  Open: 'Open — confirmed, nobody has picked it up yet',
-  'In Review': 'Someone is looking at it',
-  'Action Required': 'Something needs doing',
-  Monitoring: 'Being watched for now',
-  Resolved: 'Recorded as dealt with',
-  Closed: 'Closed',
-  Reopened: 'Opened again',
-};
+/**
+ * Plain words, and never colour alone (§200).
+ *
+ * Derived from the status table rather than written out again. These same
+ * sentences appear in three places on this screen — the state of a record,
+ * the options for moving it, and the confirmation asking whether to move
+ * it — and a second copy is a second thing that has to stay true. The
+ * confirmation dialogue is the one that matters: it quotes the state a
+ * reviewer is about to move a safety record into, and it must quote the
+ * words they just read, not a paraphrase that has drifted from them.
+ */
+const EVENT_STATE_WORDING: Record<string, string> = Object.fromEntries(
+  Object.entries(SAFETY_EVENT_STATUS).map(([state, presentation]) => [state, presentation.words]),
+);
 
 /**
  * Kept in step with the module's own table. A screen that offered a move
@@ -126,10 +131,16 @@ export function SafetyEvents({ session }: { session: StaffSession }) {
         return (
           <article key={e.safetyEventId} aria-label={`Safety event ${e.safetyEventId}`}>
             <h4>{e.safetyEventId}</h4>
-            {/* Severity in words, never a colour on its own (§200). */}
+            {/*
+              Where it stands, graded inside the safety family — never red.
+              A confirmed safety event is not a system error (D-8), and one
+              that was dealt with weeks ago is not an emergency: a list
+              where finished business looks the same as an open case is a
+              list a reviewer stops reading.
+              Severity stays in words, never a colour on its own (§200).
+            */}
+            <StatusLine status={safetyEventStatus(e.eventState)} />
             <dl>
-              <dt>Where it stands</dt>
-              <dd>{EVENT_STATE_WORDING[e.eventState] ?? e.eventState}</dd>
               <dt>What was reported</dt>
               <dd>
                 {e.category} · severity {e.severity}
