@@ -232,8 +232,20 @@
 
    深色下把颜色**朝白色插值**变亮（浅色下是朝黑等比变暗）：色相角保持不变，
    饱和度自然下降——这正是深色界面需要的，高饱和亮色在暗底上会晕。 */
+/* `:not([data-theme='light'])` 是「一律用浅色」这个偏好的**全部实现**。
+   它值一行，因为浅色值本来就写在上面的 `:root` 里：设上 data-theme='light'
+   之后这一整块不再命中，浅色自然生还——**不需要把 40 个色值再抄一遍**。
+
+   为什么只提供「跟随设备 / 一律浅色」，没有「一律深色」：那一个才需要副本
+   （在浅色设备上强制深色，必须再写一份深色值），而所有者已定深色不作优先。
+   一个偏好如果要靠复制一整套色值来实现，它的成本就不再是一个开关的成本。
+
+   这条守卫我在 2026-08-13 当天删过一次，理由是「没人设过 data-theme」。
+   属实，但删错了：**没有写入方，正确的动作是补写入方，不是把钩子也拆掉。**
+   拆掉之后，系统设成深色的人就再也没有回到浅色的路——而浅色正是这个项目
+   为长者与低数字信心使用者专门设计的那一套。 */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme='light']) {
     --color-surface-page: #12181a;
     --color-surface-raised: #1a2224;
     --color-surface-sunken: #0c1113;
@@ -404,7 +416,7 @@
 }
 /* 深色 + 高对比。跟着上面的媒体查询走，因为深色本身就只由系统设置决定。 */
 @media (prefers-color-scheme: dark) {
-  :root[data-contrast='high'] {
+  :root[data-contrast='high']:not([data-theme='light']) {
     --color-surface-page: #000000;
     --color-text-primary: #ffffff;       /* 21.00:1 / #000000 */
     --color-text-secondary: #e9ecf2;

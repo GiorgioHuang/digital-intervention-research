@@ -96,7 +96,14 @@ describe('reading and display preferences', () => {
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Put everything back to standard' }));
     });
-    for (const attr of ['data-font-scale', 'data-density', 'data-contrast', 'data-motion', 'data-stimulation']) {
+    for (const attr of [
+      'data-font-scale',
+      'data-density',
+      'data-contrast',
+      'data-motion',
+      'data-stimulation',
+      'data-theme',
+    ]) {
       expect(document.documentElement.hasAttribute(attr)).toBe(false);
     }
   });
@@ -122,6 +129,35 @@ describe('reading and display preferences', () => {
       fireEvent.click(screen.getByLabelText('Use less colour'));
     });
     expect(document.documentElement.hasAttribute('data-stimulation')).toBe(false);
+  });
+
+  /**
+   * A way back to the light design.
+   *
+   * The platform follows the device's light/dark setting, so a phone set
+   * to dark showed the dark variant — and until this control existed
+   * there was no way out of it. The light theme is the one this project
+   * was drawn for; being unable to reach it is not a preference, it is a
+   * dead end.
+   *
+   * Following the device stays the default: somebody who set their whole
+   * phone to dark meant it. So "follow my device" must clear the
+   * attribute rather than write 'system', or this app would be overriding
+   * a choice made outside it.
+   */
+  it('always light reaches the stylesheet, and following the device clears it again', async () => {
+    await act(async () => {
+      render(<DisplayPreferencesPanel />);
+    });
+    expect(document.documentElement.hasAttribute('data-theme')).toBe(false);
+    await act(async () => {
+      fireEvent.click(screen.getByLabelText('Always light'));
+    });
+    expect(document.documentElement.getAttribute('data-theme')).toBe('light');
+    await act(async () => {
+      fireEvent.click(screen.getByLabelText('Follow my device'));
+    });
+    expect(document.documentElement.hasAttribute('data-theme')).toBe(false);
   });
 
   /**

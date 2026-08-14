@@ -86,6 +86,9 @@ function blocks(css: string, context = ''): Array<{ selector: string; body: stri
 
 /** The at-rule wrapper the dark theme now lives behind, and its only one. */
 const DARK_CONTEXT = '@media (prefers-color-scheme: dark) ';
+/** The one selector dark is defined under. `:not([data-theme='light'])` is
+    what makes "always light" possible without a second copy of the palette. */
+const DARK_SELECTOR = `${DARK_CONTEXT}:root:not([data-theme='light'])`;
 
 const ALL_BLOCKS = blocks(withoutComments);
 
@@ -106,7 +109,7 @@ const light = declarations((s) => s === ':root');
    duplicate `[data-theme='dark']` copy was deleted: nothing ever set that
    attribute, so it was forty hex values that had to agree with the live
    block, with no way to notice when they stopped. */
-const darkOnly = declarations((s) => s === `${DARK_CONTEXT}:root`);
+const darkOnly = declarations((s) => s === DARK_SELECTOR);
 const dark = { ...light, ...darkOnly };
 const highContrast = {
   ...light,
@@ -402,8 +405,13 @@ describe('the token architecture holds', () => {
        against the source finds the next one. An attribute set only by the
        browser (there are none today) would need an exemption here, stated
        rather than assumed. */
+    /* Matches both `:root[data-x=…]` and `:root:not([data-x=…])`. The
+       second form is how "always light" is implemented, and a scan that
+       only saw the first would have reported the mode as fully wired
+       while the attribute had no writer — the exact failure this test
+       exists to catch, hidden by the test's own regex. */
     const modeAttributes = new Set(
-      [...withoutComments.matchAll(/:root\[(data-[\w-]+)=/g)].map((m) => m[1]!),
+      [...withoutComments.matchAll(/:root(?::not\()?\[(data-[\w-]+)=/g)].map((m) => m[1]!),
     );
     expect(modeAttributes.size, 'no mode attributes found — has the selector syntax changed?')
       .toBeGreaterThan(3);

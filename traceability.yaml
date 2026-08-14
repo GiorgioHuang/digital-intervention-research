@@ -1911,11 +1911,22 @@
     than merely passing, because a mode named for contrast that does not raise it is a label. A
     general guard now scans the stylesheet for :root[data-*=] selectors and requires each attribute
     to be written somewhere in src: the shape has been found by hand five times and should be found
-    by a test the sixth.
+    by a test the sixth. Corrected the same day: deleting the data-theme hook was the wrong half of
+    that rule. The finding was right - nothing set the attribute - but the action for a capability
+    with no writer is to add the writer, and removing the hook left anyone whose device is set to
+    dark with no route back to the light design this project was drawn for, which the owner hit on
+    their own phone within hours. Restoring one `:not([data-theme='light'])` is the entire
+    implementation of an "always light" preference, because the light values are the base and setting
+    the attribute simply stops the dark block matching; no palette is duplicated. "Always dark" is
+    deliberately not offered - that direction would need a second full copy of the dark values, and a
+    preference costing forty colours that must agree forever is not the cost of a switch. Following
+    the device stays the default: somebody who set their whole phone to dark meant it, and what was
+    missing was the way out, not a different default.
   trace_ids: [ATR-003]
   adr_ids: [ADR-061, ADR-062]
   docs:
     - "design/DESIGN_DECISIONS.md D-78"
+    - "design/DESIGN_DECISIONS.md D-79"
     - "design/DESIGN_SYSTEM.md §C.1"
     - "design/DESIGN_SYSTEM.md §C.1.1"
   code:

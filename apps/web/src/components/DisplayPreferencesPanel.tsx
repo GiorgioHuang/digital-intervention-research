@@ -181,6 +181,53 @@ export function DisplayPreferencesPanel() {
       </fieldset>
 
       {/*
+        Light or the device's own setting.
+
+        The platform follows `prefers-color-scheme`, so a phone set to dark
+        showed the dark variant with no way back — and the light design is
+        the one this project was drawn for, on the owner's own reasoning
+        about older adults, research tables and photographs. Following the
+        device stays the default, because a person who set their whole
+        phone to dark meant it; what was missing was the way out.
+
+        There is no "always dark" here: see the note on `Theme` for why
+        that one costs a duplicate palette and this one costs a selector.
+      */}
+      <fieldset>
+        <legend>Light or dark</legend>
+        <p>
+          <label>
+            <input
+              type="radio"
+              name="theme"
+              value="system"
+              checked={prefs.theme === 'system'}
+              onChange={() => change({ theme: 'system' }, 'Following your device.')}
+            />{' '}
+            Follow my device
+          </label>
+        </p>
+        <p>
+          <label>
+            <input
+              type="radio"
+              name="theme"
+              value="light"
+              checked={prefs.theme === 'light'}
+              onChange={() => change({ theme: 'light' }, 'Always light.')}
+            />{' '}
+            Always light
+          </label>
+        </p>
+        <p>
+          <small>
+            Your device is set to decide this for every app. Choose &ldquo;Always light&rdquo; if you would rather this
+            one stayed light.
+          </small>
+        </p>
+      </fieldset>
+
+      {/*
         Less colour.
 
         Offered here rather than as a "simple view" because it takes nothing

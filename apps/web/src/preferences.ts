@@ -38,6 +38,22 @@ export type Motion = 'system' | 'reduced';
  * information.
  */
 export type Stimulation = 'standard' | 'low';
+/**
+ * Light or whatever the device asks for.
+ *
+ * There is no 'dark' option, and the omission is the design. Forcing dark
+ * on a device set to light would need a second copy of the whole dark
+ * palette; keeping to light needs one `:not()` in a selector, because the
+ * light values are the base. A preference whose cost is duplicating forty
+ * colours that must then agree forever is not the cost of a switch.
+ *
+ * Why it exists at all, given the owner deprioritised dark mode: the
+ * platform follows `prefers-color-scheme`, so anybody whose phone is set
+ * to dark saw the dark variant and had no way back to the light design
+ * this project was drawn for. "Do not prioritise dark mode" is a statement
+ * about what to build, not a reason to leave somebody stuck in it.
+ */
+export type Theme = 'system' | 'light';
 
 export interface DisplayPreferences {
   fontScale: FontScale;
@@ -45,6 +61,7 @@ export interface DisplayPreferences {
   contrast: Contrast;
   motion: Motion;
   stimulation: Stimulation;
+  theme: Theme;
 }
 
 export const DEFAULT_PREFERENCES: DisplayPreferences = {
@@ -53,6 +70,7 @@ export const DEFAULT_PREFERENCES: DisplayPreferences = {
   contrast: 'standard',
   motion: 'system',
   stimulation: 'standard',
+  theme: 'system',
 };
 
 const KEY = 'hadi.display-preferences';
@@ -90,6 +108,7 @@ export function applyPreferences(p: DisplayPreferences): void {
   set('data-contrast', p.contrast === 'standard' ? null : p.contrast);
   set('data-motion', p.motion === 'system' ? null : p.motion);
   set('data-stimulation', p.stimulation === 'standard' ? null : p.stimulation);
+  set('data-theme', p.theme === 'system' ? null : p.theme);
 }
 
 export function savePreferences(p: DisplayPreferences): void {
