@@ -2083,3 +2083,37 @@
   tests:
     - apps/web/test/design-tokens.test.ts
   status: implemented
+- implementation_id: IMP-WEB-STAFF-DESKTOP-LAYOUT-001
+  module: WEB
+  summary: >-
+    The research workspace made a desktop layout on the owner's instruction to use the screen width.
+    Using the width cannot mean running sentences the width of a 27-inch monitor: past roughly 75
+    characters a line is measurably harder to read, because the eye has to hunt for the start of the
+    next one. So the width buys three things instead - the navigation becomes a left rail rather than
+    two wrapped rows of buttons, the sections inside a panel flow into two or three columns, and
+    tables and queues span the full width - while body paragraphs keep the 36rem reading measure.
+    Researchers are people too. The rail only appears above 64rem, because staff use tablets as well
+    as laptops and a rail eating a third of a tablet is worse than a row of buttons. Columns come from
+    auto-fit and minmax rather than breakpoints, since a breakpoint assumes one screen width and staff
+    screens run from 13-inch laptops to 32-inch monitors. The column floor started at 28rem and
+    measurement showed that produced exactly one column on a 1280px laptop - 938px available, two
+    columns needing 2x504 plus the gap - and 1280 is the most common staff screen there is; at 24rem
+    it gives two columns at 1280 and three at 1920. Sections containing a table span all columns,
+    since squeezing a table into a single column would recreate the compression fixed an hour
+    earlier. One more flex trap on the way: a checkbox with a long label put the box alone on one line
+    and the label beneath it, and min-inline-size: 0 did not help, because flex decides whether an
+    item fits from its hypothetical size - with basis auto, the whole sentence laid flat - so the
+    label was pushed to a new line before any shrinking was considered. flex: 1 1 0 gives it a
+    hypothetical size of zero, so it stays beside the box and wraps within itself. All three rows
+    measured on one line afterwards. The participant surface was checked and is untouched: no
+    data-workspace attribute, block layout, no horizontal page scroll.
+  trace_ids: [ATR-003]
+  adr_ids: [ADR-061, ADR-062]
+  docs:
+    - "design/DESIGN_DECISIONS.md D-85"
+  code:
+    - apps/web/src/styles.css
+    - apps/web/src/StaffApp.tsx
+  tests:
+    - apps/web/test/design-tokens.test.ts
+  status: implemented

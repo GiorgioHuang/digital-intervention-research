@@ -550,6 +550,35 @@ describe('the token architecture holds', () => {
     expect(offenders, 'tables that cannot scroll get squeezed until unreadable').toEqual([]);
   });
 
+  it('keeps the desktop workspace from stretching prose across the screen', () => {
+    /* "Use the screen width" cannot mean "run the sentences the width of a
+       27-inch monitor": past roughly 75 characters a line is measurably
+       harder to read, because the eye has to find the next line's start.
+       The width is meant to buy columns, a navigation rail and full-width
+       tables — not longer lines. So the desktop cap and the reading
+       measure have to stay different numbers, and the grid's column floor
+       must stay under the reading measure or the columns collapse back to
+       one. */
+    const desktop = light['--measure-desktop'];
+    const reading = light['--measure-default'];
+    expect(desktop, '--measure-desktop is missing').toBeDefined();
+    expect(desktop).not.toBe(reading);
+    const rem = (v: string) => Number.parseFloat(v);
+    expect(rem(desktop!), 'the desktop frame should be wider than a reading column').toBeGreaterThan(
+      rem(reading!),
+    );
+
+    const gridRule = ALL_BLOCKS.find((b) => b.selector === "main[data-workspace='staff'] > section");
+    expect(gridRule, 'the staff panel grid has gone').toBeDefined();
+    expect(gridRule!.body).toContain('grid-template-columns');
+    const floor = gridRule!.body.match(/minmax\((\d+(?:\.\d+)?)rem/);
+    expect(floor, 'the grid no longer states a column floor').not.toBeNull();
+    expect(
+      Number.parseFloat(floor![1]!),
+      'a column floor at or above the reading measure yields one column forever',
+    ).toBeLessThan(rem(reading!));
+  });
+
   it('keeps sand out of the research workspace as anything but an accent', () => {
     /* The owner's split: participant and Life Story screens are warm, the
        research workspace is teal and blue-grey with sand reserved for a

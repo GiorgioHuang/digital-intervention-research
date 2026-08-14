@@ -318,11 +318,17 @@ export function StaffApp({ onExit }: { onExit?: (() => void) | undefined }) {
   }
 
   return (
-    <div>
+    /*
+      The desktop shell. Below 64rem it is a single column exactly as
+      before — the staff workspace is used on laptops but not only on
+      laptops, and a rail that eats a third of a tablet is worse than a
+      row of buttons.
+    */
+    <div className="workspace">
       <a className="skip-link" href="#staff-main">
         Skip to main content
       </a>
-      <nav aria-label="Staff navigation">
+      <nav className="workspace__rail" aria-label="Staff navigation">
         <ul>
           {SCREENS.map((s) => (
             <li key={s.key}>

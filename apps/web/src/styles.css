@@ -56,6 +56,8 @@
   --measure-narrow: 28rem;
   --measure-default: 36rem;
   --measure-wide: 56rem;
+  /* 桌面工作区外框上限。不是行长上限——行长仍由 --measure-default 管。 */
+  --measure-desktop: 96rem;
 
   /* -- 间距 (§A.3)：单一刻度 × 密度乘数 -- */
   --space-0: 0;
@@ -634,13 +636,77 @@ main {
   padding: var(--space-5) var(--space-4) var(--space-8);
   box-sizing: border-box;
 }
-/* 员工工作区更宽（Doc 20 §301：员工可用更宽布局），且信息密度稍高
-   （所有者：研究工作区更理性）。0.9 是「稍高」——触控目标不受影响，
-   `--target-min` 是恒定的，不参与密度缩放。 */
+/* 员工工作区：桌面版（所有者裁定，2026-08-13：尽量利用屏幕宽度）。
+
+   「用满宽度」不等于「把每一行拉到 1600px」。**一行文字超过大约 75 个字符
+   就开始难读**——读到行尾要找回下一行的行首，这不是偏好问题。所以宽度花在
+   三个地方，而不是花在正文行长上：
+
+     1. 导航从顶部的两排按钮改成左侧竖栏（≥64rem）；
+     2. 面板里的各个小节在宽屏下并成两列、三列，而不是排成一条长带；
+     3. 表格与队列横跨整宽。
+
+   正文段落仍然保留 --measure-default 的行长上限。研究人员也是人。 */
 main[data-workspace='staff'] {
-  max-width: var(--measure-wide);
+  max-width: var(--measure-desktop);
   --density-surface: 0.9;
   --density: calc(var(--density-user) * var(--density-surface));
+}
+
+/* 面板内部：小节自动分列。auto-fit + minmax 让列数随宽度自己长出来，不写
+   断点——断点会假设一个屏幕宽度，而员工的屏幕从 13 吋笔记本到 32 吋外接
+   都有。 */
+main[data-workspace='staff'] > section {
+  display: grid;
+  /* 28rem 起步在 1280px 的笔记本上只长得出一列（量出来：可用 938px，两列
+     需要 2×504 + 间距 = 1044）。而 1280 正是员工最常用的那块屏。降到 24rem
+     之后 1280 就有两列，1920 有两列更宽，超宽屏三列。 */
+  grid-template-columns: repeat(auto-fit, minmax(24rem, 1fr));
+  gap: var(--space-5) var(--space-6);
+  align-items: start;
+}
+/* 标题、介绍段、动作行横跨整行：它们说的是整块面板的事，不属于某一列。 */
+main[data-workspace='staff'] > section > :not(section) {
+  grid-column: 1 / -1;
+}
+/* 含表格的小节也横跨整行——把一张表塞进一列，等于把刚修好的挤压又做一遍。 */
+main[data-workspace='staff'] > section > section:has(.scroll-x) {
+  grid-column: 1 / -1;
+}
+
+/* 桌面外壳：左侧导航竖栏 + 内容区。 */
+@media (min-width: 64rem) {
+  .workspace {
+    display: grid;
+    grid-template-columns: minmax(12rem, 15rem) minmax(0, 1fr);
+    align-items: start;
+    min-height: 100svh;
+  }
+  .workspace__rail {
+    position: sticky;
+    inset-block-start: 0;
+    block-size: 100svh;
+    overflow-y: auto;
+    border-block-end: none;
+    border-inline-end: var(--border-hairline) solid var(--color-border-subtle);
+    padding: var(--space-4) var(--space-3);
+  }
+  .workspace__rail ul {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .workspace__rail li { inline-size: 100%; }
+  .workspace__rail button {
+    inline-size: 100%;
+    justify-content: flex-start;
+    border-color: transparent;
+  }
+  /* 当前位置：左侧粗条 + 字重 + 底色，与顶部导航同一套三通道。 */
+  .workspace__rail [aria-current='page'] {
+    border-inline-start: var(--border-emphasis) solid var(--color-action-primary-bg);
+  }
+  /* 内容区自己居中，不再被外壳的整宽拖着走。 */
+  .workspace > main { margin-inline: auto; }
 }
 
 section { margin-block-end: var(--space-6); }
@@ -862,6 +928,18 @@ p:has(> input[type='checkbox']) > label,
 p:has(> input[type='radio']) > label {
   margin-block-end: 0;
   max-width: none;
+  /* 标签自己折行，而不是整块掉到下一行。没有这两句，窄列里一个长标签会被
+     flex-wrap 整体推到第二行，方框孤零零留在上一行——量出来的样子就是
+     「□」自己占一行，下面才是「Write to the participant…」。
+     `min-inline-size: 0` 是必需的：flex 项默认不小于内容的最小尺寸，不解除
+     的话它宁可换行也不肯收窄。 */
+  /* `1 1 0`，不是 `1 1 auto`。flex 决定「这一项放不放得下」用的是它的
+     **假想尺寸**——basis 为 auto 时就是内容的最大宽度，也就是整句话摊平的
+     宽度。所以 auto 的写法里，长标签在收窄之前就已经被判定放不下、整块掉
+     到下一行了，`min-inline-size: 0` 根本轮不上。basis 设 0 之后它的假想
+     尺寸是 0，永远留在方框那一行，再靠 grow 撑开、在自己内部折行。 */
+  flex: 1 1 0;
+  min-inline-size: 0;
 }
 fieldset {
   border: var(--border-default) solid var(--color-border-default);
