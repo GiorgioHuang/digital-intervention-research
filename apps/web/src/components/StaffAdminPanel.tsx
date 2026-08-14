@@ -70,28 +70,38 @@ export function StaffAdminPanel({ session }: { session: StaffSession }) {
       {participants !== null && participants.length === 0 && (
         <p>No participant in this organisation has a platform account yet.</p>
       )}
+      {/*
+        §B.3.2 makes a scrolling container the one legal outlet for wide
+        content, and a table is the widest thing this platform draws.
+        Without it the table was squeezed to the page width and every cell
+        broke mid-word — "Outcome" as "Out/co/me" — because the body-level
+        guard against long identifiers applies inside cells too. Nothing
+        overflowed; it fitted exactly, and could not be read.
+      */}
       {participants !== null && participants.length > 0 && (
-        <table>
-          <caption>Participants with a platform account in this organisation</caption>
-          <thead>
-            <tr>
-              <th scope="col">Name</th>
-              <th scope="col">Participant identifier</th>
-              <th scope="col">Registered</th>
-            </tr>
-          </thead>
-          <tbody>
-            {participants.map((p) => (
-              <tr key={p.participantId}>
-                <td>{p.displayName}</td>
-                <td>
-                  <code>{p.participantId}</code>
-                </td>
-                <td>{new Date(p.registeredAt).toISOString().slice(0, 10)}</td>
+        <div className="scroll-x">
+          <table>
+            <caption>Participants with a platform account in this organisation</caption>
+            <thead>
+              <tr>
+                <th scope="col">Name</th>
+                <th scope="col">Participant identifier</th>
+                <th scope="col">Registered</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {participants.map((p) => (
+                <tr key={p.participantId}>
+                  <td>{p.displayName}</td>
+                  <td>
+                    <code>{p.participantId}</code>
+                  </td>
+                  <td>{new Date(p.registeredAt).toISOString().slice(0, 10)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
 
       <p aria-live="polite" role="status">

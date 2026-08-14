@@ -492,6 +492,58 @@ describe('the token architecture holds', () => {
     }
   });
 
+  it('puts every table inside the container that lets it scroll', () => {
+    /* §B.3.2 makes `.scroll-x` the one legal outlet for wide content, and a
+       table is the widest thing this platform draws. Both of the tables
+       that existed were outside it, and the symptom was not the one you
+       would expect: nothing overflowed, because `overflow-wrap: anywhere`
+       on the body — the guard that stops long identifiers breaking the
+       layout — applies inside cells too. So the audit table fitted its 430px
+       column exactly, with "Outcome" broken as "Out/co/me" and
+       "participant.view" as "parti/cipa/nt.vi/ew".
+       A table squeezed until it cannot be read and a table cut off at the
+       edge are the same event for the person reading it, and only the
+       second one looks broken. Hence a scan rather than an eye. */
+    const sources = readdirSync(resolve(process.cwd(), 'src'), {
+      recursive: true,
+      encoding: 'utf8',
+    }).filter((f) => f.endsWith('.tsx'));
+    const offenders: string[] = [];
+    for (const file of sources) {
+      const text = readFileSync(resolve(process.cwd(), 'src', file), 'utf8');
+      for (const match of text.matchAll(/<table[\s>]/g)) {
+        const before = text.slice(0, match.index);
+        /* The wrapper has to be the nearest opening element before it. */
+        const lastOpen = before.lastIndexOf('<div className="scroll-x">');
+        const lastClose = before.lastIndexOf('</div>');
+        if (lastOpen === -1 || lastClose > lastOpen) {
+          offenders.push(`${file}: <table> outside .scroll-x`);
+        }
+      }
+    }
+    expect(offenders, 'tables that cannot scroll get squeezed until unreadable').toEqual([]);
+  });
+
+  it('keeps sand out of the research workspace as anything but an accent', () => {
+    /* The owner's split: participant and Life Story screens are warm, the
+       research workspace is teal and blue-grey with sand reserved for a
+       highlight. A staff screen that adopted the Life Story treatment
+       would not be wrong so much as misleading — warmth is how this
+       platform marks somebody's own memories, and a cohort table is not
+       that. */
+    const staffFiles = readdirSync(resolve(process.cwd(), 'src'), {
+      recursive: true,
+      encoding: 'utf8',
+    }).filter((f) => /Staff|staff|approver/.test(f) && f.endsWith('.tsx'));
+    expect(staffFiles.length, 'no staff sources found to scan').toBeGreaterThan(3);
+    const offenders: string[] = [];
+    for (const file of staffFiles) {
+      const text = readFileSync(resolve(process.cwd(), 'src', file), 'utf8');
+      if (/zone-story|card--story/.test(text)) offenders.push(file);
+    }
+    expect(offenders, 'staff screens using the Life Story warmth').toEqual([]);
+  });
+
   it('gives the dark theme a value for every colour the light theme defines', () => {
     /* A token defined only in light silently inherits its light value in
        dark — which is how a white-on-white state block happens. */

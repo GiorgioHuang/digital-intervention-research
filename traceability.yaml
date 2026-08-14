@@ -2007,3 +2007,45 @@
     - apps/web/test/message-panel.test.tsx
     - apps/web/test/moderator-supporter.test.tsx
   status: implemented
+- implementation_id: IMP-WEB-RESEARCH-WORKSPACE-DENSITY-001
+  module: WEB
+  summary: >-
+    The research workspace turned toward the owner's "more rational" direction - slightly higher
+    density, clearer tables, sand reserved for emphasis - and one guess of mine corrected by looking.
+    I expected the tables to overflow and be clipped by the body-level overflow-x guard. Measured,
+    the audit table was 394px inside a 430px column: not one pixel over. The truth was the opposite
+    of the guess. `overflow-wrap: anywhere`, the body-level safety net that stops long identifiers
+    breaking the layout, applies inside table cells too, and there it becomes the thing that destroys
+    the content: "Outcome" broke as "Out/co/me", "participant.view" as "parti/cipa/nt.vi/ew",
+    "Permitted" as "Per/mit/ted". The table fitted perfectly and could barely be read - and a table
+    squeezed until it is unreadable is the same event, for the person reading it, as a table cut off
+    at the edge; only the second one looks broken. Section B.3.2 has always made .scroll-x the one
+    legal outlet for wide content and both of the platform's tables were outside it. Wrapping them is
+    not sufficient on its own: `width: 100%` forces the table to compress into the container, so
+    column widths are decided by the container rather than the content, and it has to become
+    `min-inline-size: 100%`; `overflow-wrap` has to return to normal inside cells. After that the
+    table measures 861px, the container scrolls horizontally and the page does not. The sticky header
+    needed the same care: the container must actually scroll vertically for sticky to engage, so it
+    has a 70svh cap - without one the rule would have been styling that never fires, the defect this
+    codebase keeps removing - and the first version left half a data row visible above the header,
+    because sticky anchors to the padding box and the container's own top padding left a gap for rows
+    to scroll through. Both found by screenshot, neither visible to a test. Density is now the
+    product of two multipliers rather than one value: the user's "more space" and the workspace's
+    slightly-tighter baseline are different facts, and a single value means whichever is set last
+    silently erases the other - a researcher who chose more space would lose it on entering the staff
+    screens. Note also that a `--density` calc resolves on the element that declares it, so
+    redefining a component of it on a descendant does nothing unless `--density` is redeclared there
+    too. Two new guards: every table must sit inside .scroll-x, and staff screens may not use the
+    Life Story warmth, since warmth is how this platform marks somebody's own memories and a cohort
+    table is not that.
+  trace_ids: [ATR-003]
+  adr_ids: [ADR-061, ADR-062]
+  docs:
+    - "design/DESIGN_DECISIONS.md D-83"
+  code:
+    - apps/web/src/styles.css
+    - apps/web/src/components/StaffAdminPanel.tsx
+    - apps/web/src/components/AuditAccess.tsx
+  tests:
+    - apps/web/test/design-tokens.test.ts
+  status: implemented

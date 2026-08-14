@@ -185,54 +185,56 @@ export function AuditAccess({ session }: { session: StaffSession }) {
               </strong>
             )}
           </p>
-          <table>
-            <caption>
-              Audit entries matching {askedWith?.actorId === undefined || askedWith.actorId === '' ? 'your query' : `actions by ${askedWith.actorId}`}
-            </caption>
-            <thead>
-              <tr>
-                <th scope="col">When</th>
-                <th scope="col">Who</th>
-                <th scope="col">Did what</th>
-                <th scope="col">To which record</th>
-                <th scope="col">How it ended</th>
-                <th scope="col">Signed in with</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((r) => (
-                <tr key={r.auditEventId}>
-                  <td>
-                    <time dateTime={r.occurredAt}>{new Date(r.occurredAt).toLocaleString()}</time>
-                  </td>
-                  <td>
-                    {r.actorId}
-                    <br />
-                    <small>
-                      {r.actorType}
-                      {r.activeRole === null ? '' : `, acting as ${r.activeRole}`}
-                    </small>
-                  </td>
-                  <td>
-                    {r.action}
-                    {/* The reason a colleague gave for reading this very
-                        record, shown beside their read like any other act. */}
-                    {r.accessReason === null ? '' : <><br /><small>Reason given: {r.accessReason}</small></>}
-                  </td>
-                  <td>
-                    {r.targetType} {r.targetId}
-                    {r.participantId === null ? '' : <><br /><small>about participant {r.participantId}</small></>}
-                  </td>
-                  {/* Never colour alone (§200): the outcome is a word. */}
-                  <td>
-                    {RESULT_WORDING[r.result] ?? r.result}
-                    {r.policyDecisionReason === null ? '' : <><br /><small>{r.policyDecisionReason}</small></>}
-                  </td>
-                  <td>{r.authStrength ?? 'not recorded'}</td>
+          <div className="scroll-x">
+            <table>
+              <caption>
+                Audit entries matching {askedWith?.actorId === undefined || askedWith.actorId === '' ? 'your query' : `actions by ${askedWith.actorId}`}
+              </caption>
+              <thead>
+                <tr>
+                  <th scope="col">When</th>
+                  <th scope="col">Who</th>
+                  <th scope="col">Did what</th>
+                  <th scope="col">To which record</th>
+                  <th scope="col">How it ended</th>
+                  <th scope="col">Signed in with</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {rows.map((r) => (
+                  <tr key={r.auditEventId}>
+                    <td>
+                      <time dateTime={r.occurredAt}>{new Date(r.occurredAt).toLocaleString()}</time>
+                    </td>
+                    <td>
+                      {r.actorId}
+                      <br />
+                      <small>
+                        {r.actorType}
+                        {r.activeRole === null ? '' : `, acting as ${r.activeRole}`}
+                      </small>
+                    </td>
+                    <td>
+                      {r.action}
+                      {/* The reason a colleague gave for reading this very
+                          record, shown beside their read like any other act. */}
+                      {r.accessReason === null ? '' : <><br /><small>Reason given: {r.accessReason}</small></>}
+                    </td>
+                    <td>
+                      {r.targetType} {r.targetId}
+                      {r.participantId === null ? '' : <><br /><small>about participant {r.participantId}</small></>}
+                    </td>
+                    {/* Never colour alone (§200): the outcome is a word. */}
+                    <td>
+                      {RESULT_WORDING[r.result] ?? r.result}
+                      {r.policyDecisionReason === null ? '' : <><br /><small>{r.policyDecisionReason}</small></>}
+                    </td>
+                    <td>{r.authStrength ?? 'not recorded'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </>
       )}
       <p aria-live="polite" role="status">

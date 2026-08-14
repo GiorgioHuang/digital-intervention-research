@@ -6,9 +6,19 @@
 
 /* ---------- 1. 令牌：非颜色（主题无关） ---------- */
 :root {
-  /* -- 能力自适应的两个乘数（§C） -- */
+  /* -- 能力自适应的乘数（§C） -- */
   --scale-font: 1;
-  --density: 1;
+  /* 密度是两个乘数的积，不是一个值。
+     使用者选的「更宽松」是一件事，员工工作区比参与者端信息密度稍高是另一
+     件事（所有者：研究工作区更理性、密度稍高）。写成一个值，后设的那个会
+     整个盖掉前一个——于是一位选了「更宽松」的研究人员进到员工屏，他的选择
+     就没了。两个乘数相乘，两件事都还在。
+     注意：`--density` 的 calc 在声明它的那个元素上就算完了，不会因为后代
+     重定义了 `--density-surface` 而重算。所以员工工作区那条规则必须把
+     `--density` 一起重写一遍——只改 `--density-surface` 是无效的。 */
+  --density-user: 1;
+  --density-surface: 1;
+  --density: calc(var(--density-user) * var(--density-surface));
 
   /* -- 排版 (§A.2) -- */
   /* 所有者推荐 Inter / Source Sans 3 / Atkinson Hyperlegible / Noto Sans。
@@ -420,9 +430,9 @@
 :root[data-font-scale='xl'] { --scale-font: 1.25; }
 :root[data-font-scale='xxl'] { --scale-font: 1.5; }
 
-:root[data-density='compact'] { --density: 0.75; }
-:root[data-density='standard'] { --density: 1; }
-:root[data-density='spacious'] { --density: 1.25; }
+:root[data-density='compact'] { --density-user: 0.75; --density: calc(var(--density-user) * var(--density-surface)); }
+:root[data-density='standard'] { --density-user: 1; --density: calc(var(--density-user) * var(--density-surface)); }
+:root[data-density='spacious'] { --density-user: 1.25; --density: calc(var(--density-user) * var(--density-surface)); }
 
 /* 高对比 Light：所有者列为比完整深色模式更值得优先的三种模式之一。
    做法不是"换一套颜色"，而是把同一支 teal 继续压暗、把中性色推到两端，
@@ -624,8 +634,14 @@ main {
   padding: var(--space-5) var(--space-4) var(--space-8);
   box-sizing: border-box;
 }
-/* 员工工作区更宽（Doc 20 §301：员工可用更宽布局） */
-main[data-workspace='staff'] { max-width: var(--measure-wide); }
+/* 员工工作区更宽（Doc 20 §301：员工可用更宽布局），且信息密度稍高
+   （所有者：研究工作区更理性）。0.9 是「稍高」——触控目标不受影响，
+   `--target-min` 是恒定的，不参与密度缩放。 */
+main[data-workspace='staff'] {
+  max-width: var(--measure-wide);
+  --density-surface: 0.9;
+  --density: calc(var(--density-user) * var(--density-surface));
+}
 
 section { margin-block-end: var(--space-6); }
 
@@ -1229,11 +1245,57 @@ blockquote {
 table { border-collapse: collapse; width: 100%; }
 th, td {
   text-align: start;
-  padding: var(--space-2) var(--space-3);
+  padding: var(--space-3);
   border-block-end: var(--border-hairline) solid var(--color-border-subtle);
   line-height: var(--type-leading-snug);
 }
-th { font-weight: var(--type-weight-medium); background-color: var(--color-surface-sunken); }
+th { font-weight: var(--type-weight-semibold); background-color: var(--color-surface-sunken); }
+
+/* 表格放进横向滚动容器之后，必须解除两件事，否则容器等于没加。
+
+   **`width: 100%` 要撤掉。** 它逼表格压进容器宽度，于是列宽由容器决定而不是
+   由内容决定——正是这条让审计表在 430px 下把每一格都挤断。改成
+   `min-inline-size: 100%`：内容窄时铺满，内容宽时该多宽就多宽，由容器滚动。
+
+   **`overflow-wrap: anywhere` 要撤掉。** 它写在 body 上，是防止长标识符撑破
+   版面的最后一道防线，在正文里是对的。但在表格里它变成了**破坏内容的那一
+   方**：量出来的结果是 "Outcome" 断成「Out / co / me」，"participant.view"
+   断成「parti / cipa / nt.vi / ew」，"Permitted" 断成「Per / mit / ted」。
+   表格宽度 394px，一个像素都没溢出——**它完美地装下了，也几乎不可读**。
+   一张挤到看不懂的表和一张被裁掉的表，对读它的人是同一件事。
+   有了横向滚动这条正当出口，长标识符就该老老实实地宽，让人横着看。 */
+.scroll-x > table {
+  inline-size: auto;
+  min-inline-size: 100%;
+}
+.scroll-x th,
+.scroll-x td {
+  overflow-wrap: normal;
+  word-break: normal;
+}
+/* 表头永远不折行：断成两三行的表头会让整行高度参差，而表头是唯一一处
+   读者需要反复回看的文字。 */
+.scroll-x th { white-space: nowrap; }
+
+/* 粘性表头（所有者：研究工作区要「更明确的表格」）。
+   只在员工工作区，且只在容器真的会纵向滚动时才有意义——所以同时给容器一个
+   高度上限。没有上限，容器永远不滚，粘性就永远不触发，等于写了个不生效的
+   样式，那正是这几轮一直在清的那类东西。 */
+main[data-workspace='staff'] .scroll-x {
+  max-block-size: 70svh;
+}
+/* 容器自己的上内距必须取消，否则粘住的表头下面会留出一条缝，数据行从缝里
+   滚上去，**表头上方出现半行别的数据**——量出来就是这样，一眼能看见。
+   粘性表头贴的是内距盒的上沿，不是边框盒。 */
+.scroll-x:has(> table) { padding-block-start: 0; }
+.scroll-x thead th {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: var(--layer-sticky);
+  /* 必须是不透明色：粘性表头下面滚过去的是数据行，透明表头会让两层字叠在
+     一起。 */
+  background-color: var(--color-surface-sunken);
+}
 
 /* ---------- 12. 响应式 (§D)：只用 min-width，移动优先 ---------- */
 @media (min-width: 40rem) {
