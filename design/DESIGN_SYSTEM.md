@@ -1,106 +1,106 @@
-# DESIGN_SYSTEM — 设计系统基座 v0.1
+# DESIGN_SYSTEM — design system foundation v0.1
 
-> 交付范围：UI_INVENTORY A 节（设计系统基座 9 项：A1–A9）与 I 节中的跨界面状态基座（I11 加载/骨架/空/离线/同步/陈旧、I12 版本冲突、I13 错误严重度）。
-> 规范来源：Doc 20 v1.3 §13、§43–56、§224–246、§277–307、§310–320；DESIGN_BRIEF §2/§4/§6；ACCESSIBILITY_TEST_PLAN。
-> 本文件**不修改任何代码**。§F 是可粘贴的 CSS 草案，落地由实现代理执行。
-> 阶段声明：概念研究原型（ADR-061/062）。全部合成数据、模拟供应商、dev-header 身份桩。本设计系统不得暗示已获伦理批准或正在招募真实参与者。
-
----
-
-## 目录
-
-- [§0 读法与不可协商的约束](#0-读法与不可协商的约束)
-- [§A 令牌](#a-令牌)
-- [§B 全局规则](#b-全局规则)
-- [§C 能力自适应模式](#c-能力自适应模式)
-- [§D 响应式](#d-响应式)
-- [§E 状态呈现规范](#e-状态呈现规范)
-- [§F CSS 草案](#f-css-草案可直接粘贴进-appswebsrcstylescss)
-- [§G 对现有 34 个测试与可访问名的影响](#g-对现有-34-个测试与可访问名的影响)
-- [§H 关键取舍](#h-关键取舍)
-- [§I 需要产品决策的未决项](#i-需要产品决策的未决项)
+> Scope of delivery: UI_INVENTORY section A (the 9 design-system foundation items, A1–A9) and the cross-screen state foundation in section I (I11 loading/skeleton/empty/offline/syncing/stale, I12 version conflict, I13 error severity).
+> Source of specification: Doc 20 v1.3 §13, §43–56, §224–246, §277–307, §310–320; DESIGN_BRIEF §2/§4/§6; ACCESSIBILITY_TEST_PLAN.
+> This document **changes no code**. §F is a paste-ready CSS draft; landing it is the implementation agent's work.
+> Phase statement: conceptual research prototype (ADR-061/062). All synthetic data, simulated providers, dev-header identity stub. This design system must not imply that ethics approval has been obtained or that real participants are being recruited.
 
 ---
 
-## §0 读法与不可协商的约束
+## Contents
 
-### 0.1 三层令牌架构（Doc 20 §310）
+- [§0 How to read this, and the non-negotiable constraints](#0-how-to-read-this-and-the-non-negotiable-constraints)
+- [§A Tokens](#a-tokens)
+- [§B Global rules](#b-global-rules)
+- [§C Capability-adaptive modes](#c-capability-adaptive-modes)
+- [§D Responsiveness](#d-responsiveness)
+- [§E State presentation specification](#e-state-presentation-specification)
+- [§F CSS draft](#f-css-draft-paste-straight-into-appswebsrcstylescss)
+- [§G Effect on the existing 34 tests and accessible names](#g-effect-on-the-existing-34-tests-and-accessible-names)
+- [§H Key trade-offs](#h-key-trade-offs)
+- [§I Open items needing a product decision](#i-open-items-needing-a-product-decision)
+
+---
+
+## §0 How to read this, and the non-negotiable constraints
+
+### 0.1 The three-layer token architecture (Doc 20 §310)
 
 ```text
-Foundation（原始值：色值、rem 刻度、毫秒）
-        ↓  只在 :root 出现一次
-Semantic（语义名：--color-danger-fg、--space-3、--type-size-2）
-        ↓  组件只能引用这一层
-Component（组件私有：--btn-pad-block，由 semantic 派生）
+Foundation (raw values: colour values, the rem scale, milliseconds)
+        ↓  appears exactly once, in :root
+Semantic (semantic names: --color-danger-fg, --space-3, --type-size-2)
+        ↓  components may reference only this layer
+Component (component-private: --btn-pad-block, derived from semantic)
         ↓
-Mode / Theme Override（dark、高对比、字号、密度、简化）
+Mode / Theme Override (dark, high contrast, font size, density, simplified)
 ```
 
-**硬规则**：组件 CSS 中不得出现字面色值、字面 px、字面毫秒。评审时 `grep -nE '#[0-9a-fA-F]{3,6}|[0-9]+px|[0-9]+ms' styles.css` 的命中必须全部落在 `:root` / 主题覆盖块内。
+**Hard rule**: no literal colour value, literal px or literal millisecond value may appear in component CSS. At review, every hit from `grep -nE '#[0-9a-fA-F]{3,6}|[0-9]+px|[0-9]+ms' styles.css` must fall inside `:root` or a theme-override block.
 
-### 0.2 本系统"不是什么"
+### 0.2 What this system is *not*
 
-| 反模式 | 为什么禁止 |
+| Anti-pattern | Why it is forbidden |
 |---|---|
-| 渐变、阴影堆叠、玻璃拟态 | 装饰权重会被读成重要性；Doc 20 §319 elevation 不得表示科学置信度或权威 |
-| 品牌强调色作为"主色调铺满" | 高饱和大面积会与 danger/safety 语义色竞争 |
-| 圆角 ≥16px 的大圆角卡片、拟人插画 | Doc 20 §316：不得 infantilise；参与者是成年人 |
-| 徽章计数、红点、连续记录（streak）、进度条奖励 | 注意力机制，Doc 20 §297 明令禁止庆祝动效用于 Consent/matching/消息量/研究完成 |
-| 用颜色深浅表示"AI 置信度" | Doc 19 §10 认识论纪律：置信度必须是文字，不是视觉强度 |
+| Gradients, stacked shadows, glassmorphism | Decorative weight gets read as importance; Doc 20 §319, elevation must not signify scientific confidence or authority |
+| A brand accent colour used as a "wash of primary colour" | High saturation over a large area competes with the danger/safety semantic colours |
+| Cards with ≥16px corner radii, anthropomorphic illustration | Doc 20 §316: do not infantilise; participants are adults |
+| Badge counts, red dots, streaks, progress-bar rewards | Attention mechanics; Doc 20 §297 explicitly forbids celebratory motion for consent / matching / message volume / study completion |
+| Colour intensity used to signify "AI confidence" | Doc 19 §10 epistemic discipline: confidence must be words, not visual intensity |
 
-### 0.3 技术边界
+### 0.3 Technical boundaries
 
-无 UI 框架、无 CSS-in-JS、无图标库依赖、无 Web 字体下载（离线与低带宽下必须可读）。全部落在单文件 `apps/web/src/styles.css` + 一个内联 SVG 图标模块。
+No UI framework, no CSS-in-JS, no icon-library dependency, no web-font download (it must be readable offline and on a low-bandwidth connection). All of it lands in the single file `apps/web/src/styles.css` plus one inline SVG icon module.
 
 ---
 
-## §A 令牌
+## §A Tokens
 
-**令牌总量：119 个语义令牌名**。其中颜色 47 个名 × light/dark 两套值 = 94 条声明，其余 72 个名各 1 条声明；能力自适应模式（字号/密度/对比/简化/低刺激）再提供 39 条覆盖声明。§F 草案全文共 254 条 `--` 声明，与此一致。分布见下表，逐项定义在 §A.1–§A.9。
+**Total: 119 semantic token names.** Of these, 47 colour names × two sets of values (light/dark) = 94 declarations, and the remaining 72 names have 1 declaration each; the capability-adaptive modes (font size / density / contrast / simplified / low-stimulation) add a further 39 override declarations. The §F draft contains 254 `--` declarations in total, which is consistent with this. The distribution is in the table below, and each item is defined in §A.1–§A.9.
 
-| 组 | 令牌名数 | 小节 |
+| Group | Token names | Section |
 |---|---:|---|
-| 颜色（light + dark 同名两套值） | 47 | §A.1 |
-| 排版（字族/字号/行高/字重/字距 19 + 行宽 3） | 22 | §A.2 |
-| 间距（10）与密度乘数（1） | 11 | §A.3 |
-| 形状与描边 | 9 | §A.4 |
-| 焦点尺寸（颜色计入颜色组） | 4 | §A.5 |
-| 动效 | 7 | §A.6 |
+| Colour (light + dark, two sets of values under one name) | 47 | §A.1 |
+| Typography (family/size/line-height/weight/tracking 19 + measure 3) | 22 | §A.2 |
+| Spacing (10) and the density multiplier (1) | 11 | §A.3 |
+| Shape and stroke | 9 | §A.4 |
+| Focus dimensions (the colours count in the colour group) | 4 | §A.5 |
+| Motion | 7 | §A.6 |
 | elevation | 4 | §A.7 |
-| z-index 层 | 6 | §A.7 |
-| 触控目标 | 3 | §A.8 |
-| 图标 | 5 | §A.9 |
-| 字号乘数 `--scale-font` | 1 | §C.1 |
-| **合计** | **119** | |
+| z-index layers | 6 | §A.7 |
+| Touch targets | 3 | §A.8 |
+| Icons | 5 | §A.9 |
+| The font-size multiplier `--scale-font` | 1 | §C.1 |
+| **Total** | **119** | |
 
-### A.1 颜色令牌（A1；Doc 20 §311–312）
+### A.1 Colour tokens (A1; Doc 20 §311–312)
 
-对比度按 WCAG 2.x 相对亮度公式实测计算（脚本见 §A.1.5），非目测。判定门槛：
+Contrast is measured by computing the WCAG 2.x relative-luminance formula (the script is in §A.1.5), not judged by eye. The thresholds:
 
-- **正文与 <18.66px 文本**：≥ 4.5:1
-- **大字（≥24px 或 ≥18.66px 粗体）与 UI 组件边界/图形**：≥ 3:1
-- **焦点指示器**：与其两侧相邻颜色均 ≥ 3:1
+- **Body text and text below 18.66px**: ≥ 4.5:1
+- **Large text (≥24px, or ≥18.66px bold) and UI component boundaries/graphics**: ≥ 3:1
+- **Focus indicators**: ≥ 3:1 against both of the colours adjacent to them
 
-#### A.1.1 Light 主题 — Calm Teal & Warm Sand
+#### A.1.1 Light theme — Calm Teal & Warm Sand
 
-> 主题由所有者定稿（2026-08-13）：温和、可信、理性的人文科技；不做传统医院系统，也不做未来感 AI 产品。
-> **下面两张表由 `apps/web/src/styles.css` 生成，不手抄。** 断言在 `apps/web/test/design-tokens.test.ts`，改动任一色值即失败。
+> The theme was settled by the owner (2026-08-13): gentle, trustworthy, rational humane technology; neither a traditional hospital system nor a futuristic AI product.
+> **The two tables below are generated from `apps/web/src/styles.css`, not copied by hand.** The assertions are in `apps/web/test/design-tokens.test.ts`, and changing any colour value makes them fail.
 
-**两层色阶**是这套配色能同时成立的原因。所有者给的调色板里，有几支在页面底上落在 3–4.5:1 之间：作为边框合格，作为正文不合格。同一个色值两用，只能在「边框太淡」和「字看不清」之间二选一，两个都是错的。因此：
+**Two tiers of the same colour** are what allows this palette to work at all. Several of the swatches in the owner's palette land between 3:1 and 4.5:1 against the page: acceptable as a border, not acceptable as body text. Using one value for both leaves only a choice between "the border is too faint" and "the text is hard to read", and both are wrong. Hence:
 
-| 层 | 门槛 | 用在哪 | 取值方式 |
+| Tier | Threshold | Where it is used | How the value is derived |
 |---|---:|---|---|
-| 图形层 | 3:1 | 边框、图标、状态条、色块 | **原样使用所有者给的值** |
-| 文字层 | 4.5:1 | 任何要被读的字 | 同色**等比压暗**（HSL 色相与饱和度不变，只降明度） |
+| Graphic tier | 3:1 | Borders, icons, status bars, colour blocks | **The owner's value, used as given** |
+| Text tier | 4.5:1 | Anything that has to be read | The same colour **darkened by uniform scaling** (HSL hue and saturation unchanged, only lightness lowered) |
 
-等比压暗不是换一支颜色：`#287C78 → #267571` 的 hsl 由 177/51/32 变为 177/51/30。看得见颜色的那一层，完整保留了所有者的调色板。
+Uniform darkening is not a substitute colour: `#287C78 → #267571` moves the hsl from 177/51/32 to 177/51/30. The tier you actually see as colour keeps the owner's palette intact.
 
-| 令牌 | 值 | 前景/背景组合 | 实测对比度 | 门槛 |
+| Token | Value | Foreground/background pairing | Measured contrast | Threshold |
 |---|---|---|---:|---|
-| `--color-surface-page` | `#F7F8F6` | 基准面 | — | — |
-| `--color-surface-raised` | `#FFFFFF` | 基准面 | — | — |
-| `--color-surface-sunken` | `#F0F3F1` | 基准面 | — | — |
-| `--color-surface-inverse` | `#243331` | 基准面 | — | — |
+| `--color-surface-page` | `#F7F8F6` | base surface | — | — |
+| `--color-surface-raised` | `#FFFFFF` | base surface | — | — |
+| `--color-surface-sunken` | `#F0F3F1` | base surface | — | — |
+| `--color-surface-inverse` | `#243331` | base surface | — | — |
 | `--color-text-primary` | `#243331` | / page | **12.38:1** | 4.5 |
 | `--color-text-primary` | `#243331` | / raised | **13.18:1** | 4.5 |
 | `--color-text-primary` | `#243331` | / sunken | **11.80:1** | 4.5 |
@@ -111,76 +111,76 @@ Mode / Theme Override（dark、高对比、字号、密度、简化）
 | `--color-text-link` | `#267571` | / raised | **5.43:1** | 4.5 |
 | `--color-text-link` | `#267571` | / sunken | **4.86:1** | 4.5 |
 | `--color-text-inverse` | `#FFFFFF` | / surface-inverse | **13.18:1** | 4.5 |
-| `--color-border-subtle` | `#D8DEDB` | / page（**仅装饰**，不承载信息） | 1.28:1 | 免除¹ |
-| `--color-border-default` | `#74817E` | / page（图形，绝不当字用） | **3.80:1** | 3 |
+| `--color-border-subtle` | `#D8DEDB` | / page (**decorative only**, carries no information) | 1.28:1 | exempt¹ |
+| `--color-border-default` | `#74817E` | / page (graphic; never used as text) | **3.80:1** | 3 |
 | `--color-border-strong` | `#566461` | / page | **5.81:1** | 3 |
-| `--color-action-primary-bg` | `#287C78` | / page（组件边界） | **4.64:1** | 3 |
-| `--color-action-primary-bg` | `#287C78` | 与 fg `#FFFFFF` | **4.95:1** | 4.5 |
-| `--color-action-primary-bg-hover` | `#216B67` | 与 fg `#FFFFFF` | **6.24:1** | 4.5 |
-| `--color-action-primary-bg-active` | `#1B5B57` | 与 fg `#FFFFFF` | **7.83:1** | 4.5 |
+| `--color-action-primary-bg` | `#287C78` | / page (component boundary) | **4.64:1** | 3 |
+| `--color-action-primary-bg` | `#287C78` | vs fg `#FFFFFF` | **4.95:1** | 4.5 |
+| `--color-action-primary-bg-hover` | `#216B67` | vs fg `#FFFFFF` | **6.24:1** | 4.5 |
+| `--color-action-primary-bg-active` | `#1B5B57` | vs fg `#FFFFFF` | **7.83:1** | 4.5 |
 | `--color-action-secondary-fg` | `#267571` | / raised | **5.43:1** | 4.5 |
 | `--color-action-secondary-border` | `#287C78` | / page | **4.64:1** | 3 |
-| `--color-action-secondary-bg-hover` | `#DDEEEB` | 与 secondary-fg（选中态底） | **4.53:1** | 4.5 |
+| `--color-action-secondary-bg-hover` | `#DDEEEB` | vs secondary-fg (selected-state background) | **4.53:1** | 4.5 |
 | `--color-focus-ring` | `#142523` | / page | **14.95:1** | 3 |
-| `--color-focus-ring` | `#142523` | / focus-halo（内侧相邻） | **15.93:1** | 3 |
-| `--color-focus-halo` | `#FFFFFF` | / 主按钮填充（外侧相邻） | **4.95:1** | 3 |
-| `--color-info-bg` | `#E8F0F7` | Info：中性告知 | — | — |
+| `--color-focus-ring` | `#142523` | / focus-halo (inner adjacent) | **15.93:1** | 3 |
+| `--color-focus-halo` | `#FFFFFF` | / primary button fill (outer adjacent) | **4.95:1** | 3 |
+| `--color-info-bg` | `#E8F0F7` | Info: neutral notice | — | — |
 | `--color-info-fg` | `#3E6F9E` | / info-bg | **4.59:1** | 4.5 |
 | `--color-info-fg` | `#3E6F9E` | / page | **4.96:1** | 4.5 |
-| `--color-info-border` | `#3E6F9E` | / page（图形） | **4.96:1** | 3 |
-| `--color-success-bg` | `#E7F3EC` | Success：已完成 | — | — |
+| `--color-info-border` | `#3E6F9E` | / page (graphic) | **4.96:1** | 3 |
+| `--color-success-bg` | `#E7F3EC` | Success: completed | — | — |
 | `--color-success-fg` | `#2E7B59` | / success-bg | **4.50:1** | 4.5 |
 | `--color-success-fg` | `#2E7B59` | / page | **4.82:1** | 4.5 |
-| `--color-success-border` | `#2F7D5B` | / page（图形） | **4.69:1** | 3 |
-| `--color-warning-bg` | `#FBF1DC` | Warning：需注意，未阻断 | — | — |
+| `--color-success-border` | `#2F7D5B` | / page (graphic) | **4.69:1** | 3 |
+| `--color-warning-bg` | `#FBF1DC` | Warning: needs attention, not blocked | — | — |
 | `--color-warning-fg` | `#97641A` | / warning-bg | **4.51:1** | 4.5 |
 | `--color-warning-fg` | `#97641A` | / page | **4.75:1** | 4.5 |
-| `--color-warning-border` | `#B7791F` | / page（图形） | **3.42:1** | 3 |
-| `--color-danger-bg` | `#F9E8E7` | Error：已阻断 | — | — |
+| `--color-warning-border` | `#B7791F` | / page (graphic) | **3.42:1** | 3 |
+| `--color-danger-bg` | `#F9E8E7` | Error: blocked | — | — |
 | `--color-danger-fg` | `#B34848` | / danger-bg | **4.50:1** | 4.5 |
 | `--color-danger-fg` | `#B34848` | / page | **5.01:1** | 4.5 |
-| `--color-danger-border` | `#B84A4A` | / page（图形） | **4.79:1** | 3 |
-| `--color-safety-bg` | `#E6ECF4` | Safety：安全信号（非错误） | — | — |
+| `--color-danger-border` | `#B84A4A` | / page (graphic) | **4.79:1** | 3 |
+| `--color-safety-bg` | `#E6ECF4` | Safety: safety signal (not an error) | — | — |
 | `--color-safety-fg` | `#2A4470` | / safety-bg | **8.18:1** | 4.5 |
 | `--color-safety-fg` | `#2A4470` | / page | **9.13:1** | 4.5 |
-| `--color-safety-border` | `#2A4470` | / page（图形） | **9.13:1** | 3 |
-| `--color-moderation-bg` | `#E3F0EF` | Moderation：审核中 | — | — |
+| `--color-safety-border` | `#2A4470` | / page (graphic) | **9.13:1** | 3 |
+| `--color-moderation-bg` | `#E3F0EF` | Moderation: under review | — | — |
 | `--color-moderation-fg` | `#1A5451` | / moderation-bg | **7.40:1** | 4.5 |
 | `--color-moderation-fg` | `#1A5451` | / page | **8.11:1** | 4.5 |
-| `--color-moderation-border` | `#1A5451` | / page（图形） | **8.11:1** | 3 |
-| `--color-ai-bg` | `#F0EFF8` | AI：机器产出的标记 | — | — |
+| `--color-moderation-border` | `#1A5451` | / page (graphic) | **8.11:1** | 3 |
+| `--color-ai-bg` | `#F0EFF8` | AI: the mark of machine output | — | — |
 | `--color-ai-fg` | `#6C6898` | / ai-bg | **4.52:1** | 4.5 |
 | `--color-ai-fg` | `#6C6898` | / page | **4.84:1** | 4.5 |
-| `--color-ai-border` | `#7773A8` | / page（图形） | **4.10:1** | 3 |
-| `--color-story-bg` | `#F5E9D8` | Story：Life Story 与意义内容 | — | — |
+| `--color-ai-border` | `#7773A8` | / page (graphic) | **4.10:1** | 3 |
+| `--color-story-bg` | `#F5E9D8` | Story: Life Story and meaning-bearing content | — | — |
 | `--color-story-fg` | `#86633D` | / story-bg | **4.53:1** | 4.5 |
 | `--color-story-fg` | `#86633D` | / page | **5.10:1** | 4.5 |
-| `--color-story-border` | `#B18351` | / page（图形） | **3.16:1** | 3 |
-| `--color-community-bg` | `#E9F1EA` | Community：社区 | — | — |
+| `--color-story-border` | `#B18351` | / page (graphic) | **3.16:1** | 3 |
+| `--color-community-bg` | `#E9F1EA` | Community: the community | — | — |
 | `--color-community-fg` | `#52745A` | / community-bg | **4.55:1** | 4.5 |
 | `--color-community-fg` | `#52745A` | / page | **4.92:1** | 4.5 |
-| `--color-community-border` | `#6B9674` | / page（图形） | **3.16:1** | 3 |
-| `--color-matching-bg` | `#E9EFF4` | Matching：探索与选择 | — | — |
+| `--color-community-border` | `#6B9674` | / page (graphic) | **3.16:1** | 3 |
+| `--color-matching-bg` | `#E9EFF4` | Matching: exploring and choosing | — | — |
 | `--color-matching-fg` | `#4D6F8F` | / matching-bg | **4.55:1** | 4.5 |
 | `--color-matching-fg` | `#4D6F8F` | / page | **4.95:1** | 4.5 |
-| `--color-matching-border` | `#587FA3` | / page（图形） | **3.96:1** | 3 |
-| `--color-story-surface` | `#FCF8F2` | 与 text-primary（Life Story 区域底） | **12.46:1** | 4.5 |
+| `--color-matching-border` | `#587FA3` | / page (graphic) | **3.96:1** | 3 |
+| `--color-story-surface` | `#FCF8F2` | vs text-primary (Life Story area background) | **12.46:1** | 4.5 |
 | `--color-danger-solid-bg` | `#A03F3F` | 与 `#FFFFFF` | **6.41:1** | 4.5 |
-| `--color-disabled-fg` | `#69706E` | / disabled-bg（本系统不豁免，§B.1.4） | **4.54:1** | 4.5 |
+| `--color-disabled-fg` | `#69706E` | / disabled-bg (not exempted in this system, §B.1.4) | **4.54:1** | 4.5 |
 
-#### A.1.2 Dark 主题
+#### A.1.2 Dark theme
 
-> 所有者定调：本项目**不优先做完整深色模式**（使用者含长者与低数字信心人群；深色下边界、状态与低对比文字更难控制；研究表格与 Life Story 的图文更适合温暖浅色）。优先级给了 Light、高对比 Light 与低刺激模式。
-> 但深色模式**已经在产品里**——偏好面板有开关，系统 `prefers-color-scheme` 也会命中它。「不优先」不等于「可以是坏的」：留一套还配着旧蓝色的深色模式，会让选它的人看到另一个产品。所以按同一支 teal 重配，并交给同一个测试守。
+> The owner's ruling: this project **does not treat a full dark mode as a priority** (the people using it include older adults and people with low digital confidence; borders, states and low-contrast text are all harder to control in the dark; and research tables and the text and images of a Life Story suit a warm light ground better). Priority went to Light, high-contrast Light and the low-stimulation mode.
+> But dark mode **is already in the product** — there is a switch in the preferences panel, and the system's `prefers-color-scheme` reaches it too. "Not a priority" does not mean "allowed to be bad": leaving behind a dark mode still dressed in the old blue would show anyone who chose it a different product. So it is re-palletised around the same teal, and guarded by the same test.
 
-深色下把颜色**朝白色插值**变亮（浅色下是朝黑等比压暗）：色相角不变，饱和度自然下降——高饱和亮色在暗底上会晕。
+In the dark theme colours are lightened by **interpolating towards white** (in the light theme they are darkened by uniform scaling towards black): the hue angle is unchanged and the saturation naturally falls — a highly saturated bright colour haloes against a dark ground.
 
-| 令牌 | 值 | 前景/背景组合 | 实测对比度 | 门槛 |
+| Token | Value | Foreground/background pairing | Measured contrast | Threshold |
 |---|---|---|---:|---|
-| `--color-surface-page` | `#000000` | 基准面 | — | — |
-| `--color-surface-raised` | `#1A2224` | 基准面 | — | — |
-| `--color-surface-sunken` | `#0C1113` | 基准面 | — | — |
-| `--color-surface-inverse` | `#E6ECEA` | 基准面 | — | — |
+| `--color-surface-page` | `#000000` | base surface | — | — |
+| `--color-surface-raised` | `#1A2224` | base surface | — | — |
+| `--color-surface-sunken` | `#0C1113` | base surface | — | — |
+| `--color-surface-inverse` | `#E6ECEA` | base surface | — | — |
 | `--color-text-primary` | `#FFFFFF` | / page | **21.00:1** | 4.5 |
 | `--color-text-primary` | `#FFFFFF` | / raised | **16.18:1** | 4.5 |
 | `--color-text-primary` | `#FFFFFF` | / sunken | **19.00:1** | 4.5 |
@@ -191,116 +191,116 @@ Mode / Theme Override（dark、高对比、字号、密度、简化）
 | `--color-text-link` | `#6FC3BC` | / raised | **7.86:1** | 4.5 |
 | `--color-text-link` | `#6FC3BC` | / sunken | **9.24:1** | 4.5 |
 | `--color-text-inverse` | `#12181A` | / surface-inverse | **14.98:1** | 4.5 |
-| `--color-border-subtle` | `#2A3335` | / page（**仅装饰**，不承载信息） | 1.62:1 | 免除¹ |
-| `--color-border-default` | `#E9ECF2` | / page（图形，绝不当字用） | **17.75:1** | 3 |
+| `--color-border-subtle` | `#2A3335` | / page (**decorative only**, carries no information) | 1.62:1 | exempt¹ |
+| `--color-border-default` | `#E9ECF2` | / page (graphic; never used as text) | **17.75:1** | 3 |
 | `--color-border-strong` | `#FFFFFF` | / page | **21.00:1** | 3 |
-| `--color-action-primary-bg` | `#BBD4FF` | / page（组件边界） | **13.97:1** | 3 |
-| `--color-action-primary-bg` | `#BBD4FF` | 与 fg `#000000` | **13.97:1** | 4.5 |
-| `--color-action-primary-bg-hover` | `#55A9A3` | 与 fg `#000000` | **7.59:1** | 4.5 |
-| `--color-action-primary-bg-active` | `#74BCB7` | 与 fg `#000000` | **9.62:1** | 4.5 |
+| `--color-action-primary-bg` | `#BBD4FF` | / page (component boundary) | **13.97:1** | 3 |
+| `--color-action-primary-bg` | `#BBD4FF` | vs fg `#000000` | **13.97:1** | 4.5 |
+| `--color-action-primary-bg-hover` | `#55A9A3` | vs fg `#000000` | **7.59:1** | 4.5 |
+| `--color-action-primary-bg-active` | `#74BCB7` | vs fg `#000000` | **9.62:1** | 4.5 |
 | `--color-action-secondary-fg` | `#6FC3BC` | / raised | **7.86:1** | 4.5 |
 | `--color-action-secondary-border` | `#3A958F` | / page | **5.88:1** | 3 |
-| `--color-action-secondary-bg-hover` | `#16302E` | 与 secondary-fg（选中态底） | **6.82:1** | 4.5 |
+| `--color-action-secondary-bg-hover` | `#16302E` | vs secondary-fg (selected-state background) | **6.82:1** | 4.5 |
 | `--color-focus-ring` | `#EEF6F4` | / page | **19.12:1** | 3 |
-| `--color-focus-ring` | `#EEF6F4` | / focus-halo（内侧相邻） | **18.19:1** | 3 |
-| `--color-focus-halo` | `#06090A` | / 主按钮填充（外侧相邻） | **13.29:1** | 3 |
-| `--color-info-bg` | `#13253A` | Info：中性告知 | — | — |
+| `--color-focus-ring` | `#EEF6F4` | / focus-halo (inner adjacent) | **18.19:1** | 3 |
+| `--color-focus-halo` | `#06090A` | / primary button fill (outer adjacent) | **13.29:1** | 3 |
+| `--color-info-bg` | `#13253A` | Info: neutral notice | — | — |
 | `--color-info-fg` | `#678EB3` | / info-bg | **4.50:1** | 4.5 |
 | `--color-info-fg` | `#678EB3` | / page | **6.10:1** | 4.5 |
-| `--color-info-border` | `#5A83AA` | / page（图形） | **5.26:1** | 3 |
-| `--color-success-bg` | `#122A20` | Success：已完成 | — | — |
+| `--color-info-border` | `#5A83AA` | / page (graphic) | **5.26:1** | 3 |
+| `--color-success-bg` | `#122A20` | Success: completed | — | — |
 | `--color-success-fg` | `#5A987D` | / success-bg | **4.52:1** | 4.5 |
 | `--color-success-fg` | `#5A987D` | / page | **6.22:1** | 4.5 |
-| `--color-success-border` | `#4A8B6E` | / page（图形） | **5.21:1** | 3 |
-| `--color-warning-bg` | `#2C2209` | Warning：需注意，未阻断 | — | — |
+| `--color-success-border` | `#4A8B6E` | / page (graphic) | **5.21:1** | 3 |
+| `--color-warning-bg` | `#2C2209` | Warning: needs attention, not blocked | — | — |
 | `--color-warning-fg` | `#BA7E27` | / warning-bg | **4.55:1** | 4.5 |
 | `--color-warning-fg` | `#BA7E27` | / page | **6.10:1** | 4.5 |
-| `--color-warning-border` | `#B7791F` | / page（图形） | **5.77:1** | 3 |
-| `--color-danger-bg` | `#2E1817` | Error：已阻断 | — | — |
+| `--color-warning-border` | `#B7791F` | / page (graphic) | **5.77:1** | 3 |
+| `--color-danger-bg` | `#2E1817` | Error: blocked | — | — |
 | `--color-danger-fg` | `#C66E6E` | / danger-bg | **4.65:1** | 4.5 |
 | `--color-danger-fg` | `#C66E6E` | / page | **5.86:1** | 4.5 |
-| `--color-danger-border` | `#BD5A5A` | / page（图形） | **4.77:1** | 3 |
-| `--color-safety-bg` | `#16233A` | Safety：安全信号（非错误） | — | — |
+| `--color-danger-border` | `#BD5A5A` | / page (graphic) | **4.77:1** | 3 |
+| `--color-safety-bg` | `#16233A` | Safety: safety signal (not an error) | — | — |
 | `--color-safety-fg` | `#7796BD` | / safety-bg | **5.15:1** | 4.5 |
 | `--color-safety-fg` | `#7796BD` | / page | **6.88:1** | 4.5 |
-| `--color-safety-border` | `#6A8CB6` | / page（图形） | **6.04:1** | 3 |
-| `--color-moderation-bg` | `#102B2A` | Moderation：审核中 | — | — |
+| `--color-safety-border` | `#6A8CB6` | / page (graphic) | **6.04:1** | 3 |
+| `--color-moderation-bg` | `#102B2A` | Moderation: under review | — | — |
 | `--color-moderation-fg` | `#56A5A0` | / moderation-bg | **5.20:1** | 4.5 |
 | `--color-moderation-fg` | `#56A5A0` | / page | **7.29:1** | 4.5 |
-| `--color-moderation-border` | `#479C97` | / page（图形） | **6.47:1** | 3 |
-| `--color-ai-bg` | `#201F2E` | AI：机器产出的标记 | — | — |
+| `--color-moderation-border` | `#479C97` | / page (graphic) | **6.47:1** | 3 |
+| `--color-ai-bg` | `#201F2E` | AI: the mark of machine output | — | — |
 | `--color-ai-fg` | `#8682B2` | / ai-bg | **4.51:1** | 4.5 |
 | `--color-ai-fg` | `#8682B2` | / page | **5.85:1** | 4.5 |
-| `--color-ai-border` | `#7D79AB` | / page（图形） | **5.19:1** | 3 |
-| `--color-story-bg` | `#2A2117` | Story：Life Story 与意义内容 | — | — |
+| `--color-ai-border` | `#7D79AB` | / page (graphic) | **5.19:1** | 3 |
+| `--color-story-bg` | `#2A2117` | Story: Life Story and meaning-bearing content | — | — |
 | `--color-story-fg` | `#C9955C` | / story-bg | **5.98:1** | 4.5 |
 | `--color-story-fg` | `#C9955C` | / page | **7.94:1** | 4.5 |
-| `--color-story-border` | `#C08C53` | / page（图形） | **7.12:1** | 3 |
-| `--color-community-bg` | `#172519` | Community：社区 | — | — |
+| `--color-story-border` | `#C08C53` | / page (graphic) | **7.12:1** | 3 |
+| `--color-community-bg` | `#172519` | Community: the community | — | — |
 | `--color-community-fg` | `#6E9B78` | / community-bg | **5.04:1** | 4.5 |
 | `--color-community-fg` | `#6E9B78` | / page | **6.62:1** | 4.5 |
-| `--color-community-border` | `#679070` | / page（图形） | **5.80:1** | 3 |
-| `--color-matching-bg` | `#16222C` | Matching：探索与选择 | — | — |
+| `--color-community-border` | `#679070` | / page (graphic) | **5.80:1** | 3 |
+| `--color-matching-bg` | `#16222C` | Matching: exploring and choosing | — | — |
 | `--color-matching-fg` | `#678BAB` | / matching-bg | **4.51:1** | 4.5 |
 | `--color-matching-fg` | `#678BAB` | / page | **5.86:1** | 4.5 |
-| `--color-matching-border` | `#5F83A4` | / page（图形） | **5.27:1** | 3 |
-| `--color-story-surface` | `#211A12` | 与 text-primary（Life Story 区域底） | **17.20:1** | 4.5 |
+| `--color-matching-border` | `#5F83A4` | / page (graphic) | **5.27:1** | 3 |
+| `--color-story-surface` | `#211A12` | vs text-primary (Life Story area background) | **17.20:1** | 4.5 |
 | `--color-danger-solid-bg` | `#C66E6E` | 与 `#1A0808` | **5.41:1** | 4.5 |
-| `--color-disabled-fg` | `#8A9491` | / disabled-bg（本系统不豁免，§B.1.4） | **5.12:1** | 4.5 |
+| `--color-disabled-fg` | `#8A9491` | / disabled-bg (not exempted in this system, §B.1.4) | **5.12:1** | 4.5 |
 
-#### A.1.3 语义色的分工（Doc 20 §311，不得混用）
+#### A.1.3 The division of labour between semantic colours (Doc 20 §311; they must not be interchanged)
 
-| 语义族 | 只用于 | **不得**用于 |
+| Semantic family | Used only for | **Must not** be used for |
 |---|---|---|
-| info | 中性说明、"这是正常的"、上下文横幅 | 任何需要用户动作的事 |
-| success | 服务端已确认完成的事实 | 本地保存、排队中、"已提交给发送服务" |
-| warning | 需要注意但未阻断；有条件批准 | 错误；不可逆操作的最终确认 |
-| danger | 破坏性/不可逆动作、阻断错误 | 安全（Safety）事务 |
-| **safety** | SafetySignal / SafetyEvent / 紧急支持路径 | 普通错误、审核事务 |
-| **moderation** | 举报、审核决定、申诉 | 安全事务、danger |
-| **ai** | AI 参与标签、AI 草稿容器 | 表示 AI 输出的质量或置信度 |
-| disabled | 当前不可用的控件 | 权限不足的**隐藏**（受保护存在见 §E.9） |
-| **story** | Life Story、回忆卡片、引用、温和提示、空状态 | 主按钮；任何有状态要报的地方 |
-| **community** | 社区空间与其中的内容 | 参与度奖励、热度、鲜艳 Feed |
-| **matching** | 匹配建议与"还在挑"的阶段 | 已建立的连接（那是 connection＝主 teal） |
-| **connection** | 已建立且稳定的关系 | 匹配候选、待确认的关系 |
+| info | Neutral explanation, "this is normal", contextual banners | Anything requiring an action from the user |
+| success | A fact the server has confirmed as complete | A local save, something queued, "handed to the sending service" |
+| warning | Needs attention but is not blocked; conditional approval | Errors; the final confirmation of an irreversible operation |
+| danger | Destructive/irreversible actions, blocking errors | Safety matters |
+| **safety** | SafetySignal / SafetyEvent / urgent support routes | Ordinary errors, moderation matters |
+| **moderation** | Reports, moderation decisions, appeals | Safety matters, danger |
+| **ai** | AI-involvement labels, AI draft containers | Signifying the quality or confidence of AI output |
+| disabled | A control that is currently unavailable | **Hiding** something for lack of permission (for protected existence see §E.9) |
+| **story** | Life Story, memory cards, quotations, gentle prompts, empty states | Primary buttons; anywhere there is a state to report |
+| **community** | Community spaces and the content in them | Participation rewards, popularity, a brightly coloured feed |
+| **matching** | Match suggestions and the "still choosing" stage | An established connection (that is connection = the primary teal) |
+| **connection** | An established, settled relationship | Match candidates, relationships awaiting confirmation |
 
-**danger / safety / moderation 三者必须视觉可分且互不替代**：这是 Doc 20 §311 把 Safety 与 moderation 单列为语义族的原因。红=破坏性动作，**深蓝=安全（人身与福祉）**，深青=审核（内容与行为规则）。
+**danger / safety / moderation must be visually distinguishable and must never substitute for one another**: this is why Doc 20 §311 lists Safety and moderation as semantic families of their own. Red = destructive action, **dark blue = safety (of the person and their wellbeing)**, dark teal = moderation (content and conduct rules).
 
-主色改成 teal 之后，这三支颜色**差点被改坏，而且是被"改对"的动作改坏的**。把每一支都按同一个门槛（4.5:1）压到刚好达标，色相能活下来，明度活不下来——所有颜色都落到同一档亮度上。第一版推导出来的结果：safety、info、matching 三支蓝互相只差 1.25:1；moderation 的描边色与主按钮**逐字节相同**；moderation 的文字色与链接色差 1.07:1。**这些全都通过了对比度测试**——对比度量的是「与背景」，一个字都没说「与兄弟颜色」。
+After the primary colour changed to teal these three **were very nearly ruined, and ruined by the act of "getting them right"**. Compressing every one of them to just barely clear the same threshold (4.5:1) lets the hue survive but not the lightness — every colour lands on the same rung of brightness. What the first derivation produced: safety, info and matching, three blues, were only 1.25:1 apart from one another; moderation's border colour was **byte-for-byte identical** to the primary button; and moderation's text colour was 1.07:1 from the link colour. **All of this passed the contrast tests** — contrast measures a colour "against the background" and says not one word about "against its siblings".
 
-修正后 safety 回到明显更深的藏蓝（与 info 差 1.84:1），moderation 用比主按钮更深的青（与主按钮差 1.75:1），并新增一条断言：任意两个语义族不得共用色值，且没有任何一族可以等于主动作色——**一个状态不该长得像一个按钮**。
+After the correction, safety goes back to a distinctly deeper navy (1.84:1 from info), moderation uses a teal deeper than the primary button (1.75:1 from it), and a new assertion was added: no two semantic families may share a colour value, and no family may equal the primary action colour — **a state should not look like a button**.
 
-即便如此，颜色在本系统里**始终是次要线索**：safety 与 info 仍同属蓝族，灰度下几乎无法区分。因此 Safety 事务必须始终带 ⬡ 图标与「安全」字样；三者在灰度下靠图标形状（△ / ⬡ / ▢）与文字区分，见 §A.9 与 §B.1。
+Even so, colour is **always a secondary cue** in this system: safety and info are still both in the blue family and are nearly indistinguishable in greyscale. Safety matters must therefore always carry the ⬡ icon and the word "safety"; in greyscale the three are told apart by icon shape (△ / ⬡ / ▢) and by words — see §A.9 and §B.1.
 
-#### A.1.3b 区域色与语义色的关系（新增，2026-08-13）
+#### A.1.3b How zone colours relate to semantic colours (added 2026-08-13)
 
-上表后四行是**区域色**，与前面的语义色**不是同一种东西**，混用会毁掉两者：
+The last four rows of the table above are **zone colours**, and they are **not the same kind of thing** as the semantic colours above them. Mixing the two destroys both:
 
-- 语义色说的是「这件事处在什么状态」——它随时间变化，是给人**做判断**用的。
-- 区域色说的是「这块内容属于哪个部分」——它不随时间变化，是给人**认路**用的。
+- A semantic colour says "what state is this thing in" — it changes over time, and it is there to help someone **make a judgement**.
+- A zone colour says "which part of the product does this content belong to" — it does not change over time, and it is there to help someone **find their way**.
 
-**同时成立时，状态赢。** 一个人正在等安全审核，屏幕该告诉他的是这件事，不是他在哪个板块。所以区域色只出现在没有状态要报的地方：一条 Life Story 的引用、一个社区空间的介绍、一张匹配建议卡。
+**When both apply, state wins.** Someone waiting on a safety review should be told that by the screen, not told which section they are in. So zone colours appear only where there is no state to report: a quotation in a Life Story, the introduction to a community space, a match suggestion card.
 
-三条具体后果：
+Three concrete consequences:
 
-1. **Sand 绝不做按钮色。** 按钮的一致性比区域气氛重要——一个人学会「teal 的那个是主要动作」之后，不该在 Life Story 里重新学一遍。Sand 只做底、描边与引用条。
-2. **Matching 与 Connection 故意不同色。** 蓝＝还在挑，主 teal＝已经建立。它们是同一条路上前后两个不同的事实，用同一个颜色会让「已连接」看起来像「又一个候选」。
-3. **AI 只做标记，绝不铺满。** AI 蓝紫用于 AI Draft 标签、来源说明、建议卡的描边。AI 产出**不得**比参与者自己的内容拥有更强的视觉权威（Doc 19 §10）——把 AI 区域做成整片紫，等于用版面告诉人「机器说的更要紧」。
+1. **Sand is never a button colour.** Consistency of buttons matters more than the atmosphere of a zone — once someone has learned that "the teal one is the primary action", they should not have to learn it again inside Life Story. Sand does backgrounds, borders and quotation bars only.
+2. **Matching and Connection are deliberately different colours.** Blue = still choosing, primary teal = already established. They are two different facts at two points on the same path, and one colour for both would make "connected" look like "another candidate".
+3. **AI marks, it never fills.** The AI blue-violet is for the AI Draft label, the provenance note, and the border of a suggestion card. AI output **must not** carry more visual authority than a participant's own content (Doc 19 §10) — making the AI area a solid field of violet is using the layout to tell someone "what the machine said matters more".
 
-**低刺激模式必须一起覆盖这四支。** 漏掉任何一个，选了「低刺激」的人仍会看到一片色块——而那正是他选它要躲开的东西。
+**The low-stimulation mode must override all four of these together.** Miss any one and somebody who chose "low stimulation" still sees a block of colour — which is precisely what they chose it to avoid.
 
-#### A.1.4 可见性色使用（Doc 20 §312）
+#### A.1.4 Use of the visibility colours (Doc 20 §312)
 
-可见性等级（Private / Selected People / Connections / Community / Platform Public / Internet Public）**一律以图标 + 文字为主，颜色为辅**。
+The visibility levels (Private / Selected People / Connections / Community / Platform Public / Internet Public) are **always carried primarily by an icon plus words, with colour as support**.
 
-- `Private` 与 `Internet Public` 是两个极端，**禁止**仅靠色相深浅区分：`Private` 用实心闭锁图标 + 文字「只有你能看到」；`Internet Public` 用开放地球图标 + 文字「互联网上任何人都能看到」，并额外套 `warning` 描边容器。
-- 中间等级用 `--color-text-secondary` 中性呈现，不着色，避免"越公开越鲜艳"的诱导（暗黑模式禁令，Doc 20 §13.7）。
+- `Private` and `Internet Public` are the two extremes, and distinguishing them **by depth of hue alone is forbidden**: `Private` uses a solid closed-lock icon plus the words "only you can see this"; `Internet Public` uses an open-globe icon plus the words "anyone on the internet can see this", and additionally sits in a `warning` bordered container.
+- The intermediate levels are presented neutrally in `--color-text-secondary`, with no colouring, to avoid the "the more public, the brighter" nudge (the dark-pattern prohibition, Doc 20 §13.7).
 
-#### A.1.5 对比度复核脚本（评审可复跑）
+#### A.1.5 The contrast re-check script (a reviewer can re-run it)
 
 ```js
-// node contrast.mjs — WCAG 2.x 相对亮度与对比度
+// node contrast.mjs — WCAG 2.x relative luminance and contrast
 const lin = (c) => { c /= 255; return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); };
 const L = (hex) => { const h = hex.replace('#', '');
   return 0.2126 * lin(parseInt(h.slice(0,2),16))
@@ -312,83 +312,83 @@ export const contrast = (a, b) => {
 };
 ```
 
-**验收要求**：把上表所有组合写成单元测试断言（`expect(contrast(fg, bg)).toBeGreaterThanOrEqual(4.5)`），令牌值一旦被改动即失败。这是本文件唯一建议新增的自动化门。
+**Acceptance requirement**: write every combination in the table above as a unit-test assertion (`expect(contrast(fg, bg)).toBeGreaterThanOrEqual(4.5)`), so that the moment a token value is changed it fails. This is the only automated gate this document recommends adding.
 
 ---
 
-### A.2 排版令牌与规则（A2；Doc 20 §313–314）
+### A.2 Typography tokens and rules (A2; Doc 20 §313–314)
 
-#### A.2.1 字族
+#### A.2.1 Font families
 
-| 令牌 | 值 |
+| Token | Value |
 |---|---|
 | `--type-family-ui` | `system-ui, -apple-system, 'PingFang SC', 'Noto Sans CJK SC', 'Microsoft YaHei', sans-serif` |
 | `--type-family-mono` | `ui-monospace, SFMono-Regular, Menlo, 'Noto Sans Mono CJK SC', monospace` |
 
-不下载 Web 字体：离线可读优先于视觉一致（取舍 §H.2）。等宽字族**只用于**标识符（`pt_b`、`dv_9`、版本哈希）——这类文本必须能逐字符核对（Doc 20 §54「精确版本后批准」）。
+No web fonts are downloaded: readability offline takes priority over visual consistency (trade-off §H.2). The monospace family is used **only** for identifiers (`pt_b`, `dv_9`, version hashes) — text of that kind has to be checkable character by character (Doc 20 §54, "approval against an exact version").
 
-#### A.2.2 字号刻度（单一刻度，三档密度共用）
+#### A.2.2 The type scale (a single scale, shared by all three density levels)
 
-根字号保持 `112.5%`（18px），已在现有 `styles.css`；所有尺寸以 `rem` 表达，因此浏览器字号设置与 200% 缩放天然生效。
+The root font size stays at `112.5%` (18px), as it already is in the current `styles.css`; every dimension is expressed in `rem`, so the browser's font-size setting and 200% zoom work naturally.
 
-| 令牌 | 值（rem） | 默认 px（18px 根） | 用途 |
+| Token | Value (rem) | Default px (18px root) | Use |
 |---|---|---:|---|
-| `--type-size-0` | `0.833rem` | 15.0 | 仅用于 `<small>` 里的时间戳/单位；**禁止**用于状态文字、标签、说明 |
-| `--type-size-1` | `1rem` | 18.0 | 正文默认、按钮、表单 |
-| `--type-size-2` | `1.125rem` | 20.3 | 强调正文、卡片标题、状态徽章内文字 |
+| `--type-size-0` | `0.833rem` | 15.0 | Only for timestamps/units inside `<small>`; **forbidden** for status text, labels and explanations |
+| `--type-size-1` | `1rem` | 18.0 | Body default, buttons, forms |
+| `--type-size-2` | `1.125rem` | 20.3 | Emphasised body text, card titles, text inside status badges |
 | `--type-size-3` | `1.333rem` | 24.0 | h3 |
 | `--type-size-4` | `1.602rem` | 28.8 | h2 |
 | `--type-size-5` | `1.924rem` | 34.6 | h1 |
-| `--type-size-6` | `2.311rem` | 41.6 | 仅公共 surface 的落地页大标题 |
+| `--type-size-6` | `2.311rem` | 41.6 | Landing-page display headings on public surfaces only |
 
-比例 1.2（小三度）。**没有比 `--type-size-0` 更小的档**——这是 Doc 20 §314「禁止 tiny secondary labels」的令牌级执行：想不出更小的字号，就写不出更小的字号。
+The ratio is 1.2 (a minor third). **There is no step smaller than `--type-size-0`** — this is Doc 20 §314's "no tiny secondary labels" enforced at the token level: if you cannot name a smaller size, you cannot write one.
 
-#### A.2.3 行高
+#### A.2.3 Line height
 
-| 令牌 | 值 | 用途 |
+| Token | Value | Use |
 |---|---|---|
-| `--type-leading-tight` | `1.25` | `--type-size-4` 及以上的标题 |
-| `--type-leading-snug` | `1.4` | `--type-size-3`、密集表格单元 |
-| `--type-leading-normal` | `1.6` | 正文默认（现有值，保持） |
-| `--type-leading-loose` | `1.8` | 参与者长文本（同意说明、社区规则、生命故事） |
+| `--type-leading-tight` | `1.25` | Headings at `--type-size-4` and above |
+| `--type-leading-snug` | `1.4` | `--type-size-3`, dense table cells |
+| `--type-leading-normal` | `1.6` | Body default (the existing value, kept) |
+| `--type-leading-loose` | `1.8` | Long-form participant text (consent explanations, community rules, life stories) |
 
-**禁止**任何正文行高 < 1.5（Doc 20 §314）。
+Any body line height below 1.5 is **forbidden** (Doc 20 §314).
 
-#### A.2.4 字重
+#### A.2.4 Font weight
 
-| 令牌 | 值 | 用途 |
+| Token | Value | Use |
 |---|---|---|
-| `--type-weight-regular` | `400` | 正文 |
-| `--type-weight-medium` | `500` | 状态徽章文字、表格表头 |
-| `--type-weight-semibold` | `600` | 标题、按钮 |
-| `--type-weight-bold` | `700` | 仅确认对话框中被点名的对象（收件人、社区名、版本号） |
+| `--type-weight-regular` | `400` | Body text |
+| `--type-weight-medium` | `500` | Status badge text, table headers |
+| `--type-weight-semibold` | `600` | Headings, buttons |
+| `--type-weight-bold` | `700` | Only the object named in a confirmation dialog (recipient, community name, version number) |
 
-**禁止 `font-weight: 300` 及以下**（Doc 20 §314「very light text」）；**禁止段落级 `text-transform: uppercase`**（中文无影响，但英文标识符与术语适用）。
+**`font-weight: 300` and below is forbidden** (Doc 20 §314, "very light text"); **paragraph-level `text-transform: uppercase` is forbidden** (no effect on Chinese, but it applies to identifiers and terms in English).
 
-#### A.2.5 字距
+#### A.2.5 Letter spacing
 
-| 令牌 | 值 | 用途 |
+| Token | Value | Use |
 |---|---|---|
-| `--type-tracking-normal` | `0` | 全部中文文本 |
-| `--type-tracking-mono` | `0.02em` | 等宽标识符，提升逐字符核对能力 |
+| `--type-tracking-normal` | `0` | All Chinese text |
+| `--type-tracking-mono` | `0.02em` | Monospace identifiers, to make character-by-character checking easier |
 
-#### A.2.6 行宽（measure）
+#### A.2.6 Measure (line width)
 
-| 令牌 | 值 | 用途 |
+| Token | Value | Use |
 |---|---|---|
-| `--measure-narrow` | `28rem` | 对话框正文、表单单列 |
-| `--measure-default` | `36rem` | 参与者正文（约 34–40 中文字/行） |
-| `--measure-wide` | `56rem` | 研究者/员工表格与并列对比 |
+| `--measure-narrow` | `28rem` | Dialog body text, single-column forms |
+| `--measure-default` | `36rem` | Participant body text (roughly 34–40 Chinese characters per line) |
+| `--measure-wide` | `56rem` | Researcher/staff tables and side-by-side comparison |
 
-`<main>` 的可读区宽度 = `min(100%, var(--measure-default))`；员工工作区提升到 `--measure-wide`。现有 `body { max-width: 44rem }` 由此替换（见 §F）。
+The readable width of `<main>` = `min(100%, var(--measure-default))`; staff workspaces are raised to `--measure-wide`. This replaces the existing `body { max-width: 44rem }` (see §F).
 
 ---
 
-### A.3 间距令牌与三档密度（A3；Doc 20 §315）
+### A.3 Spacing tokens and the three density levels (A3; Doc 20 §315)
 
-**一套刻度，一个乘数**——Doc 20 §315 要求密集/标准/宽松"不产生互不兼容的独立系统"。做法：刻度固定，`--density` 乘数统一缩放。
+**One scale, one multiplier** — Doc 20 §315 requires that dense/standard/spacious "do not produce mutually incompatible separate systems". The approach: the scale is fixed, and the `--density` multiplier scales it uniformly.
 
-| 令牌 | 计算式 | 紧凑 ×0.75 | 标准 ×1 | 宽松 ×1.25 |
+| Token | Expression | Compact ×0.75 | Standard ×1 | Spacious ×1.25 |
 |---|---|---:|---:|---:|
 | `--space-0` | `0` | 0 | 0 | 0 |
 | `--space-1` | `calc(0.25rem * var(--density))` | 3.4px | 4.5px | 5.6px |
@@ -401,162 +401,162 @@ export const contrast = (a, b) => {
 | `--space-8` | `calc(4rem * var(--density))` | 54px | 72px | 90px |
 | `--space-9` | `calc(6rem * var(--density))` | 81px | 108px | 135px |
 
-（px 值按 18px 根字号；`--density` 是第 11 个令牌。）
+(The px values assume an 18px root font size; `--density` is the eleventh token.)
 
-**密度不得缩小以下三类量**（否则会重演 §B.4 的目标重叠缺陷）：
+**Density must not shrink any of these three** (doing so would repeat the target-overlap defect in §B.4):
 
-1. `--target-min`（44px）— 恒定
-2. `--target-gap`（相邻目标最小净间距）— 恒定
-3. `--focus-ring-width` / `--focus-ring-offset` — 恒定
+1. `--target-min` (44px) — constant
+2. `--target-gap` (the minimum clear gap between adjacent targets) — constant
+3. `--focus-ring-width` / `--focus-ring-offset` — constant
 
-即：**密度只压缩留白，不压缩可点性与可见性。**
+That is: **density compresses whitespace only, never clickability or visibility.**
 
-**默认值**：参与者工作区 `spacious`（宽松）；研究者/审核/安全/管理工作区 `standard`；仅在员工的数据表格区域局部允许 `compact`，且必须由用户显式选择（§C）。
-
----
-
-### A.4 形状与描边令牌（A4；Doc 20 §316）
-
-| 令牌 | 值 | 用途 |
-|---|---|---|
-| `--radius-0` | `0` | 表格单元、贴边区块 |
-| `--radius-1` | `0.25rem` | 徽章、输入框、按钮 |
-| `--radius-2` | `0.5rem` | 卡片、面板、对话框 |
-| `--radius-3` | `0.75rem` | 上下文横幅 |
-| `--radius-pill` | `999rem` | **仅** 用于可见性/认识论标签胶囊；不得用于按钮 |
-| `--border-hairline` | `1px` | 装饰分隔线（配 `border-subtle`） |
-| `--border-default` | `2px` | 输入框、卡片、次级按钮 |
-| `--border-strong` | `3px` | 需要注意的容器（warning/stale） |
-| `--border-emphasis` | `4px` | 状态容器的**左侧**冗余通道（见 §B.1.3）；`alertdialog` 外框 |
-
-规则：
-
-- 圆角 ≤ `--radius-2`（8px）用于所有交互元素。理由：Doc 20 §316「不得 infantilise」，大圆角+高饱和是消费级游戏化的视觉语汇。
-- **描边不得是关键状态的唯一载体**（Doc 20 §316）：关键状态 = 结构（左侧 4px 条）+ 图标 + 文字 + 颜色，四通道齐备。
-- 输入框描边一律 `--border-default` + `--color-border-default`（≥3:1），**不得**用 `border-subtle`，也**不得**用"仅下划线"的输入框——低视力下边界不可辨。
+**Defaults**: the participant workspace is `spacious`; the researcher / moderation / safety / administration workspaces are `standard`; `compact` is permitted only locally, in the staff data-table areas, and only when the user has explicitly chosen it (§C).
 
 ---
 
-### A.5 焦点令牌（A5；Doc 20 §317）
+### A.4 Shape and stroke tokens (A4; Doc 20 §316)
 
-| 令牌 | 值 | 说明 |
+| Token | Value | Use |
 |---|---|---|
-| `--focus-ring-width` | `3px` | 恒定，不随密度/字号缩放 |
-| `--focus-ring-offset` | `2px` | 与元素边缘的间隙 |
-| `--focus-halo-width` | `2px` | 填满 offset 间隙的同底色环 |
+| `--radius-0` | `0` | Table cells, flush-edged blocks |
+| `--radius-1` | `0.25rem` | Badges, inputs, buttons |
+| `--radius-2` | `0.5rem` | Cards, panels, dialogs |
+| `--radius-3` | `0.75rem` | Contextual banners |
+| `--radius-pill` | `999rem` | **Only** for the visibility/epistemic label pills; never for buttons |
+| `--border-hairline` | `1px` | Decorative dividers (paired with `border-subtle`) |
+| `--border-default` | `2px` | Inputs, cards, secondary buttons |
+| `--border-strong` | `3px` | Containers that need attention (warning/stale) |
+| `--border-emphasis` | `4px` | The redundant **left-hand** channel of a state container (see §B.1.3); the outer frame of an `alertdialog` |
 
-**双环结构**（解决"焦点环压在按钮填充色上导致对比不足"这一类问题）：
+Rules:
+
+- Corner radii ≤ `--radius-2` (8px) for all interactive elements. The reason: Doc 20 §316, "do not infantilise" — large radii plus high saturation is the visual vocabulary of consumer gamification.
+- **A stroke must never be the sole carrier of a critical state** (Doc 20 §316): a critical state = structure (the 4px left-hand bar) + icon + words + colour, all four channels present.
+- Input borders are always `--border-default` + `--color-border-default` (≥3:1). `border-subtle` **must not** be used, and neither may "underline-only" inputs — their boundary is indiscernible to someone with low vision.
+
+---
+
+### A.5 Focus tokens (A5; Doc 20 §317)
+
+| Token | Value | Notes |
+|---|---|---|
+| `--focus-ring-width` | `3px` | Constant; does not scale with density or font size |
+| `--focus-ring-offset` | `2px` | The gap from the element's edge |
+| `--focus-halo-width` | `2px` | A ring in the current surface colour, filling the offset gap |
+
+**The two-ring structure** (which solves the class of problem where "the focus ring sits on the button's fill colour and has insufficient contrast"):
 
 ```text
-[元素填充]  →  halo 2px（= 当前 surface 色）  →  ring 3px（focus-ring）  →  外部 surface
-                    ↑ 内侧相邻                      ↑ 外侧相邻
+[element fill]  →  halo 2px (= the current surface colour)  →  ring 3px (focus-ring)  →  the surface outside
+                        ↑ inner adjacent                          ↑ outer adjacent
 ```
 
-- 内侧相邻 = `--color-focus-halo`：light `#FFFFFF` vs ring `#12233F` = **15.70:1**；dark `#05070B` vs ring `#F2F6FF` = **18.63:1**
-- 外侧相邻 = 任意 surface：light 最低 **13.51:1**（safety-bg）；dark 最低 **14.19:1**（success-bg）
+- The inner adjacent colour = `--color-focus-halo`: light `#FFFFFF` vs ring `#12233F` = **15.70:1**; dark `#05070B` vs ring `#F2F6FF` = **18.63:1**
+- The outer adjacent colour = any surface: the lowest in light is **13.51:1** (safety-bg); the lowest in dark is **14.19:1** (success-bg)
 
-**均 ≥ 3:1，且不依赖被聚焦元素自身的填充色**——因此 primary 按钮（深蓝填充）上的焦点环同样合规。这是本设计刻意采用双环而非单环的原因。
+**Both are ≥ 3:1, and neither depends on the fill colour of the focused element itself** — so the focus ring on a primary button (with its dark fill) is equally compliant. This is why the design deliberately uses two rings rather than one.
 
-规则：
+Rules:
 
-- 用 `:focus-visible`，不用 `:focus`（避免鼠标点击后残留焦点环）；但 `<dialog>`/`alertdialog` 打开后的编程式聚焦必须**强制**显示焦点环（`:focus` 也画）。
-- **禁止 `outline: none`**，包括临时禁用。评审 grep 项。
-- 焦点环必须在所有状态可见：disabled 元素不接收焦点（用 `aria-disabled` + 保留可聚焦性的场景除外，见 §B.1.4）；hover/active/selected/error 状态下焦点环样式不变。
-- 焦点环不得被 `overflow: hidden` 裁掉：任何包含交互元素的容器**禁止** `overflow: hidden`，需要裁剪时用 `overflow: clip` + `overflow-clip-margin: var(--focus-ring-total)`。
-- 焦点顺序 = DOM 顺序 = 阅读顺序。**禁止正 `tabindex`**；**禁止**用 `order`/`row-reverse`/`grid-area` 改变交互元素的视觉顺序。
-
----
-
-### A.6 动效令牌与 reduced-motion（A6；Doc 20 §318、§297）
-
-| 令牌 | 值 | 用途 |
-|---|---|---|
-| `--motion-duration-instant` | `0ms` | reduced-motion 覆盖值 |
-| `--motion-duration-fast` | `120ms` | 颜色/描边变化（hover、focus） |
-| `--motion-duration-normal` | `200ms` | 展开/收起、对话框进入 |
-| `--motion-duration-slow` | `320ms` | 页面级区块进入（谨慎） |
-| `--motion-ease-standard` | `cubic-bezier(0.2, 0, 0.2, 1)` | 通用 |
-| `--motion-ease-enter` | `cubic-bezier(0, 0, 0.2, 1)` | 进入（减速） |
-| `--motion-ease-exit` | `cubic-bezier(0.4, 0, 1, 1)` | 退出（加速） |
-
-规则：
-
-- 动效**不得承载唯一信息**：任何靠动画表达的状态必须同时有静态文字。
-- **禁止**：庆祝动效、confetti、奖励动画、连续记录动画——用于 Consent、匹配、消息量、研究完成的一律禁止（Doc 20 §297 明文）。
-- **禁止**假进度：不知道进度就用不确定态（文字「正在处理」），不画会走到 90% 卡住的进度条（Doc 20 §224）。
-- **禁止**自动播放、自动轮播、无限循环动画。
-- AI 流式输出期间**不得移动焦点**（Doc 20 §294）；流式文本容器用 `aria-live="off"`，完成后一次性用 `role="status"` 播报「草稿已生成，请检查」。
-- `prefers-reduced-motion: reduce` 时：现有全局 `animation:none/transition:none` 保留，**并且**把 `--motion-duration-*` 全部覆盖为 `0ms`，使 `calc()` 派生值也归零。替代表达：用即时状态切换 + 文字变化，不用淡入淡出。
+- Use `:focus-visible`, not `:focus` (which avoids a focus ring lingering after a mouse click); but programmatic focus after a `<dialog>`/`alertdialog` opens must **force** the focus ring to show (drawn on `:focus` as well).
+- **`outline: none` is forbidden**, including temporarily. It is a review grep item.
+- The focus ring must be visible in every state: disabled elements do not receive focus (except in the cases that use `aria-disabled` and keep focusability, see §B.1.4); the focus ring's appearance does not change under hover/active/selected/error.
+- The focus ring must never be clipped by `overflow: hidden`: `overflow: hidden` is **forbidden** on any container holding an interactive element, and where clipping is needed use `overflow: clip` + `overflow-clip-margin: var(--focus-ring-total)`.
+- Focus order = DOM order = reading order. **Positive `tabindex` is forbidden**; using `order`/`row-reverse`/`grid-area` to change the visual order of interactive elements is **forbidden**.
 
 ---
 
-### A.7 层级 / elevation 与 z-index（A7；Doc 20 §319）
+### A.6 Motion tokens and reduced-motion (A6; Doc 20 §318, §297)
 
-| 令牌 | 值 | 允许用于 |
+| Token | Value | Use |
 |---|---|---|
-| `--elevation-0` | `none` | 页面内容、卡片（默认） |
-| `--elevation-1` | `0 1px 2px rgb(11 18 32 / 0.10), 0 0 0 1px rgb(11 18 32 / 0.06)` | 菜单、下拉 |
-| `--elevation-2` | `0 4px 12px rgb(11 18 32 / 0.14), 0 0 0 1px rgb(11 18 32 / 0.08)` | 对话框、粘性动作条 |
-| `--elevation-3` | `0 10px 28px rgb(11 18 32 / 0.20), 0 0 0 1px rgb(11 18 32 / 0.10)` | 临时浮层（仅一处，见下） |
+| `--motion-duration-instant` | `0ms` | The reduced-motion override value |
+| `--motion-duration-fast` | `120ms` | Colour/stroke changes (hover, focus) |
+| `--motion-duration-normal` | `200ms` | Expand/collapse, dialog entry |
+| `--motion-duration-slow` | `320ms` | Page-level block entry (sparingly) |
+| `--motion-ease-standard` | `cubic-bezier(0.2, 0, 0.2, 1)` | General |
+| `--motion-ease-enter` | `cubic-bezier(0, 0, 0.2, 1)` | Entry (decelerating) |
+| `--motion-ease-exit` | `cubic-bezier(0.4, 0, 1, 1)` | Exit (accelerating) |
 
-| 令牌 | 值 | 层 |
+Rules:
+
+- Motion **must never be the only carrier of information**: any state expressed by animation must have static words alongside it.
+- **Forbidden**: celebratory motion, confetti, reward animations, streak animations — all forbidden for consent, matching, message volume and study completion (Doc 20 §297, explicitly).
+- **No fake progress**: if the progress is unknown, use an indeterminate state (the words "working on it"), and do not draw a progress bar that runs to 90% and sticks (Doc 20 §224).
+- **No autoplay**, no auto-rotating carousels, no infinitely looping animation.
+- Focus **must not move** while AI output is streaming (Doc 20 §294); the streaming text container uses `aria-live="off"`, and on completion announces once via `role="status"`: "the draft is ready, please check it".
+- Under `prefers-reduced-motion: reduce`: the existing global `animation:none/transition:none` is kept, **and** all `--motion-duration-*` are overridden to `0ms`, so that values derived through `calc()` go to zero as well. The substitute expression is an instant state change plus a change of words, not a cross-fade.
+
+---
+
+### A.7 Layering / elevation and z-index (A7; Doc 20 §319)
+
+| Token | Value | Permitted for |
+|---|---|---|
+| `--elevation-0` | `none` | Page content, cards (the default) |
+| `--elevation-1` | `0 1px 2px rgb(11 18 32 / 0.10), 0 0 0 1px rgb(11 18 32 / 0.06)` | Menus, dropdowns |
+| `--elevation-2` | `0 4px 12px rgb(11 18 32 / 0.14), 0 0 0 1px rgb(11 18 32 / 0.08)` | Dialogs, sticky action bars |
+| `--elevation-3` | `0 10px 28px rgb(11 18 32 / 0.20), 0 0 0 1px rgb(11 18 32 / 0.10)` | Transient overlays (one place only, see below) |
+
+| Token | Value | Layer |
 |---|---:|---|
-| `--layer-base` | `0` | 常规内容 |
-| `--layer-sticky` | `10` | 粘性动作条、粘性表头 |
-| `--layer-header` | `20` | 上下文横幅 / 工作区横幅 |
-| `--layer-scrim` | `30` | 对话框遮罩 |
+| `--layer-base` | `0` | Ordinary content |
+| `--layer-sticky` | `10` | Sticky action bars, sticky table headers |
+| `--layer-header` | `20` | Contextual banners / workspace banners |
+| `--layer-scrim` | `30` | The dialog scrim |
 | `--layer-dialog` | `40` | `alertdialog` |
-| `--layer-live` | `50` | 会话超时警告（必须盖过一切） |
+| `--layer-live` | `50` | The session-timeout warning (which must cover everything) |
 
-规则（Doc 20 §319）：
+Rules (Doc 20 §319):
 
-- **elevation 不得表示科学置信度、证据强度、审批权威或紧急程度**。安全关键错误不因为"重要"就抬高阴影——它靠位置、持久性与文字表达（§E.10）。
-- dark 主题下阴影几乎不可见，因此每个 elevation 都自带 `0 0 0 1px` 描边环；dark 主题把该环替换为 `--color-border-default`，保证浮层边界 ≥3:1（§F 中已写入）。
-- 同一屏最多一层浮层。**禁止**对话框上再开对话框（这也直接服务「一次一个有意义的决定」）。
-
----
-
-### A.8 触控目标令牌（A8 前置；Doc 20 §295）
-
-| 令牌 | 值 | 说明 |
-|---|---|---|
-| `--target-min` | `2.75rem`（44px @18px 根） | 最小可点尺寸，**宽高皆适用** |
-| `--target-gap` | `0.5rem`（9px） | 相邻目标之间的**净空隙**下限 |
-| `--target-hit-slop` | `0.25rem` | 视觉尺寸小于 44px 时，用 `::before` 扩大命中区所需的外扩量 |
-
-完整规则见 §B.4。
+- **Elevation must not signify scientific confidence, strength of evidence, approval authority or urgency.** A safety-critical error does not get a taller shadow for being "important" — it is expressed by position, persistence and words (§E.10).
+- Shadows are nearly invisible in the dark theme, so every elevation carries its own `0 0 0 1px` outline ring; the dark theme replaces that ring with `--color-border-default`, keeping the overlay's boundary at ≥3:1 (this is already written into §F).
+- At most one overlay layer per screen. **A dialog on top of a dialog is forbidden** (which also serves "one meaningful decision at a time" directly).
 
 ---
 
-### A.9 图标体系（A8；Doc 20 §320）
+### A.8 Touch-target tokens (prerequisite for A8; Doc 20 §295)
 
-**不引入图标库**（依赖约束 + 体积 + 离线）。做法：`apps/web/src/components/icons.tsx` 内联 SVG，`viewBox="0 0 24 24"`、`stroke="currentColor"`、`stroke-width="2"`、`fill="none"`、`aria-hidden="true"`、`focusable="false"`。
-
-| 令牌 | 值 | 说明 |
+| Token | Value | Notes |
 |---|---|---|
-| `--icon-size-1` | `1em` | 与行内文字同高（徽章内） |
-| `--icon-size-2` | `1.25em` | 块级状态容器 |
-| `--icon-size-3` | `1.5em` | 对话框标题旁 |
-| `--icon-stroke` | `2` | 恒定；高对比模式提升到 `2.5` |
-| `--icon-gap` | `var(--space-2)` | 图标与文字间距 |
+| `--target-min` | `2.75rem` (44px at an 18px root) | The minimum tappable size, **applying to both width and height** |
+| `--target-gap` | `0.5rem` (9px) | The lower bound on the **clear gap** between adjacent targets |
+| `--target-hit-slop` | `0.25rem` | How far a `::before` must extend the hit area outwards when the visual size is under 44px |
 
-**必须有文字标签、不得单独出现的图标**（Doc 20 §320 明列）：AI、屏蔽（Block）、举报（Report）、可见性（Visibility）、安全（Safety）、草稿（Draft）。本系统把这条收紧为：**所有图标一律不得单独出现**——不存在纯图标按钮。理由：中文界面里图标语义歧义更大，且纯图标按钮的可访问名依赖 `aria-label`，与"文字即可访问名"的现有测试策略冲突（§G）。
+The full rules are in §B.4.
 
-**形状必须互异**（灰度/色盲下的区分通道）：
+---
 
-| 语义 | 轮廓形状 | 描述 |
+### A.9 The icon system (A8; Doc 20 §320)
+
+**No icon library is introduced** (dependency constraints + size + offline use). The approach: inline SVG in `apps/web/src/components/icons.tsx`, with `viewBox="0 0 24 24"`, `stroke="currentColor"`, `stroke-width="2"`, `fill="none"`, `aria-hidden="true"`, `focusable="false"`.
+
+| Token | Value | Notes |
 |---|---|---|
-| info | 圆 ○ | 圆圈内 i |
-| success | 圆 + 对勾 ✓ | 圆圈内勾 |
-| warning | 三角 △ | 三角内感叹号 |
-| danger | 八角 ⯃ | 八边形内感叹号（与 warning 三角明确不同） |
-| safety | 盾形 ⛊ | 盾牌轮廓 |
-| moderation | 方 ▢ | 方框内旗帜 |
-| ai | 菱形 ◇ | 菱形内星点（低调，不发光、不彩虹） |
-| draft | 折角纸 | 右上折角矩形 |
-| private / 可见性 | 闭锁 / 开放地球 | 两端极值形状差异最大 |
-| offline | 断开的云 | 云 + 斜杠 |
-| stale / conflict | 双圆错位 | 两个错位圆 |
+| `--icon-size-1` | `1em` | The same height as the inline text (inside a badge) |
+| `--icon-size-2` | `1.25em` | Block-level state containers |
+| `--icon-size-3` | `1.5em` | Beside a dialog title |
+| `--icon-stroke` | `2` | Constant; raised to `2.5` in high-contrast mode |
+| `--icon-gap` | `var(--space-2)` | The gap between icon and text |
+
+**Icons that must carry a text label and must never appear alone** (listed explicitly in Doc 20 §320): AI, Block, Report, Visibility, Safety, Draft. This system tightens that to: **no icon may ever appear alone** — there is no such thing as an icon-only button here. The reasons: icon semantics are more ambiguous in a Chinese-language interface, and an icon-only button's accessible name depends on `aria-label`, which conflicts with the existing "the visible words are the accessible name" test strategy (§G).
+
+**The shapes must differ from one another** (this is the channel that distinguishes them in greyscale and for colour-blind readers):
+
+| Semantics | Outline shape | Description |
+|---|---|---|
+| info | Circle ○ | An i inside a circle |
+| success | Circle + tick ✓ | A tick inside a circle |
+| warning | Triangle △ | An exclamation mark inside a triangle |
+| danger | Octagon ⯃ | An exclamation mark inside an octagon (clearly different from the warning triangle) |
+| safety | Shield ⛊ | A shield outline |
+| moderation | Square ▢ | A flag inside a square |
+| ai | Diamond ◇ | A star point inside a diamond (understated; it does not glow and is not rainbow-coloured) |
+| draft | Folded-corner page | A rectangle with the top-right corner turned |
+| private / visibility | Closed lock / open globe | The two extremes have the greatest possible difference in shape |
+| offline | Broken cloud | A cloud with a slash |
+| stale / conflict | Two offset circles | Two circles out of register |
 | loading | 圆弧 | reduced-motion 下不旋转，改为静态圆弧 + 文字 |
 
 验收：把 12 个图标渲染为灰度 PNG，无文字，请 3 人盲测能否两两区分；不能区分的重画。**这是设计验收项，不是自动化项。**
