@@ -165,7 +165,7 @@ Uniform darkening is not a substitute colour: `#287C78 → #267571` moves the hs
 | `--color-matching-fg` | `#4D6F8F` | / page | **4.95:1** | 4.5 |
 | `--color-matching-border` | `#587FA3` | / page (graphic) | **3.96:1** | 3 |
 | `--color-story-surface` | `#FCF8F2` | vs text-primary (Life Story area background) | **12.46:1** | 4.5 |
-| `--color-danger-solid-bg` | `#A03F3F` | 与 `#FFFFFF` | **6.41:1** | 4.5 |
+| `--color-danger-solid-bg` | `#A03F3F` | vs `#FFFFFF` | **6.41:1** | 4.5 |
 | `--color-disabled-fg` | `#69706E` | / disabled-bg (not exempted in this system, §B.1.4) | **4.54:1** | 4.5 |
 
 #### A.1.2 Dark theme
@@ -245,7 +245,7 @@ In the dark theme colours are lightened by **interpolating towards white** (in t
 | `--color-matching-fg` | `#678BAB` | / page | **5.86:1** | 4.5 |
 | `--color-matching-border` | `#5F83A4` | / page (graphic) | **5.27:1** | 3 |
 | `--color-story-surface` | `#211A12` | vs text-primary (Life Story area background) | **17.20:1** | 4.5 |
-| `--color-danger-solid-bg` | `#C66E6E` | 与 `#1A0808` | **5.41:1** | 4.5 |
+| `--color-danger-solid-bg` | `#C66E6E` | vs `#1A0808` | **5.41:1** | 4.5 |
 | `--color-disabled-fg` | `#8A9491` | / disabled-bg (not exempted in this system, §B.1.4) | **5.12:1** | 4.5 |
 
 #### A.1.3 The division of labour between semantic colours (Doc 20 §311; they must not be interchanged)
@@ -1009,7 +1009,7 @@ Every state presentation shares one structure (icon + title + explanation + acti
 - A high-impact action waiting on the server: `Waiting for the server to confirm. Until it does, {object} has not been {action}.`
   - For example: `Waiting for the server to confirm. Until it does, this message has not been sent.`
 
-### E.2 骨架（Doc 20 §225）
+### E.2 Skeletons (Doc 20 §225)
 
 | Item | Specification |
 |---|---|
@@ -1217,72 +1217,73 @@ Other patterns:
                    [Back to {the level above}]
 ```
 
-| 铁律 | 说明 |
+| The iron rules | Notes |
 |---|---|
-| 404 与 403 **前端呈现完全相同** | 不得用不同文案、不同图标、不同颜色 |
-| 不得说「你没有权限」 | 那等于确认了对象存在 |
-| 不得禁用而非隐藏 | 一个"灰掉的按钮"会泄露"这里有东西" |
-| 被屏蔽方视角 | 被屏蔽的人看到的是"找不到"，不是"你被屏蔽了" |
-| 加载态也不得泄露 | 不得先渲染骨架再变 404 —— 骨架的形状会泄露对象类型 |
+| 404 and 403 have **exactly the same frontend presentation** | No different wording, no different icon, no different colour |
+| Never say "you do not have permission" | That confirms the object exists |
+| Never disable instead of hiding | A "greyed-out button" leaks that "there is something here" |
+| From the blocked person's point of view | Someone who has been blocked sees "not found", not "you have been blocked" |
+| The loading state must not leak either | Do not render a skeleton and then turn it into a 404 — the skeleton's shape leaks the object's type |
 
-### E.10 严重度不靠 elevation 表达（Doc 20 §319）
+### E.10 Severity is not expressed by elevation (Doc 20 §319)
 
-安全关键错误的"重要性"由**位置（模态）+ 持久性（不自动消失）+ 文字（明说后果）+ 语义色 + 图标**表达。
-**禁止**：把 3/4 级错误的阴影调大、加发光、加边框动画、加声音。
+The "importance" of a safety-critical error is expressed by **position (modal) + persistence (it does not disappear on its own) + words (the consequence stated plainly) + semantic colour + icon**.
+**Forbidden**: giving a level 3/4 error a bigger shadow, a glow, an animated border, or a sound.
 
-### E.11 会话超时（I14；Doc 20 §238–239）
+### E.11 Session timeout (I14; Doc 20 §238–239)
 
-| 模式 | 警告 | 登出 |
+| Mode | Warning | Sign-out |
 |---|---|---|
-| 普通 | 空闲 20 分钟 | 25 分钟 |
-| 共享设备 | 空闲 5 分钟 | 7 分钟 |
+| Normal | After 20 idle minutes | 25 minutes |
+| Shared device | After 5 idle minutes | 7 minutes |
 
-警告结构（`--layer-live`，最高层）：
+The structure of the warning (`--layer-live`, the topmost layer):
 
 ```text
-[圆弧] 还有 {mm:ss} 就会自动退出
-        这是为了保护你的隐私。
-        你写的内容已经保存成草稿。
-        [继续使用]  [保存并退出]
+[arc] You will be signed out automatically in {mm:ss}
+      This is to protect your privacy.
+      What you wrote has been saved as a draft.
+      [Keep using it]  [Save and sign out]
 ```
 
-规则：
+Rules:
 
-- 倒计时**必须**同时有文字（不只有进度条），并用 `role="timer"`；每 30 秒更新一次 `aria-live="polite"`（不是每秒，避免刷屏）。
-- 超时后敏感内容隐藏，页面显示中性的「已经自动退出。重新登录后可以继续。」
-- **超时不得静默作废同意或评估**（Doc 20 §296）：进行中的同意变更/评估在超时前必须落草稿，超时后重新登录可继续。
-- 提供「延长」的前提是延长是安全的；共享设备模式下**不提供**无限延长，最多延长一次。
+- The countdown **must** also be in words (not a progress bar alone) and use `role="timer"`; it updates `aria-live="polite"` every 30 seconds (not every second, which would flood).
+- After the timeout, sensitive content is hidden and the page shows the neutral "you have been signed out automatically. You can carry on after signing in again."
+- **A timeout must not silently void a consent or an assessment** (Doc 20 §296): a consent change or assessment in progress must be written to a draft before the timeout, so it can be continued after signing back in.
+- Offering an "extend" is conditional on extending being safe; in shared-device mode unlimited extension is **not offered**, and it may be extended at most once.
 
-**状态：已实现（2026-08-05）**。两档限时、文字倒计时与 `role="timer"`、整半分钟的 `aria-live="polite"` 播报（由独立的隐藏区域承担——把每秒变化的数字放进朗读区域会把其他一切埋掉）、共享设备最多延长一次而普通模式不限次、超时后回到登录页并显示中性说明，都已落地。
+**Status: implemented (2026-08-05).** The two sets of limits, the countdown in words with `role="timer"`, the `aria-live="polite"` announcement on the half-minute (carried by a separate hidden region — putting a number that changes every second into the announced region buries everything else), the single extension on a shared device against unlimited in normal mode, and the return to the sign-in page with a neutral explanation after a timeout: all of it has landed.
 
-三处按事实偏离本节：
+Three places deviate from this section, on the facts:
 
-- **不说「你写的内容已经保存成草稿」**：本平台没有任何地方保存草稿，这句话会在它即将被打破的那一刻做出承诺。改说「你打了还没送出或保存的内容会丢失」，并由测试守住原文案不得出现（D-20）。上面那条「超时不得静默作废进行中的同意变更或评估」，在草稿机制存在之前只能靠「先警告、再登出」满足，不能靠「已经存好了」满足。
-- **做对话框，不做粘性条**：§D.5 一边把本警告列进粘性元素，一边规定粘性元素总高 ≤ 视口 25%，量出来这两条矛盾——320×844 下这段话占 665px（79%），`xxl` 下 790px。压进 211px 的唯一办法是删掉「会丢什么」那句，而那正是它存在的理由。25% 上限管的是与内容并存的常驻框架元件；打断式警告在那一刻本身就是内容（D-19）。**不加遮罩、不声明 `aria-modal`**：在它后面点一下就是「人还在」，计时器因此重置、警告随即消失。
-- **「空闲」只认按下与按键，不认指针移动**：袖子压在触控板上不该等于「人还在」。
+- **It does not say "what you wrote has been saved as a draft"**: this platform saves drafts nowhere, so that sentence would make a promise at the exact moment it is about to be broken. It says "anything you have typed and not sent or saved will be lost" instead, and a test holds the original wording out (D-20). The rule above — that a timeout must not silently void a consent change or assessment in progress — can only be satisfied by "warn first, then sign out" until a draft mechanism exists; it cannot be satisfied by "it is already saved".
+- **It is a dialog, not a sticky bar**: §D.5 both lists this warning as a sticky element and requires sticky elements to be ≤25% of the viewport in total height, and measuring shows the two rules contradict each other — at 320×844 this passage occupies 665px (79%), and 790px at `xxl`. The only way to fit it into 211px is to delete the sentence saying what will be lost, which is the reason it exists. The 25% ceiling governs persistent chrome that coexists with content; an interrupting warning is itself the content at that moment (D-19). **It has no scrim and does not declare `aria-modal`**: clicking behind it *is* "the person is still here", so the timer resets and the warning goes away.
+- **"Idle" counts presses and keystrokes only, not pointer movement**: a sleeve resting on a trackpad should not count as "the person is still here".
 
 ---
 
-## §F CSS 草案（可直接粘贴进 `apps/web/src/styles.css`）
+## §F CSS draft (paste straight into `apps/web/src/styles.css`)
 
-> **本草案未写入 `apps/web/src/styles.css`**，按简报要求只作为附录交付。
-> 落地方式：**替换**现有文件全部内容（现有 95 行的全部行为都已在本草案中保留或增强：18px 根字号、rem 尺寸、可见焦点、44px 目标、skip-link、reduced-motion、`main li` 块级按钮修补）。
-> 落地后需同时执行 §G 中标注为「需要代码改动」的项，否则部分规则（如 flex 间距替代 `{' '}`）不会生效。
+> **This draft has not been written into `apps/web/src/styles.css`**; per the brief it is delivered as an appendix only.
+> How to land it: **replace** the entire contents of the existing file (every behaviour of the existing 95 lines is preserved or strengthened in this draft: the 18px root font size, rem dimensions, visible focus, 44px targets, the skip link, reduced-motion, and the `main li` block-level button patch).
+> Once landed, the items marked "needs a code change" in §G must be carried out at the same time, or some of the rules (such as flex spacing replacing `{' '}`) will not take effect.
 
 ```css
 /* =============================================================
-   健康老龄化研究平台 — 设计系统基座 v0.1
+   Healthy Ageing Research Platform — design system foundation v0.1
    Doc 20 v1.3 §285–320 / WCAG 2.2 AA
-   规则：组件样式只引用 semantic 令牌；本文件之外不得出现字面色值/px/ms。
+   The rule: component styles reference semantic tokens only; no literal
+   colour value, px or ms may appear outside this file.
    ============================================================= */
 
-/* ---------- 1. 令牌：非颜色（主题无关） ---------- */
+/* ---------- 1. Tokens: non-colour (theme-independent) ---------- */
 :root {
-  /* -- 能力自适应的两个乘数（§C） -- */
+  /* -- The two capability-adaptive multipliers (§C) -- */
   --scale-font: 1;
   --density: 1;
 
-  /* -- 排版 (§A.2) -- */
+  /* -- Typography (§A.2) -- */
   --type-family-ui: system-ui, -apple-system, 'PingFang SC', 'Noto Sans CJK SC',
     'Microsoft YaHei', sans-serif;
   --type-family-mono: ui-monospace, SFMono-Regular, Menlo, 'Noto Sans Mono CJK SC', monospace;
@@ -1312,7 +1313,7 @@ Other patterns:
   --measure-default: 36rem;
   --measure-wide: 56rem;
 
-  /* -- 间距 (§A.3)：单一刻度 × 密度乘数 -- */
+  /* -- Spacing (§A.3): one scale × the density multiplier -- */
   --space-0: 0;
   --space-1: calc(0.25rem * var(--density));
   --space-2: calc(0.5rem * var(--density));
@@ -1324,7 +1325,7 @@ Other patterns:
   --space-8: calc(4rem * var(--density));
   --space-9: calc(6rem * var(--density));
 
-  /* -- 形状与描边 (§A.4) -- */
+  /* -- Shape and stroke (§A.4) -- */
   --radius-0: 0;
   --radius-1: 0.25rem;
   --radius-2: 0.5rem;
@@ -1335,18 +1336,18 @@ Other patterns:
   --border-strong: 3px;
   --border-emphasis: 4px;
 
-  /* -- 焦点 (§A.5)：恒定，不随密度/字号缩放 -- */
+  /* -- Focus (§A.5): constant; does not scale with density or font size -- */
   --focus-ring-width: 3px;
   --focus-ring-offset: 2px;
   --focus-halo-width: 2px;
   --focus-ring-total: calc(var(--focus-ring-width) + var(--focus-ring-offset));
 
-  /* -- 触控目标 (§A.8)：恒定 -- */
+  /* -- Touch targets (§A.8): constant -- */
   --target-min: 2.75rem;
   --target-gap: 0.5rem;
   --target-hit-slop: 0.25rem;
 
-  /* -- 动效 (§A.6) -- */
+  /* -- Motion (§A.6) -- */
   --motion-duration-instant: 0ms;
   --motion-duration-fast: 120ms;
   --motion-duration-normal: 200ms;
@@ -1355,7 +1356,7 @@ Other patterns:
   --motion-ease-enter: cubic-bezier(0, 0, 0.2, 1);
   --motion-ease-exit: cubic-bezier(0.4, 0, 1, 1);
 
-  /* -- 层级 (§A.7)：elevation 不表示置信度或权威 -- */
+  /* -- Layering (§A.7): elevation does not signify confidence or authority -- */
   --elevation-0: none;
   --elevation-1: 0 1px 2px rgb(11 18 32 / 0.1), 0 0 0 1px rgb(11 18 32 / 0.06);
   --elevation-2: 0 4px 12px rgb(11 18 32 / 0.14), 0 0 0 1px rgb(11 18 32 / 0.08);
@@ -1367,7 +1368,7 @@ Other patterns:
   --layer-dialog: 40;
   --layer-live: 50;
 
-  /* -- 图标 (§A.9) -- */
+  /* -- Icons (§A.9) -- */
   --icon-size-1: 1em;
   --icon-size-2: 1.25em;
   --icon-size-3: 1.5em;
@@ -1375,7 +1376,7 @@ Other patterns:
   --icon-gap: var(--space-2);
 }
 
-/* ---------- 2. 令牌：颜色 — Light（默认） (§A.1.1) ---------- */
+/* ---------- 2. Tokens: colour — Light (the default) (§A.1.1) ---------- */
 :root {
   --color-surface-page: #ffffff;
   --color-surface-raised: #f7f8fa;
@@ -1388,7 +1389,7 @@ Other patterns:
   --color-text-inverse: #ffffff;   /* 16.53:1 / inverse */
   --color-text-link: #14448c;      /*  9.39:1 / page */
 
-  --color-border-subtle: #d5dae2;  /* 装饰专用，1.40:1 */
+  --color-border-subtle: #d5dae2;  /* decorative only, 1.40:1 */
   --color-border-default: #767e8c; /*  4.09:1 / page */
   --color-border-strong: #414855;  /*  9.20:1 / page */
 
@@ -1400,7 +1401,7 @@ Other patterns:
   --color-action-secondary-border: #1a4fa0;
   --color-action-secondary-bg-hover: #e8eef8;
 
-  --color-focus-ring: #12233f; /* ≥13.51:1 与任一 surface；15.70:1 与 halo */
+  --color-focus-ring: #12233f; /* ≥13.51:1 against any surface; 15.70:1 against the halo */
   --color-focus-halo: #ffffff;
 
   --color-info-bg: #e8f1fa;
@@ -1432,8 +1433,8 @@ Other patterns:
   --color-disabled-border: #a8aeb9;
 }
 
-/* ---------- 3. 令牌：颜色 — Dark (§A.1.2) ---------- */
-/* 两套写法并存：媒体查询（无 JS 也生效）+ 属性选择器（用户显式选择优先） */
+/* ---------- 3. Tokens: colour — Dark (§A.1.2) ---------- */
+/* Both forms coexist: the media query (which works without JS) + the attribute selector (an explicit user choice wins) */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
     --color-surface-page: #0e1116;
@@ -1459,7 +1460,7 @@ Other patterns:
     --color-action-secondary-border: #7fb0ff;
     --color-action-secondary-bg-hover: #182231;
 
-    --color-focus-ring: #f2f6ff; /* ≥14.19:1 与任一 surface；18.63:1 与 halo */
+    --color-focus-ring: #f2f6ff; /* ≥14.19:1 against any surface; 18.63:1 against the halo */
     --color-focus-halo: #05070b;
 
     --color-info-bg: #10243a;
@@ -1490,13 +1491,13 @@ Other patterns:
     --color-disabled-fg: #8b93a1;
     --color-disabled-border: #3a414c;
 
-    /* dark 下阴影不可见：改用描边环作为浮层边界（≥3:1） */
+    /* Shadows are invisible in dark: use an outline ring as the overlay's boundary instead (≥3:1) */
     --elevation-1: 0 0 0 1px var(--color-border-default);
     --elevation-2: 0 0 0 1px var(--color-border-default), 0 4px 12px rgb(0 0 0 / 0.6);
     --elevation-3: 0 0 0 1px var(--color-border-strong), 0 10px 28px rgb(0 0 0 / 0.7);
   }
 }
-/* 用户显式选择 dark（与上方同值；属性选择器胜出于媒体查询默认） */
+/* The user has explicitly chosen dark (same values as above; the attribute selector beats the media-query default) */
 :root[data-theme='dark'] {
   --color-surface-page: #0e1116;
   --color-surface-raised: #161a21;
@@ -1550,8 +1551,8 @@ Other patterns:
   --elevation-3: 0 0 0 1px var(--color-border-strong), 0 10px 28px rgb(0 0 0 / 0.7);
 }
 
-/* ---------- 4. 能力自适应模式覆盖 (§C) ---------- */
-/* 绝不按年龄或分组自动判定：这些属性只能由用户显式设置写到 <html> 上。 */
+/* ---------- 4. Capability-adaptive mode overrides (§C) ---------- */
+/* Never determined automatically by age or by group: these attributes are written onto <html> only by an explicit user setting. */
 :root[data-font-scale='lg'] { --scale-font: 1.125; }
 :root[data-font-scale='xl'] { --scale-font: 1.25; }
 :root[data-font-scale='xxl'] { --scale-font: 1.5; }
@@ -1560,7 +1561,7 @@ Other patterns:
 :root[data-density='standard'] { --density: 1; }
 :root[data-density='spacious'] { --density: 1.25; }
 
-/* 高对比：OS 信号作初始值，用户显式选择优先 */
+/* High contrast: the OS signal is the initial value, an explicit user choice wins */
 @media (prefers-contrast: more) {
   :root:not([data-contrast='standard']) {
     --color-text-primary: #000000;
@@ -1580,7 +1581,7 @@ Other patterns:
   --color-border-subtle: #414855;
   --color-border-default: #16191f;
   --color-border-strong: #000000;
-  --color-action-primary-bg: #0b2e6b;    /* 12.98:1 与 #ffffff 前景 */
+  --color-action-primary-bg: #0b2e6b;    /* 12.98:1 against a #ffffff foreground */
   --color-action-secondary-fg: #0b2e6b;
   --border-default: 3px;
   --icon-stroke: 2.5;
@@ -1592,15 +1593,15 @@ Other patterns:
   --color-text-secondary: #e9ecf2;
   --color-border-default: #e9ecf2;
   --color-border-strong: #ffffff;
-  --color-action-primary-bg: #bbd4ff;    /* 13.97:1 与 #000000 前景 */
+  --color-action-primary-bg: #bbd4ff;    /* 13.97:1 against a #000000 foreground */
   --color-action-primary-fg: #000000;
 }
 
-/* 简化模式：隐藏次要内容、加大行高。组件用 .optional 标记可省略的内容。 */
+/* Simplified mode: hide secondary content and increase the line height. Components mark omissible content with .optional. */
 :root[data-simplify='on'] { --type-leading-normal: 1.8; }
 :root[data-simplify='on'] .optional { display: none; }
 
-/* 低刺激模式：去掉全部 tint 底，只留描边与文字 */
+/* Low-stimulation mode: remove every tint background, leaving strokes and text */
 :root[data-stimulation='low'] {
   --color-info-bg: var(--color-surface-page);
   --color-success-bg: var(--color-surface-page);
@@ -1611,21 +1612,21 @@ Other patterns:
   --color-ai-bg: var(--color-surface-page);
 }
 
-/* ---------- 5. 基础排版与文档 ---------- */
+/* ---------- 5. Base typography and the document ---------- */
 :root {
   font-family: var(--type-family-ui);
-  font-size: calc(112.5% * var(--scale-font)); /* 18px 基准 × 用户字号 */
+  font-size: calc(112.5% * var(--scale-font)); /* the 18px baseline × the user's font size */
   line-height: var(--type-leading-normal);
   color-scheme: light dark;
   color: var(--color-text-primary);
   background-color: var(--color-surface-page);
-  /* 粘性头/尾不得遮住 Tab 到的元素 (§D.5) */
+  /* A sticky header/footer must not cover an element reached by Tab (§D.5) */
   scroll-padding-block: var(--space-8);
 }
 
 html,
 body {
-  /* 最后一道防线：任何触发它的布局都是缺陷 (§B.3.1) */
+  /* The last line of defence: any layout that triggers it is a defect (§B.3.1) */
   overflow-x: clip;
 }
 
@@ -1634,7 +1635,7 @@ body {
   padding: 0;
   color: var(--color-text-primary);
   background-color: var(--color-surface-page);
-  /* 长标识符不撑破布局 */
+  /* A long identifier must not burst the layout */
   overflow-wrap: anywhere;
   word-break: normal;
 }
@@ -1663,7 +1664,7 @@ code, kbd, samp {
 }
 a { color: var(--color-text-link); }
 
-/* ---------- 6. 应用外壳与布局 ---------- */
+/* ---------- 6. The application shell and layout ---------- */
 .app-shell {
   display: flex;
   flex-direction: column;
@@ -1678,12 +1679,12 @@ main {
   padding: var(--space-5) var(--space-4) var(--space-8);
   box-sizing: border-box;
 }
-/* 员工工作区更宽（Doc 20 §301：员工可用更宽布局） */
+/* Staff workspaces are wider (Doc 20 §301: staff may use a wider layout) */
 main[data-workspace='staff'] { max-width: var(--measure-wide); }
 
 section { margin-block-end: var(--space-6); }
 
-/* 宽内容的唯一合法出口 (§B.3.2) */
+/* The only legitimate outlet for wide content (§B.3.2) */
 .scroll-x {
   overflow-x: auto;
   border: var(--border-default) solid var(--color-border-default);
@@ -1691,15 +1692,15 @@ section { margin-block-end: var(--space-6); }
   padding: var(--space-2);
 }
 
-/* ---------- 7. 焦点：双环，在所有 surface 与状态下可见 (§A.5) ---------- */
+/* ---------- 7. Focus: two rings, visible on every surface and in every state (§A.5) ---------- */
 :focus-visible {
   outline: var(--focus-ring-width) solid var(--color-focus-ring);
   outline-offset: var(--focus-ring-offset);
-  /* halo 填满 offset 间隙，使内侧相邻对比 ≥3:1，与元素填充色无关 */
+  /* The halo fills the offset gap, keeping the inner adjacent contrast ≥3:1 regardless of the element's fill colour */
   box-shadow: 0 0 0 var(--focus-halo-width) var(--color-focus-halo);
   border-radius: var(--radius-1);
 }
-/* 对话框打开后的编程式聚焦必须可见（此时不是 :focus-visible） */
+/* Programmatic focus after a dialog opens must be visible (it is not :focus-visible at that point) */
 [role='alertdialog'] :focus,
 [role='alertdialog'][tabindex='-1']:focus,
 h1[tabindex='-1']:focus,
@@ -1708,7 +1709,7 @@ h2[tabindex='-1']:focus {
   outline-offset: var(--focus-ring-offset);
   box-shadow: 0 0 0 var(--focus-halo-width) var(--color-focus-halo);
 }
-/* 焦点环不得被裁掉 (§A.5) */
+/* The focus ring must not be clipped (§A.5) */
 .scroll-x,
 .card,
 li,
@@ -1728,8 +1729,8 @@ section {
   color: var(--color-text-inverse);
 }
 
-/* ---------- 8. 触控目标：R1–R5 防复发规则 (§B.4) ---------- */
-/* R1：--target-min 是唯一来源。R2：交互元素绝不是 inline 级。 */
+/* ---------- 8. Touch targets: the R1–R5 anti-recurrence rules (§B.4) ---------- */
+/* R1: --target-min is the only source. R2: an interactive element is never inline-level. */
 button,
 input,
 select,
@@ -1745,7 +1746,7 @@ a[role='button'] {
 button,
 a[role='button'],
 summary {
-  display: inline-flex;      /* R2：绝不 display:inline */
+  display: inline-flex;      /* R2: never display:inline */
   align-items: center;
   justify-content: flex-start;
   gap: var(--icon-gap);
@@ -1763,7 +1764,7 @@ summary {
 button:hover,
 a[role='button']:hover { background-color: var(--color-action-secondary-bg-hover); }
 
-/* 主动作（每屏至多一个，Doc 20 §13.2） */
+/* The primary action (at most one per screen, Doc 20 §13.2) */
 .btn-primary {
   background-color: var(--color-action-primary-bg);
   border-color: var(--color-action-primary-bg);
@@ -1772,13 +1773,13 @@ a[role='button']:hover { background-color: var(--color-action-secondary-bg-hover
 .btn-primary:hover { background-color: var(--color-action-primary-bg-hover); }
 .btn-primary:active { background-color: var(--color-action-primary-bg-active); }
 
-/* 破坏性动作：颜色不是唯一指示，组件必须同时带图标与明确文字 */
+/* Destructive actions: colour is not the only indicator, and the component must carry an icon and explicit words as well */
 .btn-danger {
   border-color: var(--color-danger-border);
   color: var(--color-danger-fg);
 }
 
-/* 禁用：必须配说明文字 (§B.1.4)；优先用 aria-disabled 保留可聚焦性 */
+/* Disabled: must be accompanied by explanatory words (§B.1.4); prefer aria-disabled, which keeps it focusable */
 button:disabled,
 [aria-disabled='true'] {
   background-color: var(--color-disabled-bg);
@@ -1787,8 +1788,8 @@ button:disabled,
   cursor: not-allowed;
 }
 
-/* R3：间距由布局提供，禁止靠空白文本节点。 */
-/* 任何并排的动作组统一用这个容器（替代 JSX 里的 {' '}）。 */
+/* R3: spacing comes from the layout; a whitespace text node must never provide it. */
+/* Every group of side-by-side actions uses this container (replacing the {' '} in the JSX). */
 .actions {
   display: flex;
   flex-wrap: wrap;
@@ -1800,17 +1801,17 @@ button:disabled,
 .actions > form > button,
 .actions > a[role='button'] {
   flex: 1 1 auto;
-  min-width: 12rem;          /* R4：换行后每行仍是完整可点块 */
+  min-width: 12rem;          /* R4: after wrapping, each row is still a complete tappable block */
 }
-/* B.4.4：关键控件与确认按钮的额外净距 */
+/* B.4.4: extra clear distance between critical controls and confirm buttons */
 .actions--critical { gap: var(--space-5); }
-/* 确认对话框：取消恒在前，确认在后；窄屏纵向排列 */
+/* Confirmation dialogs: cancel always first, confirm second; stacked vertically on a narrow screen */
 .actions--confirm { flex-direction: column; gap: var(--space-5); }
 @media (min-width: 40rem) {
   .actions--confirm { flex-direction: row; }
 }
 
-/* R4：内容流中的单一动作 = 整行块级目标（保留并推广现有首页的修补） */
+/* R4: a single action in the content flow = a full-width block-level target (keeping and generalising the existing home-page patch) */
 main li,
 main p { margin-block: var(--space-3); }
 main li > button,
@@ -1822,7 +1823,7 @@ main li > a[role='button'] {
 }
 main li + li { margin-block-start: var(--target-gap); }
 
-/* R5：包含交互元素的容器不得压缩目标 */
+/* R5: a container holding interactive elements must not compress a target */
 main li,
 .card,
 .actions {
@@ -1830,7 +1831,7 @@ main li,
   overflow: visible;
 }
 
-/* 表单 */
+/* Forms */
 label {
   display: block;
   font-weight: var(--type-weight-medium);
@@ -1857,7 +1858,7 @@ fieldset {
 }
 legend { font-weight: var(--type-weight-semibold); padding-inline: var(--space-2); }
 
-/* ---------- 9. 导航 ---------- */
+/* ---------- 9. Navigation ---------- */
 nav ul {
   list-style: none;
   padding: 0;
@@ -1872,7 +1873,7 @@ nav {
   background-color: var(--color-surface-raised);
 }
 nav li { max-width: none; margin: 0; }
-/* aria-current 三通道：结构（左条）+ 字重 + 颜色，绝不只靠颜色 */
+/* aria-current in three channels: structure (the left bar) + weight + colour, never colour alone */
 nav [aria-current='page'] {
   border-inline-start: var(--border-emphasis) solid var(--color-action-primary-bg);
   font-weight: var(--type-weight-bold);
@@ -1882,7 +1883,7 @@ nav [aria-current='page'] {
 main ul { padding-inline-start: var(--space-5); }
 main ul:not([class]) > li { max-width: var(--measure-default); }
 
-/* ---------- 10. 状态呈现：图标 + 文字 + 颜色 + 结构 (§B.1 / §E) ---------- */
+/* ---------- 10. State presentation: icon + words + colour + structure (§B.1 / §E) ---------- */
 .icon {
   inline-size: var(--icon-size-1);
   block-size: var(--icon-size-1);
@@ -1890,7 +1891,7 @@ main ul:not([class]) > li { max-width: var(--measure-default); }
   stroke-width: var(--icon-stroke);
 }
 
-/* 行内徽章：文字必须是真实文本节点，绝不用 ::before content */
+/* Inline badge: the words must be a real text node, never ::before content */
 .badge {
   display: inline-flex;
   align-items: center;
@@ -1902,7 +1903,7 @@ main ul:not([class]) > li { max-width: var(--measure-default); }
   font-weight: var(--type-weight-medium);
 }
 
-/* 块级状态容器：第四通道 = 左侧 4px 结构条 */
+/* Block-level state container: the fourth channel = the 4px structural bar on the left */
 .state {
   display: flow-root;
   border-inline-start: var(--border-emphasis) solid var(--color-border-strong);
@@ -1931,7 +1932,7 @@ main ul:not([class]) > li { max-width: var(--measure-default); }
 .state--ai,         .badge--ai         { background-color: var(--color-ai-bg);         color: var(--color-ai-fg);         border-inline-start-color: var(--color-ai-border); }
 .state--draft,      .badge--draft      { background-color: var(--color-surface-sunken); color: var(--color-text-secondary); border-inline-start-color: var(--color-border-strong); }
 
-/* 骨架：绝不模仿徽章/按钮/对勾的形状 (§E.2) */
+/* Skeleton: never imitate the shape of a badge, a button or a tick (§E.2) */
 .skeleton {
   background-color: var(--color-surface-sunken);
   border-radius: var(--radius-1);
@@ -1939,14 +1940,14 @@ main ul:not([class]) > li { max-width: var(--measure-default); }
   margin-block: var(--space-2);
 }
 
-/* ---------- 11. 卡片、引用、对话框 ---------- */
+/* ---------- 11. Cards, quotations, dialogs ---------- */
 .card {
   border: var(--border-default) solid var(--color-border-default);
   border-radius: var(--radius-2);
   padding: var(--space-4);
   margin-block: var(--space-4);
   background-color: var(--color-surface-raised);
-  box-shadow: var(--elevation-0); /* 内容卡片不抬升 */
+  box-shadow: var(--elevation-0); /* a content card is not raised */
 }
 
 blockquote {
@@ -1967,7 +1968,7 @@ blockquote {
   max-width: var(--measure-narrow);
 }
 
-/* 上下文横幅（当前身份，共享设备场景恒显） (§D.6) */
+/* The contextual banner (the current identity, permanently shown on a shared device) (§D.6) */
 .context-banner {
   background-color: var(--color-surface-inverse);
   color: var(--color-text-inverse);
@@ -1977,7 +1978,7 @@ blockquote {
   z-index: var(--layer-header);
 }
 
-/* 表格：宽表放进 .scroll-x，不让页面横向滚动 (§B.3.2) */
+/* Tables: a wide table goes into .scroll-x, so the page never scrolls horizontally (§B.3.2) */
 table { border-collapse: collapse; width: 100%; }
 th, td {
   text-align: start;
@@ -1987,19 +1988,19 @@ th, td {
 }
 th { font-weight: var(--type-weight-medium); background-color: var(--color-surface-sunken); }
 
-/* ---------- 12. 响应式 (§D)：只用 min-width，移动优先 ---------- */
+/* ---------- 12. Responsiveness (§D): min-width only, mobile first ---------- */
 @media (min-width: 40rem) {
   main { padding-inline: var(--space-5); }
 }
 @media (min-width: 56rem) {
   main[data-workspace='staff'] { padding-inline: var(--space-6); }
 }
-/* 矮视口（横屏手机、分屏）取消粘性，避免遮挡关键动作 (§D.5) */
+/* A short viewport (a phone in landscape, a split screen) cancels stickiness, so a critical action is never covered (§D.5) */
 @media (max-height: 30rem) {
   .context-banner { position: static; }
 }
 
-/* ---------- 13. 动效与 reduced-motion (§A.6) ---------- */
+/* ---------- 13. Motion and reduced-motion (§A.6) ---------- */
 @media (prefers-reduced-motion: reduce) {
   :root {
     --motion-duration-fast: 0ms;
@@ -2016,24 +2017,33 @@ th { font-weight: var(--type-weight-medium); background-color: var(--color-surfa
   }
 }
 
-/* ---------- 14. 打印（研究者导出核对场景） ---------- */
+/* ---------- 14. Print (the researcher checking an export) ---------- */
 @media print {
   nav, .actions, .skip-link { display: none; }
   main { max-width: none; }
   .state, .card { break-inside: avoid; }
-  /* 打印时颜色必然丢失 —— 这正是状态必须带图标与文字的原因 */
+  /* Colour is inevitably lost in print — which is exactly why a state must carry an icon and words */
 }
 ```
 
-**草案自查（已复核）**：唯一令牌名 **119** 个，`--` 声明合计 **254** 条（颜色 47×2 = 94，非颜色 72，自适应模式覆盖 39，其余为 dark 主题的 elevation 重定义）；组件区零字面色值；`px` 仅出现于描边宽度/焦点环/阴影；`overflow: hidden` 零处；`outline: none` 零处；`content:` 仅出现在 §B.4.2 的命中区扩展伪元素（空字符串，不承载文字）。
+**Self-check of the draft (verified)**: **119** unique token names; **254** `--` declarations in total (colour 47×2 = 94, non-colour 72, adaptive-mode overrides 39, and the rest are the dark theme's elevation redefinitions); zero literal colour values in the component area; `px` appears only in stroke widths, focus rings and shadows; zero occurrences of `overflow: hidden`; zero occurrences of `outline: none`; `content:` appears only in the hit-area expansion pseudo-element of §B.4.2 (an empty string, carrying no text).
 
 ---
 
-## §G 对现有 34 个测试与可访问名的影响
+## §G Effect on the existing 34 tests and accessible names
 
-### G.0 判定依据（已核实）
+> **Note on reading this section (added during the 2026-08-15 translation).**
+> The strings quoted below are the Chinese interface copy that existed when
+> this document was written. Decision D-9 later moved every user-visible
+> string in the product to English, so the copy quoted here is a record of
+> what the analysis was performed against, not of what the interface says
+> today. Where the current English string is known it is given alongside;
+> the analysis itself — which query styles break and which do not — is
+> unaffected by the language of the strings.
 
-`@testing-library/dom@10.4.1` 的 `getNodeText`（`node_modules/.pnpm/@testing-library+dom@10.4.1/.../get-node-text.js:12`）：
+### G.0 The basis for these judgements (verified)
+
+`getNodeText` in `@testing-library/dom@10.4.1` (`node_modules/.pnpm/@testing-library+dom@10.4.1/.../get-node-text.js:12`):
 
 ```js
 Array.from(node.childNodes)
@@ -2041,125 +2051,125 @@ Array.from(node.childNodes)
   .map(c => c.textContent).join('')
 ```
 
-**只取直接文本子节点**。由此得出三条可操作结论：
+**It takes direct text child nodes only.** Three actionable conclusions follow:
 
-1. 在元素内**新增 `<svg aria-hidden>` 兄弟节点**不影响 `getByText`（SVG 不产生文本节点），也不影响可访问名（`aria-hidden` 从名称计算中剔除）。
-2. **把整段文字包进一层 `<span>`** 不会破坏 `getByText('X')`——匹配从父元素转移到该 span，仍是唯一匹配。
-3. **把一段被断言的文字拆到两个元素**会破坏断言。这是唯一的真实风险。
+1. **Adding an `<svg aria-hidden>` sibling** inside an element does not affect `getByText` (SVG produces no text node), and does not affect the accessible name either (`aria-hidden` is excluded from name computation).
+2. **Wrapping a whole passage in a `<span>`** does not break `getByText('X')` — the match moves from the parent to that span and is still the single match.
+3. **Splitting an asserted passage across two elements** does break the assertion. This is the one real risk.
 
-### G.1 现状核对
+### G.1 Checking the current state
 
-- 34 个测试中查询方式为：`getByRole('button'|'alert'|'alertdialog'|'status'|'note'|'list', {name})`、`getByLabelText`、`getByText`、`textContent.toContain`。
-- **无** `getByRole('table' | 'row' | 'cell' | 'grid')` 查询 → §D.4 的表格策略当前无冲突。
-- **无** `getByTestId` → 不能靠 test-id 规避。
-- `getByRole('list', { name: '消息记录' })` 依赖 `<ol aria-label="消息记录">`；样式化该列表不得移除 `aria-label`。
+- The query styles used across the 34 tests are: `getByRole('button'|'alert'|'alertdialog'|'status'|'note'|'list', {name})`, `getByLabelText`, `getByText`, and `textContent.toContain`.
+- There are **no** `getByRole('table' | 'row' | 'cell' | 'grid')` queries → the table strategy in §D.4 currently conflicts with nothing.
+- There is **no** `getByTestId` → a test id cannot be used to sidestep this.
+- `getByRole('list', { name: 'message record' })` depends on `<ol aria-label="message record">`; styling that list must not remove the `aria-label`.
 
-### G.2 不改变可访问名的改动（可直接执行）
+### G.2 Changes that do not alter an accessible name (safe to carry out directly)
 
-| 改动 | 为什么安全 |
+| Change | Why it is safe |
 |---|---|
-| 全部令牌与基础样式（§F 草案） | 纯 CSS |
-| 在状态文字前插入 `<svg class="icon" aria-hidden="true" focusable="false">` | 不产生文本节点；从可访问名计算中剔除 |
-| 用 `<div class="actions">` 包裹并排按钮，删除 JSX 中的 `{' '}` | 按钮自身文本不变；`{' '}` 本就是按钮**之外**的文本节点 |
-| 给现有元素加 `className` | 不影响角色与名称 |
-| `MessagePanel` 中的行内 `style={{...}}` 改为 class | 同上 |
-| 给 `<main>` 加 `data-workspace="staff"` | 属性不参与名称计算 |
-| 加 `.app-shell` class 到已存在的最外层 `<div>` | 该 `<div>` 已存在 |
-| 加「显示与阅读设置」「遮住屏幕」「退出登录」导航项 | **新增**可访问名，不改动已有 6 项 |
-| 加空状态/骨架/离线横幅 | 新增元素 |
+| All tokens and base styles (the §F draft) | Pure CSS |
+| Inserting `<svg class="icon" aria-hidden="true" focusable="false">` before the state text | Produces no text node; excluded from accessible-name computation |
+| Wrapping side-by-side buttons in `<div class="actions">` and deleting the `{' '}` from the JSX | The buttons' own text is unchanged; `{' '}` was always a text node **outside** the button |
+| Adding a `className` to an existing element | Does not affect role or name |
+| Changing the inline `style={{...}}` in `MessagePanel` to a class | As above |
+| Adding `data-workspace="staff"` to `<main>` | Attributes do not participate in name computation |
+| Adding the `.app-shell` class to the outermost `<div>`, which already exists | That `<div>` already exists |
+| Adding the "Display and reading settings", "Cover the screen" and "Sign out" navigation items | These **add** accessible names; the existing 6 are untouched |
+| Adding empty states / skeletons / the offline banner | New elements |
 
-### G.3 会影响测试但**不**改变可访问名的改动（需同步调整测试）
+### G.3 Changes that affect tests but do **not** alter an accessible name (the tests need adjusting alongside)
 
-| 改动 | 影响 | 建议 |
+| Change | Effect | Recommendation |
 |---|---|---|
-| §B.4.4 确认对话框按钮顺序统一为「返回/取消」在前、「确认」在后 | 按名查询不受影响；但若某测试用 `getAllByRole('button')[0]` 或依赖 DOM 顺序，会失败 | 已核对：现有测试**均按名查询**，无序号依赖 → **无需改测试**。此改动落地时需复跑确认 |
-| 队列统一为 `<ul>` + CSS Grid 表格外观（§D.4） | 若未来引入 `<table>` 再改回会破坏角色查询 | 现在就定死语义，避免以后返工 |
-| `<h1 tabindex="-1">` 焦点管理（§B.2） | `tabindex` 不影响名称/角色 | 无需改测试 |
+| §B.4.4, standardising confirmation-dialog button order as "go back/cancel" first and "confirm" second | Queries by name are unaffected; but any test using `getAllByRole('button')[0]` or relying on DOM order would fail | Verified: the existing tests **all query by name** and none depend on index → **no test changes needed**. Re-run to confirm when this lands |
+| Standardising queues as `<ul>` + a CSS Grid table appearance (§D.4) | If a `<table>` were introduced later and this reverted, role queries would break | Fix the semantics now, to avoid rework later |
+| `<h1 tabindex="-1">` focus management (§B.2) | `tabindex` does not affect name or role | No test changes needed |
 
-### G.4 **会改变可访问名或断言文本**的改动（需产品与工程共同确认）
+### G.4 Changes that **do** alter an accessible name or asserted text (product and engineering must agree)
 
-这是唯一需要单列的一节。共 3 项：
+This is the only section that has to be listed item by item. There are 3:
 
-**G.4.1 错误码从主文案移入 `<details>`（§E.0 文案宪法第 6 条）**
+**G.4.1 Moving the error code out of the main text and into a `<details>` (clause 6 of the wording constitution, §E.0)**
 
-- 现状：`api.ts` 消费方拼接 `未能获取消息记录：${err.error.code}`、`未成功：${err.error.code}`、`发送确认未成功：${err.error.code}`、`网络错误，草稿未保存` 等，直接渲染进 `role="status"` / `role="alert"`。
-- 规范要求：主文案说明「发生了什么 / 内容是否还在 / 什么没有发生 / 下一步」，错误码折进 `<details><summary>技术细节</summary>`。
-- **影响**：`role="status"` / `role="alert"` 的 `textContent` 改变。
-- **核对结果**：现有 34 个测试中**没有**断言这些错误文案（已 grep：测试只断言 `访问口令`、`与你的账号和权限无关`、`请再点一次刚才的操作`、`对方不会收到通知`、投递状态标签等成功路径文案）。→ **预计零测试破坏**，但改动前必须复跑全量。
-- **需要决策**：新错误文案的具体措辞（见 §I.1）。
+- As it stands: the consumers in `api.ts` concatenate strings like `Could not fetch the message record: ${err.error.code}`, `Did not succeed: ${err.error.code}`, `Send confirmation did not succeed: ${err.error.code}` and `Network error, the draft was not saved`, and render them straight into `role="status"` / `role="alert"`.
+- What the specification requires: the main text says what happened / whether the content is still there / what did not happen / what to do next, with the error code folded into `<details><summary>Technical detail</summary>`.
+- **Effect**: the `textContent` of `role="status"` / `role="alert"` changes.
+- **Result of checking**: none of the existing 34 tests assert on these error strings (grepped: the tests assert only success-path copy such as the access password, "this is nothing to do with your account or your permissions", "please press what you just pressed again", "the other person will not be notified", and the delivery-state labels). → **zero test breakage expected**, but the full suite must be re-run before the change.
+- **Needs a decision**: the exact wording of the new error copy (see §I.1).
 
-**G.4.2 「拒绝『开放匹配』」等按钮的图标化（如果采纳）**
+**G.4.2 Putting icons in buttons such as "Decline Open Matching" (if adopted)**
 
-- 若在按钮内插入 `<svg aria-hidden>`：可访问名**不变**（`getByRole('button', { name: '拒绝「开放匹配」' })` 仍通过）。
-- 若插入的是**带文字的** `<title>` 或 `aria-label`：名称**会变**。
-- **本规范的决定**：图标一律 `aria-hidden="true"` 且**永不**携带 `aria-label` / `<title>`。→ **零影响**。此项列出仅为明确禁令。
+- If an `<svg aria-hidden>` is inserted inside the button: the accessible name is **unchanged** (`getByRole('button', { name: 'Decline "Open Matching"' })` still passes).
+- If what is inserted is a `<title>` or `aria-label` **carrying text**: the name **does** change.
+- **This specification's decision**: icons are always `aria-hidden="true"` and **never** carry an `aria-label` or `<title>`. → **zero impact**. It is listed here only to make the prohibition explicit.
 
-**G.4.3 `staff-queues.test.tsx` 的「是你，不能自批」文案**
+**G.4.3 The "that is you, so you cannot approve it" copy in `staff-queues.test.tsx`**
 
-- 现状断言：`screen.getByText(/是你，不能自批/)`。
-- §E.8「2 级 · 阻断」的文案模式建议改为：`这一项是你提交的，需要另一位有权限的同事来批准。`——不指责、说明下一步。
-- **影响**：该断言**会失败**。
-- **需要决策**：是否采纳新措辞（见 §I.1）。若采纳，同步改测试为 `/需要另一位有权限的同事/`。
-- 类似候选（同样需决策，当前均未被测试断言）：`密码级别下会被拒绝`、`会被服务端拒绝`——这两条其实已符合"说明原因"的要求，建议**保留原文**，仅补充下一步动作作为第二句（追加句不会破坏 `toContain` 断言）。
+- The assertion as it stands: `screen.getByText(/that is you, so you cannot approve it/)`.
+- The wording pattern in §E.8, "level 2 · blocking", suggests changing it to: `You submitted this, so it needs a colleague with permission to approve it.` — no blame, and it says what happens next.
+- **Effect**: that assertion **would fail**.
+- **Needs a decision**: whether to adopt the new wording (see §I.1). If adopted, change the test to `/needs a colleague with permission/` at the same time.
+- Similar candidates (also needing a decision, and none of them currently asserted by a test): "would be refused at the password tier" and "would be refused by the server". Both already satisfy the "say the reason" requirement, so the recommendation is to **keep them as they are** and add the next action as a second sentence (an appended sentence does not break a `toContain` assertion).
 
-### G.5 明确保留、不得改动的文案（已被测试锁定且措辞已合规）
+### G.5 Copy that is explicitly kept and must not change (already pinned by tests and already compliant)
 
-以下文案经核对**符合本规范的诚实与不指责要求**，本设计系统**不建议改动**：
+The following copy was checked and **satisfies this specification's honesty and no-blame requirements**, so this design system **does not recommend changing it**:
 
-`草稿 — 尚未发送`、`已确认，排队发送中`、`已提交给发送服务`、`发送服务已接受（对方尚未收到）`、`已送达对方`、`发送失败 — 可重试`、`送达状态未知 — 正在核实，不代表成功`、`草稿 — 只有你能看到`、`对方不会收到通知`、`已锁定的研究数据集不会被改写`、`不会由自动系统单独决定`、`本平台不是紧急求助渠道`、`即使你之后屏蔽了对方，这份报告仍会被处理`、`不显示举报人身份`、`是否采纳始终由本人决定`、`不是本人证言`、`与你的账号和权限无关`、`请再点一次刚才的操作`、`不可更改`、`帖子按时间从新到旧显示。`
+`Draft — not sent yet`, `Confirmed, queued for sending`, `Handed to the delivery service`, `Accepted by the delivery service (not received by the person yet)`, `Delivered to the other person`, `Delivery failed — you can try again`, `Delivery status unknown — being checked; this does not mean it arrived`, `Draft — only you can see it`, `the other person will not be notified`, `a locked research dataset will not be overwritten`, `not decided by an automated system on its own`, `this platform is not an emergency service`, `this report will still be dealt with even if you block the person afterwards`, `the reporter's identity is not shown`, `whether to accept it is always the person's own decision`, `this is not the person's own testimony`, `this is nothing to do with your account or your permissions`, `please press what you just pressed again`, `cannot be changed`, `posts are shown newest first.`
 
-以及全部 34 个按名查询的按钮文案（`保存草稿`、`确认发布`、`返回，不屏蔽` …）。**设计系统不改按钮文案。**
-
----
-
-## §H 关键取舍
-
-**H.1｜不引入图标库与图标字体，图标全部内联 SVG，且不存在纯图标按钮。**
-代价：图标制作与灰度可辨性验收成为人工工作量；按钮更宽，移动端一行放不下三个动作。
-换取：零依赖、离线可用、可访问名恒等于可见文字（与现有 34 个按名查询的测试策略完全对齐），且天然满足 Doc 20 §320「AI/Block/Report/Visibility/Safety/Draft 必须有文字标签」。
-放弃的方案：图标+`aria-label` 的紧凑工具栏——它会让可访问名与可见文字分离，中文界面里尤其危险。
-
-**H.2｜不下载 Web 字体，用系统字族。**
-代价：跨平台中文字形不一致（PingFang / 微软雅黑 / Noto 的字重与字面不同），设计稿的排版精度下降。
-换取：首屏无字体闪烁、离线可读、低带宽下不出现"方块字"，且不产生第三方字体 CDN 的隐私外流（THREAT_MODEL 关注项）。
-
-**H.3｜断点用 `rem` 而非 `px`。**
-代价：把浏览器字号调到 32px 的用户，在 1280px 宽的桌面上也会拿到单列布局——员工可能觉得"浪费了屏幕"。
-换取：大字用户自动获得单列、无横向滚动的布局，这正是 WCAG 1.4.4/1.4.10 想要的结果。判断：参与者的可读性优先于员工的信息密度。若员工强烈反对，可用 `data-density="compact"` 局部补偿，但断点不改。
-
-**H.4｜三档密度用一个 `--density` 乘数，而不是三套间距刻度；且密度不缩放触控目标、焦点环。**
-代价：紧凑模式的压缩幅度受限（只能到 0.75×），做不出真正"Excel 级"的密集表格。
-换取：Doc 20 §315 明确要求"不产生互不兼容的独立系统"；更重要的是，任何允许密度压缩 44px 目标的设计都会重演 §B.4 那个真实缺陷。宁可紧凑模式不够紧凑。
-
-**H.5｜Doc 20 §286 的八种能力模式，本系统只交付其中四种（令牌可实现的），并在 §C.2 中如实标注另外四种未交付。**
-代价：不能宣称"已支持八种模式"，PILOT_READINESS 相关条目要保持未满足。
-换取：Step-by-Step / Read-Aloud / Supporter-Assisted / Extended Time 分别属于流程拆分、TTS 与多模态同意、权限模型、会话策略——把它们塞进令牌层只会产出假的合规声明。这与 Doc 19 的认识论纪律一致：不把设计假设呈现为已实现的能力。
+Plus all 34 button strings queried by name (`Save draft`, `Confirm publish`, `Go back, do not block` …). **The design system does not change button copy.**
 
 ---
 
-## §I 需要产品决策的未决项
+## §H Key trade-offs
 
-**I.1｜错误文案的最终措辞，特别是 `是你，不能自批`（阻塞 §G.4.3）**
-§E.8 给出的是模式，不是最终文案。需要决定：(a) 是否统一改写现有员工侧错误文案为"不指责 + 下一步"格式；(b) 若改，`staff-queues.test.tsx` 的断言同步更新由谁执行。
-建议：参与者侧文案**必须**改（认知负荷与尊严直接相关）；员工侧可先保留，仅追加第二句动作提示（不破坏 `toContain` 断言）。**需要产品拍板。**
+**H.1 | No icon library and no icon font; every icon is inline SVG, and there is no such thing as an icon-only button.**
+The cost: drawing the icons and accepting their greyscale distinguishability becomes manual work; buttons are wider, and three actions no longer fit on one mobile row.
+What it buys: zero dependencies, works offline, and the accessible name is always identical to the visible words (exactly aligned with the existing test strategy of 34 queries by name). It also satisfies Doc 20 §320's "AI/Block/Report/Visibility/Safety/Draft must carry a text label" naturally.
+The approach rejected: a compact toolbar of icons with `aria-label` — it separates the accessible name from the visible words, which is especially dangerous in a Chinese-language interface.
 
-**I.2｜参与者移动端导航：顶部横向滚动 vs 底部固定栏**
-Doc 20 §304 说移动端用「bottom or compact primary navigation」，二选一未定。
-- 底部栏：拇指可达（老年用户手部灵活度考量），但占用垂直空间、在小视口 + 大字号下会挤压内容，且与 iOS Safari 底部工具栏冲突。
-- 顶部横滚：不占垂直空间，但 6 个 44px 项在 320px 宽下必须横滚，而横滚导航对屏幕阅读器与开关设备不友好。
-本文件按现状（顶部 `flex-wrap: wrap`）出规范，**但这需要真实用户测试（R3）来决定**，不应由设计代理单方面拍板。
+**H.2 | No web fonts are downloaded; system font families are used.**
+The cost: Chinese glyphs are inconsistent across platforms (PingFang / Microsoft YaHei / Noto differ in weight and in the glyphs themselves), so the typographic precision of the design falls.
+What it buys: no font flash on first paint, readable offline, no tofu boxes on a low-bandwidth connection, and no privacy leak to a third-party font CDN (a THREAT_MODEL concern).
 
-**I.3｜Safety 语义色定为紫色（`#5B2080` / `#D9B8F2`）**
-理由是必须与 danger（红）和 moderation（青）三方可分。但紫色在部分文化语境中与哀悼/宗教相关，Doc 20 §320 要求图标"经过文化审查"，颜色同理。**需要文化与伦理评审确认**，尤其在中文语境下。备选：深橙棕（但与 warning 距离过近）。
+**H.3 | Breakpoints in `rem` rather than `px`.**
+The cost: a user who has set their browser font size to 32px gets a single-column layout even on a 1280px-wide desktop — staff may feel this "wastes the screen".
+What it buys: a large-text user automatically gets a single-column layout with no horizontal scrolling, which is exactly the outcome WCAG 1.4.4/1.4.10 is after. The judgement: participant readability takes priority over staff information density. If staff object strongly, `data-density="compact"` can compensate locally, but the breakpoints do not change.
 
-**I.4｜Read-Aloud（朗读）模式是否纳入原型范围**
-Doc 20 §286 列为模式之一，§298–300 规定了语音交互与多模态同意。这牵涉：浏览器 TTS 还是服务端 TTS（后者有数据外流问题，见 THREAT_MODEL）；朗读内容是否包含他人的消息（隐私边界）；共享设备上朗读的隐私风险（§306 明确要求"谨慎"）。
-**在产品决定之前，本设计系统不为其预留令牌，也不在设置界面中显示该选项。**
+**H.4 | The three density levels use one `--density` multiplier rather than three spacing scales; and density does not scale touch targets or focus rings.**
+The cost: how far compact mode can compress is limited (only to 0.75×), so a genuinely "Excel-grade" dense table is not achievable.
+What it buys: Doc 20 §315 explicitly requires that this "does not produce mutually incompatible separate systems"; and more importantly, any design that lets density compress a 44px target would repeat the real defect in §B.4. Better that compact mode is not compact enough.
 
-**I.5｜「遮住屏幕」隐私屏与共享设备模式的默认值**
-§D.6 规定共享设备模式必须由用户显式勾选。但真实场景（社区中心公用平板）里，最需要这个模式的人最不可能主动勾选。
-备选：(a) 由部署方在环境变量中把整个部署实例标记为"共享设备部署"，所有会话强制短超时；(b) 保持用户自选。
-(a) 更安全但剥夺个体选择，且改变了同意与会话的语义。**需要伦理与部署方共同决策。**
+**H.5 | Of the eight capability modes in Doc 20 §286, this system delivers only four (the ones tokens can implement), and marks the other four honestly as not delivered in §C.2.**
+The cost: it cannot be claimed that "all eight modes are supported", and the related PILOT_READINESS entries have to stay unmet.
+What it buys: Step-by-Step / Read-Aloud / Supporter-Assisted / Extended Time belong respectively to flow decomposition, TTS and multimodal consent, the permission model, and session policy — forcing them into the token layer would only produce a false claim of compliance. This is consistent with Doc 19's epistemic discipline: do not present a design assumption as an implemented capability.
 
-**I.6｜对比度自动化门是否进 CI**
-§A.1.5 建议把全部颜色组合写成单元测试。这会增加一个测试文件与约 90 条断言，并且**任何令牌调整都必须同步更新期望值**。收益是令牌回归可捕获，成本是改配色的摩擦变大。**需要工程决定是否接受这个摩擦。**
+---
+
+## §I Open items needing a product decision
+
+**I.1 | The final wording of the error copy, particularly "that is you, so you cannot approve it" (blocks §G.4.3)**
+What §E.8 gives is a pattern, not final copy. Decisions needed: (a) whether to rewrite the existing staff-side error copy uniformly into the "no blame + what next" form; (b) if so, who updates the assertion in `staff-queues.test.tsx` alongside it.
+Recommendation: the participant-side copy **must** change (cognitive load and dignity are directly at stake); the staff side can stay as it is for now, with only a second sentence of guidance appended (which does not break a `toContain` assertion). **Product must rule on this.**
+
+**I.2 | Participant navigation on mobile: horizontally scrolling at the top vs a fixed bottom bar**
+Doc 20 §304 says mobile uses "bottom or compact primary navigation"; which of the two is undecided.
+- A bottom bar: reachable by thumb (relevant to older users' hand mobility), but it costs vertical space, squeezes the content at a small viewport with a large font, and conflicts with the iOS Safari bottom toolbar.
+- Top horizontal scrolling: costs no vertical space, but six 44px items must scroll horizontally at 320px wide, and a horizontally scrolling navigation is unfriendly to screen readers and switch devices.
+This document specifies the current state (a top `flex-wrap: wrap`), **but this needs real user testing (R3) to decide**, and should not be settled unilaterally by a design agent.
+
+**I.3 | Setting the Safety semantic colour to purple (`#5B2080` / `#D9B8F2`)**
+The reason is that it must be distinguishable from both danger (red) and moderation (teal). But purple is associated with mourning or religion in some cultural contexts; Doc 20 §320 requires icons to have had a cultural review, and the same applies to colour. **This needs confirmation from a cultural and ethics review**, particularly in a Chinese-language context. The alternative: a deep orange-brown (but that sits too close to warning).
+
+**I.4 | Whether Read-Aloud is in scope for the prototype**
+Doc 20 §286 lists it as one of the modes, and §298–300 specify voice interaction and multimodal consent. This involves: browser TTS or server-side TTS (the latter has a data-egress problem, see THREAT_MODEL); whether what is read aloud includes other people's messages (a privacy boundary); and the privacy risk of reading aloud on a shared device (§306 explicitly requires discretion).
+**Until product decides, this design system reserves no tokens for it and does not show the option in the settings interface.**
+
+**I.5 | The default for the "cover the screen" privacy shield and for shared-device mode**
+§D.6 requires shared-device mode to be ticked explicitly by the user. But in the real setting (a shared tablet in a community centre), the people who most need this mode are the least likely to tick it themselves.
+The alternatives: (a) let the deployer mark the whole deployment as a "shared-device deployment" via an environment variable, forcing short timeouts on every session; (b) keep it as the user's own choice.
+(a) is safer but removes individual choice, and it changes the semantics of consent and of the session. **Ethics and the deployer must decide this together.**
+
+**I.6 | Whether the automated contrast gate goes into CI**
+§A.1.5 recommends writing every colour combination as a unit test. That adds one test file and roughly 90 assertions, and **every token adjustment then has to update the expected values alongside it**. The benefit is that token regressions are caught; the cost is more friction when changing the palette. **Engineering must decide whether that friction is acceptable.**
