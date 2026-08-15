@@ -911,310 +911,310 @@ Rules:
 - Stickiness is cancelled when the viewport height is below `30rem` (a phone in landscape, a split screen): `@media (max-height: 30rem) { .sticky { position: static } }`.
 - The page must set `scroll-padding-block-start: <sticky header height>` and `scroll-padding-block-end: <sticky footer height>`, or an element reached by Tab will be covered by the sticky bar (a hard requirement of focus visibility, §B.2).
 
-### D.6 共享环境与共享设备（Doc 20 §306–307）
+### D.6 Shared settings and shared devices (Doc 20 §306–307)
 
-这不是"响应式的附属"，而是本平台的真实场景（社区中心的共用平板）。
+This is not an appendix to responsiveness; it is a real setting for this platform (the shared tablet in a community centre).
 
-| 要求 | 设计 |
+| Requirement | The design |
 |---|---|
-| 谨慎的页面标题 | `<title>` 恒为「健康老龄化研究平台」，**不含**参与者姓名、社区名、消息内容。切屏不改 title（改用 `<h1>` 承载屏幕名） |
-| 通知不含内容 | 任何浏览器通知/角标只说「有 1 条新消息」，不带发件人与正文 |
-| 隐私屏 | 导航中固定项「遮住屏幕」→ 立即覆盖内容为不透明遮罩 + 「已遮住。点击继续」。**遮罩必须是不透明色块，不得用 `filter: blur()`**（模糊可被截图增强还原，且低视力用户误以为是渲染故障） |
-| 易于登出 | 「退出登录」在导航中恒定可见，≤2 次点击（含一次确认），不埋在菜单 |
-| 减少最近内容预览 | 共享设备模式下，列表页只显示对方标识与时间，不显示消息摘要 |
-| 安全返回首页 | 每屏有「回到首页」，且首页不含任何内容预览 |
-| 显式用户切换 | 「切换使用者」= 完全清空 `sessionStorage` + 重新进入登录 |
-| 短超时 | 共享设备模式空闲 5 分钟警告、7 分钟登出（普通模式 20/25 分钟）；见 §E.11 |
-| 当前身份可见 | 上下文横幅恒显示「当前：{标识}」，用 `--color-surface-inverse` 反色条，不可关闭 |
-| 本地草稿保护 | 共享设备模式下草稿只存服务端；`localStorage` 不写任何内容，偏好设置改存 `sessionStorage` |
+| A discreet page title | `<title>` is always "Healthy Ageing Research Platform" and **contains no** participant name, community name or message content. Changing screen does not change the title (the screen name is carried by `<h1>` instead) |
+| Notifications carry no content | Any browser notification or badge says only "1 new message", without the sender or the body |
+| Privacy screen | A fixed "Cover the screen" item in the navigation → immediately covers the content with an opaque mask plus "Covered. Tap to continue". **The mask must be an opaque block of colour and must not use `filter: blur()`** (blur can be recovered by enhancing a screenshot, and a low-vision user mistakes it for a rendering fault) |
+| Easy to sign out | "Sign out" is permanently visible in the navigation, within ≤2 taps (including one confirmation), and not buried in a menu |
+| Fewer previews of recent content | In shared-device mode, list screens show only the other person's identifier and the time, with no message summary |
+| A safe route home | Every screen has "Back to home", and the home screen contains no preview of any content |
+| Explicit user switching | "Switch user" = clear `sessionStorage` entirely + return to sign-in |
+| Short timeouts | In shared-device mode, a warning after 5 idle minutes and sign-out at 7 (in normal mode, 20/25 minutes); see §E.11 |
+| The current identity is visible | The contextual banner permanently shows "Currently: {identifier}" on a `--color-surface-inverse` reversed bar, which cannot be dismissed |
+| Local draft protection | In shared-device mode drafts are stored server-side only; nothing is written to `localStorage`, and preferences move to `sessionStorage` |
 
-共享设备模式的**开关**：登录页上的显式复选框「这是共用的设备」，默认**未勾选**但文案醒目。不得自动探测（探测会误判且不可解释）。
+The **switch** for shared-device mode: an explicit checkbox on the sign-in page, "this is a shared device", **unticked** by default but with prominent wording. It must not be detected automatically (detection misjudges and cannot be explained).
 
-**状态：已实现（2026-08-05）**。开关按本节要求做成登录页的显式复选框，且**不探测**。已落地：恒显的上下文横幅（当前身份）、隐私屏（不透明色块，并把身后一切设为 `inert`——没有这一步，从遮罩后面按 Tab 会走遍页面上每一个控件，屏幕阅读器把遮罩要挡的东西一字不落读出来）、「切换使用者」、偏好改存 `sessionStorage`、5/7 分钟短超时（§E.11）、`<title>` 改为不含角色的固定标题。
+**Status: implemented (2026-08-05).** The switch is an explicit checkbox on the sign-in page as this section requires, and **nothing is detected**. What landed: the permanent contextual banner (the current identity); the privacy screen (an opaque block of colour, with everything behind it set `inert` — without that step, pressing Tab from behind the mask walks every control on the page and the screen reader reads out, word for word, exactly what the mask exists to hide); "Switch user"; preferences moved to `sessionStorage`; the 5/7-minute short timeouts (§E.11); and `<title>` changed to a fixed title that does not name a role.
 
-三处按事实偏离本节：
+Three places deviate from this section, on the facts:
 
-- **「切换使用者 = 完全清空 `sessionStorage`」不照字面做**：共享设备标记正存在那里，照字面做会让最保护人的设置在陌生人坐下的那一刻消失。清空后把标记写回，关于人的一切不写回（D-18）。
-- **环境访问口令仍留在 `localStorage`**：它是原型环境的门钥匙而不是关于人的信息；清掉它会让整台公用平板从此进不来（D-18）。
-- **「减少最近内容预览」无需实现**：会话列表本来就不显示消息摘要，只有对方标识、可以互相写信的依据与会话状态。浏览器通知同理——平台没有通知，没有内容可省。
+- **"Switch user = clear `sessionStorage` entirely" is not done literally**: the shared-device flag is stored there, and doing it literally would make the most protective setting vanish at the moment a stranger sits down. After clearing, the flag is written back; nothing about a person is written back (D-18).
+- **The environment access password stays in `localStorage`**: it is the key to the prototype environment's door, not information about a person, and clearing it would lock the whole shared tablet out permanently (D-18).
+- **"Fewer previews of recent content" needs no implementation**: the conversation list never showed message summaries in the first place, only the other person's identifier, the basis on which they may write to each other, and the conversation's state. The same goes for browser notifications — the platform has none, so there is no content to omit.
 
-**量出来的一处修正**：横幅第一版（一句整话＋两个块级按钮）在 320×844 下占 304px，即视口的 36%，超过 §D.5 给粘性元素的 25% 上限。改成两个并排按钮后为 169–197px（20–23%）；`xl`/`xxl` 两档字号下仍达 45%，故在这两档**取消粘性**——选择放大字号的人正是屏幕空间最紧的人，把接近一半的视口钉死给一条常驻横幅，方向就是反的。
+**One correction that came from measuring**: the first version of the banner (a full sentence plus two block-level buttons) occupied 304px at 320×844, i.e. 36% of the viewport, exceeding the 25% ceiling §D.5 sets for sticky elements. With the two buttons placed side by side it is 169–197px (20–23%); at the `xl`/`xxl` font sizes it still reaches 45%, so at those two sizes stickiness is **cancelled** — someone who has chosen a larger font is exactly the person with the least screen space, and nailing nearly half their viewport to a permanent banner is the wrong direction.
 
 ---
 
-## §E 状态呈现规范（I11 / I12 / I13）
+## §E State presentation specification (I11 / I12 / I13)
 
-### E.0 通用结构与文案宪法
+### E.0 The common structure and the constitution for wording
 
-所有状态呈现共用一个结构（图标 + 标题 + 说明 + 动作 + 可选技术细节）：
+Every state presentation shares one structure (icon + title + explanation + action + optional technical detail):
 
 ```html
 <div class="state state--{severity}" role="{status|alert|none}">
   <p class="state__head">
     <svg class="icon" aria-hidden="true" focusable="false">…</svg>
-    <strong>{状态标题}</strong>
+    <strong>{state title}</strong>
   </p>
-  <p class="state__body">{发生了什么 / 你的内容怎么样了 / 什么没有发生}</p>
-  <p class="state__actions"><button>{下一步动作}</button></p>
-  <details class="state__detail"><summary>技术细节</summary><p><code>{code}</code></p></details>
+  <p class="state__body">{what happened / what became of your content / what did not happen}</p>
+  <p class="state__actions"><button>{the next action}</button></p>
+  <details class="state__detail"><summary>Technical detail</summary><p><code>{code}</code></p></details>
 </div>
 ```
 
-**文案宪法（六条，全部可检验）**：
+**The constitution for wording (six clauses, all of them checkable)**:
 
-1. **说明下一步能做什么**。每条错误/空/离线文案的最后一句必须是一个用户可执行的动作或一条求助路径。
-2. **不指责用户**。禁用第二人称过失句式。
-   | 禁止 | 改为 |
+1. **Say what can be done next.** The last sentence of every error, empty and offline message must be an action the user can take or a route to getting help.
+2. **Do not blame the user.** Second-person fault constructions are forbidden.
+   | Forbidden | Instead |
    |---|---|
-   | 你输入的内容有误 | 这一项需要填写{要求}。 |
-   | 你没有权限 | 这一项在你当前的角色下看不到。 |
-   | 你的网络有问题 | 现在连不上服务器。 |
-   | 操作失败，请重试 | 没有保存成功。你写的内容还在，可以再点一次「保存草稿」。 |
-   | 无效的请求 | 这次提交没有被接受，因为{具体原因}。 |
-3. **说明工作是否保存**。每条错误必须明确回答"我刚才写的东西还在吗"。
-4. **说明什么没有发生**（Doc 20 §231）。例：「消息**没有**发出。」「同意**没有**被更改。」
-5. **不给虚假安慰**。未知就是未知：「送达状态未知 — 正在核实，不代表成功」（现有 `DELIVERY_STATE_LABELS` 已合规，保持）。禁止「马上就好」「应该没问题」。
-6. **技术码只作可选细节**：错误码放 `<details>`，摘要文字为「技术细节」。主文案里不出现 `ERR_*`。
-   > 现有代码把错误码直接拼进主文案（`未能获取消息记录：${err.error.code}`）。这是本规范要求改动的一处，影响见 §G.4。
+   | You entered something wrong | This field needs {requirement}. |
+   | You do not have permission | This is not visible in your current role. |
+   | There is a problem with your network | The server cannot be reached right now. |
+   | The operation failed, please retry | It was not saved. What you wrote is still here; you can press "Save draft" again. |
+   | Invalid request | This submission was not accepted, because {specific reason}. |
+3. **Say whether the work was saved.** Every error must answer, explicitly, "is what I just wrote still there?"
+4. **Say what did not happen** (Doc 20 §231). For example: "the message was **not** sent." "The consent was **not** changed."
+5. **Give no false comfort.** Unknown means unknown: "Delivery status unknown — being checked, which does not mean it succeeded" (the existing `DELIVERY_STATE_LABELS` is already compliant and is kept). "Almost done" and "it should be fine" are forbidden.
+6. **A technical code is an optional detail only**: error codes go in a `<details>` whose summary reads "Technical detail". `ERR_*` never appears in the main text.
+   > The existing code concatenates the error code straight into the main text (`Could not fetch the message record: ${err.error.code}`). This is one of the changes this specification requires; the impact is in §G.4.
 
-**播报规则**：
+**Announcement rules**:
 
-| 严重度 | ARIA | 是否打断 |
+| Severity | ARIA | Does it interrupt? |
 |---|---|---|
-| 加载/同步/空 | `role="status"`（`aria-live="polite"`） | 否 |
-| 信息性 | `role="status"` | 否 |
-| 可恢复错误 | `role="alert"` | 是（AT 打断） |
-| 阻断错误 | `role="alert"` + 焦点移到容器 | 是 |
-| 安全关键 | `role="alertdialog"` + `aria-modal` | 是，接管 |
-| 安全性关键 | `role="alertdialog"` + 会话处理 | 是，接管 |
+| Loading/syncing/empty | `role="status"` (`aria-live="polite"`) | No |
+| Informational | `role="status"` | No |
+| Recoverable error | `role="alert"` | Yes (assistive technology interrupts) |
+| Blocking error | `role="alert"` + focus moves to the container | Yes |
+| Safety-critical | `role="alertdialog"` + `aria-modal` | Yes, it takes over |
+| Security-critical | `role="alertdialog"` + session handling | Yes, it takes over |
 
 ---
 
-### E.1 加载（Doc 20 §224）
+### E.1 Loading (Doc 20 §224)
 
-| 项 | 规范 |
+| Item | Specification |
 |---|---|
-| 结构 | `role="status"` + 图标（静态圆弧，reduced-motion 下不转）+ 文字 |
-| 布局 | **保留布局**：容器保持最终高度（`min-height`），不得让内容跳动 |
-| 进度 | **禁止假进度条**。不知道就用不确定态文字 |
-| 取消 | 只在取消安全时提供（只读查询可取消；已提交的写操作不可取消，改为「正在确认，请勿重复提交」） |
-| 超时 | ≥10s 显示恢复路径 |
-| 高影响动作 | 必须等服务端确认，**不得**乐观更新（Doc 20 §224 末句） |
+| Structure | `role="status"` + an icon (a static arc, which does not spin under reduced-motion) + words |
+| Layout | **Preserve the layout**: the container keeps its final height (`min-height`), so content must not jump |
+| Progress | **Fake progress bars are forbidden.** If it is not known, use indeterminate wording |
+| Cancelling | Offered only where cancelling is safe (a read-only query can be cancelled; a write that has already been submitted cannot, and becomes "confirming, please do not submit again") |
+| Timeout | At ≥10s, show a route to recovery |
+| High-impact actions | Must wait for server confirmation; an optimistic update is **forbidden** (Doc 20 §224, final sentence) |
 
-**文案**
+**Wording**
 
-- 载入中：`正在载入{对象}…`
-- 提交中：`正在提交…请稍候，不要重复点击。`
-- ≥10s：`还在处理。你可以继续等待，或者回到上一步再试一次。你写的内容不会丢。`
-- 高影响动作等待服务端：`正在等待服务器确认。在确认之前，{对象}还没有{动作}。`
-  - 例：`正在等待服务器确认。在确认之前，这条消息还没有发出。`
+- Loading: `Loading {object}…`
+- Submitting: `Submitting… please wait, and do not press again.`
+- At ≥10s: `Still working on it. You can keep waiting, or go back a step and try again. What you wrote will not be lost.`
+- A high-impact action waiting on the server: `Waiting for the server to confirm. Until it does, {object} has not been {action}.`
+  - For example: `Waiting for the server to confirm. Until it does, this message has not been sent.`
 
 ### E.2 骨架（Doc 20 §225）
 
-| 项 | 规范 |
+| Item | Specification |
 |---|---|
-| 适用 | 可预测的低风险列表：会话列表、社区帖子列表、贡献列表 |
-| **禁止** | 审批状态、消息投递状态、安全决定、匹配结果、数据集锁定 —— 这些**绝不**用骨架，因为骨架的形状会被读成"结果已存在" |
-| 无障碍 | 骨架块 `aria-hidden="true"`；外层容器 `role="status"` 内含真实文字「正在载入会话列表」 |
-| 动效 | 微光扫过仅在 `--motion-duration-normal` 下允许；`reduced-motion` 时静态灰块 |
-| 形状 | 只画中性灰条（`--color-surface-sunken`），**不得**画出徽章形状、按钮形状或对勾 |
+| Applies to | Predictable, low-risk lists: the conversation list, the community post list, the contribution list |
+| **Forbidden for** | Approval states, message delivery states, safety decisions, match results, dataset locking — these **never** use a skeleton, because the shape of the skeleton gets read as "the result already exists" |
+| Accessibility | The skeleton blocks are `aria-hidden="true"`; the outer container has `role="status"` and contains the real words "loading the conversation list" |
+| Motion | The shimmer sweep is permitted only at `--motion-duration-normal`; under `reduced-motion` it is a static grey block |
+| Shape | Draw neutral grey bars only (`--color-surface-sunken`); **never** draw the shape of a badge, the shape of a button, or a tick |
 
-### E.3 空状态（Doc 20 §226）
+### E.3 Empty states (Doc 20 §226)
 
-必须回答四问，顺序固定：
+Four questions must be answered, in a fixed order:
 
 ```text
-[图标]  {为什么是空的}
-        {这是正常的吗}
-        {你可以做什么}   ← 一个明确动作
-        {去哪里求助}     ← 链接或说明
+[icon]  {why is it empty}
+        {is this normal}
+        {what you can do}      ← one clear action
+        {where to get help}    ← a link or an explanation
 ```
 
-| 场景 | 文案 |
+| Situation | Wording |
 |---|---|
-| 无消息 | **还没有消息。**<br>你还没有和任何人开始会话，这很正常。<br>[去看看可以联系的人]<br>不确定怎么开始？在「帮助与安全」里可以联系研究团队。 |
-| 无联系人 | **你还没有建立联系。**<br>建立联系需要双方都表示愿意，这需要一点时间。<br>[看看「认识新朋友」]（可选，你随时可以不参加）<br>—— |
-| 无匹配候选 | **现在没有可以推荐的人。**<br>这不代表出了问题：推荐依据你的兴趣与设置，有时候就是没有合适的。<br>[看看我的兴趣设置]<br>—— |
-| 无社区帖子 | **「{社区名}」里还没有帖子。**<br>这个社区刚开始，还没有人发布内容。<br>[写第一篇（会先存成草稿，只有你能看到）]<br>—— |
-| 无生命故事 | **你还没有添加生命故事。**<br>这是完全自愿的，不添加也不影响你参与研究。<br>[了解生命故事是什么]<br>—— |
-| 无待办（首页） | **今天没有需要你做的事。**<br>这是正常的，研究不会每天都有任务。<br>[看看我的同意选择]<br>—— |
-| 队列为空（员工） | **当前没有待处理的{对象}。**<br>队列为空。<br>[查看已处理的记录]<br>—— |
+| No messages | **No messages yet.**<br>You have not started a conversation with anyone, which is perfectly normal.<br>[See who you can contact]<br>Not sure how to start? You can contact the research team from "Help and safety". |
+| No connections | **You have not made any connections yet.**<br>A connection needs both people to say they are willing, and that takes a little time.<br>[Look at "Meet new people"] (optional — you can always not take part)<br>—— |
+| No match candidates | **There is nobody to suggest right now.**<br>This does not mean something has gone wrong: suggestions are based on your interests and settings, and sometimes there simply is not a good fit.<br>[Look at my interest settings]<br>—— |
+| No community posts | **There are no posts in "{community name}" yet.**<br>This community has just started and nobody has posted anything.<br>[Write the first one (it is saved as a draft first, and only you can see it)]<br>—— |
+| No life story | **You have not added a life story yet.**<br>This is entirely voluntary, and not adding one does not affect your part in the research.<br>[Find out what a life story is]<br>—— |
+| Nothing to do (home) | **Nothing needs you today.**<br>This is normal; the research does not have a task every day.<br>[Look at my consent choices]<br>—— |
+| An empty queue (staff) | **There are no {object} waiting.**<br>The queue is empty.<br>[View the records already handled]<br>—— |
 
-**禁令**：空状态不得写「快去认识新朋友吧！」这类促动语；不得用插画暗示"你很孤单"；可选功能的空状态必须明写「可选」「不参加也没关系」。
+**Prohibitions**: an empty state must not say things like "go and meet some new people!"; it must not use illustration to imply "you are lonely"; and the empty state of an optional feature must say plainly that it is "optional" and that "it is fine not to take part".
 
-### E.4 离线（Doc 20 §227）
+### E.4 Offline (Doc 20 §227)
 
 ```text
-[断云图标] 现在是离线状态
-           已经载入的内容还能看，新的内容看不到。
-           你现在**不能**：发送消息、确认同意的更改、提交报告。
-           你写的草稿保存在这台设备上，连上网络后会同步。
-           [重新检查连接]
+[broken-cloud icon] You are offline right now
+                    You can still read what has already loaded, but not anything new.
+                    Right now you **cannot**: send a message, confirm a change to your consent, or submit a report.
+                    Drafts you write are saved on this device and will sync once you are back online.
+                    [Check the connection again]
 ```
 
-| 项 | 规范 |
+| Item | Specification |
 |---|---|
-| 位置 | 页面顶部持久横幅（`--layer-header`），不可关闭，直到恢复 |
-| ARIA | `role="status"`；恢复时播报「已经重新连上」 |
-| 禁用范围 | **所有高影响动作禁用**（发送、确认、批准、锁定、撤回同意、举报提交）。禁用时按 §B.1.4 给出原因文字 |
-| 草稿 | 明确说明存在本地；共享设备模式下**不存本地**，文案改为「离线时无法保存草稿。请把内容复制下来，或等连上网络再写。」 |
-| 禁令 | 不得让用户以为离线时点的按钮"排队会成功"。没有隐式队列 |
+| Position | A persistent banner at the top of the page (`--layer-header`), not dismissible until the connection returns |
+| ARIA | `role="status"`; on recovery it announces "you are back online" |
+| Scope of disabling | **Every high-impact action is disabled** (send, confirm, approve, lock, withdraw consent, submit a report). When disabled, give the reason in words per §B.1.4 |
+| Drafts | State plainly that they are stored locally; in shared-device mode **nothing is stored locally**, and the wording becomes "drafts cannot be saved while offline. Please copy what you have written, or wait until you are back online." |
+| Prohibition | The user must never be led to believe that a button pressed while offline "will queue and succeed". There is no implicit queue |
 
-### E.5 同步（Doc 20 §228）
+### E.5 Syncing (Doc 20 §228)
 
-六态，**必须区分"本地已保存"与"服务端已确认"**：
+Six states, and **"saved locally" must be distinguished from "confirmed by the server"**:
 
-| 状态 | 图标 | 文案 | 颜色 |
+| State | Icon | Wording | Colour |
 |---|---|---|---|
-| 本地已保存 | 折角纸 | `已保存在这台设备上 — 还没有上传` | info |
-| 正在同步 | 圆弧 | `正在上传…` | info |
-| 已同步 | 圆+勾 | `已保存到服务器` | success |
-| 冲突 | 双圆错位 | `这一项在别处被改过 — 需要你选择怎么处理` | warning |
-| 同步失败 | 八角 | `没有上传成功。内容还在这台设备上，可以再试一次。` | danger |
-| 需要复核 | 方框旗 | `已上传，等待工作人员复核` | moderation |
+| Saved locally | Folded-corner page | `Saved on this device — not uploaded yet` | info |
+| Syncing | Arc | `Uploading…` | info |
+| Synced | Circle + tick | `Saved to the server` | success |
+| Conflict | Two offset circles | `This was changed somewhere else — you need to choose what to do` | warning |
+| Sync failed | Octagon | `The upload did not succeed. Your content is still on this device and you can try again.` | danger |
+| Needs review | Flag in a square | `Uploaded, waiting for a member of staff to review it` | moderation |
 
-**铁律（Doc 20 §228 末句）**：本地保存**绝不**呈现为"已发布/已发送"。`success` 绿色只允许用于"服务端已确认"。
+**The iron rule (Doc 20 §228, final sentence)**: a local save is **never** presented as "published" or "sent". The `success` green is permitted only for "confirmed by the server".
 
-### E.6 陈旧（Doc 20 §229）
-
-```text
-[双圆错位图标] 你看到的内容不是最新的
-                这一页是在 {时间} 载入的，之后{对象}被改过。
-                现在显示的是最新版本（第 {n} 版）。
-                变化：{差异摘要}
-                [用最新版本继续]  [先看看变化]
-```
-
-| 项 | 规范 |
-|---|---|
-| 触发 | 服务端版本号 ≠ 页面持有版本号 |
-| 行为 | **自动载入最新版**，展示差异，让用户重做或修订 |
-| 不可忽略 | Consent / Block / MutualAcceptance / DatasetLock 的陈旧**必须阻断**动作，不给「忽略」选项（Doc 20 §229 末句） |
-| 文案 | 不说「你的页面过期了」（指责）；说「这一页是在 {时间} 载入的」（陈述） |
-
-### E.7 版本冲突（I12；Doc 20 §230）
+### E.6 Stale (Doc 20 §229)
 
 ```text
-[双圆错位图标] 你的修改和别人的修改撞上了
-                你的草稿**没有丢**，也**没有**覆盖别人的修改。
-                你的版本（第 {a} 版，你在 {t1} 编辑）
-                服务器上的版本（第 {b} 版，{谁} 在 {t2} 编辑）
-                [并排比较]
-                [合并]  [用服务器版本重来]  [另存为副本]  [取消]
+[two-offset-circles icon] What you are looking at is not the latest version
+                          This page loaded at {time}, and {object} has been changed since.
+                          You are now seeing the latest version (version {n}).
+                          What changed: {summary of the difference}
+                          [Continue with the latest version]  [Look at what changed first]
 ```
 
-| 项 | 规范 |
+| Item | Specification |
 |---|---|
-| 首要保证 | 草稿保留，**禁止静默覆盖**（Doc 20 §230） |
-| 必须展示 | 双方版本号、编辑者、编辑时间、差异 |
-| 动作 | 合并 / 刷新 / 另存副本 / 取消 —— 按场景提供适用子集，不提供不适用的 |
-| 署名 | "别人是谁"仅在该用户对当前用户可见时显示；否则「另一位有权限的工作人员」（受保护存在，§E.9） |
-| 严重度 | 阻断级（`role="alert"` + 焦点移入） |
+| Trigger | The server's version number ≠ the version number the page holds |
+| Behaviour | **Load the latest version automatically**, show the difference, and let the user redo or revise |
+| Not ignorable | Staleness on Consent / Block / MutualAcceptance / DatasetLock **must block** the action, with no "ignore" option offered (Doc 20 §229, final sentence) |
+| Wording | Do not say "your page has expired" (blame); say "this page loaded at {time}" (a statement) |
 
-### E.8 错误四级严重度（I13；Doc 20 §232–237）
+### E.7 Version conflict (I12; Doc 20 §230)
 
-先说明第 0 级：**信息性**不是错误，**不得使用 warning 样式**（Doc 20 §233）。用 `info` 语义色，`role="status"`，不打断。
+```text
+[two-offset-circles icon] Your changes and someone else's have collided
+                          Your draft has **not** been lost, and it has **not** overwritten the other changes.
+                          Your version (version {a}, edited by you at {t1})
+                          The version on the server (version {b}, edited by {who} at {t2})
+                          [Compare side by side]
+                          [Merge]  [Start again from the server's version]  [Save as a copy]  [Cancel]
+```
 
-| 级别 | 语义色 | 放置 | 持久性 | 打断 | 升级 |
+| Item | Specification |
+|---|---|
+| The first guarantee | The draft is kept, and **silent overwriting is forbidden** (Doc 20 §230) |
+| Must be shown | Both version numbers, who edited, when they edited, and the difference |
+| Actions | Merge / refresh / save as a copy / cancel — offer the subset that applies to the situation, and do not offer the ones that do not |
+| Attribution | "Who the other person is" is shown only where that user is visible to the current user; otherwise "another member of staff with permission" (protected existence, §E.9) |
+| Severity | Blocking (`role="alert"` + focus moves in) |
+
+### E.8 The four levels of error severity (I13; Doc 20 §232–237)
+
+First, level 0: **informational is not an error**, and **must not use the warning style** (Doc 20 §233). Use the `info` semantic colour, `role="status"`, and do not interrupt.
+
+| Level | Semantic colour | Placement | Persistence | Interrupts | Escalation |
 |---|---|---|---|---|---|
-| 0 信息性 | info | 就近内联 | 直到状态改变 | 否 | 无 |
-| 1 **可恢复** | warning | 出错处就近内联 | 直到解决 | `role="alert"` | 无 |
-| 2 **阻断** | danger | 内容区顶部，替换动作区 | 直到解决 | `role="alert"` + 焦点移入 | 提供支持路径 |
-| 3 **安全关键** | safety | 模态接管 | 直到人工处理 | `alertdialog` | 路由到问责复核 |
-| 4 **安全性关键** | danger（实心） | 模态接管 + 会话处理 | 直到重新认证 | `alertdialog` | 隐藏受保护细节 |
+| 0 informational | info | Inline, close to the point | Until the state changes | No | None |
+| 1 **recoverable** | warning | Inline, next to where it went wrong | Until resolved | `role="alert"` | None |
+| 2 **blocking** | danger | Top of the content area, replacing the action area | Until resolved | `role="alert"` + focus moves in | Offers a support route |
+| 3 **safety-critical** | safety | Modal takeover | Until a person handles it | `alertdialog` | Routes to accountability review |
+| 4 **security-critical** | danger (solid) | Modal takeover + session handling | Until re-authentication | `alertdialog` | Hides protected detail |
 
-#### 1 级 · 可恢复（§234）
+#### Level 1 · recoverable (§234)
 
-**必备**：保留输入 / 指出如何修正 / 安全重试 / 备选路径 / 求助入口。
-
-```text
-[三角] 这条消息还没有保存
-       你写的内容还在下面的框里，没有丢。
-       原因：内容超过了 2000 字，现在是 2140 字。
-       请删掉一些内容再点「保存草稿」。
-       > 技术细节：VALIDATION_TOO_LONG
-```
-
-其它模式：
-
-- 必填未填：`这一项需要填写：{字段名}。填好之后就可以继续。`（焦点移到该字段）
-- 网络瞬断：`没有连上服务器。你写的内容还在。[再试一次]`
-- 重试安全性：可安全重试的写「[再试一次]」；不确定是否已生效的写「这次请求可能已经生效了。请先[刷新看看结果]，不要直接重试。」
-
-#### 2 级 · 阻断（§235）
-
-**必备**：说明被挡住的是什么动作 / 不指责 / 保留之前的工作 / 给出明确解决或求助路径。
+**Required**: keep the input / say how to correct it / safe retry / an alternative route / a way to get help.
 
 ```text
-[八角] 现在不能发布到「园艺角」
-        你的草稿已经保存，没有丢，也没有发布出去。
-        原因：这个社区的规则在你加入之后更新到了第 3 版，需要你先看过新规则。
-        [查看第 3 版规则]
-        如果你觉得这不对，可以在「帮助与安全」里联系研究团队。
+[triangle] This message has not been saved
+           What you wrote is still in the box below; it has not been lost.
+           The reason: the content is over 2000 characters — it is currently 2140.
+           Please remove some of it and press "Save draft" again.
+           > Technical detail: VALIDATION_TOO_LONG
 ```
 
-其它模式：
+Other patterns:
 
-- 前置条件缺失：`要{做这件事}，需要先{前置}。[去{前置}]`
-- 状态不允许：`这个{对象}现在是「{状态}」，在这个状态下不能{动作}。[查看状态说明]`
-- 双人批准中自批：`这一项是你提交的，需要另一位有权限的同事来批准。[查看还有谁可以批准]`
-  > 现有 `staff-queues.test.tsx` 断言 `/是你，不能自批/`。改文案会破坏该测试，见 §G.4。
+- A required field left empty: `This field needs to be filled in: {field name}. Once it is, you can continue.` (focus moves to that field)
+- A momentary network drop: `The server could not be reached. What you wrote is still here. [Try again]`
+- Retry safety: where a retry is safe, say "[Try again]"; where it is uncertain whether it took effect, say "this request may already have taken effect. Please [refresh to see the result] first, rather than retrying directly."
 
-#### 3 级 · 安全关键（§236）
+#### Level 2 · blocking (§235)
 
-**必备**：停止不安全的动作 / 紧急与支持选项始终可见 / 路由到问责复核 / **不给虚假安慰**。
+**Required**: say which action was blocked / do not blame / preserve the earlier work / give a clear route to resolution or help.
 
 ```text
-[盾形] 这一步先停下来
-        我们没有继续刚才的操作。
-        你写的内容已经保存，工作人员会看到。
-
-        如果你或其他人现在有危险，请直接拨打当地紧急电话。
-        本平台不是紧急求助渠道。
-
-        接下来：这件事会转给工作人员处理，不是由自动系统单独决定。
-        [我知道了]  [联系研究团队]
+[octagon] You cannot post to "Gardening Corner" right now
+          Your draft has been saved. It has not been lost, and it has not been published.
+          The reason: this community's rules were updated to version 3 after you joined, and you need to read the new rules first.
+          [Read version 3 of the rules]
+          If you think this is wrong, you can contact the research team from "Help and safety".
 ```
 
-| 项 | 规范 |
+Other patterns:
+
+- A missing precondition: `To {do this}, you need to {precondition} first. [Go to {precondition}]`
+- The state does not allow it: `This {object} is currently "{state}", and it cannot be {action} in that state. [Read about the states]`
+- Self-approval under two-person approval: `You submitted this, so it needs a colleague with permission to approve it. [See who else can approve]`
+  > The existing `staff-queues.test.tsx` asserts `/that is you, so you cannot approve it/`. Changing the wording would break that test, see §G.4.
+
+#### Level 3 · safety-critical (§236)
+
+**Required**: stop the unsafe action / keep emergency and support options visible at all times / route to accountability review / **give no false comfort**.
+
+```text
+[shield] Let us stop here for a moment
+         We have not continued with what you were doing.
+         What you wrote has been saved, and a member of staff will see it.
+
+         If you or someone else is in danger right now, please call your local emergency number directly.
+         This platform is not an emergency service.
+
+         What happens next: this goes to a member of staff, and is not decided by an automated system on its own.
+         [I understand]  [Contact the research team]
+```
+
+| Item | Specification |
 |---|---|
-| 结构 | `role="alertdialog"` + `aria-modal="true"` + 标题关联 |
-| 紧急路径 | 紧急电话说明**恒在**，不折叠、不放 `<details>` |
-| 禁令 | 不得说「一切正常」「已经安全了」「别担心」；不得承诺响应时间除非有 SLA |
-| 人的权威 | 必须写明「由工作人员处理，不是自动系统单独决定」（Doc 20 §13.19） |
-| 关闭 | 关闭按钮存在，但关闭不撤销已触发的问责流程；关闭后焦点回触发点 |
-| 不阻塞求助 | 该对话框**不得**遮挡「帮助与安全」入口 |
+| Structure | `role="alertdialog"` + `aria-modal="true"` + an associated title |
+| The emergency route | The emergency-number text is **always present**; never collapsed, never inside a `<details>` |
+| Prohibitions | Never say "everything is fine", "you are safe now" or "don't worry"; never promise a response time unless there is an SLA |
+| Human authority | It must say plainly "handled by a member of staff, not decided by an automated system on its own" (Doc 20 §13.19) |
+| Closing | A close button exists, but closing does not undo the accountability process already triggered; on close, focus returns to the trigger |
+| Getting help is never blocked | This dialog **must not** obscure the route into "Help and safety" |
 
-#### 4 级 · 安全性关键（§237）
+#### Level 4 · security-critical (§237)
 
-**必备**：可能结束/限制会话 / 隐藏受保护细节 / 可能要求 step-up 认证 / 给出安全的求助路径。
+**Required**: may end or restrict the session / hide protected detail / may require step-up authentication / give a safe route to help.
 
 ```text
-[实心八角] 为了保护账户，这次操作没有继续
-            没有任何内容被更改。
-            这次操作需要再确认一次身份。
-            [重新验证身份]
-            如果不是你本人在操作，请通过{支持渠道}联系我们。
+[solid octagon] To protect the account, this action did not continue
+                Nothing has been changed.
+                This action needs your identity confirmed once more.
+                [Verify your identity again]
+                If this was not you, please contact us through {support channel}.
 ```
 
-| 项 | 规范 |
+| Item | Specification |
 |---|---|
-| 信息最小化 | **不说明具体触发原因**（不泄露检测规则）；不显示 IP、设备、时间等可用于探测的细节 |
-| 受保护细节 | 页面上已渲染的敏感内容立即遮蔽 |
-| step-up | 若需 MFA：说明为什么需要（「这一步会锁定研究数据集，不能撤销」），不只说"需要 MFA" |
-| 会话终止 | 若必须登出：先保存草稿到服务端，登出后提示「你写的内容已经保存，重新登录后还在」 |
-| 求助 | 求助渠道必须是**带外**的（不依赖已被限制的会话） |
-| 禁令 | 不得指责（「检测到异常行为」→「这次操作需要再确认一次身份」） |
+| Minimise information | **Do not explain the specific trigger** (which would leak the detection rules); do not show IP, device, time or other detail that could be used to probe |
+| Protected detail | Sensitive content already rendered on the page is masked immediately |
+| Step-up | If MFA is needed: say why ("this step locks a research dataset and cannot be undone"), not merely "MFA required" |
+| Ending the session | If sign-out is unavoidable: save the draft to the server first, and after signing out say "what you wrote has been saved, and it will still be there when you sign back in" |
+| Help | The route to help must be **out of band** (it must not depend on the session that has been restricted) |
+| Prohibition | Do not blame ("unusual activity detected" → "this action needs your identity confirmed once more") |
 
-### E.9 受保护存在（I3；ADR-050、Doc 20 §27）
+### E.9 Protected existence (I3; ADR-050, Doc 20 §27)
 
-**跨所有状态的统一措辞**。后端已强制不泄露存在性，前端必须有唯一呈现：
+**One form of words across every state.** The backend already enforces not leaking existence, and the frontend must have a single presentation of it:
 
 ```text
-[闭锁图标] 找不到这一项
-            它可能不存在，也可能你现在看不到它。
-            这两种情况我们不做区分，这是为了保护每个人的隐私。
-            [回到{上一层}]
+[closed-lock icon] This could not be found
+                   It may not exist, or it may be something you cannot see right now.
+                   We do not distinguish between the two, in order to protect everyone's privacy.
+                   [Back to {the level above}]
 ```
 
 | 铁律 | 说明 |
