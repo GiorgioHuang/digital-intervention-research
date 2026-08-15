@@ -1,21 +1,21 @@
 # PILOT_READINESS_REPORT
 
-> 状态截至 2026-07-30。**结论：合成试点验证通过（synthetic-Pilot validation passed）；正式 Pilot 就绪 = Pending External Approval。本系统未获伦理批准，不得用于真实参与者招募（ATR-025）。**
+> Status as of 2026-07-30. **Conclusion: synthetic-pilot validation passed; readiness for a formal pilot = Pending External Approval. This system has no ethics approval and must not be used to recruit real participants (ATR-025).**
 
-## 已具备（代码 + 测试证据，见 traceability.yaml 29 条目）
+## What is in place (code + test evidence; see the 29 entries in traceability.yaml)
 
-- M01–M13、M16–M18 全部十六个模块域 Implemented；M14 报告/受控导出/可携带性导出 Implemented（外部提交显式延后）；M15 审批/治理保留/break-glass Implemented。
-- 约 200 个确定性测试（CI 每推送全量执行，全新数据库 + 迁移演练 up→down→up）。
-- 关键不变量全部有代码+测试证据：Effective Permission 七要素、granular Consent 与撤回传播、协议/干预/证据快照/数据集锁定不可变性、AI Draft≠Testimony、Block fail-closed、独立 MatchDecision、MutualAcceptance 单次消费、CommunicationBasis、消息双状态机与精确 SendConfirmation、回调认证/重放防护、SafetySignal 人工权威、Level-5 AI 禁止全清单、Output≠Interpretation≠Finding、职责分离（自批双层禁止）。
-- 合成试点端到端主线 + 场景矩阵（见 SYNTHETIC_PILOT_PLAN.md）。
-- Knowledge Platform 真实对接：Healthy Aging Knowledge Graph MCP 客户端（ADR-052/110）经 REST 全链暴露（evidence.search → 评审 → 引用 provenance → 双人批准 → 快照），CI 每推送对已部署 Cloud Run+Neon 实例真实调用冒烟；模拟器保持默认（KNOWLEDGE_PLATFORM_MODE 显式切换）。审计与能力矩阵见 KNOWLEDGE_GRAPH_INTEGRATION.md。
+- All sixteen module domains M01–M13 and M16–M18 are Implemented; M14 reporting / controlled export / portability export is Implemented (external submission explicitly deferred); M15 approval / governance retention / break-glass is Implemented.
+- Around 200 deterministic tests (CI runs the full suite on every push, against a fresh database plus a migration drill up→down→up).
+- Every critical invariant has code and test evidence: the seven elements of Effective Permission, granular consent and the propagation of withdrawal, immutability of protocols / interventions / evidence snapshots / dataset locks, AI Draft ≠ Testimony, Block failing closed, independent MatchDecision, single consumption of MutualAcceptance, CommunicationBasis, the two message state machines and exact SendConfirmation, callback authentication and replay protection, human authority over SafetySignal, the complete list of Level-5 AI prohibitions, Output ≠ Interpretation ≠ Finding, and separation of duties (self-approval forbidden at two layers).
+- The synthetic pilot's end-to-end main line plus the scenario matrix (see SYNTHETIC_PILOT_PLAN.md).
+- Real Knowledge Platform integration: the Healthy Aging Knowledge Graph MCP client (ADR-052/110) is exposed through the full REST chain (evidence.search → review → citation provenance → two-person approval → snapshot), with CI making a real smoke call against the deployed Cloud Run + Neon instance on every push; the simulator remains the default (KNOWLEDGE_PLATFORM_MODE switches explicitly). The audit and capability matrix are in KNOWLEDGE_GRAPH_INTEGRATION.md.
 
-## 未就绪 / 显式缺口（不伪造完成）
+## Not ready / explicit gaps (nothing is faked as complete)
 
-1. **Pending External Approval**：伦理（ADR-048/ATR-025）、供应商合同（AI/通信/IdP/托管/恶意软件扫描器——**对象存储已定为 Cloudflare R2 但尚未接通**）、政策值（保留期/驻留/备份 RPO-RTO/附件/投递映射/MA 有效期）、匹配属性注册表与 feed 排序政策、分析环境。
-2. **Deferred（代码层）**：其余模块命令的 REST 端点（已暴露：参与者侧全链 + 员工侧 M04 协议链/M05 入组链/M06 干预组合/M09 安全 triage/M12 数据集血缘/M13 分析链 + M17 Life Story + M03 relationship 管理 + M14 报告·受控导出 + M15 审批·治理保留·break-glass + M18 属主查询 + M18 社区（空间/版本化规则加入/时间序 feed/草稿-发布，参与者社区页面已实现））；WCAG AA 真实用户测试（参与者工作区核心流程已实现：任务式首页、细粒度同意、消息发送确认；自动化测试不替代真实用户无障碍验收）。SECURITY_AND_PRIVACY_PLAN/THREAT_MODEL/ACCESSIBILITY_TEST_PLAN 已起草（详见各文件；其中真实用户无障碍验收 R1–R3 与残余风险关闭仍未满足）。
-3. 合成场景 1/6/14/17/18/28 部分覆盖（见计划矩阵 Deferred 行）。
+1. **Pending External Approval**: ethics (ADR-048/ATR-025); provider contracts (AI / communication / IdP / hosting / malware scanner — **object storage is settled as Cloudflare R2 but is not yet connected**); policy values (retention periods / residency / backup RPO-RTO / attachments / delivery mapping / MA validity); the matching attribute registry and the feed ordering policy; and the analysis environment.
+2. **Deferred (at the code layer)**: REST endpoints for the remaining module commands (already exposed: the full participant-side chain + the staff-side M04 protocol chain / M05 enrolment chain / M06 intervention portfolio / M09 safety triage / M12 dataset lineage / M13 analysis chain + M17 Life Story + M03 relationship management + M14 reporting and controlled export + M15 approval, governance retention and break-glass + M18 owner queries + M18 community (spaces / joining versioned rules / chronological feed / draft-then-publish, with the participant community screen implemented)); and WCAG AA testing with real users (the participant workspace's core flows are implemented: a task-based home screen, granular consent, message send confirmation — but automated tests are not a substitute for accessibility acceptance by real users). SECURITY_AND_PRIVACY_PLAN / THREAT_MODEL / ACCESSIBILITY_TEST_PLAN have been drafted (see each file; within them, real-user accessibility acceptance R1–R3 and the closure of residual risks remain unmet).
+3. Synthetic scenarios 1/6/14/17/18/28 are partially covered (see the Deferred rows of the plan matrix).
 
-## 就绪门（Doc 18 §193）判定
+## The readiness gate (Doc 18 §193): the judgement
 
-代码/测试类条目：满足。人员配备、伦理、供应商、无障碍真实用户测试、正式签署：**全部未满足——不得进入真实招募**。
+Code and test items: met. Staffing, ethics, providers, accessibility testing with real users, and formal sign-off: **none of them met — recruitment of real participants must not begin.**
