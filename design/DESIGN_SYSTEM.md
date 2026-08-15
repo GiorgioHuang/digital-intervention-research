@@ -557,153 +557,153 @@ The full rules are in §B.4.
 | private / visibility | Closed lock / open globe | The two extremes have the greatest possible difference in shape |
 | offline | Broken cloud | A cloud with a slash |
 | stale / conflict | Two offset circles | Two circles out of register |
-| loading | 圆弧 | reduced-motion 下不旋转，改为静态圆弧 + 文字 |
+| loading | Arc | Does not spin under reduced-motion; becomes a static arc plus words |
 
-验收：把 12 个图标渲染为灰度 PNG，无文字，请 3 人盲测能否两两区分；不能区分的重画。**这是设计验收项，不是自动化项。**
+Acceptance: render the 12 icons as greyscale PNGs with no words, and ask 3 people, blind, whether they can tell each pair apart; redraw any that cannot be told apart. **This is a design acceptance item, not an automated one.**
 
 ---
 
-## §B 全局规则
+## §B Global rules
 
-### B.1 颜色不得是唯一状态指示 —— 状态呈现三元组
+### B.1 Colour must never be the only indicator of state — the state-presentation triple
 
-#### B.1.1 规范
+#### B.1.1 The specification
 
-任一状态呈现 = **图标 + 文字 + 颜色**，三者齐备且各自独立可用。
+Every presentation of a state = **icon + words + colour**, all three present and each usable on its own.
 
 ```html
-<!-- 行内徽章（可见性、认识论类型、投递状态、审批状态） -->
+<!-- Inline badge (visibility, epistemic type, delivery state, approval state) -->
 <span class="badge badge--warning">
-  <svg class="icon" aria-hidden="true" focusable="false"><!-- 三角 --></svg>
-  草稿 — 只有你能看到
+  <svg class="icon" aria-hidden="true" focusable="false"><!-- triangle --></svg>
+  Draft — only you can see it
 </span>
 ```
 
-| 通道 | 要求 | 失效时的后备 |
+| Channel | Requirement | The fallback when it fails |
 |---|---|---|
-| **图标** | `aria-hidden="true"`，装饰性，形状互异（§A.9） | 图标不渲染时文字仍完整表达状态 |
-| **文字** | 状态名是**真实文本节点**，构成可访问名的一部分，**不得**只存在于 `aria-label`/`title`/`::before content` | — |
-| **颜色** | 仅强化。**移除全部颜色后，信息零损失** | — |
-| （第四通道）**结构** | 关键状态额外加左侧 `--border-emphasis` 条或独立容器 | 见 §B.1.3 |
+| **Icon** | `aria-hidden="true"`, decorative, shapes distinct from one another (§A.9) | If the icon does not render, the words still express the state in full |
+| **Words** | The state name is a **real text node** and forms part of the accessible name; it **must not** exist only in `aria-label`/`title`/`::before content` | — |
+| **Colour** | Reinforcement only. **With all colour removed, no information is lost** | — |
+| (The fourth channel) **Structure** | Critical states additionally take a left-hand `--border-emphasis` bar or a container of their own | See §B.1.3 |
 
-#### B.1.2 三条禁令
+#### B.1.2 Three prohibitions
 
-1. **禁止 `content:` 承载状态文字**——`::before { content: "已批准" }` 在部分 AT 下不播报，且用户样式表下丢失。
-2. **禁止仅靠 `background-color` 区分行状态**（表格行、队列行）。行状态必须有一列文字。
-3. **禁止仅靠图标区分**——见 §A.9，无纯图标状态。
+1. **`content:` must not carry state text** — `::before { content: "Approved" }` is not announced by some assistive technology, and is lost under a user stylesheet.
+2. **Row state must not be distinguished by `background-color` alone** (table rows, queue rows). A row's state must have a column of words.
+3. **Distinguishing by icon alone is forbidden** — see §A.9, there are no icon-only states.
 
-#### B.1.3 关键状态的四通道
+#### B.1.3 The four channels for a critical state
 
-「关键状态」= 会改变用户对后果判断的状态。清单（Doc 20 §43–45、§50）：
+A "critical state" = one that changes the user's judgement about consequences. The list (Doc 20 §43–45, §50):
 
-- 生命周期：Draft / Active / Paused / Completed / Withdrawn / Superseded / Retired / Archived
-- 审批：Not Submitted / In Review / Returned for Revision / Approved / **Approved with Conditions** / Rejected / Superseded / Archived
-- 资源：Usable / Restricted / Suspended / Expired / Deleted / Withdrawn / **Locked** / Unavailable
-- 投递：现有 `DELIVERY_STATE_LABELS` 七态（保持文案不变，见 §G）
-- 同步：本地已保存 / 正在同步 / 已同步 / 冲突 / 同步失败 / 需要复核
-- 可见性：六级（§A.1.4）
-- 认识论类型：Doc 19 §10 十一类（平台事实 / 参与者提供信息 / 参与者证言 / 支持者贡献 / 人工观察 / 人工决定 / 检索到的证据 / AI 推断 / 建议 / 草稿 / 未知）
+- Lifecycle: Draft / Active / Paused / Completed / Withdrawn / Superseded / Retired / Archived
+- Approval: Not Submitted / In Review / Returned for Revision / Approved / **Approved with Conditions** / Rejected / Superseded / Archived
+- Resource: Usable / Restricted / Suspended / Expired / Deleted / Withdrawn / **Locked** / Unavailable
+- Delivery: the seven existing `DELIVERY_STATE_LABELS` states (wording unchanged, see §G)
+- Sync: saved locally / syncing / synced / conflict / sync failed / needs review
+- Visibility: the six levels (§A.1.4)
+- Epistemic type: the eleven categories in Doc 19 §10 (platform fact / participant-provided information / participant testimony / supporter contribution / human observation / human decision / retrieved evidence / AI inference / suggestion / draft / unknown)
 
-这些**必须**用块级状态容器（左 4px 条 + tint 底 + 图标 + 文字），不得只用行内徽章。
+These **must** use a block-level state container (4px left bar + tint background + icon + words); an inline badge alone is not sufficient.
 
-#### B.1.4 禁用态的表达
+#### B.1.4 Expressing the disabled state
 
-禁用不是状态三元组的例外，而是它的一个实例：
+Disabled is not an exception to the state triple, it is an instance of it:
 
-- **禁止**只把按钮变灰。灰色按钮旁必须有一句说明**为什么**以及**怎样才能启用**。
-- 优先用 `aria-disabled="true"` + 保留可聚焦性 + 点击时用 `role="status"` 播报原因，而不是 `disabled` 属性（`disabled` 元素不可聚焦，键盘用户无法发现它为什么不可用）。
-- 例外：表单提交中（防重复提交）用真 `disabled`，并同步显示「正在提交…」。
-- **权限不足不用禁用态表达**——见 §E.9 受保护存在。
+- **Greying out the button alone is forbidden.** Beside a greyed-out button there must be a sentence saying **why**, and **what would make it available**.
+- Prefer `aria-disabled="true"` + keeping it focusable + announcing the reason via `role="status"` on click, over the `disabled` attribute (a `disabled` element cannot be focused, so a keyboard user cannot discover why it is unavailable).
+- The exception: during form submission (to prevent double submission) use a real `disabled`, and show "submitting…" at the same time.
+- **Lack of permission is not expressed by a disabled state** — see §E.9, protected existence.
 
-#### B.1.5 验收
+#### B.1.5 Acceptance
 
-1. **灰度检查**：`filter: grayscale(1)` 下截图，所有状态仍可区分（人工，纳入 R1 专家走查）。
-2. **裸 HTML 检查**：禁用全部 CSS，所有状态文字仍在文档流中可读（可自动化：`document.body.innerText` 包含状态名）。
-3. **`content` grep**：`grep -n "content: *['\"][^'\"]" styles.css` 的命中不得包含中文或状态词。
+1. **The greyscale check**: screenshot under `filter: grayscale(1)`; every state is still distinguishable (manual, folded into the R1 expert walkthrough).
+2. **The bare-HTML check**: disable all CSS; every state's words are still readable in the document flow (automatable: `document.body.innerText` contains the state name).
+3. **The `content` grep**: hits from `grep -n "content: *['\"][^'\"]" styles.css` must not contain Chinese or any state word.
 
 ---
 
-### B.2 焦点在所有状态可见
+### B.2 Focus visible in every state
 
-见 §A.5 令牌与双环结构。此处补交互规则（Doc 20 §294）：
+See §A.5 for the tokens and the two-ring structure. The interaction rules follow here (Doc 20 §294):
 
-| 时机 | 焦点去向 |
+| Moment | Where focus goes |
 |---|---|
-| 屏幕切换（`setScreen`） | `<main>` 内的 `<h1>`（`tabindex="-1"`，聚焦后不留 tabstop） |
-| 对话框打开 | 对话框标题（`<h2 tabindex="-1">`），**不是**主按钮——避免误触；`aria-labelledby` 指向该标题 |
-| 对话框关闭 | 触发它的按钮（必须保存引用） |
-| 校验失败 | 第一个出错字段；同时 `role="alert"` 播报错误摘要 |
-| 动作成功 | 停在原地，用 `role="status"` 播报；**不跳转焦点**（避免"我的位置没了"） |
-| 动作失败 | 停在原地，`role="alert"` 播报；焦点不动，用户可直接改后重试 |
-| 动态内容插入（列表加载） | 焦点不动，`role="status"` 播报数量 |
-| AI 流式输出 | **焦点绝不移动**（Doc 20 §294 明文） |
+| Screen change (`setScreen`) | The `<h1>` inside `<main>` (`tabindex="-1"`, leaving no tab stop behind once focused) |
+| A dialog opens | The dialog's title (`<h2 tabindex="-1">`), **not** the primary button — this avoids a mis-tap; `aria-labelledby` points at that title |
+| A dialog closes | The button that opened it (a reference to which must be kept) |
+| Validation fails | The first field in error; at the same time `role="alert"` announces the error summary |
+| An action succeeds | Stays where it is, announced via `role="status"`; **focus does not jump** (which avoids "I have lost my place") |
+| An action fails | Stays where it is, announced via `role="alert"`; focus does not move, so the user can correct and retry directly |
+| Dynamic content is inserted (a list loads) | Focus does not move; `role="status"` announces the count |
+| AI output streaming | **Focus never moves** (Doc 20 §294, explicitly) |
 
-规则：焦点环不得被粘性元素遮挡——粘性头/尾必须为其后的内容预留 `scroll-padding-block`（§D.5）。
+Rule: the focus ring must never be obscured by a sticky element — a sticky header or footer must reserve `scroll-padding-block` for the content behind it (§D.5).
 
 ---
 
-### B.3 200% 缩放与高文本缩放：不横向滚动
+### B.3 200% zoom and large text scaling: no horizontal scrolling
 
-#### B.3.1 结构规则
+#### B.3.1 Structural rules
 
-1. **一切尺寸用 `rem` / `%` / `ch` / `em`**，禁止布局用 `px`（`px` 只允许出现在描边宽度、焦点环宽度、阴影这些"物理细节"上）。
-2. **断点用 `rem`**（§D.1）：浏览器字号调大 → 有效视口变窄 → 自动降级为单列。这是特性不是缺陷（取舍 §H.3）。
-3. **禁止固定 `height`**；只用 `min-height`。
-4. **禁止 `white-space: nowrap`** 于任何用户可见文本；仅允许用于等宽标识符，且必须配 `overflow-wrap: anywhere` 的兄弟策略或放入 §B.3.2 的滚动容器。
-5. **`overflow-wrap: anywhere`** 全局生效于正文容器——长标识符（`pt_b`、UUID、哈希）不撑破布局。
-6. 顶层守卫：`html, body { overflow-x: clip; }` 不用来掩盖问题，而是作为最后一道防线；**任何触发它的布局都是缺陷**。
+1. **Every dimension in `rem` / `%` / `ch` / `em`**; `px` is forbidden for layout (`px` is permitted only for "physical details" such as stroke widths, focus-ring widths and shadows).
+2. **Breakpoints in `rem`** (§D.1): a larger browser font size → a narrower effective viewport → automatic degradation to a single column. This is a feature, not a defect (trade-off §H.3).
+3. **Fixed `height` is forbidden**; use `min-height` only.
+4. **`white-space: nowrap` is forbidden** on any user-visible text; it is permitted only for monospace identifiers, and only alongside a sibling `overflow-wrap: anywhere` strategy or inside the scrolling container from §B.3.2.
+5. **`overflow-wrap: anywhere`** applies globally to body containers — a long identifier (`pt_b`, a UUID, a hash) must not burst the layout.
+6. The top-level guard `html, body { overflow-x: clip; }` is not there to paper over problems; it is the last line of defence, and **any layout that triggers it is a defect**.
 
-#### B.3.2 宽内容的唯一合法出口
+#### B.3.2 The only legitimate outlet for wide content
 
-表格、代码块、ASCII 线框、宽图表**不得**让页面横向滚动，只能在自己的容器里滚动：
+Tables, code blocks, ASCII wireframes and wide charts **must not** make the page scroll horizontally; they may only scroll inside their own container:
 
 ```html
-<div class="scroll-x" role="region" aria-label="参与者列表（可横向滚动）" tabindex="0">
+<div class="scroll-x" role="region" aria-label="Participant list (scrolls horizontally)" tabindex="0">
   <table>…</table>
 </div>
 ```
 
-- 必须 `tabindex="0"`（键盘可滚）+ `role="region"` + `aria-label`（说明它可滚动）。
-- 容器两侧用 `--color-border-default` 描边，让"这里还有内容"可见。
-- 移动端优先给**替代表示**（卡片列表）而非滚动；但见 §D.4 关于何时不能替代。
+- It must have `tabindex="0"` (scrollable by keyboard) + `role="region"` + `aria-label` (saying that it scrolls).
+- Border both sides of the container with `--color-border-default`, so that "there is more content here" is visible.
+- On mobile, prefer an **alternative representation** (a card list) over scrolling; but see §D.4 on when it cannot be substituted.
 
-#### B.3.3 验收
+#### B.3.3 Acceptance
 
-- 视口 1280×1024 @ 200% 缩放（等效 640×512 CSS px）与 320×256 CSS px：`document.documentElement.scrollWidth <= clientWidth`。
-- 浏览器最小字号设为 24px：同上断言 + 所有 44px 目标仍不重叠（§B.4）。
-- 400% 缩放（WCAG 1.4.10 的正式门槛，等效 320px 宽）：单列，无内容丢失。
+- A 1280×1024 viewport at 200% zoom (equivalent to 640×512 CSS px) and at 320×256 CSS px: `document.documentElement.scrollWidth <= clientWidth`.
+- Browser minimum font size set to 24px: the same assertion, plus every 44px target still not overlapping (§B.4).
+- 400% zoom (WCAG 1.4.10's formal threshold, equivalent to 320px wide): single column, no content lost.
 
 ---
 
-### B.4 触控目标 ≥44px 且相邻目标不得重叠 —— 防复发规则
+### B.4 Touch targets ≥44px and adjacent targets must not overlap — the anti-recurrence rules
 
-> **背景（真实缺陷）**：`min-height: 2.75rem` 的按钮出现在由 `line-height: 1.6 × 18px = 28.8px` 决定的行框里。行内级按钮之间靠 JSX 的 `{' '}` 文本节点提供间隔，换行后行框按行高堆叠，44px 高的按钮相互压叠。现有 `styles.css` 已针对**首页列表**做了局部修补（`main li > button { display: block }`），但这是点修，不是规则——换一个容器就会复发。
+> **Background (a real defect)**: buttons with `min-height: 2.75rem` appeared inside line boxes determined by `line-height: 1.6 × 18px = 28.8px`. The spacing between inline-level buttons was provided by JSX `{' '}` text nodes, so once they wrapped the line boxes stacked at the line height and the 44px-tall buttons overlapped one another. The current `styles.css` already carries a local patch for the **home-page list** (`main li > button { display: block }`), but that is a spot fix, not a rule — change the container and it comes back.
 
-#### B.4.1 五条不可复发规则
+#### B.4.1 Five anti-recurrence rules
 
-**R1｜尺寸唯一来源**
-`--target-min` 是最小目标尺寸的唯一定义。组件 CSS **禁止**写字面高度。评审 grep：`min-height:\s*[0-9.]+(rem|px)` 在 `:root` 之外零命中。
+**R1 | A single source for the size**
+`--target-min` is the only definition of the minimum target size. Component CSS **must not** write a literal height. The review grep: `min-height:\s*[0-9.]+(rem|px)` has zero hits outside `:root`.
 
-**R2｜交互元素不得作为行内级参与文本行框**
-所有 `button`、`a[role="button"]`、`input`、`select`、`summary`、以及任何有 `onClick` 的元素，其 `display` 必须是 `block` / `flex` / `grid` / `inline-flex` 之一，**禁止 `display: inline`**，且必须 `align-items: center`。行内级元素的高度不参与行框计算（或参与得不可控），这是缺陷根因。
+**R2 | An interactive element must never take part in a text line box as an inline-level element**
+Every `button`, `a[role="button"]`, `input`, `select`, `summary`, and anything with an `onClick`, must have a `display` of `block` / `flex` / `grid` / `inline-flex`. **`display: inline` is forbidden**, and `align-items: center` is required. The height of an inline-level element does not participate in line-box calculation (or participates uncontrollably), and that is the root cause of the defect.
 
-**R3｜间距必须由布局提供，禁止由空白文本节点提供**
-相邻目标之间的间隔一律由父容器的 `display: flex; gap: var(--target-gap)` 或子元素的 `margin-block` 提供。
-**禁止**用 JSX 的 `{' '}`、`&nbsp;`、`<br>` 作为按钮之间的间隔——它们是文本，会随行高塌陷、随字号变化失控。
-> 现有代码 `App.tsx:60–66`（`进入 / 支持者入口 / 员工入口`）与 `MessagePanel` 等处正是 `{' '}` 分隔。改为 flex 容器 **不改变任何按钮的可访问名**（§G.2）。
+**R3 | Spacing must come from the layout, never from a whitespace text node**
+The gap between adjacent targets is always provided by the parent's `display: flex; gap: var(--target-gap)` or by the child's `margin-block`.
+Using JSX `{' '}`, `&nbsp;` or `<br>` as the gap between buttons is **forbidden** — they are text, they collapse with the line height, and they go out of control as the font size changes.
+> The existing code at `App.tsx:60–66` (`Enter / Supporter entrance / Staff entrance`) and places such as `MessagePanel` are separated by exactly this `{' '}`. Changing them to flex containers **changes no button's accessible name** (§G.2).
 
-**R4｜内容流中的动作是整行块级目标**
-`<li>`、`<p>`、`<td>` 内的动作按钮：若该容器内只有这一个动作，按钮占满整行（`display: block; width: 100%; text-align: start`）；若有多个动作，父容器改为 `display: flex; flex-wrap: wrap; gap: var(--target-gap)`，且每个按钮 `flex: 1 1 auto; min-width: 12rem`（保证换行后每行仍是完整可点块）。
+**R4 | An action in the content flow is a full-width block-level target**
+Action buttons inside `<li>`, `<p>` or `<td>`: if that container holds only this one action, the button fills the row (`display: block; width: 100%; text-align: start`); if there are several actions, the parent becomes `display: flex; flex-wrap: wrap; gap: var(--target-gap)` and each button takes `flex: 1 1 auto; min-width: 12rem` (which guarantees that each row is still a complete tappable block after wrapping).
 
-**R5｜容器不得压缩目标**
-包含交互元素的容器**禁止**：固定 `height`、`overflow: hidden`、`line-height` 小于 `--target-min` 的同时限制溢出、`max-height` + 裁剪。需要裁剪时用 `overflow: clip; overflow-clip-margin: var(--focus-ring-total)`。
+**R5 | A container must not compress a target**
+A container holding interactive elements **must not** have: a fixed `height`; `overflow: hidden`; a `line-height` below `--target-min` combined with constrained overflow; or `max-height` plus clipping. Where clipping is needed, use `overflow: clip; overflow-clip-margin: var(--focus-ring-total)`.
 
-#### B.4.2 例外与命中区扩展
+#### B.4.2 Exceptions and hit-area expansion
 
-只有两类元素允许**视觉**小于 44px：
+Only two kinds of element are permitted to be **visually** smaller than 44px:
 
-1. 正文中的行内链接（WCAG 2.5.8 的 inline exception）
-2. 密集表格中的行内动作——**且必须**用 `::before` 把命中区扩到 44px：
+1. Inline links in body text (WCAG 2.5.8's inline exception)
+2. Inline actions in a dense table — **and they must** use `::before` to expand the hit area to 44px:
 
 ```css
 .target-inline { position: relative; }
@@ -713,203 +713,203 @@ The full rules are in §B.4.
   inset: calc(-1 * var(--target-hit-slop));
   min-height: var(--target-min);
   min-width: var(--target-min);
-  /* 垂直居中扩展 */
+  /* expanded, vertically centred */
   top: 50%; translate: 0 -50%;
 }
 ```
 
-**但**：命中区扩展后相邻目标的**命中矩形**同样不得相交——扩展不豁免 R3 的间距要求。
+**But**: once the hit area is expanded, the **hit rectangles** of adjacent targets must still not intersect — expansion does not exempt anything from R3's spacing requirement.
 
-#### B.4.3 自动化回归断言（建议纳入 CI）
+#### B.4.3 The automated regression assertion (recommended for CI)
 
-这是防复发的关键，不是可选项：
+This is the crux of preventing recurrence, not an optional extra:
 
 ```ts
-// 伪代码：jsdom 无布局，需 Playwright / 真实浏览器
+// Pseudocode: jsdom has no layout, so this needs Playwright / a real browser
 const targets = page.locator('button, a[href], input, select, [role="button"], summary');
 const rects = await targets.evaluateAll(els => els.map(e => e.getBoundingClientRect()));
 
-// 1) 尺寸
+// 1) size
 for (const r of rects) {
   expect(r.height).toBeGreaterThanOrEqual(44);
   expect(r.width).toBeGreaterThanOrEqual(44);
 }
-// 2) 互不相交（含 --target-gap 的净空隙）
+// 2) no intersection (including the clear gap of --target-gap)
 const GAP = 8;
 for (let i = 0; i < rects.length; i++)
   for (let j = i + 1; j < rects.length; j++) {
     const a = rects[i], b = rects[j];
     const overlapX = Math.min(a.right, b.right) - Math.max(a.left, b.left);
     const overlapY = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top);
-    expect(overlapX > -GAP && overlapY > -GAP).toBe(false); // 需有一轴净距 ≥ GAP
+    expect(overlapX > -GAP && overlapY > -GAP).toBe(false); // one axis must have a clear distance ≥ GAP
   }
 ```
 
-**运行矩阵**：320px / 375px / 768px / 1280px 宽 × 字号 {默认, 24px, 32px} × 密度 {compact, standard, spacious} × 缩放 {100%, 200%, 400%}。至少覆盖 320px×32px×spacious×200% 这一最恶劣组合。
+**The run matrix**: 320px / 375px / 768px / 1280px wide × font size {default, 24px, 32px} × density {compact, standard, spacious} × zoom {100%, 200%, 400%}. At minimum, cover the worst combination: 320px × 32px × spacious × 200%.
 
-#### B.4.4 关键控件的额外保护（Doc 20 §295）
+#### B.4.4 Extra protection for critical controls (Doc 20 §295)
 
-`屏蔽`、`报告`、`取消`、`返回`、`撤回` 必须"可达且不易误触"：
+`Block`, `Report`, `Cancel`, `Go back` and `Withdraw` must be "reachable and hard to hit by accident":
 
-- 与**破坏性/确认类**按钮之间的净空隙提升至 `--space-5`（标准密度 27px），而非 `--target-gap`。
-- 确认对话框中，`确认…` 与 `返回，不…` 分列两行（移动端）或用 `--space-5` 分隔（宽屏），**且顺序恒为「返回/取消」在前、「确认」在后**（防止肌肉记忆误触）。
-  > 注：现有实现（如 `确认屏蔽` / `返回，不屏蔽`）的**按钮文案与可访问名保持不变**，只调整布局与顺序 —— 顺序调整会影响按 DOM 顺序的测试，见 §G.3。
+- The clear gap between them and any **destructive/confirming** button is raised to `--space-5` (27px at standard density), rather than `--target-gap`.
+- In a confirmation dialog, `Confirm…` and `Go back, do not…` are on separate rows (on mobile) or separated by `--space-5` (on a wide screen), **and the order is always "go back/cancel" first and "confirm" second** (which prevents a muscle-memory mis-tap).
+  > Note: the **button wording and accessible names of the existing implementation** (such as `Confirm block` / `Go back, do not block`) stay unchanged; only the layout and the order are adjusted — and changing the order affects tests that go by DOM order, see §G.3.
 
-#### B.4.5 等权重选择对：`.btn-primary` 的禁用场景（Doc 20 §13.7 无暗黑模式）
+#### B.4.5 Equal-weight choice pairs: where `.btn-primary` is forbidden (Doc 20 §13.7, no dark patterns)
 
-当两个选项在**价值上等权**时，**两者都不得**使用 `.btn-primary`，必须同尺寸、同字重、同描边、同色，只有文字不同：
+When two options are **equal in value**, **neither** may use `.btn-primary`; they must have the same size, the same weight, the same stroke and the same colour, differing only in their words:
 
-| 场景 | 按钮对 | 要求 |
+| Situation | The button pair | Requirement |
 |---|---|---|
-| 同意选择 | `同意「…」` / `拒绝「…」` | 两者视觉完全相同。`consent-panel.test.tsx:34–37` 已断言两组按钮数量相等——**这条测试是这条规则的现有守卫，必须保持通过** |
-| 匹配决定 | `感兴趣` / `暂时不` | 同上 |
-| 参与可选活动 | `参加` / `这次不参加` | 同上 |
-| 撤回确认 | `确认撤回「…」` / `返回，不撤回` | 同上（撤回是用户的权利，不得让"返回"显得更可取） |
+| A consent choice | `Agree to "…"` / `Decline "…"` | The two are visually identical. `consent-panel.test.tsx:34–37` already asserts that the two groups have equal button counts — **that test is this rule's existing guard, and must keep passing** |
+| A match decision | `Interested` / `Not for now` | As above |
+| Joining an optional activity | `Take part` / `Not this time` | As above |
+| Withdrawal confirmation | `Confirm withdrawal of "…"` / `Go back, do not withdraw` | As above (withdrawal is the user's right, and "go back" must not be made to look preferable) |
 
-`.btn-primary` 只允许用于**没有对立选项**的单一前进动作（`保存草稿`、`提交报告`、`进入`）。
-**验收**：对每一组等权按钮断言 `getComputedStyle` 的 `backgroundColor`、`fontWeight`、`borderWidth` 完全相同。
+`.btn-primary` is permitted only for a single forward action with **no opposing option** (`Save draft`, `Submit report`, `Enter`).
+**Acceptance**: for each equal-weight pair, assert that `getComputedStyle`'s `backgroundColor`, `fontWeight` and `borderWidth` are exactly the same.
 
 ---
 
-### B.5 语义 HTML 与"不得为视觉引入 div 汤"
+### B.5 Semantic HTML, and "no div soup introduced for visual reasons"
 
-| 需求 | 正确做法 | 禁止 |
+| Need | The correct approach | Forbidden |
 |---|---|---|
-| 卡片 | `<article>` / `<section aria-labelledby>` | `<div class="card">` |
-| 状态徽章 | `<span class="badge">` 内含真实文本 | `<div>` + `::before content` |
-| 队列/列表 | `<ul>` / `<ol>` + `<li>` | `<div role="list">` |
-| 表格 | `<table><thead><th scope="col">` | `<div role="grid">` |
-| 折叠 | `<details><summary>` | `<div onClick>` |
-| 对话框 | `<div role="alertdialog" aria-labelledby aria-modal="true">`（现状）或 `<dialog>` | 无语义浮层 |
-| 分组 | `<fieldset><legend>` | `<div>` + 视觉标题 |
-| 布局 | 在**已有**语义元素上加 class 做 flex/grid 容器 | 新增纯布局 `<div>` 包裹层 |
+| A card | `<article>` / `<section aria-labelledby>` | `<div class="card">` |
+| A status badge | `<span class="badge">` containing real text | `<div>` + `::before content` |
+| A queue/list | `<ul>` / `<ol>` + `<li>` | `<div role="list">` |
+| A table | `<table><thead><th scope="col">` | `<div role="grid">` |
+| A disclosure | `<details><summary>` | `<div onClick>` |
+| A dialog | `<div role="alertdialog" aria-labelledby aria-modal="true">` (as it currently is) or `<dialog>` | A semantics-free overlay |
+| A group | `<fieldset><legend>` | `<div>` + a visual heading |
+| Layout | Adding a class to an **existing** semantic element to make it a flex/grid container | Adding a purely presentational `<div>` wrapper |
 
-**唯一允许新增的非语义包裹**：`.scroll-x`（§B.3.2，带 `role="region"`）与 `.app-shell`（最外层 flex 容器，现已存在于 `App.tsx` 的 `<div>`）。
+**The only non-semantic wrappers permitted to be added**: `.scroll-x` (§B.3.2, carrying `role="region"`) and `.app-shell` (the outermost flex container, which already exists as the `<div>` in `App.tsx`).
 
 ---
 
-## §C 能力自适应模式（C；Doc 20 §286–287）
+## §C Capability-adaptive modes (C; Doc 20 §286–287)
 
-### C.1 五个可切换维度（2026-08-13 核对）
+### C.1 The five switchable dimensions (audited 2026-08-13)
 
-全部以 `<html>` 上的 `data-*` 属性驱动令牌覆盖。**没有任何 JS 逻辑判断"用户是谁"。**
+All of them drive token overrides through `data-*` attributes on `<html>`. **There is no JS logic anywhere that decides "who the user is".**
 
-| 维度 | 属性 | 取值 | 令牌覆盖 | 有开关吗 |
+| Dimension | Attribute | Values | Token override | Is there a switch? |
 |---|---|---|---|---|
-| 字号 | `data-font-scale` | `standard`(默认) / `lg` / `xl` / `xxl` | `--scale-font` = 1 / 1.125 / 1.25 / 1.5 | ✅ |
-| 密度 | `data-density` | `standard`(默认) / `spacious` | `--density` = 1 / 1.25（§A.3） | ✅ |
-| 对比 | `data-contrast` | `standard`(默认) / `high` | 颜色令牌换成高对比组（**含十个语义族，见下**）；`--border-default` → 3px；`--icon-stroke` → 2.5 | ✅ |
-| 动效 | `data-motion` | `system`(默认) / `reduced` | 全部 duration → 0ms | ✅ |
-| 少一点颜色 | `data-stimulation` | `standard`(默认) / `low` | 全部 tint 底 → 页面底；描边、图标、文字不变 | ✅ **2026-08-13 补上** |
+| Font size | `data-font-scale` | `standard` (default) / `lg` / `xl` / `xxl` | `--scale-font` = 1 / 1.125 / 1.25 / 1.5 | ✅ |
+| Density | `data-density` | `standard` (default) / `spacious` | `--density` = 1 / 1.25 (§A.3) | ✅ |
+| Contrast | `data-contrast` | `standard` (default) / `high` | Colour tokens swap to the high-contrast set (**including all ten semantic families, see below**); `--border-default` → 3px; `--icon-stroke` → 2.5 | ✅ |
+| Motion | `data-motion` | `system` (default) / `reduced` | All durations → 0ms | ✅ |
+| Less colour | `data-stimulation` | `standard` (default) / `low` | All tint backgrounds → the page background; strokes, icons and text unchanged | ✅ **added 2026-08-13** |
 
-**这一栏是这次核对加的，因为它揭出了问题。** `data-stimulation` 从 v0.1 起就有完整的规则块，而**没有任何代码设过这个属性**——所有者明确把「低刺激模式」排在完整深色模式之前，而它一直是打不开的。同一次核对还发现 `data-simplify` 与 `data-theme` 也没有写入方**（处理见下）**。已加一条测试：扫描样式表里所有 `:root[data-*=]` 选择器，逐个到 `src/` 里找写入方，找不到就失败。
+**This last column was added by that audit, because it is what exposed the problem.** `data-stimulation` has had a complete block of rules since v0.1, and **no code had ever set the attribute** — the owner explicitly ranked the low-stimulation mode above a full dark mode, and all along it could not be turned on. The same audit found that `data-simplify` and `data-theme` had no writer either **(what was done about each is below)**. A test has been added: scan the stylesheet for every `:root[data-*=]` selector and look for a writer in `src/` for each one; if there is none, fail.
 
-**`data-simplify` 已删除。** 它两头都空：没有写入方，而且**全应用没有一个元素带 `.optional`**，所以就算设上，能做的只有把行高 1.6 改成 1.8——那件事「密度」偏好本来就在做。按 D-75 的判法，这一类要删不要建：给它补开关，等于造一个写着「简化」、按下去只把行距变宽的控件。真正的「一次只做一件事」是流程层的工作（见 C.2 的 Step-by-Step 行）。
+**`data-simplify` has been deleted.** It was empty at both ends: no writer, and **not one element in the whole application carries `.optional`**, so even if it were set, all it could do is change a line height of 1.6 to 1.8 — which is what the density preference already does. By the D-75 test, this class of thing is to be deleted rather than built: giving it a switch would mean building a control labelled "simplify" that, when pressed, only widens the line spacing. Genuine "one thing at a time" is work at the flow layer (see the Step-by-Step row in C.2).
 
-**`data-theme` 保留为「一律浅色」的开关（D-79 修正），深色模式仍由 `prefers-color-scheme` 单一定义。** 当天先删后补：删的理由是「没有写入方」，属实但动作错了——发现一个能力没有写入方，正确的动作是补写入方。所有者在自己手机上看到深色、且**没有任何路径回到浅色**，才暴露出来。现在 `:root:not([data-theme='light'])` 这一个 `:not()` 就是「一律浅色」的全部实现：浅色值本来就在 `:root`，属性一设，深色块不再命中。**「一律深色」照所有者裁定提供**（D-80）：它确实需要复制整套深色值，所以副本由脚本从活的那一块生成，并有一条测试逐个令牌锁住两块完全一致——重复本身不可怕，无人看守的重复才是。三个选项都是**图标 + 文字**：图标 `aria-hidden`、文字作可及名称，且图标放大一档（☀/☾ 在多数字体里只占字面一半）。 从来没有代码设过 `data-theme`，所以那 40 条 hex 是**第二份副本**：它必须与媒体查询里的那份逐字一致，却没有任何机制能在它们分叉时出声——而先被改坏的多半是媒体查询那份，也就是所有系统深色使用者真正走的那条路。删掉副本之后，深色模式对使用者的行为**一点没变**（仍然跟随系统设置），只是不再有第二份会悄悄过期的值。所有者已定「深色模式不作优先」，所以没有补应用内开关；哪天要补，把属性选择器与写入方一起加回来即可。
+**`data-theme` is kept as the "always light" switch (the D-79 correction), and dark mode is still defined solely by `prefers-color-scheme`.** On the day it was first deleted and then restored: the reason for deleting it — "it has no writer" — was true, but the action was wrong. The correct action on finding a capability with no writer is to build the writer. What exposed this was the owner seeing dark mode on their own phone with **no path back to light at all**. The single `:not()` in `:root:not([data-theme='light'])` is now the entire implementation of "always light": the light values are already in `:root`, so once the attribute is set the dark block stops matching. **"Always dark" is provided per the owner's ruling** (D-80): it genuinely does require duplicating the whole set of dark values, so the copy is generated by a script from the live block, and a test pins the two blocks token by token to be identical — duplication is not the danger, unwatched duplication is. All three options are **icon + words**: the icon is `aria-hidden`, the words are the accessible name, and the icon is bumped up one size step (☀/☾ occupy only half the em in most fonts).
 
-#### C.1.1 高对比不是只把正文调黑
+#### C.1.1 High contrast is not just darkening the body text
 
-第一版高对比只覆盖了正文、次要文字、链接与按钮，**十个语义族一个没动**：正文从 12.38:1 抬到 21:1，而 warning / danger / story / ai 四块**原地停在 4.50 上下**——整屏最难读的东西一点没变。**打开这个模式的人，正是最需要把「被拒绝了」那句话看清楚的人。** 现在每一族都推到 AAA（≥7:1），底更接近白、字沿同一色相继续压暗。断言：高对比下每一族都必须**严格高于**标准模式，否则这个模式只是个名字。
+The first version of high contrast covered body text, secondary text, links and buttons, and **left all ten semantic families untouched**: body text went from 12.38:1 up to 21:1, while warning / danger / story / ai **stayed put at around 4.50** — the hardest things on the screen to read did not change at all. **The person who turns this mode on is precisely the person who most needs to be able to read the sentence saying they were declined.** Every family is now pushed to AAA (≥7:1), with the background closer to white and the text darkened further along the same hue. The assertion: under high contrast every family must be **strictly higher** than in standard mode, or the mode is only a name.
 
-### C.2 与 Doc 20 §286 八种模式的映射（诚实对照）
+### C.2 Mapping to the eight modes in Doc 20 §286 (an honest comparison)
 
-| Doc 20 模式 | 本系统实现 | 说明 |
+| Doc 20 mode | How this system implements it | Notes |
 |---|---|---|
-| Standard | 全部默认值 | ✅ 令牌覆盖 |
-| High Visibility | `data-contrast="high"` + `data-font-scale="xl"` | ✅ 令牌覆盖 |
-| Simple | ❌ **已删除，见 C.1** | 曾以 `data-simplify` 存在，两头都空。真正的简化是流程层的工作，与 Step-by-Step 同属一件事 |
-| Low Stimulation | `data-stimulation="low"`（+ 可与 `data-motion="reduced"` 同开） | ✅ 令牌覆盖，**且已有开关**（2026-08-13 前没有） |
-| Step-by-Step | ❌ **不是令牌能实现的** | 需要流程层拆分（多步表单、每步一个决定）。属 I16 表单族，本文件不覆盖 |
-| Read-Aloud | ❌ **不是令牌能实现的** | 需要 TTS 能力与 §300 多模态同意；见 §I.4 未决 |
-| Supporter-Assisted | ❌ **不是令牌能实现的** | 需要权限模型与"谁在代为操作"的呈现；见 D2/§180–181 |
-| Extended Time | ❌ **不是令牌能实现的** | 属会话超时策略（I14 / §296、§238） |
+| Standard | All the default values | ✅ Token override |
+| High Visibility | `data-contrast="high"` + `data-font-scale="xl"` | ✅ Token override |
+| Simple | ❌ **Deleted, see C.1** | It existed as `data-simplify` and was empty at both ends. Genuine simplification is work at the flow layer, the same piece of work as Step-by-Step |
+| Low Stimulation | `data-stimulation="low"` (which can be combined with `data-motion="reduced"`) | ✅ Token override, **and it now has a switch** (it had none before 2026-08-13) |
+| Step-by-Step | ❌ **Not something tokens can implement** | It needs the flow to be broken up (multi-step forms, one decision per step). That belongs to the I16 form family and is not covered by this document |
+| Read-Aloud | ❌ **Not something tokens can implement** | It needs TTS capability and the multimodal consent of §300; see §I.4, open |
+| Supporter-Assisted | ❌ **Not something tokens can implement** | It needs the permission model and a presentation of "who is acting on whose behalf"; see D2/§180–181 |
+| Extended Time | ❌ **Not something tokens can implement** | It belongs to session-timeout policy (I14 / §296, §238) |
 
-**这张表是诚实声明**：本设计系统只交付 4 个维度中可由令牌实现的部分，另 4 种模式必须在流程层单独设计，不得声称"已支持八种模式"。
+**This table is an honest declaration**: this design system delivers only the part of these four dimensions that tokens can implement. The other four modes must be designed separately at the flow layer, and it must not be claimed that "all eight modes are supported".
 
-### C.3 绝对禁令
+### C.3 Absolute prohibitions
 
-1. **不得按年龄自动判定**。系统不得读取、推断或使用出生日期/年龄段来预设任何模式。
-2. **不得按参与者分组自动判定**（如"干预组默认宽松"）——那会成为混杂变量，且是把人当类别对待。
-3. **不得由 AI 推断能力**并自动切换。
-4. **不得因某人使用了辅助技术就替他改变设置**——尊重 OS 信号只作**初始值**，不作锁定。
+1. **No automatic determination by age.** The system must not read, infer or use a date of birth or age band to preset any mode.
+2. **No automatic determination by participant group** (such as "the intervention arm defaults to spacious") — that would become a confounding variable, and it treats a person as a category.
+3. **No AI inference of capability** with an automatic switch.
+4. **No changing someone's settings for them because they use assistive technology** — respecting an OS signal means using it as an **initial value**, never as a lock.
 
-允许作为**初始值**的信号（都是用户自己在系统里设过的偏好，不是对人的推断）：
+Signals permitted as an **initial value** (all of them are preferences the user has themselves set in their system, not inferences about the person):
 
-| 信号 | 映射 |
+| Signal | Mapping |
 |---|---|
 | `prefers-color-scheme` | light / dark |
-| `prefers-contrast: more` | `data-contrast="high"` 初始值 |
-| `prefers-reduced-motion: reduce` | 动效令牌归零 |
-| 浏览器根字号 | 天然生效（rem） |
+| `prefers-contrast: more` | The initial value of `data-contrast="high"` |
+| `prefers-reduced-motion: reduce` | Motion tokens go to zero |
+| The browser's root font size | Takes effect naturally (rem) |
 
-用户一旦显式设置，用户值**永久优先**于 OS 信号。
+Once the user sets something explicitly, the user's value takes **permanent** precedence over the OS signal.
 
-### C.4 控制界面要求（Doc 20 §287）
+### C.4 Requirements on the control interface (Doc 20 §287)
 
-| 要求 | 实现 |
+| Requirement | Implementation |
 |---|---|
-| 易于找到 | 在**每个**工作区的主导航中有固定项「显示与阅读设置」；不埋在二级菜单 |
-| 可预览 | 设置页顶部有**实时样例区**（一段正文 + 一个按钮 + 一个状态徽章），随选择即时变化 |
-| 可逆 | 每个维度旁有「恢复默认」，页面底部有「全部恢复默认」 |
-| 持久 | `localStorage`（共享设备模式下改为 `sessionStorage`，见 §D.6） |
-| 任务中可用 | 设置以 `<dialog>` 形式从任何屏幕打开，**不卸载当前屏幕、不丢失表单输入**；关闭后焦点回到触发按钮 |
+| Easy to find | A fixed "Display and reading settings" item in the primary navigation of **every** workspace; not buried in a secondary menu |
+| Previewable | A **live sample area** at the top of the settings screen (a paragraph of body text + a button + a status badge), changing immediately with each choice |
+| Reversible | A "restore default" beside each dimension, and a "restore all defaults" at the foot of the page |
+| Persistent | `localStorage` (changing to `sessionStorage` in shared-device mode, see §D.6) |
+| Usable mid-task | The settings open as a `<dialog>` from any screen, **without unmounting the current screen or losing form input**; on close, focus returns to the triggering button |
 
-**实现约束**：属性写在 `<html>` 上、令牌覆盖是纯 CSS，因此切换不触发 React 重渲染，表单状态天然保留。这是选择 `data-*` 而非 React Context 的理由。
+**Implementation constraint**: the attribute is written on `<html>` and the token overrides are pure CSS, so switching does not trigger a React re-render and form state is preserved naturally. This is the reason for choosing `data-*` over React Context.
 
-**无 JS 降级**：`<noscript>` 下无法切换，但 `prefers-*` 媒体查询仍生效——因此高对比与暗色主题**必须**同时写成媒体查询与属性选择器两套（§F 已如此实现）。
+**Degradation without JS**: under `<noscript>` nothing can be switched, but the `prefers-*` media queries still apply — which is why high contrast and the dark theme **must** be written twice, as a media query and as an attribute selector (§F already does this).
 
 ---
 
-## §D 响应式（A9；Doc 20 §301–307）
+## §D Responsiveness (A9; Doc 20 §301–307)
 
-### D.1 断点（内容驱动，rem 单位）
+### D.1 Breakpoints (content-driven, in rem)
 
-| 名称 | 条件 | 由什么内容决定 |
+| Name | Condition | What content determines it |
 |---|---|---|
-| （基准） | `< 40rem` | 单列。参与者默认形态。所有设计从这里开始 |
-| `sm` | `≥ 40rem`（720px @18px） | 一行能放下两个 `min-width: 12rem` 的动作按钮 |
-| `md` | `≥ 56rem`（1008px） | 员工工作区可以出现侧边导航 + 内容两列 |
-| `lg` | `≥ 76rem`（1368px） | 员工工作区可以出现三列或"列表 + 详情 + 上下文"并列 |
+| (base) | `< 40rem` | Single column. The participant's default form. All design starts here |
+| `sm` | `≥ 40rem` (720px at 18px) | Two `min-width: 12rem` action buttons fit on one row |
+| `md` | `≥ 56rem` (1008px) | A staff workspace can show side navigation + content in two columns |
+| `lg` | `≥ 76rem` (1368px) | A staff workspace can show three columns, or "list + detail + context" side by side |
 
-**用 `rem` 而非 `px`**：用户把字号调到 32px 时，40rem = 1280px，多数平板会落回单列——大字用户自动得到单列。这是有意为之（取舍 §H.3）。
+**In `rem` rather than `px`**: when a user sets their font size to 32px, 40rem = 1280px and most tablets fall back to a single column — a large-text user automatically gets a single column. This is deliberate (trade-off §H.3).
 
-### D.2 移动优先的布局规则
+### D.2 Mobile-first layout rules
 
-1. **基准样式 = 移动样式**。所有 `@media` 只用 `min-width`，不用 `max-width`。
-2. **参与者工作区在任何宽度下都是单列**，正文宽度封顶 `--measure-default`。宽屏只增加左右留白，不增加列数。理由：Doc 20 §13.2「一次一个有意义的决定」——多列天然并列多个决定。
-3. **员工工作区**可在 `md`/`lg` 分列，但：任一列内部仍是单列流；不得把一个决定的上下文与它的确认按钮分到两列（Doc 20 §13.3「先解释再询问」要求同屏可见，分列视为违规，除非两列在同一视口内同时完整可见）。
+1. **The base styles are the mobile styles.** Every `@media` uses `min-width` only, never `max-width`.
+2. **The participant workspace is a single column at every width**, with body text capped at `--measure-default`. A wide screen adds side margin only, never more columns. The reason: Doc 20 §13.2, "one meaningful decision at a time" — multiple columns inherently place multiple decisions side by side.
+3. **A staff workspace** may split into columns at `md`/`lg`, but: the inside of any column is still a single-column flow; and the context for a decision must never be split from its confirm button across two columns (Doc 20 §13.3, "explain before asking", requires them visible on the same screen; splitting them across columns counts as a violation unless both columns are fully visible in the same viewport at once).
 
-### D.3 导航
+### D.3 Navigation
 
-| 断点 | 参与者 | 员工 |
+| Breakpoint | Participant | Staff |
 |---|---|---|
-| 基准 | 顶部单行横向滚动的 `<nav>`（现状）**或**底部固定栏；见 §I.2 未决 | 顶部 `<nav>`，可换行 |
-| `sm+` | 顶部 `<nav>`，`flex-wrap: wrap`，每项 ≥44px | 同上 |
-| `md+` | 同上（不变，保持单列） | 左侧持久侧栏（`<nav>` + `<ul>`），内容区 `--measure-wide` |
+| Base | A single-row horizontally scrolling top `<nav>` (as it is now) **or** a fixed bottom bar; see §I.2, open | A top `<nav>` that can wrap |
+| `sm+` | A top `<nav>`, `flex-wrap: wrap`, every item ≥44px | As above |
+| `md+` | As above (unchanged, staying single-column) | A persistent left sidebar (`<nav>` + `<ul>`), with the content area at `--measure-wide` |
 
-规则：
+Rules:
 
-- 导航项数 ≤ 7（现有参与者导航为 6 项，合规）。
-- `aria-current="page"` 已在现有实现，保留；视觉上用**左/下 4px 实心条 + 加粗 + 颜色**三通道，不只用颜色。
-- **移动端底部导航若采用**：必须为内容区加 `padding-block-end: calc(导航高度 + var(--space-5))`，且不得遮挡任何 `确认/取消` 按钮（Doc 20 §304「sticky but non-obscuring」）。
+- No more than 7 navigation items (the existing participant navigation has 6, which is compliant).
+- `aria-current="page"` is already in the existing implementation and is kept; visually it uses three channels — **a 4px solid bar on the left/bottom + bold + colour** — not colour alone.
+- **If bottom navigation is adopted on mobile**: the content area must be given `padding-block-end: calc(nav height + var(--space-5))`, and it must not obscure any confirm/cancel button (Doc 20 §304, "sticky but non-obscuring").
 
-### D.4 表格 → 卡片的降级（以及何时不降级）
+### D.4 Degrading a table to cards (and when not to)
 
-| 情况 | 移动端做法 |
+| Situation | What to do on mobile |
 |---|---|
-| 纯展示、每行 ≤4 个字段（如报告队列） | 降级为 `<ul>` + `<li>` 卡片，每字段 `<dl><dt>字段名<dd>值` |
-| 需要跨行比较的数据（数据集质量复核、版本对比） | **不降级**。保留 `<table>`，放进 §B.3.2 的 `.scroll-x` 容器 |
-| 带行内动作的队列 | 降级为卡片，动作按 R4 变为整行块级按钮 |
+| Purely presentational, ≤4 fields per row (a report queue, say) | Degrade to `<ul>` + `<li>` cards, each field as `<dl><dt>field name<dd>value` |
+| Data that has to be compared across rows (dataset quality review, version comparison) | **Do not degrade.** Keep the `<table>` and put it in the `.scroll-x` container from §B.3.2 |
+| A queue with inline actions | Degrade to cards, with the actions becoming full-width block-level buttons per R4 |
 
-**注意**：`<table>` → `<ul>` 的降级**改变了元素角色**。若某个测试用 `getByRole('table')` 或 `getByRole('row')` 查询，降级会在窄视口下失败。现有 34 个测试中**没有**表格角色查询（已核对，见 §G.1），但未来新增表格时必须遵守：**响应式降级不得跨断点改变角色**——正确做法是两种表示同时存在于 DOM、用 CSS 显隐，或统一只用一种。本系统选择：**队列一律用 `<ul>` 语义，宽屏用 CSS Grid 排成表格外观**，从而角色恒定。真正需要 `<table>` 语义的（多维数据）则永不降级、只滚动。
+**Note**: degrading `<table>` → `<ul>` **changes the element's role**. If a test queries with `getByRole('table')` or `getByRole('row')`, the degradation will make it fail at a narrow viewport. None of the existing 34 tests query a table role (verified, see §G.1), but any table added in future must obey this: **a responsive degradation must not change a role across a breakpoint**. The correct approaches are to have both representations present in the DOM and shown/hidden by CSS, or to use only one of them throughout. This system chooses: **queues always use `<ul>` semantics, and on a wide screen CSS Grid arranges them to look like a table**, so the role is constant. Anything that genuinely needs `<table>` semantics (multi-dimensional data) never degrades and only scrolls.
 
-### D.5 粘性元素
+### D.5 Sticky elements
 
-- 粘性只用于：员工表格表头、长表单的动作条、会话超时警告。
-- 粘性元素必须：`position: sticky`（非 `fixed`）、`z-index: var(--layer-sticky)`、总高度 ≤ 视口 25%。
-- 视口高度 < `30rem`（横屏手机、分屏）时取消粘性：`@media (max-height: 30rem) { .sticky { position: static } }`。
-- 页面必须设 `scroll-padding-block-start: <粘性头高度>` 与 `scroll-padding-block-end: <粘性尾高度>`，否则键盘 Tab 到的元素会被粘性条盖住（焦点可见性硬要求，§B.2）。
+- Stickiness is used only for: staff table headers, the action bar of a long form, and the session-timeout warning.
+- A sticky element must be: `position: sticky` (not `fixed`), `z-index: var(--layer-sticky)`, and no more than 25% of the viewport in total height.
+- Stickiness is cancelled when the viewport height is below `30rem` (a phone in landscape, a split screen): `@media (max-height: 30rem) { .sticky { position: static } }`.
+- The page must set `scroll-padding-block-start: <sticky header height>` and `scroll-padding-block-end: <sticky footer height>`, or an element reached by Tab will be covered by the sticky bar (a hard requirement of focus visibility, §B.2).
 
 ### D.6 共享环境与共享设备（Doc 20 §306–307）
 
