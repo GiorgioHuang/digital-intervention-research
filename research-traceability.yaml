@@ -1,6 +1,6 @@
-# RESEARCH_TRACEABILITY_MATRIX 的机器可读层（Master Prompt v1.2 Traceability Format）。
-# finding_status 词汇：Doc 19 v1.3 §38 + not_started/in_analysis。
-# 规则：非 supported 不得标 supported；每条至少 1 个 Trace ID 与 1 个 ADR ID。
+# The machine-readable layer of RESEARCH_TRACEABILITY_MATRIX (Master Prompt v1.2 Traceability Format).
+# finding_status vocabulary: Doc 19 v1.3 §38 + not_started/in_analysis.
+# Rule: anything that is not supported must not be marked supported; every entry carries at least 1 Trace ID and 1 ADR ID.
 
 - research_item: RQ-P1
   question: "Is the framework internally coherent?"

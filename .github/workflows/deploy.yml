@@ -155,7 +155,7 @@ jobs:
           elif [ -n "${{ vars.GOOGLE_CLIENT_ID }}" ]; then
             echo "::warning::GOOGLE_CLIENT_ID is set but the HADI_SESSION_SECRET secret is missing — staying on the dev-header stub. Create the secret to switch on Sign in with Google."
           else
-            echo "::notice::GOOGLE_CLIENT_ID not set — deploying on the dev-header stub (identity is whatever a header says). See DEPLOYMENT.md 开启 Google 登录."
+            echo "::notice::GOOGLE_CLIENT_ID not set — deploying on the dev-header stub (identity is whatever a header says). See DEPLOYMENT.md Switching on Sign in with Google."
           fi
           # Guarded either by real authentication or by the shared token;
           # unguarded only when neither, and that stays off the internet.

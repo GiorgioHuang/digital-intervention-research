@@ -16,7 +16,8 @@ import { EmptyState, ErrorState, LoadingState } from './StateBlock.js';
  * shown in full before confirming. The feed is member-only and strictly
  * chronological — no algorithmic ranking, no engagement mechanics, and no
  * unread counts. Posting is draft-first: nothing leaves the author without
- * an explicit confirmed "发布到[社区]" step, mirroring message sending.
+ * an explicit confirmed "Publish to [community]" step, mirroring message
+ * sending.
  */
 const POST_STATE_LABELS: Record<string, string> = {
   Draft: 'Draft — only you can see it',

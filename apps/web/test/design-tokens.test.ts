@@ -4,8 +4,10 @@ import { describe, expect, it } from 'vitest';
 
 /**
  * The contrast gate DESIGN_SYSTEM.md §A.1.5 has asked for since v0.1:
- * "把上表所有组合写成单元测试断言，令牌值一旦被改动即失败。这是本文件唯一
- * 建议新增的自动化门。" It did not exist. Re-palletising the whole system to
+ * "write every combination in the table above as a unit-test assertion, so
+ * that the moment a token value is changed it fails. This is the only
+ * automated gate this document recommends adding." It did not exist.
+ * Re-palletising the whole system to
  * Calm Teal & Warm Sand is the moment it has to, because the ratios that
  * were true of the old blue are not true of the new teal, and nothing but
  * arithmetic can tell you which.

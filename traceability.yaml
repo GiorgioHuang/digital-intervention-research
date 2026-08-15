@@ -616,7 +616,7 @@
   summary: Participants are named to each other instead of numbered (decision D-12). The community feed, conversation list and connection list rendered internal participant primary keys at other participants - a recorded defect, because a key shown to one person is a handle for correlating that person across every screen they appear on. M18's three read queries now resolve a display name through a narrow ParticipantNamePort declared in M18 and satisfied structurally by M02's query object, so the dependency stays one way and no module reaches into another's schema; the lookup is batched because a feed resolves up to a hundred authors and one query per author would be a query storm on the most-visited screen. A participant whose name cannot be resolved is described as "A community member", identical for everyone unresolved so the placeholder cannot be used to tell them apart, and never as an identifier. Known cost, stated rather than hidden - Doc 20 §354 forbids combining ParticipantProfile and PublicProfile, and PublicProfile is not implemented (B14), so every name shown to another participant currently comes from the research-side record and the participant cannot choose how they are called per §132; the community screen therefore says outright that a published post carries the name on the participant record and that no separate community name exists yet. Sweep deps in the worker and in the sweep tests throw rather than resolve names, so a sweep that ever needs one is a deliberate design change and not an unexplained placeholder in a log
   trace_ids: [ATR-002, ATR-016]
   adr_ids: [ADR-050, ADR-113]
-  docs: ["design/DESIGN_DECISIONS.md D-12", "design/PARTICIPANT_WORKSPACE.md 偏差 #2", "Doc 20 §131-133", "Doc 20 §136", "Doc 20 §156", "Doc 20 §354"]
+  docs: ["design/DESIGN_DECISIONS.md D-12", "design/PARTICIPANT_WORKSPACE.md Deviation #2", "Doc 20 §131-133", "Doc 20 §136", "Doc 20 §156", "Doc 20 §354"]
   code: [packages/modules/m18-community-social/src/application/queries.ts, packages/modules/m18-community-social/src/application/commands.ts, packages/modules/m02-participant/src/contracts/index.ts, packages/modules/m02-participant/src/infrastructure/repository.ts, apps/web/src/components/MessagesScreen.tsx, apps/web/src/components/CommunityPanel.tsx, apps/api/src/app.module.ts]
   tests: [packages/modules/m18-community-social/test/m18.integration.test.ts, apps/web/test/messages-screen.test.tsx, apps/web/test/community-panel.test.tsx]
   status: implemented
@@ -1445,7 +1445,7 @@
     information.
   trace_ids: [ATR-003]
   adr_ids: [ADR-104]
-  docs: ["design/DESIGN_DECISIONS.md D-68", "DEPLOYMENT.md 开启 Google 登录"]
+  docs: ["design/DESIGN_DECISIONS.md D-68", "DEPLOYMENT.md Switching on Sign in with Google"]
   code:
     - packages/database/migrations/1753800000027_google-identity.sql
     - apps/api/src/auth/google-token.ts
@@ -1494,7 +1494,7 @@
     because once self-signup exists "who let this person in" stops having one answer for everybody.
   trace_ids: [ATR-003]
   adr_ids: [ADR-104]
-  docs: ["design/DESIGN_DECISIONS.md D-69", "DEPLOYMENT.md 自助注册与邀请"]
+  docs: ["design/DESIGN_DECISIONS.md D-69", "DEPLOYMENT.md Self-registration and invitations"]
   code:
     - packages/database/migrations/1753800000028_self-signup-and-invitation-grants.sql
     - apps/api/src/auth/session-store.ts
@@ -1528,7 +1528,7 @@
     authentication is on.
   trace_ids: [ATR-003]
   adr_ids: [ADR-104]
-  docs: ["DEPLOYMENT.md 开启 Google 登录"]
+  docs: ["DEPLOYMENT.md Switching on Sign in with Google"]
   code:
     - .github/workflows/deploy.yml
     - apps/api/src/http-context.ts
@@ -1562,7 +1562,7 @@
     the mutation ran against a stale dist and stayed green; rebuilding made it fail as intended.
   trace_ids: [ATR-003]
   adr_ids: [ADR-104]
-  docs: ["design/DESIGN_DECISIONS.md D-70", "DEPLOYMENT.md 自助注册与邀请"]
+  docs: ["design/DESIGN_DECISIONS.md D-70", "DEPLOYMENT.md Self-registration and invitations"]
   code:
     - packages/modules/m01-identity-org/src/application/commands.ts
     - packages/modules/m01-identity-org/src/application/queries.ts
@@ -1596,7 +1596,7 @@
     have believed, must come back 401.
   trace_ids: [ATR-003]
   adr_ids: [ADR-104]
-  docs: ["DEPLOYMENT.md 要开放自助注册，访问令牌门得先撤掉", "THREAT_MODEL.md"]
+  docs: ["DEPLOYMENT.md To open self-registration, the access-token gate has to go first", "THREAT_MODEL.md"]
   code:
     - .github/workflows/deploy.yml
   tests:
@@ -1629,7 +1629,7 @@
     staffed and are unreachable.
   trace_ids: [ATR-003]
   adr_ids: [ADR-104]
-  docs: ["design/DESIGN_DECISIONS.md D-71", "DEPLOYMENT.md 第一个管理员"]
+  docs: ["design/DESIGN_DECISIONS.md D-71", "DEPLOYMENT.md The first administrator"]
   code:
     - packages/modules/m01-identity-org/src/application/commands.ts
     - packages/modules/m01-identity-org/src/application/queries.ts
