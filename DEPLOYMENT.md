@@ -1,12 +1,18 @@
 # DEPLOYMENT
 
+> **本仓库是公开的。** 所有指向真实部署的值——域名、端点、项目标识——都存在
+> 仓库变量（Settings → Secrets and variables → Actions → Variables）里，文档中
+> 一律以尖括号占位符出现。往这里粘真实值之前先想一下：**它会被任何人读到**。
+> 需要保密的值（数据库连接串、会话密钥、访问令牌）属于 Secret Manager 或
+> Actions Secrets，不属于变量——变量对协作者可见，且一旦被打进日志就是公开的。
+
 > Cloud Run + Neon 部署与 CI/CD 说明。沿用 aging-knowledge-graph 在同一 GCP 项目验证过的模式（WIF 无密钥认证、Secret Manager、`gcloud run deploy --source .`）。**该部署环境仅承载合成数据的概念研究原型**（ADR-061/062）。认证有两种模式（ADR-104）：`AUTH_MODE=google` 是真实认证（见下节「开启 Google 登录」），`AUTH_MODE=dev-header` 是开发/合成试点桩，身份即 `x-actor-id` 所声称者。**当前部署跑在桩上**，访问令牌门是补偿性边界而非身份认证。
 
 ## 架构
 
 - **单 Cloud Run 服务**（默认名 `hadi-platform`）：一个容器内由 `tools/start-cloud.mjs` 启动三个进程——API（同源静态托管 `apps/web/dist` 的 Web 应用）+ pg-boss worker + scheduler（`RUN_JOBS=true`，scheduler 错峰 5 秒启动以避免 pg-boss 初始化死锁）。任一进程退出即整容器退出（fail closed：宁可重启，不带病运行掉了安全清扫的服务）。
 - **Neon PostgreSQL**：`DATABASE_URL` 由 Secret Manager 的 `HADI_DATABASE_URL` 注入；迁移在部署工作流内、新版本上线**之前**由 GitHub runner 直接对 Neon 执行（全部迁移可逆且 CI 每推送演练）。
-- **Knowledge Graph 真实对接**：部署环境默认 `KNOWLEDGE_PLATFORM_MODE=mcp`，指向 https://knowledge-graph.internal.example。
+- **Knowledge Graph 真实对接**：部署环境在仓库变量 `KNOWLEDGE_MCP_URL` 存在时切到 `KNOWLEDGE_PLATFORM_MODE=mcp`，指向该变量给出的端点；变量未设则留在确定性模拟器。
 - **访问边界（fail closed）**：`HADI_ACCESS_TOKEN` 密钥存在 → 公网开放但所有 `/v1` 请求必须携带 `X-Access-Token`（常数时间比较；静态资源与 /health 开放，不含数据）；密钥不存在 → 服务以 IAM-only ingress 部署，不对公网开放。Web 端首次用 `<url>/?token=<令牌>` 打开即存储并从地址栏剥离。
 
 ## CI/CD 链
@@ -66,15 +72,15 @@ PORT=8099 WEB_DIST_DIR=$PWD/apps/web/dist ACCESS_TOKEN=local-smoke-token-0123456
 **已获授权的 JavaScript 来源**（每个对外主机名一条）：
 
 ```
-https://participants.internal.example
-https://staff.internal.example
+<参与者入口域名>
+<员工入口域名>
 ```
 
 **已获授权的重定向 URI —— 这一栏必须填，而且是根路径带结尾斜杠**：
 
 ```
-https://participants.internal.example/
-https://staff.internal.example/
+<参与者入口域名>/
+<员工入口域名>/
 ```
 
 **只填了 JavaScript 来源、重定向 URI 留空，登录一定失败**，报 `redirect_uri_mismatch`。而且这个错只出现在 Google 那一页上——本平台的日志里干干净净，什么都看不到，因为浏览器根本没回来过。参与者入口和工作人员入口是同一个服务的两个域名（D-66），**两个都要登记**，漏一个就是那一侧整个进不去。
@@ -100,7 +106,7 @@ https://staff.internal.example/
 
 ```
 # 仓库变量（Settings → Secrets and variables → Actions → Variables）
-GOOGLE_CLIENT_ID    = 000000000000-….apps.googleusercontent.com
+GOOGLE_CLIENT_ID    = <上一步创建的客户端 ID>.apps.googleusercontent.com
 # 可选：GOOGLE_ALLOWED_DOMAINS / GOOGLE_MFA_DOMAINS / ALLOW_SELF_SIGNUP
 
 # Secret Manager

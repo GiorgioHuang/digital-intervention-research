@@ -8,7 +8,7 @@ import { createKnowledgePlatformMcpClient } from '../src/infrastructure/kp-mcp-c
  * backed by an actual JSON-RPC round trip to POST /mcp.
  *
  * Endpoint selection: KNOWLEDGE_MCP_URL if set (CI points this at the
- * deployed Cloud Run instance, https://knowledge-graph.internal.example), else a locally
+ * deployed Cloud Run instance named by the KNOWLEDGE_MCP_URL repository variable), else a locally
  * running server (repo aging-knowledge-graph, `PORT=8790 npm run serve`).
  * Skips honestly when neither is reachable — it never fakes a pass.
  */

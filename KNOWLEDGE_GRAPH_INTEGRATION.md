@@ -4,16 +4,16 @@
 
 ## 0. 部署事实：无需新建 GCP/Neon 基础设施 `[Prototype Observation]`
 
-用户提出「如果需要服务器可以用 GCP，数据库可以用 Neon」。审计发现 **KG 已经部署完毕**：仓库 `GiorgioHuang/aging-knowledge-graph` 自带 `scripts/deploy-cloudrun.sh` 与 `scripts/neon-setup.ts`，服务已运行在 **Cloud Run（https://knowledge-graph.internal.example）+ Neon（pgvector）**。因此本次对接**零新增基础设施**——平台直接调用现有端点。
+用户提出「如果需要服务器可以用 GCP，数据库可以用 Neon」。审计发现 **KG 已经部署完毕**：仓库 `GiorgioHuang/aging-knowledge-graph` 自带 `scripts/deploy-cloudrun.sh` 与 `scripts/neon-setup.ts`，服务已运行在 **Cloud Run（Cloud Run 上的既有实例，端点见仓库变量 `KNOWLEDGE_MCP_URL`）+ Neon（pgvector）**。因此本次对接**零新增基础设施**——平台直接调用现有端点。
 
-- 本开发沙箱的出站代理拒绝对 knowledge-graph.internal.example 的 CONNECT（403，代理策略），localhost 不受限。因此：本地开发/测试跑真实的本地 KG 服务器（同一代码、同一种子语料，`PORT=8790 npm run serve`）；**CI（GitHub Actions，公网出口开放）以 `KNOWLEDGE_MCP_URL=https://knowledge-graph.internal.example` 对生产实例做每推送真实调用冒烟**。两条路径跑的是同一测试套件、同一断言。
+- 本开发沙箱的出站代理拒绝对该端点的 CONNECT（403，代理策略），localhost 不受限。因此：本地开发/测试跑真实的本地 KG 服务器（同一代码、同一种子语料，`PORT=8790 npm run serve`）；**CI（GitHub Actions，公网出口开放）以仓库变量 `KNOWLEDGE_MCP_URL` 指向生产实例做每推送真实调用冒烟**。两条路径跑的是同一测试套件、同一断言。
 
 ## 1. Readiness Assessment（就绪判定）
 
 **Partially Ready（部分就绪）——接口与语义能力就绪，语料规模是当前的主要限制。**
 
 - **就绪**：MCP 面（16 个 `graceage_*` 工具，HTTP POST /mcp 与 stdio 双传输）、结构化可追溯返回（claim→certainty→sources(DOI/PMID)→quality 分层）、知识缺口一等公民建模、路径查询、语义搜索。对本平台**概念研究阶段**（合成输入、理论建模、原型验证）的需求，这些能力已足够真实对接并驱动 M10 证据链。
-- **部署语料注记** `[Prototype Observation]`：CI 对 knowledge-graph.internal.example 的真实调用显示，部署实例（Neon）语料是种子集的**超集**——包含摄入的文献源节点（`doi:` 前缀标识），且服务端语义搜索（embedding + Neon）冷路径延迟可超 15 秒。适配器与测试已按此现实校准（标识契约=图内可解析，非 `ga:` 命名约定；45 秒客户端超时）。
+- **部署语料注记** `[Prototype Observation]`：CI 对生产实例的真实调用显示，部署实例（Neon）语料是种子集的**超集**——包含摄入的文献源节点（`doi:` 前缀标识），且服务端语义搜索（embedding + Neon）冷路径延迟可超 15 秒。适配器与测试已按此现实校准（标识契约=图内可解析，非 `ga:` 命名约定；45 秒客户端超时）。
 - **限制**：种子基线语料为 60 节点/54 声明/25 证据的策展集——覆盖了优先主题域的骨架（孤独感、社会连接、怀旧/生命故事、数字干预、知识缺口），但**远不足以支撑真实证据综述**；部分节点类型缺失（无 `problem`/`model`/`risk` 独立类型）；图谱级版本号未经 API 暴露（`seed/graph.json` 内 `"version": 6` 字段存在但 /health 与 MCP 不返回）。
 - **结论**：作为概念研究阶段的证据与理论基础设施：**Ready**。作为未来经验研究阶段的证据基础设施：**Not Ready（需要语料扩充与版本暴露，见 §5 建议）**。
 
@@ -46,7 +46,7 @@
 4. **REST 暴露 M10 全链**（StaffCommandController）：`GET /v1/evidence/search?q=`、`POST /v1/evidence-reviews`、`…/references`（真实解析外部引用并落 provenance）、`…/submit`、`…/approve`（EvidenceReviewer、confirmed、职责分离）、`POST /v1/evidence-decisions`、`…/approve`（批准即产 EvidenceSnapshot，ADR-044）。
 5. **配置（失败关闭默认）**：`KNOWLEDGE_PLATFORM_MODE=simulator|mcp`（默认 simulator——确定性模拟器仍是 CI/合成试点的基线），`mcp` 模式要求 `KNOWLEDGE_MCP_URL` 否则进程拒绝启动。
 6. **测试**：`kp-mcp.real-call.test.ts` 六项，其中四项为**对活体服务器的真实调用**（搜索返回 `ga:` 节点+retrieval identity 格式、去重、已知节点解析且哈希稳定、未知节点 → undefined），两项失败关闭（不可达端口/非 MCP 响应 → DEPENDENCY_UNAVAILABLE）；e2e 新增 M10 全链（搜索→评审→引用→双人批准→快照）与参与者 403 拒绝。探活失败时诚实 skip，不伪造通过。
-7. **CI 实弹冒烟**：测试步注入 `KNOWLEDGE_MCP_URL=https://knowledge-graph.internal.example`——每次推送对生产 Cloud Run+Neon 实例做真实 JSON-RPC 调用。
+7. **CI 实弹冒烟**：测试步注入仓库变量 `KNOWLEDGE_MCP_URL`——每次推送对生产 Cloud Run+Neon 实例做真实 JSON-RPC 调用。
 
 ## 4. Example MCP Queries（真实调用样例）`[Prototype Observation]`
 
@@ -110,4 +110,4 @@ graceage_recommendations {}
 - **证据流**：Researcher 经 `GET /v1/evidence/search` 探索（临时、不落库）→ 人工挑选后 `POST /v1/evidence-reviews/:id/references` 附加（此刻记录 externalIdentifier + retrieval identity + 检索时刻 + 完整 provenance）→ 评审/决定/快照全链人工权威 + 职责分离。图谱内容**永不自动**成为平台研究结论。
 - **认识论纪律**（Doc 19 §10）：图谱返回的 certainty/quality 是**上游策展元数据**，引用时标注 `[Source-Derived]`；种子语料驱动的任何分析结果不得表述为经验证据。
 - **可用性语义**：`simulator` 模式是默认与 CI 基线（确定性）；`mcp` 模式显式启用真实依赖。真实依赖不可达 = 503 DEPENDENCY_UNAVAILABLE，绝不静默降级为空结果。
-- **运行手册**:本地 `git clone GiorgioHuang/aging-knowledge-graph && PORT=8790 npm run serve`，然后 `KNOWLEDGE_PLATFORM_MODE=mcp KNOWLEDGE_MCP_URL=http://localhost:8790` 启动 API；线上直接指向 `https://knowledge-graph.internal.example`。
+- **运行手册**:本地 `git clone GiorgioHuang/aging-knowledge-graph && PORT=8790 npm run serve`，然后 `KNOWLEDGE_PLATFORM_MODE=mcp KNOWLEDGE_MCP_URL=http://localhost:8790` 启动 API；线上指向仓库变量 `KNOWLEDGE_MCP_URL` 给出的端点。

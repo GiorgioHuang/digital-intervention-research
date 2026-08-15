@@ -73,7 +73,11 @@ jobs:
         # probes /health first and skips honestly if the service is down —
         # availability of an external dependency must not flake the build.
         env:
-          KNOWLEDGE_MCP_URL: https://knowledge-graph.internal.example
+          # The deployed knowledge-graph endpoint is a repository Variable, not a
+          # literal here: this repository is public and its workflow logs are
+          # public with it. Unset (as in any fork) the real-call test skips
+          # honestly rather than pretending to pass.
+          KNOWLEDGE_MCP_URL: ${{ vars.KNOWLEDGE_MCP_URL }}
         run: pnpm test
 
       # Runs against the populated post-test database: dump -> restore

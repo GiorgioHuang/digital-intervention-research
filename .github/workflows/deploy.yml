@@ -171,7 +171,12 @@ jobs:
           echo "AUTH_MODE_DEPLOYED=$AUTH_MODE" >> "$GITHUB_ENV"
           # Real Knowledge Graph integration (ADR-052/110): the deployed
           # platform talks to the live MCP endpoint.
-          ENVVARS="$ENVVARS,KNOWLEDGE_PLATFORM_MODE=mcp,KNOWLEDGE_MCP_URL=${{ vars.KNOWLEDGE_MCP_URL || 'https://knowledge-graph.internal.example' }}"
+          # No literal fallback: with KNOWLEDGE_MCP_URL unset the service keeps
+          # the deterministic simulator rather than being pointed at a host
+          # written into a public repository.
+          if [ -n "${{ vars.KNOWLEDGE_MCP_URL }}" ]; then
+            ENVVARS="$ENVVARS,KNOWLEDGE_PLATFORM_MODE=mcp,KNOWLEDGE_MCP_URL=${{ vars.KNOWLEDGE_MCP_URL }}"
+          fi
           # The staff workspace's addresses are compiled into the web
           # bundle, because the browser is what decides which surface it
           # is showing. Written as Vite's own env file rather than a
@@ -227,8 +232,13 @@ jobs:
           URL=$(gcloud run services describe "${{ vars.CLOUD_RUN_SERVICE || 'hadi-platform' }}" \
             --project "${{ vars.GCP_PROJECT_ID }}" --region "${{ vars.GCP_REGION || 'us-east1' }}" \
             --format='value(status.url)')
-          echo "Service URL: $URL"
-          echo "$URL" >> "$GITHUB_STEP_SUMMARY"
+          # Masked, and kept out of the run summary. This repository is
+          # public, and so are its workflow logs and summaries: printing the
+          # service URL there publishes the deployment address to anyone who
+          # opens a build. The same `::add-mask::` treatment the database URL
+          # already gets above.
+          echo "::add-mask::$URL"
+          echo "Deployed revision answered; URL withheld from public logs." >> "$GITHUB_STEP_SUMMARY"
 
           # First request may cold-start the instance; allow a few attempts.
           for i in 1 2 3 4 5 6; do
