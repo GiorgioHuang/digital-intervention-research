@@ -21,8 +21,32 @@ permissions:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    # Deploy only what CI has fully verified (tests + drills), never a red build.
-    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    # Deploy only what CI has fully verified (tests + drills), never a red
+    # build — and only work that came from this repository.
+    #
+    # `workflow_run` is the dangerous trigger in a public repository, and the
+    # danger is not obvious: this job runs in the BASE repository's context,
+    # with its secrets and its Workload Identity, but it is started by a CI
+    # run that anybody can cause. `branches: [main]` above does not restrain
+    # that, because it matches the branch of the run that triggered it — for
+    # a pull request from a fork, that is the fork's own branch name. Anyone
+    # could fork this repo, push to a branch they name `main`, open a pull
+    # request, let CI pass, and have this job deploy their commit — the
+    # checkout below takes `workflow_run.head_sha` — to the real Cloud Run
+    # service, with access to the production database secret.
+    #
+    # So three conditions, none of them redundant:
+    #   head_repository  the triggering CI ran on THIS repo, not a fork
+    #   event == push    it was a push to main, not a pull request
+    #   head_branch      that push was on main
+    # The first is the one that closes the hole; the other two keep the
+    # original intent (deploy main, not every green build).
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.head_repository.full_name == github.repository &&
+       github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.head_branch == 'main')
     steps:
       - name: Check deploy configuration
         id: cfg

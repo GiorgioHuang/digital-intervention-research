@@ -6,7 +6,7 @@
  * - `scaffolded` requires the referenced code paths to exist;
  * - `implemented`/`verified` require code AND test paths to exist.
  */
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parse } from 'yaml';
@@ -55,6 +55,34 @@ for (const e of entries) {
     }
     if (!e.tests?.length) errors.push(`${id}: status ${e.status} requires test evidence`);
   }
+}
+
+/*
+ * A traceability.yaml anywhere but the repository root.
+ *
+ * This checker reads exactly one file, resolved from the root, so a stray
+ * copy is not merely unchecked — it is invisible. Appending an entry from
+ * a subdirectory (`cd packages/database && cat >> traceability.yaml`)
+ * creates one, the entry is lost, and the check reports success, because
+ * everything it was asked to look at is fine. That happened twice in one
+ * day, and both times the green tick is what made it hard to notice.
+ *
+ * A check that cannot see the thing that went wrong should at least say
+ * that the thing exists.
+ */
+function straySearch(dir, found = []) {
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    if (entry.name === 'node_modules' || entry.name === '.git' || entry.name === 'dist') continue;
+    const full = resolve(dir, entry.name);
+    if (entry.isDirectory()) straySearch(full, found);
+    else if (entry.name === 'traceability.yaml' && full !== resolve(root, 'traceability.yaml')) {
+      found.push(full.slice(root.length + 1));
+    }
+  }
+  return found;
+}
+for (const stray of straySearch(root)) {
+  errors.push(`traceability.yaml outside the repository root, so its entries are never checked: ${stray}`);
 }
 
 if (errors.length > 0) {

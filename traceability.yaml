@@ -2178,3 +2178,31 @@
   tests:
     - apps/web/test/accounts-and-roles.test.tsx
   status: implemented
+- implementation_id: IMP-CI-DEPLOY-FORK-GUARD-001
+  module: PLATFORM
+  summary: >-
+    The deploy workflow guarded against forks before the repository is made public. This is not
+    information unsuitable for publication; it is a hole that publication itself opens, and it is not
+    obvious. The deploy job is triggered by workflow_run after CI, so it runs in this repository's
+    context - its secrets, its Workload Identity, its Cloud Run service - while being started by a CI
+    run that anybody can cause. The branches filter on the trigger reads as a restriction and is not
+    one: it matches the branch of the triggering run, and for a pull request from a fork that is the
+    fork's own branch name. The full path works: fork the repository, push to a branch named main,
+    open a pull request, let CI pass, and the deploy job starts in the upstream context, checks out
+    workflow_run.head_sha - the fork's commit - and deploys it to the real service while holding the
+    production database secret. Three conditions now gate it, none redundant: head_repository closes
+    the hole, and event == push with head_branch == main preserve the original intent of deploying
+    main rather than every green build. The guard is a single if: expression, which is the easiest
+    thing in a workflow to lose in a refactor - nothing fails and nothing looks different afterwards,
+    and the door is open again - so the test asserts each condition separately rather than matching
+    the line, and also pins the checkout ref, since the guard and ref: head_sha are a pair that must
+    not be changed independently.
+  trace_ids: [ATR-003]
+  adr_ids: [ADR-061, ADR-062]
+  docs:
+    - "design/DESIGN_DECISIONS.md D-88"
+  code:
+    - .github/workflows/deploy.yml
+  tests:
+    - packages/database/test/deploy-smoke.test.ts
+  status: implemented

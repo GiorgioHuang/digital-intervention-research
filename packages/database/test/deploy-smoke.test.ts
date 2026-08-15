@@ -114,3 +114,55 @@ describe('the deploy smoke test’s access-token gate check', () => {
     expect(r.attempts).toBe(6);
   });
 });
+
+/**
+ * The guard that keeps a fork from deploying to production.
+ *
+ * `deploy` is triggered by `workflow_run` after CI, which means it runs in
+ * THIS repository's context — its secrets, its Workload Identity, its Cloud
+ * Run service — while being started by a CI run anybody can cause. The
+ * `branches: [main]` filter on the trigger reads as if it restricts that,
+ * and does not: it matches the branch of the triggering run, and for a pull
+ * request from a fork that is the fork's own branch name. Fork the repo,
+ * push to a branch called `main`, open a pull request, let CI pass, and
+ * this job would check out `workflow_run.head_sha` — the fork's commit —
+ * and deploy it, holding the production database secret while it did.
+ *
+ * The repository is about to become public, which is what turns this from
+ * a theoretical hole into an open door. The guard is one `if:` expression,
+ * and an `if:` expression is the easiest thing in a workflow to lose in a
+ * refactor: nothing fails, nothing looks different, and the door is open
+ * again. Hence a test, and hence one that names each condition separately
+ * rather than matching the whole line — so that dropping any single one of
+ * them is a failure with the reason attached.
+ */
+describe('the deploy workflow only deploys this repository', () => {
+  const workflow = readFileSync(
+    join(fileURLToPath(new URL('../../../', import.meta.url)), '.github/workflows/deploy.yml'),
+    'utf8',
+  );
+
+  it('requires the triggering run to have come from this repository, not a fork', () => {
+    expect(
+      workflow.replace(/\s+/g, ' '),
+      'a fork could deploy to production without this',
+    ).toContain('github.event.workflow_run.head_repository.full_name == github.repository');
+  });
+
+  it('requires a push rather than a pull request', () => {
+    expect(workflow.replace(/\s+/g, ' ')).toContain("github.event.workflow_run.event == 'push'");
+  });
+
+  it('still requires main, and still requires CI to have passed', () => {
+    const flat = workflow.replace(/\s+/g, ' ');
+    expect(flat).toContain("github.event.workflow_run.head_branch == 'main'");
+    expect(flat).toContain("github.event.workflow_run.conclusion == 'success'");
+  });
+
+  it('deploys the commit CI verified, which is why the guard has to hold', () => {
+    /* If this ever stops being head_sha the guard matters less — and if the
+       guard is ever dropped, this is the line that makes it exploitable.
+       They belong in one test so that neither is changed alone. */
+    expect(workflow).toContain('ref: ${{ github.event.workflow_run.head_sha || github.sha }}');
+  });
+});
