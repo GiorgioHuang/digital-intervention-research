@@ -720,148 +720,150 @@ Filter: [All] [Assigned to me] [Overdue]
 | A direct field | The payload layer already guarantees no reporterId (THREAT_MODEL §5; the e2e test asserts against the raw JSON); **the frontend must never add one back** |
 | Precise timing | The queue shows **bands** only (<24h / 1–3 days / >3 days); a precise timestamp appears only in E3's evidence area, and only as the time of the **content**, never of the **report** |
 | Ordering | The default sort is `priority → deadline`, and **sorting by report time is not offered**; within the same priority and deadline the order is a stable hash of the case ID, not the order of arrival |
-| 措辞 | 举报人自述文本**不进入队列卡片**（见 E3 的分级展开） |
-| 数量 | 只显示报告数量的**分档**（1 / 2–4 / 5 以上）以支持比例判断，不显示精确计数随时间的变化曲线 |
+| Wording | The reporter's own account **never enters a queue card** (see the staged disclosure in E3) |
+| Volume | Only a **band** of the report count is shown (1 / 2–4 / 5 or more), enough to support a judgement of proportion, and never a curve of the exact count over time |
 
-**状态矩阵**
+**State matrix**
 
-| 状态 | 呈现与文案原文 |
+| State | Presentation and copy in full |
 |---|---|
-| LOADING | `正在载入个案队列…`（骨架屏禁用） |
-| EMPTY | `当前没有待处理个案。这是正常状态。新的报告进入后会出现在这里，按优先级和处理时限排序。` |
-| ERROR | `没能获取队列。这不代表队列是空的。可以重试；如果持续失败，请通知运维值班。[重试] ▸技术细节` |
-| FORBIDDEN | `你的角色不能查看审核队列。这不是出错。` |
-| PROTECTED | 队列中某条打开后不可见时：`无法显示这个内容。这个个案可能已被重新分配或已结案。返回队列继续。` ——**注意：此文案对「不存在」与「无权」必须一致** |
+| LOADING | `Loading the case queue…` (skeleton screens are forbidden) |
+| EMPTY | `There are no cases waiting. This is a normal state. New reports will appear here as they arrive, ordered by priority and deadline.` |
+| ERROR | `The queue could not be fetched. This does not mean the queue is empty. You can try again; if it keeps failing, tell the operations duty contact. [Try again] ▸technical details` |
+| FORBIDDEN | `Your role cannot view the moderation queue. Nothing has gone wrong.` |
+| PROTECTED | When an item in the queue is not visible once opened: `This content cannot be shown. This case may have been reassigned or closed. Go back to the queue and carry on.` — **note: this copy must be identical for "does not exist" and "you are not allowed"** |
 
-**无障碍要点**
+**Accessibility points**
 
-- 队列是 `<ul>`，每个个案是 `<li>` 内的 `<article aria-labelledby="case-MC-1043">`；`<dl>` 承载字段。
-- 优先级 = 文字 + 图标（不只有颜色）；「高」不得只用红色块表示。
-- 筛选与排序是 `<button aria-pressed>` 组，切换后 `role="status"` 播报 `已按处理时限排序，7 个个案。`
-- 每个 `[打开个案]` 是块级整行按钮，44px 高，行间距 ≥12px。
+- The queue is a `<ul>`, each case an `<article aria-labelledby="case-MC-1043">` inside an `<li>`; the fields sit in a `<dl>`.
+- Priority = words + an icon (never colour alone); "high" must not be a red block on its own.
+- Filtering and sorting are a group of `<button aria-pressed>`, and after a change `role="status"` announces `Sorted by deadline, 7 cases.`
+- Each `[Open the case]` is a block-level full-width button, 44px tall, with ≥12px between rows.
 
 ---
 
-### E3 案件详情与证据最小化呈现
+### E3 Case detail and minimised presentation of evidence
 
-**目标 / 要回答的问题**
+**Purpose / the questions it answers**
 
-- 被报告的具体是哪一段内容、哪一个版本？
-- 适用哪条规则的哪个版本？
-- 依比例原则，我需要什么才能作决定？
-- **不该回答的问题：这个人过去所有的言行是什么样。**
+- Exactly which piece of content, and which version of it, was reported?
+- Which version of which rule applies?
+- Under the principle of proportionality, what do I need in order to decide?
+- **The question it must not answer: what has this person said and done in general.**
 
-**线框**
+**Wireframe**
 
 ```
-<h1>个案 MC-1043</h1>
-[个案 · 审阅中]  处理时限：2 天后
+<h1>Case MC-1043</h1>
+[Case · under review]  Deadline: in 2 days
 
-── 报告摘要（系统归类）─────────
-类型：骚扰
-对象：社区帖子 SP-7781（版本 2）
-社区：园艺角
-报告数量：2 份
+── Report summary (classified by the system) ──
+Type: harassment
+Object: community post SP-7781 (version 2)
+Community: Gardening Corner
+Number of reports: 2
 
-▸ 展开举报人的原始陈述
-  展开前请注意：陈述由举报人书写，
-  可能包含自述信息。你不得据此推断
-  举报人身份，也不得据此调整处置。
-  展开会记入访问审计。
+▸ Show the reporter's own account
+  Before you open this: the account was written by the
+  person who reported it and may contain things about
+  themselves. You must not use it to infer who they are,
+  and you must not let it change the disposition.
+  Opening it is written to the access audit.
 
-── 被报告的内容 ───────────────
+── The reported content ───────
 ┌────────────────────────────┐
-│ «…帖子正文原文…»             │
-│ 发布：2026-07-28 10:14       │
-│ 版本：2（当前）  [查看版本 1] │
-│ 来源：参与者本人发布          │
+│ «…the post's text…»          │
+│ Published: 2026-07-28 10:14  │
+│ Version: 2 (current)  [View version 1] │
+│ Source: published by the participant themselves │
 └────────────────────────────┘
-只显示被报告的这一条内容。
+Only the one item that was reported is shown.
 
-── 适用规则 ───────────────────
-园艺角社区规则 v3（2026-05-01 生效）
-第 4 条：不得针对个人的贬损性言论
-[查看规则全文]
-⚠ 发帖时生效的是 v3，与当前版本一致。
+── The applicable rule ────────
+Gardening Corner community rules v3 (in force from 2026-05-01)
+Clause 4: no demeaning remarks directed at a person
+[Read the rules in full]
+⚠ v3 was in force when the post was made, and matches the current version.
 
-── 与本次处置相关的既往处置 ────
-过去 12 个月内针对该账号的**已生效处置**：1 次
-  · 2026-03-02 · 警告 · 规则第 4 条
-不显示未成立的报告，也不显示与本条
-规则无关的历史。
+── Previous dispositions relevant to this one ──
+**Dispositions in force** against this account in the past 12 months: 1
+  · 2026-03-02 · warning · rule clause 4
+Reports that were not upheld are not shown, and neither is
+history unrelated to this rule.
 
-── 自动信号 ───────────────────
-[自动产生的信号 · 未经人工确认]
-分类：可能的贬损性言论
-不得单独作为处置依据。
+── Automated signal ───────────
+[Signal raised automatically · not confirmed by a person]
+Classification: possible demeaning remark
+Must not be the sole basis for a disposition.
 
-── 需要更多证据？─────────────
-调取范围之外的内容需要填写理由，
-并会记入审计，由第三人复核。
-              [申请调取更多证据]
+── Need more evidence? ────────
+Retrieving anything outside this scope requires a written
+reason, is recorded in the audit trail, and is reviewed by
+a third person.
+              [Request more evidence]
 
 ────────────────────────────
-[进入决定]        [转给安全团队]
+[Go to the decision]        [Hand to the safety team]
 ```
 
-**证据最小化的具体规则（可检验，另见 §7）**
+**The specific rules of evidence minimisation (checkable; see also §7)**
 
-1. 默认可见的内容 = **被报告的那一条**（及其在报告时点的版本）。
-2. 既往处置只显示：过去 12 个月、**已生效的处置**、**同一规则条款**下的。未成立的报告一律不显示。
-3. 举报人陈述**默认折叠**，展开是显式动作 + 明确警示 + 审计记录。
-4. 任何超出上述范围的调取，走「申请调取更多证据」：必填理由 + 范围 + 记入审计 + 第三人复核。
-5. 界面**不提供**跳转到该账号的研究数据、评估结果、安全记录、消息内容、匹配记录的任何入口（§188：avoid unrelated research or Safety data）。
+1. Visible by default = **the one item that was reported** (in the version it was in when reported).
+2. Previous dispositions show only: the past 12 months, **dispositions in force**, under **the same rule clause**. Reports that were not upheld are never shown.
+3. The reporter's account is **collapsed by default**; opening it is an explicit action + an explicit warning + an audit record.
+4. Any retrieval beyond that scope goes through "request more evidence": a mandatory reason + the scope + an audit record + review by a third person.
+5. The interface offers **no route at all** to that account's research data, assessment results, safety records, message content or matching records (§188: avoid unrelated research or Safety data).
 
-**状态矩阵**
+**State matrix**
 
-| 状态 | 呈现与文案原文 |
+| State | Presentation and copy in full |
 |---|---|
-| LOADING | `正在载入个案…`；证据区在载入完成前不渲染；决定入口 `disabled` 并说明 `证据载入完成后才能进入决定。` |
-| EMPTY | 内容已被作者删除时：`被报告的内容已不可获取（作者已删除）。你仍可依据保留的证据快照作决定。[查看证据快照]`；若无快照：`没有可用的证据。在没有证据的情况下不应作出限制性处置——可以关闭为不成立，或申请调取。` |
-| ERROR | 通用 ERROR + `个案没有任何改动。` |
-| FORBIDDEN | `你没有被分配这个个案，也不属于可复核的角色。这不是出错。[申请分配]` |
-| PROTECTED | 通用 PROTECTED（涵盖：个案不存在 / 已归他人 / 已并案 / 你无权） |
+| LOADING | `Loading the case…`; the evidence area is not rendered until loading completes; the route to the decision is `disabled` and says `You can go to the decision once the evidence has loaded.` |
+| EMPTY | Where the author has deleted the content: `The reported content is no longer available (the author deleted it). You can still decide on the evidence snapshot that was kept. [View the evidence snapshot]`; and with no snapshot: `There is no evidence available. A restrictive disposition should not be made without evidence — you can close this as not upheld, or request retrieval.` |
+| ERROR | The generic ERROR copy + `Nothing about the case has changed.` |
+| FORBIDDEN | `This case is not assigned to you, and your role is not one that can review it. Nothing has gone wrong. [Request assignment]` |
+| PROTECTED | The generic PROTECTED copy (covering: the case does not exist / belongs to somebody else / has been merged / you are not allowed) |
 
-**关键交互与确认文案**
+**Key interactions and confirmation copy**
 
-展开举报人陈述：
-
-```
-展开举报人的原始陈述？
-· 陈述由举报人书写，可能包含可推断身份的信息
-· 你不得据此推断举报人身份，也不得据此调整处置
-· 这次展开会以你的身份记入访问审计  🔒
-[展开并知悉]      [不展开]
-```
-
-申请调取更多证据：
+Opening the reporter's account:
 
 ```
-申请调取范围之外的证据？
-· 你申请调取：{范围}
-· 理由：{必填，将随记录保存}
-· 调取范围之外的内容需要第三人复核，不会立即可见
-· 申请与复核结果都会记入审计  🔒
-[提交申请]        [返回]
+Show the reporter's own account?
+· It was written by the person who reported this and may contain information from which they could be identified
+· You must not use it to infer who they are, and you must not let it change the disposition
+· Opening it is recorded in the access audit under your name  🔒
+[Open, understood]      [Do not open]
 ```
 
-**无障碍要点**
+Requesting more evidence:
 
-- 折叠区用原生 `<details><summary>`，`summary` 的可访问名包含警示要点：`展开举报人的原始陈述（展开会记入审计）`。
-- 规则版本用 `<data value="v3">`，版本号必须是文字，不能只在颜色/位置上暗示。
-- 「进入决定」与「转给安全团队」并列且**等权**——转给安全不是「更重」的选项，也不是逃避处置的出口（见 E6 措辞）。
-- 长内容区 `overflow-x: auto` 独立滚动，页面本体不横向滚动。
+```
+Request evidence beyond the current scope?
+· You are requesting: {scope}
+· Reason: {mandatory, stored with the record}
+· Content outside the scope is reviewed by a third person and does not become visible immediately
+· Both the request and the review outcome are recorded in the audit trail  🔒
+[Submit the request]        [Go back]
+```
+
+**Accessibility points**
+
+- The collapsed area uses a native `<details><summary>`, and the `summary`'s accessible name carries the warning: `Show the reporter's own account (opening it is recorded in the audit trail)`.
+- The rule version uses `<data value="v3">`; the version number must be words and must never be implied by colour or position alone.
+- "Go to the decision" and "Hand to the safety team" sit side by side with **equal weight** — handing to safety is not the "heavier" option, and it is not an escape from making a disposition (see the wording in E6).
+- Long content areas scroll independently with `overflow-x: auto`; the page body never scrolls horizontally.
 
 ---
 
-### E4 审核决定与确认（不可变）
+### E4 Moderation decisions and confirmation (immutable)
 
-**目标 / 要回答的问题**
+**Purpose / the questions it answers**
 
-- 我要作出的是什么处置、依据哪条规则、比例是否恰当？
-- 被处置的人会看到什么？
-- 他能怎么申诉？
-- 我作完之后还能改吗？（答案：不能。所以确认屏必须把这句话说清楚，并同屏给出申诉与恢复路径。）
+- What disposition am I about to make, under which rule, and is it proportionate?
+- What will the person subject to it see?
+- How can they appeal?
+- Can I change it afterwards? (The answer: no. So the confirmation screen must say that plainly, and give the appeal and restoration route on the same screen.)
 
 **线框**
 
