@@ -1418,76 +1418,76 @@ Audit: written to the audit trail in your name  🔒
 **Wireframe**
 
 ```
-<h1>安全事件 SE-0042</h1>
-[安全事件 · 已确认]   负责人：S-003
+<h1>Safety event SE-0042</h1>
+[Safety event · confirmed]   Owner: S-003
 
-── 确认内容 ───────────────────
-类别：自伤风险
-严重度：中
-与干预的关联性：可能相关
-受影响：消息功能、匹配功能
-确认人：S-003 · 2026-08-03 14:20
-来源信号：SS-2210 [查看]
+── What was confirmed ─────────
+Category: risk of self-harm
+Severity: medium
+Relationship to the intervention: possibly related
+Affected: messaging, matching
+Confirmed by: S-003 · 2026-08-03 14:20
+Originating signal: SS-2210 [View]
 
-── 动作 ───────────────────────
+── Actions ────────────────────
 ┌────────────────────────────┐
-│ 联系参与者                   │
-│ 权限：安全审阅人             │
-│ 状态：已完成 · S-003 ·       │
+│ Contact the participant      │
+│ Permission: safety reviewer  │
+│ Status: done · S-003 ·       │
 │       2026-08-03 15:02       │
 └────────────────────────────┘
 ┌────────────────────────────┐
-│ 暂停匹配功能                 │
-│ 权限：安全审阅人 ⚑           │
-│ 状态：进行中 · 复核时间 8-10  │
-│         [查看暂停详情]       │
+│ Suspend matching             │
+│ Permission: safety reviewer ⚑│
+│ Status: in progress · review 8-10 │
+│         [View suspension detail] │
 └────────────────────────────┘
 ┌────────────────────────────┐
-│ 通知已批准的联系人           │
-│ 状态：未开始 · 逾期 1 天 ⚠   │
-│         [记录这项动作]       │
+│ Notify the approved contacts │
+│ Status: not started · 1 day overdue ⚠ │
+│         [Record this action] │
 └────────────────────────────┘
 
-[添加一项动作]
+[Add an action]
 
-── 监测 ───────────────────────
-当前：每日复核 · 下次 2026-08-04
-[更改监测安排]
+── Monitoring ─────────────────
+Current: daily review · next 2026-08-04
+[Change the monitoring arrangement]
 
-── 时间线 ─────────────────────
-（只显示与本事件相关的记录）
-2026-08-03 14:20 事件确认 · S-003
-2026-08-03 15:02 已联系参与者 · S-003
-2026-08-03 15:10 暂停匹配功能 · S-003
-🔒 时间线为追加记录，不可修改
+── Timeline ───────────────────
+(shows only records relating to this event)
+2026-08-03 14:20 event confirmed · S-003
+2026-08-03 15:02 participant contacted · S-003
+2026-08-03 15:10 matching suspended · S-003
+🔒 the timeline is append-only and cannot be changed
 ```
 
-**状态矩阵**
+**State matrix**
 
-| 状态 | 呈现与文案原文 |
+| State | Presentation and copy in full |
 |---|---|
-| LOADING | `正在载入安全事件…` |
-| EMPTY | 无动作时：`这个事件还没有记录任何动作。如果确实不需要采取动作，请添加一条「暂不采取动作」并说明理由——空白不等于已判断。` |
-| ERROR | `没能载入这个安全事件的完整信息。**不要据此认为动作已完成。** 请重试。[重试]` |
-| FORBIDDEN | `你的角色可以看到这个事件，但不能记录安全动作。这不是出错。` |
-| PROTECTED | 通用 PROTECTED |
+| LOADING | `Loading the safety event…` |
+| EMPTY | With no actions: `No actions have been recorded on this event yet. If no action is genuinely needed, add a "no action for now" with your reason — blank is not the same as judged.` |
+| ERROR | `The full details of this safety event could not be loaded. **Do not take this as meaning the actions are complete.** Please try again. [Try again]` |
+| FORBIDDEN | `Your role can see this event but cannot record safety actions. Nothing has gone wrong.` |
+| PROTECTED | The generic PROTECTED copy |
 
-**关键交互与确认文案**
+**Key interactions and confirmation copy**
 
 ```
-确认记录动作「通知已批准的联系人」为已完成？
-· 对象：安全事件 SE-0042
-· 记录内容：动作名称、完成时间、你的署名
-· 不记录：通话或谈话的具体内容
-· 这条记录写入后不可修改；如需更正，
-  应追加一条更正记录，原记录保留  🔒
-[确认记录]        [返回]
+Record the action "notify the approved contacts" as done?
+· Object: safety event SE-0042
+· What is recorded: the action's name, when it was completed, and your name
+· What is not recorded: anything specific said in a call or conversation
+· Once written this record cannot be changed; to correct it,
+  add a correction record — the original is kept  🔒
+[Confirm and record]        [Go back]
 ```
 
-**无障碍要点**
+**Accessibility points**
 
-- 严重度、关联性都是文字（`中`、`可能相关`），不得只用色阶（§200：不得只用告警色）。
-- 每个动作卡是 `<li>` + `<dl>`，状态在可访问名内：`记录这项动作（通知已批准的联系人，未开始，逾期 1 天）`。
+- Severity and relationship are both words (`medium`, `possibly related`) and must never be a colour scale alone (§200: an alert colour must not carry it by itself).
+- Each action card is an `<li>` + `<dl>`, with the status inside the accessible name: `Record this action (notify the approved contacts, not started, 1 day overdue)`.
 - 时间线是 `<ol>`，时间用 `<time datetime>`。
 
 ---
