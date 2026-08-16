@@ -427,7 +427,7 @@ describe.skipIf(!dbAvailable)('HTTP API (e2e)', () => {
 
   it('moderation over HTTP: queue hides reporter identity; decisions are human, confirmed, immutable', async () => {
     const rep = await call('/v1/reports', patAcc, {
-      reporterId: patId, reportedActorId: strangerAcc, category: 'harassment', description: '重复的骚扰消息',
+      reporterId: patId, reportedActorId: strangerAcc, category: 'harassment', description: 'Repeated harassing messages',
     });
     const caseId = ((await rep.json()) as { data: { meta: { moderationCaseId: string } } }).data.meta.moderationCaseId;
 
@@ -447,11 +447,11 @@ describe.skipIf(!dbAvailable)('HTTP API (e2e)', () => {
 
     // Unconfirmed decisions are refused; confirmed decisions stick.
     const unconfirmed = await call(`/v1/moderation-cases/${caseId}/decision`, moderatorAcc, {
-      decision: 'Warn', reason: '首次违规，警告', confirmed: false,
+      decision: 'Warn', reason: 'First breach — a warning', confirmed: false,
     });
     expect(unconfirmed.status).toBe(409);
     const decided = await call(`/v1/moderation-cases/${caseId}/decision`, moderatorAcc, {
-      decision: 'Warn', reason: '首次违规，警告', confirmed: true,
+      decision: 'Warn', reason: 'First breach — a warning', confirmed: true,
     });
     expect(decided.status).toBe(201);
     const decisionId = ((await decided.json()) as { data: { id: string } }).data.id;
@@ -478,7 +478,7 @@ describe.skipIf(!dbAvailable)('HTTP API (e2e)', () => {
     await pool.query(`INSERT INTO life_story.archives (id, participant_id) VALUES ($1, $2)`, [archId, `pt_sup_owner_${Date.now()}`]);
     await pool.query(
       `INSERT INTO life_story.contributions (id, archive_id, contributor_actor_id, content_text)
-       VALUES ($1, $2, $3, '我记得那年的花园')`,
+       VALUES ($1, $2, $3, 'I remember the garden that year')`,
       [contribId, archId, supporterAcc],
     );
     const mine = await call('/v1/life-story/contributions/mine', supporterAcc);
@@ -574,9 +574,9 @@ describe.skipIf(!dbAvailable)('HTTP API (e2e)', () => {
     const mDraftOwn = `msg_hist_dn_${Date.now()}`;
     await pool.query(
       `INSERT INTO community_social.messages (id, thread_id, sender_participant_id, content_text, lifecycle_state, delivery_state)
-       VALUES ($4, $1, $2, '你好', 'Sent', 'Provider Accepted'),
-              ($5, $1, $3, '对方的私密草稿', 'Draft', 'Not Submitted'),
-              ($6, $1, $2, '我自己的草稿', 'Draft', 'Not Submitted')`,
+       VALUES ($4, $1, $2, 'Hello', 'Sent', 'Provider Accepted'),
+              ($5, $1, $3, 'the other party''s private draft', 'Draft', 'Not Submitted'),
+              ($6, $1, $2, 'my own draft', 'Draft', 'Not Submitted')`,
       [threadId, patId, otherId, mSent, mDraftOther, mDraftOwn],
     );
 
@@ -836,7 +836,7 @@ describe.skipIf(!dbAvailable)('HTTP API (e2e)', () => {
     expect(outsider.status).toBe(404);
 
     const item = await call(`/v1/life-story/archives/${archiveId}/items`, patAcc, {
-      title: '花园的夏天', contentText: '那年夏天我们种了玫瑰。', sourceType: 'ParticipantAuthored',
+      title: 'The summer of the garden', contentText: 'That summer we planted roses.', sourceType: 'ParticipantAuthored',
     });
     expect(item.status).toBe(201);
     const itemBody = (await item.json()) as { data: { id: string; meta: { versionId: string } } };
@@ -869,14 +869,14 @@ describe.skipIf(!dbAvailable)('HTTP API (e2e)', () => {
   it('supporter contribution over HTTP needs consent; acceptance never becomes testimony', async () => {
     // One archive per participant — reuses the archive from the previous test.
     const item = await call(`/v1/life-story/archives/${archiveId}/items`, patAcc, {
-      title: '老照片', contentText: '第一稿。', sourceType: 'ParticipantAuthored',
+      title: 'An old photograph', contentText: 'First draft.', sourceType: 'ParticipantAuthored',
     });
     const itemId = ((await item.json()) as { data: { id: string } }).data.id;
 
     // Relationship exists (seeded) but the supporter-contribution consent
     // does not — denied with hidden existence.
     const early = await call(`/v1/life-story/archives/${archiveId}/contributions`, supporterAcc, {
-      itemId, contentText: '我记得那天的玫瑰。',
+      itemId, contentText: 'I remember the roses that day.',
     });
     expect(early.status).toBe(404);
 
@@ -885,7 +885,7 @@ describe.skipIf(!dbAvailable)('HTTP API (e2e)', () => {
     })).status).toBe(201);
 
     const prop = await call(`/v1/life-story/archives/${archiveId}/contributions`, supporterAcc, {
-      itemId, contentText: '我记得那天的玫瑰。',
+      itemId, contentText: 'I remember the roses that day.',
     });
     expect(prop.status).toBe(201);
     const contributionId = ((await prop.json()) as { data: { id: string } }).data.id;
@@ -916,7 +916,7 @@ describe.skipIf(!dbAvailable)('HTTP API (e2e)', () => {
     const threadId = `th_e2e_${Date.now()}`;
     await pool.query(
       `INSERT INTO community_social.match_candidates (id, participant_a_id, participant_b_id, match_explanation, expires_at)
-       VALUES ($1, $2, $3, '你们都选择了园艺作为兴趣', now() + interval '7 days')`,
+       VALUES ($1, $2, $3, 'You both chose gardening as an interest', now() + interval '7 days')`,
       [candId, patId, otherId],
     );
     await pool.query(
@@ -979,7 +979,7 @@ describe.skipIf(!dbAvailable)('HTTP API (e2e)', () => {
     expect(cands.status).toBe(200);
     const candBody = (await cands.json()) as { data: { id: string; attributes: Record<string, unknown> }[] };
     const cand = candBody.data.find((c) => c.id === candId);
-    expect(cand?.attributes['explanation']).toContain('园艺');
+    expect(cand?.attributes['explanation']).toContain('gardening');
     expect(JSON.stringify(candBody)).not.toContain(otherId.replace('pt_', 'pt_') + '"');
     expect(Object.keys(cand?.attributes ?? {})).not.toContain('otherParticipantId');
 
@@ -1048,8 +1048,8 @@ describe.skipIf(!dbAvailable)('HTTP API (e2e)', () => {
     // Staff (OrganisationAdministrator) creates the space; rule version 1
     // exists from the start so every join records an exact version.
     const created = await call('/v1/community-spaces', adminAcc, {
-      name: `园艺角 ${suffix}`,
-      rulesText: '友善交流；不分享他人隐私。',
+      name: `Gardening Corner ${suffix}`,
+      rulesText: 'Be kind to one another; do not share anyone else\'s private information.',
     });
     expect(created.status).toBe(201);
     const createdBody = (await created.json()) as { data: { id: string; meta: { ruleVersionId: string } } };
@@ -1084,7 +1084,7 @@ describe.skipIf(!dbAvailable)('HTTP API (e2e)', () => {
     const draft = await call('/v1/social-posts', patAcc, {
       spaceId,
       participantId: patId,
-      contentText: '大家好，我是新成员',
+      contentText: 'Hello everyone, I am a new member',
     });
     expect(draft.status).toBe(201);
     const postId = ((await draft.json()) as { data: { id: string } }).data.id;
@@ -1109,7 +1109,7 @@ describe.skipIf(!dbAvailable)('HTTP API (e2e)', () => {
     );
     await pool.query(
       `INSERT INTO community_social.social_posts (id, space_id, author_participant_id, content_text, post_state, published_at)
-       VALUES ($1, $2, $3, '来自其他成员的问候', 'Published', now())`,
+       VALUES ($1, $2, $3, 'A greeting from another member', 'Published', now())`,
       [`sp_e2e_${suffix}`, spaceId, otherId],
     );
     const feed = await call(`/v1/participants/${patId}/community-spaces/${spaceId}/feed`, patAcc);
