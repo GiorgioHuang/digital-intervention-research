@@ -72,7 +72,7 @@ Rules:
 - Screen readers: `EpistemicTag` renders as `<span class="epi" role="note"><span class="visually-hidden">Knowledge type: </span>Simulated observation (simulated observation)</span>`; the footnote is body text inside the same `role="note"`, never a tooltip.
 - Sorting and filtering: any table listing conclusions must support filtering by epistemic type, and **filtering out the "contradiction" type requires an explicit action and shows "N contradictions hidden" in the table header**.
 
-### 1.3 三级认识论阶梯：分析输出 ≠ 解释 ≠ 发现
+### 1.3 The three-rung epistemic ladder: analysis output ≠ interpretation ≠ finding
 
 This is the core discipline of C15/C16. All three must be distinguishable at a glance, visually and in wording:
 
@@ -367,7 +367,7 @@ Research projects › RP-001 › Research questions
 
 ---
 
-### C3 证据检索与结果卡（§59–61）— 真实 KG 对接
+### C3 Evidence search and result cards (§59–61) — genuinely connected to the KG
 
 **Implementation status (2026-08-04): partially implemented.** The chain of search → create a review → attach citations → submit → have somebody else approve is now reachable. Previously the search could be called and citations could be attached, **but no query listed reviews at all** — so a review could only be created, added to and submitted by somebody keeping the identifier in their head outside the product, and nobody could reach the review queue at the end of the chain. Three points of wording hold this section's requirements: (1) **provenance before assertion (§51)** — a result card leads with "source system · external identifier · version" and only then gives the title and abstract; the abstract is the search system's account of a thing, whereas the provenance is what lets a person judge whether to believe it. (2) **A failed search is never written as "no evidence"** — an unreachable upstream returns 503 and appears on screen as an error, never as an empty result; "we could not ask" and "there is none" are different facts. (3) **A citation that fails to resolve is not rendered as a citation** — when it does not resolve, the record takes the raw identifier as its title with the source `unknown`, and rendering that alongside resolved ones as though nothing were different would turn "we cannot find this" into something that looks like a citation. Each one is therefore marked with its resolution status, and the approval screen additionally counts beside the control: "M of N have not been checked against a source, and approving does not check them."
 
@@ -375,7 +375,7 @@ The presentation of conflicting evidence (§60) and the evidence snapshot came w
 
 **① Purpose and density**: turn search results from an external knowledge graph into **reviewable evidence material**, not into "answers". Density: a dense list + a detail panel on the right (desktop); on mobile, a card stream with drill-down to detail. **The data on this screen is real (a genuine MCP call), but the graph's content is a hand-curated seed corpus** — and that must be said plainly.
 
-**② 线框**
+**② Wireframe**
 
 ```text
 Evidence › Search
@@ -431,7 +431,7 @@ Side by side: conflicting evidence for ga:loneliness
 └─────────────────────────────────────────────────────┘
 ```
 
-**③ 状态矩阵**
+**③ State matrix**
 
 | State | Presentation |
 |---|---|
@@ -455,7 +455,7 @@ Side by side: conflicting evidence for ga:loneliness
 
 ---
 
-### C4 证据决定与快照（§62–63）
+### C4 Evidence decisions and snapshots (§62–63)
 
 **Implementation status (2026-08-04): partially implemented.** A decision can be written against a review and agreed by a second person; on agreement an **immutable EvidenceSnapshot** is written in the same transaction, with its content hash on screen — that snapshot is what later work cites, which is why the confirmation copy says outright that this is the last moment the wording can change, and that changing it afterwards means a new decision. Three points of wording: (1) **the outcome vocabulary belongs to the platform and is not invented by the interface** — the database rejects values outside it, and "approved / rejected / provisional" are **not** outcomes; an outcome answers "what does the evidence say" and approval answers "who agreed", and merging the two makes a decision read as settled because somebody signed it. (2) **"The evidence conflicts" is a first-class outcome** (§60), written as a finding rather than as a failure to reach a conclusion; a vocabulary offering only support and oppose pushes whoever writes the decision towards overstating one side. (3) It is **explicitly distinguished** from "insufficient evidence": one means things were found and they contradict each other, the other that almost nothing was found. A decision may be written against a review that has not been approved — the command allows it, so the interface **warns honestly rather than pretending to block** (an interface narrowing this on its own would be inventing a rule the server does not have); the approval screen additionally notes that "agreeing with this decision is not the same as approving that review".
 
@@ -463,7 +463,7 @@ Side by side: conflicting evidence for ga:loneliness
 
 **① Purpose and density**: converge a set of evidence citations into **one of seven evidence decisions**, then freeze it as an **immutable snapshot**. Density: standard (this is a decision screen, not a browsing screen). **One decision per screen.**
 
-**② 线框**
+**② Wireframe**
 
 ```text
 Evidence › ER-004 › Evidence decision
@@ -507,7 +507,7 @@ Evidence › ER-004 › Evidence snapshot (review before creating)
 └───────────────────────────────────────────────────────────────┘
 ```
 
-**③ 状态矩阵**
+**③ State matrix**
 
 | State | Presentation |
 |---|---|
@@ -735,7 +735,7 @@ The change warning (shown when somebody attempts a modification)
 └───────────────────────────────────────────────────────────────┘
 ```
 
-**③ 状态矩阵**
+**③ State matrix**
 
 | State | Presentation |
 |---|---|
@@ -776,7 +776,7 @@ Communities › Gardening Corner › configuration
 └───────────────────────────────────────────────────────────────┘
 ```
 
-**③ 状态矩阵**
+**③ State matrix**
 
 | State | Presentation |
 |---|---|
@@ -843,7 +843,7 @@ Matching policy › PR-002
 
 ---
 
-### C11 合成人物画像与情景设置（§72）
+### C11 Synthetic personas and scenario settings (§72)
 
 **① Purpose and density**: create synthetic personas and scenarios, and **remind the reader at every step that these are not real people**. Density: a dense table (the persona list) + a standard form (scenarios).
 
@@ -884,7 +884,7 @@ Synthetic personas
 
 ---
 
-### C12 参与者列表与详情（研究者视角，§73–74）— 已有局部实现（入组队列）
+### C12 Participant list and detail (the researcher's view, §73–74) — partially implemented (the enrolment queue)
 
 **① Purpose and density**: a high-density list keyed on the **pseudonymous study code** + detail partitioned by permission. **Private social content and reporter identities are excluded** (a hard requirement of §73). Density: a dense table.
 
@@ -929,7 +929,7 @@ Participant SP-002 (pseudonymous)
 
 ---
 
-### C13 干预与评估监测（§75–77）
+### C13 Intervention and assessment monitoring (§75–77)
 
 **① Purpose and density**: distinguish the ten intervention delivery states from the eight assessment states, and **never infer completion from "assigned"** (a hard requirement of §75). Density: a dense matrix table + charts (which must carry all of §253's metadata).
 
@@ -982,7 +982,7 @@ Safety (minimum necessary)
 
 **Implementation status (2026-08-04): the whole chain is now reachable.** Previously **only the last step, locking, had an interface** — writing a definition, approving it, generating a version and completing the quality review could none of them be carried out from any screen, so the lockable queue **could never be filled through the product**: a decision screen whose queue cannot be filled has never been used by anyone. There is now a "Datasets" block on the researcher's side (write a definition / generate a version / record that the quality review is complete, with `listDatasetWork` gated on `dataset.define` — if you can do the work you can see how far it has got), and a new "dataset definitions" decision screen on the approver's side (`listDefinitionsAwaitingApproval`). Three points of wording: the variable dictionary is "what goes in", **message bodies are excluded by default and what is not listed is not included** (ADR-034), and the approval confirmation puts that sentence beside the control; **a drafter cannot approve their own definition** (enforced both by the command and by a database CHECK), stated in the row before the button rather than raised as an error after submission; and "record that the quality review is complete" is **a person's record of their own action**, is not called "approve", and says plainly that it is not locking. **Approving a definition is not at the MFA tier** (`dataset.approve-definition` requires confirmation only; locking is what requires MFA) — the screen does not falsely claim strong authentication is needed, because overstating an action's cost is its own kind of dishonesty and teaches people to ignore the notices that are real.
 
-**② 线框（锁定确认屏为重点）**
+**② Wireframe (the lock confirmation screen is the focus)**
 
 ```text
 Datasets › DD-003 › variable construction
@@ -1020,7 +1020,7 @@ Datasets › dv_9 › lock confirmation
 └───────────────────────────────────────────────────────────────────────┘
 ```
 
-**③ 状态矩阵**
+**③ State matrix**
 
 | State | Presentation |
 |---|---|
@@ -1047,13 +1047,13 @@ Buttons: `Lock this dataset version` / `Go back and review`
 
 ---
 
-### C15 分析计划 / 运行 / 解释记录（§84–87）
+### C15 Analysis plans / runs / interpretation records (§84–87)
 
 **Implementation status (2026-08-04): partially implemented.** The chain of write a plan → have somebody else approve it → record a run → write an interpretation → have somebody else approve it is now reachable; previously **every step had a command and not one had an interface**, and each stage referred to the others by identifier alone, so the chain could not even be *looked at*, let alone walked. Two points of wording: (1) **"record a run" is not "execute an analysis"** — the platform has no compute engine, and what is stored is a person's record that an analysis was run against this version of the data and what it produced; labelling the button "run analysis" would claim the platform did the thing. (2) **It can only run against a locked dataset version** (the server returns `DATASET_LOCK_NOT_READY`), so the selector lists only locked ones and explains why, rather than letting somebody choose and then refusing them; each run displays the manifest hash of the version it ran against — which is the whole point of locking before analysing: an interpretation is about one run, and a run is about that one body of data.
 
 **① Purpose and density**: separate "plan → run → output → interpretation" into four layers that cannot be confused with one another. Density: dense (the run list) + standard (interpretation editing). **This is where the epistemic ladder is enforced (see 1.3).**
 
-**② 线框**
+**② Wireframe**
 
 ```text
 Analysis › run ar_12
@@ -1103,13 +1103,13 @@ Analysis › run ar_12
 
 ---
 
-### C16 研究发现与干预决定（§88–90）
+### C16 Research findings and intervention decisions (§88–90)
 
 **Implementation status (2026-08-04): partially implemented.** A research finding can be written from an **approved interpretation** and approved by somebody else; the approval screen lists the interpretation and run identifier the finding rests on beside the control, the drafter cannot approve their own finding (command + database CHECK), and the row says so before the button. **The strong-authentication notice appears only in the findings section**: of the three approvals, only `finding.approve` is at the MFA tier, and repeating the notice on plans and interpretations would overstate their cost and teach people to skip past the one that is real. **Runs do not enter an approval queue**: nobody "approves" a run — it either happened or it did not, and putting it in a decision queue would imply a judgement nobody is asking for. **Not implemented**: intervention decisions (§90's InterventionDecision).
 
 **① Purpose and density**: produce a `ResearchFinding` (carrying two independent dimensions: the **theoretical finding type** and the **approval state**) and an `InterventionDecision` (one of eight). Density: standard. **An AI draft is always a draft.**
 
-**② 线框**
+**② Wireframe**
 
 ```text
 Findings › RF-006
@@ -1145,7 +1145,7 @@ Intervention decision › based on RF-006
  ⓘ All data in the current phase is synthetic, so decisions such as "expand" or "retain" require an additional stated reason.
 ```
 
-**③ 状态矩阵**
+**③ State matrix**
 
 | State | Presentation |
 |---|---|
@@ -1173,13 +1173,13 @@ Buttons: `Confirm and approve this finding` / `Go back and review`
 
 ---
 
-### C17 报告与受控导出（§91）— 已有局部实现（导出审批队列）
+### C17 Reports and controlled exports (§91) — partially implemented (the export approval queue)
 
 **① Purpose and density**: report versions + the full controlled-export chain: request → approve (MFA) → generate → deliver → receipt → expiry. **"Generated" is not "delivered"** (a hard requirement of §91). Density: standard + a dense queue table.
 
 **Implementation status (2026-08-04)**: **the reports side** (open a report / write a version / have somebody else approve it) is implemented — the "reports" in this section's title previously had no interface at all, only the export half had a screen, and so the report-version approval queue never had anything in it to approve. Approval fixes that version: a database trigger refuses any change to the content of an approved version, and a correction can only be a new version; the drafter cannot approve their own version (command + database CHECK), stated in the row before the button; and `report.approve` requires confirmation only and is **not at the MFA tier**, so the screen does not falsely claim strong authentication is needed. On the export side: requesting, approving (MFA + separation of duties), and **generating, recording delivery and recording receipt** are implemented (the "exports waiting to be carried out" block in the researcher workspace, with `listExportsToCarryOut` gated on `export.generate` — if you can do the work you can see the work). Previously **approval was the end of the line**: no query listed approved requests, the package would never be generated, and delivery would never be recorded; somebody asking for a copy of their own information would be told honestly that it had been agreed and then hear nothing further — not because anyone refused, but because no interface could take the next step. The three states' wording holds §91: `Approved` says "no package has been generated yet", `Generated` says "the package exists and has been given to nobody", and `Delivered` says "recorded as delivered; the recipient has not confirmed". **"Record that I have delivered it" is a person's record of their own action, not an action by the platform** — the platform sends nothing, which is why the button is not called "deliver". Once received (`Received`) it leaves the queue: leaving finished work in a to-do list is how a to-do list stops being read. **Expiry is not implemented** (no command or field carries the expiry of an export).
 
-**② 线框**
+**② Wireframe**
 
 ```text
 Exports › new request
@@ -1202,7 +1202,7 @@ Exports › ex_5 › status (an honest state machine)
  ⓘ "Generated" is not "delivered"; "handed to the provider" is not "the recipient received it".
 ```
 
-**③ 状态矩阵**
+**③ State matrix**
 
 | State | Presentation |
 |---|---|
@@ -1231,12 +1231,12 @@ Buttons: `Confirm and approve this export` / `Reject` opens its own dialog (one 
 
 ---
 
-## 3. G. 管理工作区（G1–G7）
+## 3. G. Administration workspace (G1–G7)
 
 > **The global boundary (a permanent `role="note"` at the top of every screen, not dismissible)**:
 > `The administration workspace governs running and access only: accounts, roles, integrations, jobs, flags and audit. It grants no research, moderation or safety authority — research conclusions, moderation decisions and safety dispositions are neither made here nor shown here.`
 
-### G1 管理仪表盘与系统状态（§41）
+### G1 Administration dashboard and system status (§41)
 
 **① Purpose and density**: an overview of operational health. **Research findings and moderation decisions are not administrative KPIs** (a hard requirement of §41) — so "number of findings", "moderation throughput" and "number of participants" **must not appear** on this dashboard. Density: a dense card grid.
 
@@ -1280,7 +1280,7 @@ Administration workspace › dashboard
 
 ---
 
-### G2 用户与组织（§21）
+### G2 Users and organisations (§21)
 
 **① Purpose and density**: operational management of accounts and organisations. **A participant's research content must not be displayed.** Density: a dense table.
 
@@ -1469,7 +1469,7 @@ Administration › feature flags
   permission engine and the protocol, and no flag affects them.
 ```
 
-**③ 状态矩阵**
+**③ State matrix**
 
 | State | Presentation |
 |---|---|
@@ -1525,118 +1525,108 @@ Administration › audit access
 
 ---
 
-## 4. 已实现 → 目标设计 差异清单
+## 4. Gap list: what is implemented versus the target design
 
-现状：`apps/web/src/StaffApp.tsx` + `components/Staff*.tsx` 是**无样式语义 HTML**，把 C2/C5/C6/C12/C14/C17 的一部分压缩进 3 个面板（研究者 / 批准 / 入组协调）。以下为逐项差异。
+> **Re-verified against the code on 2026-08-16, and largely rewritten.** This
+> section was a snapshot of `StaffApp.tsx` as it stood when the specification
+> was written, and almost every gap it described has since been closed.
+> Translating it as written would have handed a reader a list of defects that
+> no longer exist, hiding the two that do. Each row below was checked by
+> reading the component or the test named in it.
 
-### 4.1 结构性差异（信息架构）
+### 4.1 Structural gaps (information architecture)
 
-| 现状 | 目标设计 | 理由 |
+| Gap as originally recorded | Status (2026-08-16) |
+|---|---|
+| `StaffApproverPanel` placed four kinds of high-impact decision side by side on one screen; DESIGN_BRIEF §2 requires one per screen | ✅ **Closed.** The panel is now 97 lines of routing, and the decisions live in eleven separate screens under `components/approver/`: ProtocolDecisions, DatasetLock, DatasetDefinitions, ExportDecisions, ApprovalRecords, EvidenceReviews, EvidenceDecisions, AnalysisDecisions, InterventionDecisions, ReportDecisions, ReConsent |
+| Every object was reached by **typing an identifier** (`protocol version identifier`, `dataset version identifier`, `export request identifier`, `approval record identifier`) | ✅ **Closed** for the approver queues — those inputs are gone and the queues are list-driven. ❌ **Still open** for safety triage, where `Signal identifier` remains a typed field (this is the same item as S-2 in MODERATION_SAFETY_SUPPORTER §8) |
+| Approval screens **did not show the content hash** (the dataset lock queue showed `manifestHash.slice(0,12)`, and protocol approval showed no hash at all) | ✅ **Closed.** `ProtocolDecisions.tsx` renders `Content hash` and `DatasetLock.tsx` renders `Manifest hash` |
+| Separation of duties was only a note in the queue row, and the decision button stayed clickable | ✅ **Closed.** `ProtocolDecisions.tsx` carries `disabled={own}` on the decision controls, and the screens state the reason in words (`cannot approve`, `separation`) |
+| No empty-state design (an empty list showed one line of text, or nothing) | ✅ **Closed.** The approver screens render named empty states |
+| Errors surfaced as raw error codes | ✅ **Closed.** See §8 C-9 in MODERATION_SAFETY_SUPPORTER: the panels call `staffLoadError` / `staffActionError` |
+| No C3/C4 evidence interface, though the backend and the KG were connected | ✅ **Closed.** `EvidenceReviews.tsx` and `EvidenceDecisions.tsx` exist |
+| The researcher workspace had 5 flat "workspace" buttons rather than §17's destinations | ⚠️ **Partly.** The approver side is split by artefact as the specification asks; a full §17 destination set is not built |
+| Tabular data was carried in `<ul style={{listStyle:'none'}}>` rather than `<table>` | ⚠️ **Partly.** Tables now exist and are inside `.scroll-x` with sticky headers (see DESIGN_SYSTEM), but column selection and saved views are not built |
+| No epistemic tags and no `[synthetic data]` markings | ❌ **Still open.** Neither is implemented anywhere in the staff screens |
+
+### 4.2 Changes affecting accessible names (and therefore the tests)
+
+> The original table listed Chinese accessible names, which stopped being
+> current when the interface moved to English (D-9). The names below were read
+> from `apps/web/test/staff-queues.test.tsx` and `staff-panels.test.tsx` as
+> they are today.
+
+| # | Original target | Status (2026-08-16) |
 |---|---|---|
-| `StaffApp` 用 5 个"工作区"按钮（入组协调/研究者/批准/安全 triage/内容审核）平铺 | 研究者工作区应有 §17 的 17 个目的地（仪表盘/项目/问题/证据/协议/干预/参与者/入组/交付/评估/安全/AI/数据集/分析/发现/报告/治理任务）；"批准"不是一个工作区，而是**每类工件的审批视图**（C6/C14/C17 各自的屏） | Doc 20 §17、§26–29 角色感知导航 |
-| `StaffApproverPanel` 在一屏并列 4 类高影响决定（协议批准、数据集锁定、导出决定、M15 审批） | 拆成 4 个决定屏，每屏一个决定 | DESIGN_BRIEF §2「单屏不得并列两个高影响决定」 |
-| 所有对象靠**手输标识符**（`协议版本标识`、`数据集版本标识`、`导出申请标识`、`审批记录标识`） | 队列驱动：从待办进入对象详情屏，标识符只读显示 + 可复制 | 手输标识符是误操作源；且无法在决定前展示版本/哈希 |
-| 审批时**不显示内容哈希**（数据集锁定队列显示 `manifestHash.slice(0,12)`，协议批准完全不显示哈希） | 每个审批屏必须有 `ExactVersionBlock`：类型 + 标识 + 版本号 + **完整可展开哈希** + 差异摘要 | **精确版本后批准（不可协商）** |
-| 协议审批屏没有 §66 要求的依据（证据快照、干预配置、AI 配置、同意影响、社区/匹配影响、审核/安全影响、数据集定义、未解决评论） | C6 全部补齐 | §66 |
-| 职责分离只在队列行内提示"是你，不能自批"，但决定按钮仍可点 | 队列行按钮 `disabled` + 行内说明；详情屏"你与这个对象的关系"一行；起草侧提交确认提前告知 | **职责分离前置（不可协商）** |
-| MFA 提示是按钮文字里的"（MFA）"+ 一句总说明 | 三时点契约：屏顶强认证条 + 按钮文字 `（需要强认证）` + 确认对话框首行；密码级会话下按钮**禁用**而非可点 | **人的权威 / 不得点击后才突然弹出（不可协商）** |
-| `MFA_REQUIRED_ACTIONS` 常量列出 5 项，其中「M15 审批决定」正确，但界面把「导出决定（含拒绝）」整体标 MFA | 按 `catalogue.ts` 精确标注：`export.approve` 需要 MFA；**拒绝导出走同一权限键，也需要 MFA**（此项现状正确）；但**证据决定批准、分析计划批准、解释批准、数据集定义批准、协议激活、资格决定不需要 MFA**，新屏不得错标 | 过度警告与漏报同为错误 |
-| 无空状态设计（列表为空时只有一行文字或什么都没有） | 每个队列/表格有具名空态（见各章节） | Doc 20 §224–229、I11 |
-| 错误呈现为原始错误码（`未成功：${err.error.code}`） | 错误码 → 中文文案 + 分级 + 下一步（1.8 表） | Doc 20 §231–237 |
-| 研究者面板的导出表单没有说明「已生成 ≠ 已投递」，也没有状态机 | C17 状态机 5 段 + 诚实措辞 | §91 |
-| 全部使用 `<ul style={{listStyle:'none'}}>` 承载表格型数据 | 改为 `<table>` + `<caption>` + `<th scope>`，含排序与列选择 | §251、1.9 |
-| 没有认识论标签、没有 `[合成数据]` 标记 | 全工作区强制 | Doc 19 §10、DESIGN_BRIEF §3 |
-| 没有 C3/C4 证据界面（后端与 KG 已通） | 新建 C3/C4 | UI_INVENTORY P1 |
+| 1 | Button names must be unique and contain the object identifier, rather than four buttons all named "select" | ✅ **Done** — e.g. `Dataset version dv_9` |
+| 2 | Load the queue on entry; keep an explicit refresh | ⚠️ **Partly** — the approver queues no longer need a manual load, but safety triage still has `View signals waiting for triage` |
+| 3 | Identifiers become read-only + a copy button | ✅ **Done** for approver queues; ❌ open for `Signal identifier` |
+| 4 | `Lock dataset version (MFA)` → names the action and the object | ✅ **Done** — `Lock this dataset version`. ⚠️ The `(requires strong authentication)` suffix is present on some screens (DatasetDefinitions, ExportDecisions, InterventionDecisions) but not on this button |
+| 5 | `Approve (MFA)` → `Approve this protocol version` etc. | ✅ **Done** — `Approve this protocol version`, `Activate this protocol version`, `Approve this export`, `Reject this export`. Note that reject is named and separate, which is what the export rule requires |
+| 6 | Replace "actions marked MFA will be refused at the password tier" with a strong-authentication bar at the top | ⚠️ **Partly** — the wording exists on several screens; there is no single top-of-screen bar |
+| 7 | The self-approval note becomes a complete sentence, and the button is disabled | ✅ **Done** — `disabled={own}` plus wording |
+| 8 | The generic `Confirm` button becomes action-specific (`Confirm and approve this version`, `Lock this dataset version`, …) | ❌ **STILL OPEN** — `name: 'Confirm'` appears 3 times across the two staff test files. This is the same defect as C-3 in MODERATION_SAFETY_SUPPORTER §8, and the rule it breaks is DESIGN_BRIEF §2: a confirm button must name what it is confirming |
 
-### 4.2 会改变可访问名的改动（影响现有测试）
+**What remains open, in one place**: the generic `Confirm` button (item 8, = C-3); the typed `Signal identifier` on safety triage (items 2 and 3, = S-2); epistemic tags and `[synthetic data]` markings, which have never been built; and the absence of a single strong-authentication bar per screen.
 
-> 说明：`apps/web/test/staff-panels.test.tsx` 与 `apps/web/test/staff-queues.test.tsx` 按可访问名与文本查询元素。下表列出**必须改**（原则驱动）与**建议不改**（无原则理由，改了只是制造测试churn）。
+---
 
-**A. 必须改（原则驱动），会破坏测试：**
+## 5. Key trade-offs (decided, with the reasoning recorded)
 
-| # | 现可访问名 / 文本 | 目标 | 破坏的断言 | 原因 |
+1. **Density versus touch targets**: the dense level compresses content rows to 2rem, but **a row containing a control is forced back to 2.75rem**. The result is "dense tables with a sparse action column" rather than uniform density. The reason: a real defect once shipped in which 44px buttons sat inside a 29px line box and overlapped each other.
+
+2. **Queue-driven versus typed identifiers**: everything moves to queue-driven, at the cost of losing "paste an identifier and jump straight there". The compensation: every object's detail screen offers `[copy identifier]`, and a global "open by identifier" entry point is kept (implemented under the §34 search rules) — but it leads to the **detail screen**, never to a decision button.
+
+3. **How the hash is presented on an approval screen**: truncated to 16 hex characters by default, complete inside the confirmation dialog. The trade-off: a full hash takes space and is hard to read, but **at the moment of the decision the complete value must be visible**. The compromise is "truncated while browsing, complete while deciding".
+
+4. **A read-only view versus hiding entirely when permission is insufficient**: for research artefacts that are **not under protected existence** (protocols, datasets, findings), insufficient permission shows the full read-only view plus an explanation — a researcher has to be able to see the basis in order to collaborate. For objects that **are** under protected existence (a blocked relationship, a reporter's identity), the shared `RESOURCE_NOT_FOUND` copy is always used, and "does not exist" is never distinguished from "not permitted".
+
+5. **Epistemic tags are mandatory**: this adds cost every time a conclusion is recorded. That cost is accepted — it is the discipline that distinguishes this platform from an ordinary research tool, and the current phase (synthetic data) needs it especially, to prevent statements that overreach.
+
+6. **The administration dashboard shows no research or moderation metrics**: an administrator loses any overview of "what the platform is producing". That is deliberate (§41). Where an operational overview is genuinely needed, only content-independent measures are permitted — job volume, error rate, availability.
+
+7. **The AI configuration screen still exists under the Level-5 prohibition**: showing "forbidden" is more honest than hiding it, and it makes the prohibition itself auditable and reviewable. The cost is a screen carrying many inoperable controls — resolved with words rather than by implying it through greying out.
+
+8. **No grid roving tabindex**: researcher tables have many columns and roving tabindex would improve navigation, but it introduces a divergence from the ordinary Tab order that the existing tests and users rely on. The ordinary Tab order is the default; it is enabled per table only where there are more than 12 columns and it has been usability-tested.
+
+---
+
+## 6. Open items needing a product decision
+
+> Each of the following is either in tension with Doc 20 or beyond this document's authority to settle. **None is decided here.**
+
+| # | Open item | Where the tension lies | Who decides | Interim handling if undecided |
 |---|---|---|---|---|
-| 1 | `button 名 "选择"`（协议/锁定/导出/审批四个队列共 4 处同名） | `打开 pv_7f3a91c2`（含对象标识，唯一） | `staff-queues.test.tsx`：`getByRole('button', { name: '选择' })` | 同名按钮在屏幕阅读器下不可区分（1.9） |
-| 2 | `button 名 "查看待办"`（手动触发加载） | 进入屏幕即加载；保留 `刷新待办` 作为显式刷新 | `staff-queues.test.tsx`：`getByRole('button', { name: '查看待办' })` | 队列屏的默认状态应是"已加载"，"空"与"未加载"必须可区分 |
-| 3 | `label "协议版本标识"` / `"数据集版本标识"` / `"导出申请标识"` / `"审批记录标识"`（可编辑 input） | 改为只读展示 + `复制协议版本标识`（button）；输入框取消 | `staff-panels.test.tsx`：`getByLabelText('数据集版本标识')`；`staff-queues.test.tsx`：`getByLabelText('协议版本标识')` | 手输标识符无法承载"精确版本后批准" |
-| 4 | `button 名 "锁定数据集版本（MFA）"` | `锁定这个数据集版本（需要强认证）` | `staff-panels.test.tsx`：锁定用例 | "MFA"是术语缩写；"需要强认证"是可读文案且承载预告契约 |
-| 5 | `button 名 "批准（MFA）"` / `"激活"` / `"批准导出（MFA）"` / `"拒绝导出（MFA）"` | `批准这个协议版本（需要强认证）` / `激活这个协议版本` / `批准这次导出（需要强认证）` / `拒绝这次导出（需要强认证）` | 未被现有测试直接断言（`批准（MFA）` 目前无断言），但 `staff-panels.test.tsx` 断言了 `密码级别下会被拒绝` 文本 | 同上；且拒绝需独立确认对话框 |
-| 6 | 文本 `"注意：标注 MFA 的操作在当前密码级别下会被拒绝。"` | 屏顶强认证条：`本屏的强认证动作：批准协议版本、锁定数据集版本、导出批准。你当前是密码级认证，这些按钮已禁用。` | `staff-panels.test.tsx`：`getByText(/密码级别下会被拒绝/)` | "会被拒绝"是事后语气；预告契约要求"已禁用 + 下一步" |
-| 7 | 文本 `"——是你，不能自批"`（行内后缀） | 独立句：`这是你提交的，按职责分离规则你不能批准它。` + 按钮禁用 | `staff-queues.test.tsx`：`getByText(/是你，不能自批/)` | 破折号后缀不是完整句，屏幕阅读器读起来是碎片 |
-| 8 | `button 名 "确认执行"`（通用，四类动作共用） | 按动作具名：`确认批准这个版本` / `锁定这个数据集版本` / `确认批准这次导出` / `确认这个审批决定` | `staff-panels.test.tsx`：`getByRole('button', { name: '确认执行' })` | 确认按钮必须点名后果（DESIGN_BRIEF §2） |
-
-**B. 建议不改（保持稳定，减少测试churn）：**
-
-`提交处置`、`确认`（安全 triage）、`信号标识`、`处理此信号`、`查看待处理信号`、`记录资格决定`、`资格决定理由`、`入组标识`、`为该参与者办理退出`、`确认退出`、`目的`、`接收方`、`来源（逗号分隔的精确标识）`、`去标识级别`、`提交导出申请`、`创建项目`、`起草协议版本`、`提交评审` —— 这些名称已经符合"动作 + 对象"的原则，目标设计沿用。
-
-**C. 需要新增断言（新行为，无破坏）：**
-
-- 密码级会话下，`批准…（需要强认证）` 按钮 `disabled === true`（现状是可点后 403）。
-- 自提交对象的队列行，其 `打开 …` 按钮之外的决定按钮 `disabled === true`。
-- 审批确认对话框文本包含**完整内容哈希**（现状仅数据集队列列出前 12 位，且不进对话框）。
-- 空队列渲染具名空态文本（现状仅入组列表有 `没有匹配的入组记录。`）。
-- 证据检索在 `DEPENDENCY_UNAVAILABLE` 下不渲染空结果列表，而渲染 `检索没有完成` 文本。
-
-**D. 迁移建议**：改动 1–8 集中在 `StaffApproverPanel` 拆分这一次重构里完成，一次性更新两个测试文件，避免分批改名。`StaffCoordinatorPanel`、`StaffSafetyTriagePanel`、`StaffResearcherPanel` 的现有可访问名不动，视觉与状态设计可以单独落地。
+| U1 | **Whether protocol approval is a "two-person approval"**: UI_INVENTORY records C6 as "exact version, **two-person**", but Doc 20 §66 itself contains no two-person requirement, and §245 says Dual Approval applies only to "**selected governance actions** designated by policy" (exceptional data release, high-impact configuration). `catalogue.ts` currently enforces only "approver ≠ submitter" for `protocol.approve` (a single approver + separation of duties) | The inventory versus the specification | Research governance lead | The design follows `catalogue.ts`: a single approver + separation of duties. If two-person is genuinely required, both the permission catalogue and the screen need to change together |
+| U2 | **Which role approves a dataset lock**: `dataset.lock` belongs to ResearchApprover. A researcher cannot lock a dataset they defined, which is good, but §82's "human authorisation" does not say whether that person must differ from the `dataset.approve-definition` approver | The granularity of separation of duties | Research governance lead | The interface shows both identities (the definition's approver and the person locking) and, where they are the same, displays a note saying so — see D-11 |
+| U3 | **Whether the administration workspace may reveal that a participant account exists**: G2 currently shows participant account rows (account facts only). If the existence of a participant is itself protected information in some contexts (ADR-050), an administrative list should not show it | Operational need versus protected existence | Privacy lead | The current design shows account facts and no content; if it is judged protected, it changes to "lookup by exact identifier only, with no listing" |
+| U4 | **Whether the "reason for access" on audit access is mandatory**: the design makes it mandatory (to raise the cost of misuse), but the backend's `audit.view` carries no such requirement | Design versus implementation | Privacy lead | Mandatory in the frontend and recorded with the query; if the backend does not record the field, the backend must add it, or this is a false safeguard |
+| U5 | **`STEP_UP_AUTHENTICATION_REQUIRED` and the three tiers `mfa`/`step-up`**: `AuthStrength` has three tiers — `password`, `mfa`, `step-up` — but `catalogue.ts` currently uses no more than `mfa`. Whether any action should rise to `step-up` (break-glass execution, export approval) is open | Security tiering | Security lead | The interface uses one phrase throughout, "strong authentication (MFA)"; introducing step-up would require a second phrase (`needs verifying again`) and a second forewarning contract |
+| U6 | **Whether some intervention-decision values should be disabled during the synthetic phase**: §90 offers eight values, but all data is currently synthetic, and reaching "Expand" or "Retain" on synthetic evidence is a risky statement | Completeness versus epistemic discipline | Research lead | The current design keeps all eight but requires an additional reason field and shows a warning for Expand/Retain/Retire; whether to disable them outright is the research lead's decision |
+| U7 | **How the `[synthetic data]` marking travels in reports and exports**: it is mandatory inside the interface, but how the exported file itself (CSV/PDF) carries it — filename? header? a manifest field? — is beyond UI design | Honesty across a boundary | Research lead + backend | The interface states in the approval confirmation that "the export is marked [synthetic data]", but **honouring that statement requires backend implementation** — until then, the statement is a promise the platform has not kept |
+| U8 | **Whether all 17 researcher destinations belong in the primary navigation**: Doc 20 §17 lists 17, and they cannot be laid out flat on mobile | Completeness versus §33 mobile navigation | Product | Desktop: 8 primary items + a "more" group; mobile: 4 in the bottom bar + a drawer. Which items go in which group needs product confirmation |
+| U9 | **How strongly to present the KG corpus's limitations**: KNOWLEDGE_GRAPH_INTEGRATION states plainly that the seed corpus is "far from sufficient to support a real evidence review". C3 currently puts that sentence in a permanent notice at the top of the screen | Usability versus honesty | Research lead | Keep the permanent notice at the top; whether to repeat the limitation on every evidence card (more honest, noisier) is undecided |
+| U10 | **Whether a "saved view" is shared across users** | Collaboration versus leaking a personal configuration (a saved filter can reveal research intent) | Product + privacy | The current design is **personal only**, with no sharing |
 
 ---
 
-## 5. 关键取舍（已决定，记录理由）
+## 7. Landing checklist (to be self-checked item by item during implementation)
 
-1. **密度 vs. 触控目标**：dense 档把内容行压到 2rem，但**含控件的行强制回到 2.75rem**。取舍结果是"密集表格 + 稀疏动作列"，而不是全局密集。理由：历史上真实发生过 44px 按钮落进 29px 行框互相压叠的缺陷。
-
-2. **队列驱动 vs. 标识符输入**：全面改为队列驱动，代价是失去"直接粘贴标识符跳转"的效率。补偿：每个对象详情屏提供 `[复制标识]`，并保留一个全局"按标识打开"入口（在 §34 搜索规则下实现），但它导向**详情屏**，不导向决定按钮。
-
-3. **审批屏的哈希呈现**：默认 16 hex 截断，确认对话框内完整。取舍：完整哈希占屏且难读，但**决定的那一刻必须看到完整值**。折中是"浏览时截断，决定时完整"。
-
-4. **权限不足时显示只读视图 vs. 完全隐藏**：对**非受保护存在**的研究工件（协议、数据集、发现），权限不足显示完整只读视图 + 说明——研究者需要看得到依据才能协作。对**受保护存在**的对象（被屏蔽关系、举报人身份），一律 `RESOURCE_NOT_FOUND` 统一文案，不区分"不存在"与"无权限"。
-
-5. **认识论标签强制必填**：增加了每次记录结论的成本。接受这个成本——这是本平台区别于普通研究工具的核心纪律，且当前阶段（合成数据）尤其需要它防止越界表述。
-
-6. **管理仪表盘不显示研究/审核指标**：管理员会失去"平台在产出什么"的总览。这是刻意的（§41）。若确需运行性总览，只允许"作业量、错误率、可用性"这类与内容无关的指标。
-
-7. **AI 配置屏在 Level-5 全禁下仍然存在**：显示"被禁止"比隐藏更诚实，也让"禁止"这件事可被审计与评审。代价是屏幕上存在大量不可操作的控件——用文字说明而非灰化暗示来化解。
-
-8. **不做 grid roving tabindex**：研究者表格列多，roving tabindex 能提升导航效率，但会引入与现有测试和普通 Tab 序不一致的风险。默认用普通 Tab 序；仅在列 > 12 且经过可用性验证后按表启用。
-
----
-
-## 6. 需要产品决策的未决项
-
-> 以下各项与 Doc 20 存在张力或超出设计权限，**不擅自决定**。
-
-| # | 未决项 | 张力所在 | 需要谁决定 | 若不决定的临时处理 |
-|---|---|---|---|---|
-| U1 | **协议批准是否属于"双人批准"**：UI_INVENTORY 把 C6 记为"精确版本、**双人**"；但 Doc 20 §66 本身不含双人要求，§245 只说 Dual Approval 用于"由策略指定的**选定治理动作**"（例外数据放行、高影响配置）。`catalogue.ts` 当前对 `protocol.approve` 只强制"批准人 ≠ 提交人"（单批准人 + 职责分离） | 清单 vs. 规范 vs. 实现，三者不一致 | 研究治理负责人 + 后端 | 界面按**单批准人 + 职责分离**设计，并在审批屏显示 `本次批准需要 1 名批准人（与提交人不同）`，为未来"2 名"预留批准人列表位与第二签名区；同时需要澄清哪些动作属于 §245 的双人范围（候选：导出批准、破窗执行） |
-| U2 | **数据集锁定的批准人角色**：`dataset.lock` 属 ResearchApprover。研究者无法锁定自己定义的数据集——这是好的，但 §82 的"人工授权"没写明是否需要与 `dataset.approve-definition` 的批准人不同 | 职责分离粒度 | 研究治理负责人 | 界面显示两个批准人的身份（定义批准人 / 锁定人），若相同则显示提示 `定义与锁定由同一人完成`，不阻断 |
-| U3 | **管理工作区是否能看到参与者账号的存在**：G2 目前显示参与者账号行（仅账号事实）。若参与者存在本身在某些情境下是受保护信息（ADR-050），管理列表就不该显示 | 运维需要 vs. 受保护存在 | 隐私负责人 | 当前设计显示账号事实但不显示任何内容；若判定为受保护，改为"仅按精确标识查询，不列表" |
-| U4 | **审计访问的"访问理由"是否必填**：设计上设为必填（提高滥用成本），但后端 `audit.view` 无此要求 | 设计 vs. 实现 | 隐私负责人 | 前端必填、随查询记录；若后端不记录该字段，需后端增加，否则这是"假的保障" |
-| U5 | **`STEP_UP_AUTHENTICATION_REQUIRED` 与 `mfa`/`step-up` 三级**：`AuthStrength` 有 `password | mfa | step-up` 三级，但 `catalogue.ts` 目前最高只用到 `mfa`。是否有动作应升到 `step-up`（例如破窗执行、导出批准） | 安全分级 | 安全负责人 | 界面统一用"强认证（MFA）"一种措辞；若引入 step-up，需要第二套措辞（`需要再次验证身份`） |
-| U6 | **合成阶段的"干预决定"是否应禁用部分取值**：§90 提供八种取值，但当前全部数据为合成，"扩大 Expand""保留 Retain"在合成证据上做出是有风险的表述 | 完整性 vs. 认识论纪律 | 研究负责人 | 当前设计保留八项但对 Expand/Retain/Retire 要求额外理由字段并显示警告；是否直接禁用需研究负责人决定 |
-| U7 | **报告与导出内容中的 `[合成数据]` 标记形式**：界面内已强制；导出的文件本身（CSV/PDF）如何携带该标记（文件名？页眉？清单字段？）超出 UI 设计范围 | 跨边界诚实性 | 研究负责人 + 后端 | 界面在批准确认中声明"导出内容标记为 [合成数据]"，但**该声明的兑现需要后端实现**——在实现前，这句话不得出现（否则是虚假承诺） |
-| U8 | **研究者工作区的 17 个目的地是否全部进主导航**：Doc 20 §17 列出 17 项，移动端不可能平铺 | 完整性 vs. §33 移动导航 | 产品 | 桌面：主导航 8 项 + "更多"分组；移动：底部 4 项 + 抽屉。分组归属需产品确认 |
-| U9 | **KG 语料局限的呈现强度**：KNOWLEDGE_GRAPH_INTEGRATION 明确种子语料"远不足以支撑真实证据综述"。C3 目前把这句话放在屏顶固定说明 | 可用性 vs. 诚实 | 研究负责人 | 保持屏顶固定说明；是否在每张证据卡上重复该限制（更诚实但更嘈杂）需决定 |
-| U10 | **"保存视图"是否跨用户共享** | 协作 vs. 个人配置泄露（保存的筛选条件可能暴露研究意图） | 产品 + 隐私 | 当前设计为**仅个人**，不提供共享 |
-
----
-
-## 7. 落地检查表（实现时逐项自检）
-
-- [ ] 每个审批屏的批准控件同视口内可见：类型 / 标识 / 版本号 / 内容哈希
-- [ ] 确认对话框内显示**完整**哈希
-- [ ] 提交人 = 当前身份时，决定按钮在**渲染时**即禁用并给出完整句说明
-- [ ] 起草侧提交确认提前说明"提交后你不能批准"
-- [ ] 屏顶强认证条列出本屏所有 MFA 动作；密码级会话下相应按钮禁用
-- [ ] 没有任何 MFA 要求是在点击后才出现的
-- [ ] 每张证据卡显示出处 / 研究设计 / 证据强度 / 冲突证据
-- [ ] 弱、间接、缺失证据有区别于强证据的版式与显式说明
-- [ ] `DEPENDENCY_UNAVAILABLE` 不渲染空结果列表
-- [ ] 每个结论性元素有认识论标签；合成数据结果带 `[合成数据]`
-- [ ] 分析输出 / 解释 / 发现三层版式与措辞可区分
-- [ ] 管理工作区每屏有边界横幅；管理仪表盘无研究/审核指标
-- [ ] 所有列表为 `<table>` 语义，排序有 `aria-sort` + 播报
-- [ ] 行内动作按钮可访问名唯一且含对象标识
-- [ ] 含控件的行 ≥ 2.75rem，相邻目标不重叠
-- [ ] 每个列表有具名空态；空态与加载态、错误态可区分
-- [ ] 错误显示中文解释 + 下一步，不显示裸错误码
-- [ ] 200% 缩放下无横向页面滚动
+- [ ] Every approval screen shows, within the same viewport as the approve control: type / identifier / version number / content hash
+- [ ] The confirmation dialog shows the hash in **full**
+- [ ] Where the submitter is the current identity, the decision button is disabled **at render time** and gives a complete-sentence explanation
+- [ ] The drafting side's submit confirmation states in advance that "you will not be able to approve this afterwards"
+- [ ] A strong-authentication bar at the top of the screen lists every MFA action on it; the corresponding buttons are disabled in a password-tier session
+- [ ] No MFA requirement appears only after a click
+- [ ] Every evidence card shows provenance / study design / evidence strength / conflicting evidence
+- [ ] Weak, indirect and missing evidence have a format and an explicit statement distinct from strong evidence
+- [ ] `DEPENDENCY_UNAVAILABLE` does not render an empty result list
+- [ ] Every element stating a conclusion carries an epistemic tag; results from synthetic data carry `[synthetic data]`
+- [ ] Analysis output / interpretation / finding are distinguishable in both format and wording
+- [ ] Every administration screen carries the boundary banner; the administration dashboard shows no research or moderation metrics
+- [ ] Every list uses `<table>` semantics, with sorting carrying `aria-sort` and an announcement
+- [ ] Every row action button's accessible name is unique and contains the object's identifier
+- [ ] Rows containing controls are ≥ 2.75rem and adjacent targets never overlap
+- [ ] Every list has a named empty state, distinguishable from the loading and error states
+- [ ] Errors show an explanation plus a next step, never a bare error code
+- [ ] No horizontal page scrolling at 200% zoom
