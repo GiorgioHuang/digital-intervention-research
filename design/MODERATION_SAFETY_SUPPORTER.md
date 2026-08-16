@@ -1557,69 +1557,70 @@ This notice is a **shared component**, appearing in: the F1 footer, the top of F
 
 ```
 ┌────────────────────────────┐
-│ 本平台不是紧急求助渠道       │
+│ This platform is not an emergency service │
 │                            │
-│ 本平台的处理不是即时的。     │
+│ Nothing here happens immediately.          │
 │                            │
-│ 如果有人正处于立即的危险中： │
-│ · 拨打当地紧急电话           │
-│ · 或联系当地危机支援服务     │
-│   «此处为占位：具体号码与服务 │
-│    名称需按部署地区填写，    │
-│    并经伦理审查批准——见 §10» │
+│ If somebody is in immediate danger:        │
+│ · call your local emergency number         │
+│ · or contact your local crisis support     │
+│   «placeholder: the specific number and    │
+│    service name must be filled in for the  │
+│    deployment region and approved by       │
+│    ethics review — see §10»                │
 │                            │
-│ 研究团队能做的：            │
-│ · 工作日 09:00–17:00 回应    │
-│   平台内的安全担忧           │
-│ · 人工查看每一条安全信号     │
-│ · 必要时暂停相关功能         │
+│ What the research team can do:             │
+│ · respond to safety concerns raised in the │
+│   platform, weekdays 09:00–17:00           │
+│ · have a person look at every safety signal│
+│ · suspend the relevant features if needed  │
 │                            │
-│ 研究团队不能做的：          │
-│ · 提供医疗或心理治疗         │
-│ · 即时到场或即时联系         │
-│ · 代替紧急服务              │
+│ What the research team cannot do:          │
+│ · provide medical or psychological treatment│
+│ · attend in person or make contact instantly│
+│ · stand in for the emergency services      │
 └────────────────────────────┘
 ```
 
-> **概念研究阶段的诚实标注**：本原型为合成数据环境，上述「研究团队能做的」在当前阶段**是被建模的未来系统行为**。参与者可见的版本必须加一句：`当前为研究原型演示环境，没有真实参与者，也没有真实的值班响应。`（见 §10 未决项 U-6：真实部署时该句必须移除，且紧急号码必须由伦理审查确定。）
+> **The honest marking required in the conceptual research phase**: this prototype is a synthetic-data environment, and "what the research team can do" above is, at this stage, **behaviour of the future system being modelled**. The participant-facing version must add: `This is a research prototype demonstration environment. There are no real participants and no real duty response.` (See open item U-6 in §10: on a real deployment that sentence must be removed, and the emergency numbers must be settled by ethics review.)
 
-**状态矩阵（F6 两屏合并）**
+**State matrix (both F6 screens)**
 
-| 状态 | 呈现与文案原文 |
+| State | Presentation and copy in full |
 |---|---|
-| LOADING | `正在载入当前暂停状态…`；在读到之前，暂停/恢复按钮 `disabled`：`需要先确认当前状态，避免重复暂停或误恢复。` |
-| EMPTY | 无暂停中对象：`当前没有处于暂停的参与者或功能。这是正常状态。` |
-| ERROR | 安全关键：`没能记录这次{暂停/恢复}。**状态没有改变**——{原状态}仍然有效。请重试；若持续失败，立即按值班流程处理，不要以此屏为准。[重试] [升级联系人清单]` |
-| FORBIDDEN | `这项操作需要 MFA 级认证 / 需要批准人角色。没有任何内容被改动。` |
-| PROTECTED | 通用 PROTECTED |
+| LOADING | `Loading the current suspension state…`; until it has been read, the suspend/restore buttons are `disabled`: `The current state has to be confirmed first, to avoid a duplicate suspension or a mistaken restoration.` |
+| EMPTY | Nothing suspended: `No participants or features are currently suspended. This is a normal state.` |
+| ERROR | Safety-critical: `This {suspension/restoration} could not be recorded. **The state has not changed** — {the previous state} is still in force. Please try again; if it keeps failing, act immediately under the duty process and do not treat this screen as authoritative. [Try again] [The escalation contact list]` |
+| FORBIDDEN | `This action requires MFA-tier authentication / the approver role. Nothing has been changed.` |
+| PROTECTED | The generic PROTECTED copy |
 
-**确认文案原文（暂停）**
+**Confirmation copy in full (suspension)**
 
 ```
-确认暂停参与者 P-118 的「匹配」功能？
+Suspend the "matching" feature for participant P-118?
 
-对象：参与者 P-118 · 仅匹配功能
-立即效果：不再产生新的匹配候选；
-      已有的连接与消息不受影响
-本人仍然可以：查看与撤回同意、查看自己的
-      内容、导出、联系研究支持、使用帮助与安全
-理由类别：安全事件相关
-复核时间：2026-08-10
-负责人：S-003（你）
-本人会看到：「你的匹配功能已暂时停用。
-      研究团队会与你联系。」
-恢复方式：需要复核、纠正措施与批准，
-      不能一键恢复
-可逆性：暂停可以解除；**本条暂停记录不可修改**  🔒
+Object: participant P-118 · matching only
+Immediate effect: no new match candidates are generated;
+      existing connections and messages are unaffected
+The person can still: view and withdraw consent, view their own
+      content, export, contact research support, use Help and safety
+Reason category: related to a safety event
+Review date: 2026-08-10
+Owner: S-003 (you)
+They will see: "Your matching has been switched off for now.
+      The research team will be in touch."
+How it is lifted: it needs review, corrective measures and approval;
+      there is no one-click restore
+Reversibility: the suspension can be lifted; **this suspension record cannot be changed**  🔒
 
-[确认暂停匹配]        [返回]
+[Confirm and suspend matching]        [Go back]
 ```
 
-**无障碍要点**
+**Accessibility points**
 
-- 范围复选组按影响从小到大排列，`<legend>` 写明 `范围（优先选择最小必要范围）`。
-- 「你选择后会看到」区域是 `aria-live="polite"` 的效果预览，勾选变化后播报一次汇总（不是每次勾选都长篇播报）。
-- 恢复屏的七项确认是复选而非一个按钮：**不能一键恢复**是交互层面的表达，不只是文案。
+- The scope checkboxes run in order of increasing impact, with the `<legend>` reading `Scope (prefer the smallest necessary scope)`.
+- The "what you will see once you choose" area is an `aria-live="polite"` preview of the effects, announcing one summary after a change rather than a long announcement on every tick.
+- The seven confirmations on the restoration screen are checkboxes rather than a single button: **no one-click restore** is expressed in the interaction, not only in the copy.
 
 ---
 
