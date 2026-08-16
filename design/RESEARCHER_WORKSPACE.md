@@ -527,55 +527,55 @@ Evidence › ER-004 › Evidence snapshot (review before creating)
   Once created a snapshot cannot be changed and cannot be deleted. Protocol approval cites this snapshot.`
   Buttons: `Create the snapshot (immutable)` / `Go back and review`
 
-**⑤ 无障碍**：七个选项是 `<fieldset><legend>证据决定</legend>` 的 radio 组，**无预选**（默认无选中，避免暗黑模式诱导）；中英文并列写在同一 `<label>` 内；引用表符合 1.9；哈希用 `<code>` + 可复制按钮，可访问名 `复制内容哈希`。
+**⑤ Accessibility**: the seven options are a radio group in `<fieldset><legend>Evidence decision</legend>` with **nothing pre-selected** (no default choice, so nothing is nudged); the citation table follows 1.9; the hash is a `<code>` plus a copy button whose accessible name is `Copy the content hash`.
 
 ---
 
-### C5 协议版本编辑器（§64–65）— 已有局部实现
+### C5 Protocol version editor (§64–65) — partially implemented
 
-**① 目标与密度**：分节编辑一个协议版本，随时可见"完整度"与"与上一版差异"。密度：dense 三栏（章节导航 / 编辑区 / 右侧完整度与评论）；手机为单栏 + 章节抽屉。**自动保存不等于提交，更不等于批准**（§65 硬要求）。
+**① Purpose and density**: edit a protocol version section by section, with "how complete it is" and "what differs from the previous version" visible at all times. Density: dense, three columns (section navigation / editing area / completeness and comments on the right); a single column with a section drawer on mobile. **Autosave is not submission, and it is certainly not approval** (a hard requirement of §65).
 
-**② 线框**
+**② Wireframe**
 
 ```text
-协议 › PR-002 › 版本 v3（草稿）
+Protocols › PR-002 › version v3 (draft)
 ┌──────────────┬────────────────────────────────────┬───────────────┐
-│ 章节          │ 3. 干预与剂量                      │ 完整度 7/11   │
-│ ✓1 目的       │ ┌────────────────────────────────┐ │ ✗ 5 同意影响  │
-│ ✓2 人群       │ │ …正文编辑区…                   │ │ ✗ 8 数据集边界│
-│ ●3 干预与剂量 │ │                                │ │ ✗ 9 匹配规则  │
-│ ✗5 同意影响   │ └────────────────────────────────┘ │ ✗11 安全规则  │
-│ ✗8 数据集边界 │ 引用的证据快照* [ES-011 sha256:be31…▾]│─ 评论(2) ────│
-│ …            │ 引用的干预版本* [IV-004 v2 ▾]        │ 未解决 2      │
-│              │ [让 AI 起草本节] 🤖                  │ @approver_wu │
+│ Sections      │ 3. Intervention and dose           │ Complete 7/11 │
+│ ✓1 Purpose    │ ┌────────────────────────────────┐ │ ✗ 5 Consent impact │
+│ ✓2 Population │ │ …the editing area…             │ │ ✗ 8 Dataset boundaries │
+│ ●3 Intervention and dose │ │                     │ │ ✗ 9 Matching rules │
+│ ✗5 Consent impact │ └────────────────────────────┘ │ ✗11 Safety rules │
+│ ✗8 Dataset boundaries │ Evidence snapshot cited* [ES-011 sha256:be31…▾]│─ Comments (2) ─│
+│ …            │ Intervention version cited* [IV-004 v2 ▾] │ Unresolved 2 │
+│              │ [Have AI draft this section] 🤖    │ @approver_wu  │
 ├──────────────┴────────────────────────────────────┴───────────────┤
-│ 草稿已于 11:32 自动保存。自动保存不会提交，也不会批准。            │
-│ [查看与 v2 的差异] [校验] [提交评审]                               │
+│ Draft autosaved at 11:32. Autosaving does not submit, and does not approve. │
+│ [View the differences from v2] [Validate] [Submit for review]      │
 └───────────────────────────────────────────────────────────────────┘
 ```
 
-**③ 状态矩阵**
+**③ State matrix**
 
-| 态 | 呈现 |
+| State | Presentation |
 |---|---|
-| 加载 | 章节导航先渲染（结构已知），正文骨架；未加载完不允许编辑，避免覆盖 |
-| 空队列 | 新建版本时所有章节为空：`这是一个空白的新版本。你也可以从 v2 复制内容再修改。[从 v2 复制]` |
-| 错误 | 自动保存失败必须**显式**：`自动保存失败（<码>）。你的修改还在这个页面里，但没有保存到服务器。[重试保存]`——不得静默；`VERSION_CONFLICT` 走 §230 版本冲突呈现：并排显示你的版本与服务器版本，由人选择 |
-| 权限不足 | 无 `protocol.draft`：只读模式，顶部 `你可以查看这个协议版本，但不能编辑（需要 Researcher）。` |
-| 需要 MFA | 编辑与提交**不需要** MFA。提交按钮旁固定说明：`提交后由批准人以强认证（MFA）批准。你不能批准自己提交的版本。` |
+| Loading | The section navigation renders first (its structure is known) with a skeleton for the body; editing is not allowed until loading completes, to prevent overwriting |
+| Empty queue | On a new version every section is empty: `This is a blank new version. You can also copy the content from v2 and edit it. [Copy from v2]` |
+| Error | A failed autosave must be **explicit**: `Autosave failed (<code>). Your changes are still on this page but have not been saved to the server. [Retry saving]` — never silent; `VERSION_CONFLICT` uses the §230 version-conflict presentation, showing your version and the server's side by side for a person to choose between |
+| Insufficient permission | Without `protocol.draft`: read-only mode, with `You can view this protocol version but cannot edit it (it needs Researcher).` at the top |
+| MFA required | Editing and submitting do **not** require MFA. A permanent note beside the submit button: `After submitting, an approver approves it with strong authentication (MFA). You cannot approve a version you submitted yourself.` |
 
-**④ 确认文案**
+**④ Confirmation copy**
 
-- 提交评审：
-  `确认提交协议版本 v3 评审？
-  提交时会固定这一版的内容并生成内容哈希，批准人只能批准这个确切版本。
-  提交后会记录你是提交人——此后你不能批准这个版本（职责分离）。
-  还有 4 个章节未完成、2 条评论未解决；提交后这些仍会显示给批准人。`
-  按钮：`确认提交` / `返回继续编辑`
-- 离开未保存：`这一页有未保存的修改。离开会丢失它们。` `留在本页` / `丢弃修改离开`
-- AI 起草：草稿插入时以 `🤖 AI 起草 · 未采纳` 区块包裹，`[采纳到本节]` 后区块消失并在本节来源里记录"AI 参与"。
+- Submitting for review:
+  `Submit protocol version v3 for review?
+  Submitting fixes this version's content and generates a content hash, and an approver can only approve this exact version.
+  Submitting records you as the submitter — you will not be able to approve this version afterwards (separation of duties).
+  4 sections are still incomplete and 2 comments are unresolved; these remain visible to the approver after submission.`
+  Buttons: `Confirm and submit` / `Go back and keep editing`
+- Leaving with unsaved changes: `This page has unsaved changes. Leaving will lose them.` `Stay on this page` / `Discard the changes and leave`
+- AI drafting: an inserted draft is wrapped in a `🤖 Drafted by AI · not adopted` block; after `[Adopt into this section]` the block disappears and "AI involvement" is recorded in that section's provenance.
 
-**⑤ 无障碍**：章节导航是 `<nav aria-label="协议章节">` + 列表；完成状态用文字（`已完成`/`未完成`）不只用 ✓/✗ 符号（符号加 `aria-hidden` 并配文字）；自动保存状态用 `role="status" aria-live="polite"` 播报，但**限流**（每 30 秒最多一次，避免打断屏幕阅读器）；差异视图用 `<ins>`/`<del>` 语义标签，并提供"仅列出变更章节"的文本摘要（不依赖颜色区分增删）。
+**⑤ Accessibility**: the section navigation is a `<nav aria-label="Protocol sections">` + list; completion status is words (`complete`/`incomplete`) rather than only ✓/✗ symbols (the symbols carry `aria-hidden` and are paired with words); autosave status is announced through `role="status" aria-live="polite"` but is **rate-limited** (at most once every 30 seconds, so it does not keep interrupting a screen reader); the diff view uses the semantic `<ins>`/`<del>` elements and provides a text summary listing only the changed sections (never relying on colour to distinguish an addition from a deletion).
 
 ---
 
