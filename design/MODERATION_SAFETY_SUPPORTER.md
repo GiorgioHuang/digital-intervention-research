@@ -372,148 +372,151 @@ Attribution: submitted in your name («Mr Wang»)
 **确认文案原文**
 
 ```
-确认把这份补充提交给 «林女士» 审阅？
-· 收到的人：只有她本人（和必要时的研究支持人员）
-· 会发生：她会看到你的内容、你选的来源和你的署名
-· 不会发生：内容不会被发布，也不会成为她的证言
-· 提交后：在她开始审阅前，你可以撤回
-· 这次提交会记入记录  🔒
-[确认提交]        [返回继续编辑]
+Submit this addition for «Mrs Lin» to review?
+· Who receives it: only her (and research support staff where necessary)
+· What will happen: she will see your content, the source you chose, and your name
+· What will not happen: it will not be published, and it will not become her testimony
+· After submitting: you can withdraw it until she starts reviewing
+· This submission is written to the record  🔒
+[Confirm and submit]        [Go back and keep editing]
 ```
 
-**无障碍要点**
+**Accessibility points**
 
-- 单选组用 `<fieldset><legend>`，**无预选**（与 ConsentPanel 一致的既有约定）。
-- 文本域有可见 `<label>`，非 `aria-label`；字数限制若存在必须可见并在 `aria-describedby` 中。
-- 提交结果通过既有 `role="status" aria-live="polite"` 播报：`已提交，等待本人审阅。`
+- The radio group uses `<fieldset><legend>` with **nothing pre-selected** (the existing convention, matching ConsentPanel).
+- The textarea has a visible `<label>`, not an `aria-label`; any character limit must be visible and referenced in `aria-describedby`.
+- The result is announced through the existing `role="status" aria-live="polite"` region: `Submitted, waiting for her to review it.`
 
 ---
 
-### D4 我的贡献状态列表（接受 ≠ 证言）
+### D4 My contributions and their status (accepted ≠ testimony)
 
-**目标 / 要回答的问题**
+**Purpose / the questions it answers**
 
-- 我提交的每一条现在处于什么状态？
-- 「被接受」到底意味着什么？
-- 我还能做什么？（撤回 / 重新提交）
+- What state is each thing I submitted in?
+- What does "accepted" actually mean?
+- What can I still do? (withdraw / resubmit)
 
-**线框**
+**Wireframe**
 
 ```
-<h1>我的贡献</h1>
+<h1>My contributions</h1>
 
-被接受的内容会保留你的署名，作为**你的贡献**保存。
-它不会变成她的证言——证言只能由她本人确认。
+Anything accepted keeps your name on it and is stored as **your contribution**.
+It does not become her testimony — only she can confirm testimony.
 
-── 3 条 ───────────────────────
+── 3 items ────────────────────
 ┌────────────────────────────┐
-│ «那年夏天她在纺织厂…»        │
-│ 状态：已被接受               │
-│ 是否为本人证言：否           │
-│ 署名：王先生（家庭成员）      │
-│ 你的来源：她本人告诉我的      │
-│ 接受时间：2026-07-11         │
-│ 🔒 记录已写入，不可修改       │
+│ «That summer she was at the mill…»  │
+│ State: accepted              │
+│ Is this the person's testimony: no  │
+│ Attributed to: Mr Wang (family member) │
+│ Your source: she told me     │
+│ Accepted: 2026-07-11         │
+│ 🔒 written to the record, cannot be changed │
 └────────────────────────────┘
 ┌────────────────────────────┐
-│ «关于外婆的院子…»            │
-│ 状态：已提交，等待本人审阅    │
-│ 是否为本人证言：否           │
-│         [撤回这条提交]       │
+│ «About grandmother's yard…»  │
+│ State: submitted, waiting for her to review │
+│ Is this the person's testimony: no  │
+│         [Withdraw this submission]  │
 └────────────────────────────┘
 ┌────────────────────────────┐
 │ «…»                        │
-│ 状态：未被接受               │
-│ 是否为本人证言：否           │
-│ 未被接受不代表内容有问题，    │
-│ 她可以只是选择不收录。        │
+│ State: not accepted          │
+│ Is this the person's testimony: no  │
+│ Not being accepted does not mean    │
+│ there is anything wrong with it —   │
+│ she may simply have chosen not to   │
+│ include it.                  │
 └────────────────────────────┘
 ```
 
-**关键设计判断：`是否为本人证言：否` 是一个独立字段，出现在每一张卡片上，包括被接受的卡片。**
-现有实现把这句话塞在状态标签的括号里（`已被接受（作为你的贡献记录，不是本人证言）`）——括号是可被忽略的排版信号，字段不是。
+**A key design judgement: `Is this the person's testimony: no` is a field of its own, present on every card, including the accepted ones.**
+The current implementation tucks that sentence into a parenthesis on the status label (`accepted (recorded as your contribution, not the person's testimony)`) — a parenthesis is a typographic signal that can be skipped over. A field is not.
 
 **状态矩阵**
 
 | 状态 | 呈现与文案原文 |
 |---|---|
-| LOADING | `正在载入你的贡献…` |
-| EMPTY | `你还没有提交过贡献。这很正常。当她邀请你补充某段内容时，你可以在这里看到提交记录。[了解我能补充什么]` |
-| ERROR | 通用 ERROR；列表保留上一次成功结果并标注 `以下内容可能不是最新的（上次更新：{ts}）` |
-| FORBIDDEN | 通用 FORBIDDEN |
-| PROTECTED | 单条被撤销可见时整条替换为 `无法显示这个内容。`，**不显示原因**，其余条目正常显示 |
+| LOADING | `Loading your contributions…` |
+| EMPTY | `You have not submitted any contributions yet. That is normal. When she invites you to add to something, the record of what you submitted will appear here. [Find out what I can add to]` |
+| ERROR | The generic ERROR copy; the list keeps the last successful result, marked `What follows may not be up to date (last updated: {ts})` |
+| FORBIDDEN | The generic FORBIDDEN copy |
+| PROTECTED | Where visibility of a single item has been revoked, that whole item is replaced with `This content cannot be shown.`, **giving no reason**, while the remaining items display normally |
 
-**确认文案原文（撤回）**
+**Confirmation copy in full (withdrawing)**
 
 ```
-确认撤回这条提交？
-· 她将不再看到这条内容
-· 你写的文字会保留为草稿，你可以修改后重新提交
-· 如果她已经开始审阅，撤回可能不再生效——那时会告诉你
-[确认撤回]        [返回]
+Withdraw this submission?
+· She will no longer see it
+· What you wrote is kept as a draft, and you can revise it and submit it again
+· If she has already started reviewing, withdrawing may no longer take effect — you will be told if so
+[Confirm and withdraw]        [Go back]
 ```
 
-**无障碍要点**
+**Accessibility points**
 
-- 卡片用 `<ul><li>`，每张卡内是**定义列表** `<dl>`（字段名/值），屏幕阅读器逐字段朗读「是否为本人证言：否」。
-- 状态既是文字也是徽章；不得只有色块。
-- 撤回按钮块级整行，与卡片其他内容有 ≥8px 间距。
+- The cards are a `<ul><li>`, and inside each card is a **definition list** `<dl>` (field name / value), so a screen reader reads out "is this the person's testimony: no" field by field.
+- The state is both words and a badge; a block of colour alone is not allowed.
+- The withdraw button is block-level and full width, with ≥8px between it and the rest of the card.
 
 ---
 
-### D5 共享活动支持
+### D5 Supporting a shared activity
 
-**目标 / 要回答的问题**
+**Purpose / the questions it answers**
 
-- 她请我协助什么？
-- 我做的协助会被记录吗、谁看得到？
-- 哪些事我可以帮、哪些必须她自己来？
+- What has she asked me to help with?
+- Will the help I give be recorded, and who can see it?
+- What may I help with, and what must she do herself?
 
-**线框**
+**Wireframe**
 
 ```
-<h1>协助活动</h1>
+<h1>Helping with an activity</h1>
 
-她请你协助的事项列在下面。
-凡是需要她本人决定的步骤，都必须由她自己完成——
-你可以在旁协助操作，但不能替她作决定。
+What she has asked for your help with is listed below.
+Any step that is hers to decide has to be done by her —
+you can help her operate things, but you cannot decide for her.
 
-── 她请你协助 ─────────────────
+── She has asked for your help with ──
 ┌────────────────────────────┐
-│ 准备一次视频通话（周四 15:00）│
-│ 你可以帮：设备设置、调大字号、 │
-│           检查网络           │
-│ 必须她本人：是否参加、说什么   │
-│         [记录我提供了协助]    │
+│ Preparing a video call (Thursday 15:00) │
+│ You can help with: setting up the device, │
+│           making the text bigger, checking the connection │
+│ Must be her: whether to take part, what to say │
+│         [Record that I helped]        │
 └────────────────────────────┘
 
-── 关于协助记录 ───────────────
-如果你记录了协助，这条记录会作为研究的
-「执行情况」数据保存，她本人可以看到。
-记录内容只包括：协助类型、时间、由谁提供。
-不包括你们谈话的内容。
+── About records of help ──────
+If you record that you helped, that record is kept as
+"how it was carried out" data for the research, and she
+can see it. The record contains only: the kind of help,
+when, and who gave it.
+It does not contain anything you talked about.
 ```
 
-**状态矩阵**
+**State matrix**
 
-| 状态 | 呈现与文案原文 |
+| State | Presentation and copy in full |
 |---|---|
-| LOADING | `正在载入协助请求…` |
-| EMPTY | `她现在没有请你协助任何活动。这很正常——是否需要协助由她决定。` |
-| ERROR | 通用 ERROR + `协助记录没有保存。你可以稍后再记录，时间以你填写的为准。` |
-| FORBIDDEN | `你当前的权限不包含活动协助。这不是出错。如果她希望你协助活动，她需要在她的授权里加上这一项。` |
-| PROTECTED | 通用 PROTECTED |
+| LOADING | `Loading requests for help…` |
+| EMPTY | `She has not asked for your help with any activity at the moment. That is normal — whether help is needed is hers to decide.` |
+| ERROR | The generic ERROR copy + `The record of help was not saved. You can record it later; the time will be the one you enter.` |
+| FORBIDDEN | `Your current permissions do not include helping with activities. Nothing has gone wrong. If she wants you to help with activities, she needs to add that to what she has granted you.` |
+| PROTECTED | The generic PROTECTED copy |
 
-**确认文案原文**
+**Confirmation copy in full**
 
 ```
-确认记录你提供了「设备设置」协助？
-· 记录内容：协助类型、时间、你的署名
-· 不记录：你们谈话或活动的具体内容
-· 可见范围：她本人与研究团队
-· 用途：研究需要知道活动是在什么协助条件下完成的
-· 这条记录写入后不可修改，如有错误请联系研究支持更正  🔒
-[确认记录]        [返回]
+Record that you gave help with "setting up the device"?
+· What is recorded: the kind of help, when, and your name
+· What is not recorded: anything specific you talked about or did
+· Who can see it: her and the research team
+· Why: the research needs to know what help an activity was carried out with
+· Once written this record cannot be changed; if it is wrong, contact research support to correct it  🔒
+[Confirm and record]        [Go back]
 ```
 
 **无障碍要点**
