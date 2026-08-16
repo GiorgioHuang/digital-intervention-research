@@ -579,69 +579,69 @@ Protocols › PR-002 › version v3 (draft)
 
 ---
 
-### C6 协议审批视图（§66、§89）— 已有局部实现
+### C6 Protocol approval view (§66, §89) — partially implemented
 
-**① 目标与密度**：这是**精确版本后批准**原则最集中的屏。密度：标准（决定屏），信息完整但不堆叠第二个决定。
+**① Purpose and density**: this is the screen where the **approval against an exact version** principle is most concentrated. Density: standard (a decision screen) — complete information, with no second decision stacked on top.
 
-**② 线框**
+**② Wireframe**
 
 ```text
-批准 › 协议版本 pv_7f3a91c2
+Approvals › protocol version pv_7f3a91c2
 ┌───────────────────────────────────────────────────────────────────────┐
-│ ⓘ 本屏的强认证动作：批准协议版本（需要 MFA）。你当前是 MFA 级认证。   │
-├─ 你正在批准的对象 ────────────────────────────────────────────────────┤
-│ 类型 ProtocolVersion  标识 pv_7f3a91c2 [复制]  版本号 v3               │
-│ 内容哈希 sha256:9b1c4e0a7d55f231… [全文][复制]                         │
-│ 起草人 researcher_lin  提交人 researcher_lin  提交 2026-08-01 09:14    │
-│ 你与这个对象的关系：你不是起草人也不是提交人，可以决定。               │
-├─ 与 v2 的变更（12 处）────────────────────────────────────────────────┤
-│ • 3 处涉及同意（模型）：新增「社区参与」范围 → 需要重新同意           │
-│ • 1 处涉及数据集边界：纳入消息元数据（不含内容）                       │
-│ • 8 处文字修订                                    [查看逐节差异]      │
-├─ 未解决评论（2）─────────────────────────────────────────────────────┤
-│ @approver_wu 在 §8：数据集边界的措辞需要与 M12 定义对齐（未解决）      │
-├─ 依据与影响 ─────────────────────────────────────────────────────────┤
-│ 证据快照   ES-011  sha256:be31f0a9… （不可变）        [查看]          │
-│ 干预配置   IV-004 v2                                   [查看]          │
-│ AI 配置    Level-5 全禁（当前阶段）                    [查看]          │
-│ 同意影响   需要重新同意：是（影响 24 名合成参与者）                   │
-│ 社区/匹配  社区「园艺角」规则 v2；匹配策略无变化                       │
-│ 审核/安全  审核负责人已就位：是；安全规则无变化                        │
-│ 数据集定义 DD-003（草稿）——⚠ 尚未批准                                │
+│ ⓘ Strong-authentication actions on this screen: approve a protocol version (requires MFA). You are currently at the MFA tier. │
+├─ What you are approving ──────────────────────────────────────────────┤
+│ Type ProtocolVersion  Identifier pv_7f3a91c2 [copy]  Version v3        │
+│ Content hash sha256:9b1c4e0a7d55f231… [full][copy]                     │
+│ Drafted by researcher_lin  Submitted by researcher_lin  2026-08-01 09:14 │
+│ Your relationship to this object: you neither drafted nor submitted it, so you can decide. │
+├─ Changes from v2 (12) ────────────────────────────────────────────────┤
+│ • 3 touching consent (model): adds the "community participation" scope → re-consent required │
+│ • 1 touching dataset boundaries: includes message metadata (not content) │
+│ • 8 textual revisions                            [View differences by section] │
+├─ Unresolved comments (2) ─────────────────────────────────────────────┤
+│ @approver_wu on §8: the wording of the dataset boundary needs to align with the M12 definition (unresolved) │
+├─ Basis and impact ────────────────────────────────────────────────────┤
+│ Evidence snapshot  ES-011  sha256:be31f0a9… (immutable)   [View]      │
+│ Intervention configuration  IV-004 v2                     [View]      │
+│ AI configuration  Level-5 entirely prohibited (current phase) [View]  │
+│ Consent impact  Re-consent required: yes (affects 24 synthetic participants) │
+│ Community/matching  Community "Gardening Corner" rules v2; matching policy unchanged │
+│ Moderation/safety  A moderation owner is in place: yes; safety rules unchanged │
+│ Dataset definition  DD-003 (draft) — ⚠ not yet approved               │
 ├───────────────────────────────────────────────────────────────────────┤
-│ 决定（单选，必填理由）                                                │
-│  ( ) 批准这个版本（需要强认证 MFA）                                    │
-│  ( ) 退回起草人                                                        │
-│ 理由* [__________________________________________________]            │
-│                                              [提交我的决定]           │
+│ Decision (choose one; a reason is required)                           │
+│  ( ) Approve this version (requires strong authentication, MFA)       │
+│  ( ) Send back to the drafter                                         │
+│ Reason* [__________________________________________________]          │
+│                                              [Submit my decision]     │
 └───────────────────────────────────────────────────────────────────────┘
 ```
 
-**③ 状态矩阵**
+**③ State matrix**
 
-| 态 | 呈现 |
+| State | Presentation |
 |---|---|
-| 加载 | `ExactVersionBlock` 优先渲染（版本与哈希是决定的前提，必须先到）；未到齐前决定区禁用并注明 `依据信息还没加载完，暂时不能决定。` |
-| 空队列 | 待评审队列为空：`现在没有待你评审的协议版本。` + `你提交的版本会由其他批准人处理。` |
-| 错误 | 自批准 `AUTHORISATION_DENIED`：本屏**不应到达**（队列层已禁用）；若仍发生，显示 `这是你提交的，按职责分离规则你不能批准它。界面本该提前拦住——这是一个缺陷。`；`VERSION_CONFLICT`：禁用决定区，`这个版本在你阅读期间被改动了。请重新打开最新版本。` |
-| 权限不足 | 无 `protocol.approve`：显示完整只读审批视图（研究者需要看得到依据）+ `你可以查看，但不能批准（需要 ResearchApprover）。` |
-| 需要 MFA | 密码级会话：批准单选项禁用并标 `需要强认证（MFA）`；`退回起草人` 仍可用（不需要 MFA）。说明：`你当前是密码级认证，不能执行批准。可以退回起草人，或以 MFA 重新登录后再批准。` |
+| Loading | The `ExactVersionBlock` renders first (the version and hash are preconditions of the decision and must arrive first); until everything has arrived the decision area is disabled and notes `The basis has not finished loading, so no decision can be made yet.` |
+| Empty queue | An empty review queue: `There are no protocol versions awaiting your review.` + `Versions you submitted are handled by other approvers.` |
+| Error | Self-approval `AUTHORISATION_DENIED`: this screen **should never be reached** in that state (the queue already disables it); if it happens anyway, it shows `You submitted this, so under separation of duties you cannot approve it. The interface should have stopped you earlier — that is a defect.`; `VERSION_CONFLICT`: the decision area is disabled, `This version was changed while you were reading it. Open the latest version again.` |
+| Insufficient permission | Without `protocol.approve`: the full approval view is shown read-only (a researcher needs to see the basis) + `You can view this but cannot approve it (it needs ResearchApprover).` |
+| MFA required | A password-tier session: the approve option is disabled and marked `requires strong authentication (MFA)`; `Send back to the drafter` remains available (it does not require MFA). The explanation: `You are authenticated at the password tier and cannot approve. You can send it back to the drafter, or sign in again with MFA and then approve.` |
 
-**④ 确认文案（原文）**
+**④ Confirmation copy (in full)**
 
 ```
-确认批准 ProtocolVersion pv_7f3a91c2 版本 v3？
-内容哈希：sha256:9b1c4e0a7d55f2318a6e0c4477bd91ea（完整值）
-你批准的是这个确切版本。之后对协议的任何修改都必须走新版本。
-这次批准会以 researcher_wu 的身份署名并写入审计。
-影响：需要重新同意（24 名合成参与者，模型）；数据集定义 DD-003 仍未批准。
-这个操作需要强认证（MFA）。
+Approve ProtocolVersion pv_7f3a91c2, version v3?
+Content hash: sha256:9b1c4e0a7d55f2318a6e0c4477bd91ea (the full value)
+What you are approving is this exact version. Any later change to the protocol has to go through a new version.
+This approval is signed in the name of researcher_wu and written to the audit trail.
+Impact: re-consent required (24 synthetic participants, model); dataset definition DD-003 is still unapproved.
+This action requires strong authentication (MFA).
 ```
-按钮：`确认批准这个版本` / `返回复核`
+Buttons: `Confirm and approve this version` / `Go back and review`
 
-退回：`确认退回给起草人？会把你写的理由发给 researcher_lin，版本回到草稿状态。`
+Sending back: `Send this back to the drafter? The reason you wrote goes to researcher_lin, and the version returns to draft.`
 
-**⑤ 无障碍**：确认对话框 `role="alertdialog" aria-labelledby aria-describedby`，焦点进入后落在标题，Esc = 返回；哈希在对话框内以 `<code>` 完整呈现且允许换行（不横向滚动）；决定 radio 无预选；"未解决评论"是 `<ul>`，数量写进 `<h3>` 文本；`需要强认证（MFA）` 是按钮可访问名的一部分，不是纯视觉徽标。
+**⑤ Accessibility**: the confirmation dialog is `role="alertdialog" aria-labelledby aria-describedby`, focus lands on the title on entry, and Esc = go back; the hash is presented in full inside the dialog as `<code>` and is allowed to wrap (never scrolling horizontally); the decision radios pre-select nothing; "unresolved comments" is a `<ul>` with the count written into the `<h3>` text; `requires strong authentication (MFA)` is part of the button's accessible name, not a purely visual badge.
 
 ---
 
