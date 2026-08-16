@@ -142,31 +142,31 @@
 
 ## I. Cross-screen states and shared components (18)
 
-| # | 单元 | 文档 | 状态 |
+| # | Unit | Doc | Status |
 |---|---|---|---|
-| I1 | 工作区切换与上下文横幅 | §23–24 | 部分 |
-| I2 | 全局导航规则与角色感知导航 | §26–29 | 部分 |
-| I3 | 受保护存在的呈现（不泄露存在性） | §27、ADR-050 | 已在后端强制，前端无统一呈现 |
-| I4 | 状态徽章与生命周期/审批/资源状态呈现 | §43–45、§56 | 散落 |
-| I5 | 可见性与受众预览组件 | §46–47、§261–262 | 未实现 |
-| I6 | 出处与来源组件（Source before assertion） | §51、§264 | 未实现 |
-| I7 | 认识论类型标签（Doc 19 §10 十类） | §52 | 未实现 |
-| I8 | AI 参与标签与 Draft 呈现 | §53、§211 | 部分（消息草稿为人写草稿；AI 起草按 D-14 暂不启用，故当前无 AI 参与标签需求）|
-| I9 | 版本呈现与当前/历史对比 | §54–55 | 未实现 |
-| I10 | 投递状态呈现（诚实措辞） | §50、§161–162 | ✅ 已实现 |
-| I11 | 加载/骨架/空/离线/同步/陈旧状态 | §224–229 | 部分（2026-08-04 核对更正，此前写「缺失」）：`StateBlock.tsx` 提供 `LoadingState` / `EmptyState` / `ErrorState` 三个共用组件，全平台在用，且守住一条规矩——**「还没有」与「还没加载」是两个事实，必须读起来不同**；一片空白若含义是「正在加载」，那就是在说谎。每个状态都是**图标 + 文字**，颜色只作次要线索，因此在灰度、打印与色觉差异下同样成立。**未做**：骨架屏、离线/同步/陈旧三态（应用没有离线能力，画一个离线态等于承诺一件做不到的事） |
-| I12 | 版本冲突呈现 | §230 | 部分：审批决策屏在执行前重读对象，若内容哈希或时间戳变动即拒绝执行并说明（C6）；**未做**：通用的版本冲突组件 |
-| I13 | 错误状态与严重度分级（可恢复/阻断/安全关键/安全性关键） | §231–237 | ✅ 已实现（2026-08-04 核对更正，此前写「部分（原始错误码）」）：`errors.ts` 把服务器错误码译成四段结构（标题 / 安抚 / 原因 / 下一步）并分三级严重度，映射到 warning / danger / Safety 三个语义族；原始错误码收进 `<details>`，因为它只对支持人员有用。参与者侧与员工侧措辞分开（`presentError` 与 `staffLoadError` / `staffActionError`）——**读取失败与命令被拒不是同一回事**，把「职责分离」当成读取失败的原因曾是一个真实缺陷 |
-| I14 | 会话超时与共享设备超时 | §238–239 | ✅ 已实现（2026-08-05）：普通 20/25 分钟、共享设备 5/7 分钟；倒计时是文字并带 `role="timer"`，整半分钟通过独立的 `aria-live="polite"` 播报（每秒播报会把其他一切埋掉）；共享设备最多延长一次，普通模式不限次；超时后回到登录页并显示中性说明（只说计时到了，不说屏幕上原本是什么）。**三处按事实偏离设计稿**：（1）不说「已保存成草稿」——平台没有草稿（D-20）；（2）做对话框不做粘性条（D-19）；（3）「空闲」只认按下与按键，不认指针移动——袖子压在触控板上不该等于「人还在」 |
-| I15 | 确认模式族（简单/详细/step-up/双人批准/撤销） | §240–246 | 部分（已有确认对话框） |
-| I16 | 表单族（敏感字段、多步表单） | §247–249 | 部分 |
-| I17 | 数据展示族（表格、时间线、图表、卡片家族） | §251–259 | 未实现 |
-| I18 | 通知策略与隐私边界 | §271–276 | 未实现 |
+| I1 | Workspace switching and the context banner | §23–24 | Partial |
+| I2 | Global navigation rules and role-aware navigation | §26–29 | Partial |
+| I3 | Presenting protected existence (never disclosing that something exists) | §27, ADR-050 | Enforced in the backend; no unified presentation in the frontend |
+| I4 | Status badges and the presentation of lifecycle / approval / resource states | §43–45, §56 | Scattered |
+| I5 | Visibility and audience-preview components | §46–47, §261–262 | Not implemented |
+| I6 | Provenance and source components (source before assertion) | §51, §264 | Not implemented |
+| I7 | Epistemic type labels (the ten types in Doc 19 §10) | §52 | Not implemented |
+| I8 | AI-involvement labels and Draft presentation | §53, §211 | Partial (message drafts are written by people; AI drafting is switched off under D-14, so there is currently no need for an AI-involvement label)|
+| I9 | Version presentation and current/historical comparison | §54–55 | Not implemented |
+| I10 | Delivery state presentation (honest wording) | §50, §161–162 | ✅ Implemented |
+| I11 | Loading / skeleton / empty / offline / syncing / stale states | §224–229 | Partial (corrected against the code on 2026-08-04; this previously read "missing"): `StateBlock.tsx` provides the three shared components `LoadingState` / `EmptyState` / `ErrorState`, used across the platform, and holds one rule — **"there is nothing yet" and "it has not loaded yet" are two different facts and must read differently**; a blank area that means "loading" is a lie. Every state is an **icon + words**, with colour only as a secondary cue, so it holds in greyscale, in print, and for colour-vision differences. **Not done**: skeleton screens, and the offline / syncing / stale trio (the application has no offline capability, and drawing an offline state would promise something it cannot do) |
+| I12 | Version-conflict presentation | §230 | Partial: the approval decision screens re-read the object before acting and refuse, with an explanation, if the content hash or timestamp has moved (C6); **not done**: a general version-conflict component |
+| I13 | Error states and severity grading (recoverable / blocking / safety-critical / security-critical) | §231–237 | ✅ Implemented (corrected against the code on 2026-08-04; this previously read "partial (raw error codes)"): `errors.ts` translates server error codes into a four-part structure (title / reassurance / cause / next step) across three severities, mapped to the warning / danger / Safety semantic families; the raw error code is folded into a `<details>`, because it is useful only to support staff. The participant-side and staff-side wordings are separate (`presentError` versus `staffLoadError` / `staffActionError`) — **a failed read and a refused command are not the same thing**, and giving "separation of duties" as the reason a read failed was a real defect |
+| I14 | Session timeout and shared-device timeout | §238–239 | ✅ Implemented (2026-08-05): 20/25 minutes normally, 5/7 minutes on a shared device; the countdown is words carrying `role="timer"`, with each half-minute announced through a separate `aria-live="polite"` region (announcing every second would bury everything else); a shared device may be extended once at most, and normal mode without limit; on timeout it returns to the sign-in page with a neutral explanation (saying only that the timer ran out, never what had been on screen). **Three factual departures from the design**: (1) it does not say "saved as a draft" — the platform has no drafts (D-20); (2) it is a dialog rather than a sticky bar (D-19); (3) "idle" counts presses and keystrokes only, not pointer movement — a sleeve resting on a trackpad should not count as "the person is still here" |
+| I15 | The confirmation pattern family (simple / detailed / step-up / two-person approval / undo) | §240–246 | Partial (confirmation dialogs exist) |
+| I16 | The form family (sensitive fields, multi-step forms) | §247–249 | Partial |
+| I17 | The data-presentation family (tables, timelines, charts, the card family) | §251–259 | Not implemented |
+| I18 | Notification policy and privacy boundaries | §271–276 | Not implemented |
 
 ---
 
-## 优先级建议（供设计代理排期）
+## Suggested priorities (for a design agent's scheduling)
 
-1. **P0 — 让已实现的界面可用且合规**（2026-08-05 更新）：A1–A9 的**令牌已定义**、I11/I13 的**共用组件已实现**，因此 P0 不是「建立基座」而是**把基座用起来**。已完成：三档密度与四档字号的实际入口（B13 阅读与显示偏好，此前这些令牌定义了却没有任何代码去设它们）、A9 共享设备隐私与 I14 会话超时。**P0 余下**：图标集（A8 令牌已有、图标本身没有）。这仍是唯一能立刻落到已部署原型上的部分。
-2. **P1 — 补齐后端已具备、前端缺失的高价值流程**（2026-08-04 更新：**本条已基本走完**）：B9–B12、C3–C4、C14、C15–C16、C17 均已部分实现，演示种子也已把这些链路种上数据；B15（评估）按 D-17 阻塞，B11 按 D-16 不实现。剩余的是 C7–C11、C13 与 E/F 两个工作区。
-3. **P2 — 概念完整性所需**：其余研究者/审核/安全流程、管理工作区、公共 surface、AI 伴侣（受 Level-5 禁止约束）。
+1. **P0 — make the screens that exist usable and compliant** (updated 2026-08-05): the **tokens for A1–A9 are defined** and the **shared components for I11/I13 are implemented**, so P0 is not "build the foundation" but **put the foundation to use**. Done: real entry points for the three density levels and four font sizes (B13, reading and display preferences — these tokens were previously defined with no code setting them), A9 shared-device privacy, and I14 session timeouts. **Remaining in P0**: the icon set (A8's tokens exist; the icons themselves do not). This is still the only part that can land on the deployed prototype immediately.
+2. **P1 — fill in the high-value flows the backend already has and the frontend lacks** (updated 2026-08-04: **this item is largely complete**): B9–B12, C3–C4, C14, C15–C16 and C17 are all partially implemented, and the demo seed now seeds data along those chains; B15 (assessments) is blocked under D-17, and B11 is not to be implemented under D-16. What remains is C7–C11, C13, and the E and F workspaces.
+3. **P2 — what conceptual completeness requires**: the remaining researcher / moderation / safety flows, the administration workspace, the public surfaces, and the AI companion (constrained by the Level-5 prohibition).
