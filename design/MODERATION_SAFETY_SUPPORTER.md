@@ -1,167 +1,178 @@
-# 审核 / 安全 / 支持者 / 公共 surface 设计规范
+# Moderation / Safety / Supporter / public surface design specification
 
-> 覆盖 UI_INVENTORY 的 **D1–D6（支持者 6）、E1–E6（审核 6）、F1–F6（安全 6）、H1–H5（公共与邀请 5）**，共 **23 个界面单元**。
-> 规范来源：Doc 20 v1.3 §18–20、§22、§27、§38–40、§92–93、§127–129、§180–204、§224–246、§265–267、§280–282、§285–307、§310–320；DESIGN_BRIEF；THREAT_MODEL；ACCESSIBILITY_TEST_PLAN。
-> 阶段口径（ADR-061/062）：全部合成数据、模拟供应商、**dev-header 身份桩**。本文件描述的界面必须如实呈现这一点，**不得暗示已获伦理批准、已有真实认证、或正在接触真实参与者**。
-> 本文件只定义 D/E/F/H 四组界面。设计系统基座（A1–A9）与跨界面共用组件（I1–I18）由另行交付的文件定义；本文件只**消费**其令牌与组件，消费清单见 §1.7。
+> Covers UI_INVENTORY's **D1–D6 (supporter, 6), E1–E6 (moderation, 6), F1–F6 (safety, 6) and H1–H5 (public and invitation, 5)** — **23 interface units** in total.
+> Source of specification: Doc 20 v1.3 §18–20, §22, §27, §38–40, §92–93, §127–129, §180–204, §224–246, §265–267, §280–282, §285–307, §310–320; DESIGN_BRIEF; THREAT_MODEL; ACCESSIBILITY_TEST_PLAN.
+> Phase framing (ADR-061/062): all synthetic data, simulated providers, and the **dev-header identity stub**. The interfaces described here must present that honestly and **must not imply that ethics approval has been obtained, that real authentication exists, or that real participants are being reached**.
+> This file defines only the D/E/F/H groups. The design system foundation (A1–A9) and the cross-screen shared components (I1–I18) are defined in separately delivered files; this file only **consumes** their tokens and components, and the consumption list is in §1.7.
 
----
-
-## 目录
-
-- §1 共用约定（先读）
-- §2 D. 支持者工作区（D1–D6）
-- §3 E. 审核工作区（E1–E6）
-- §4 F. 安全工作区（F1–F6）
-- §5 H. 公共与邀请 surface（H1–H5）
-- §6 举报人保护：可检验检查表
-- §7 证据最小化：可检验规则
-- §8 对现有实现的改动清单与测试影响
-- §9 设计取舍（已决定，附理由）
-- §10 未决项（需产品 / 伦理 / 法务决策）
+> **On the copy blocks in this file.** The literal copy quoted throughout is a
+> **statement of intent**, not the authoritative wording. Under D-9 the English
+> strings in the code are the current source of truth for what a screen says,
+> and the specification and the implementation are a known, accepted
+> divergence. This file was written in Chinese and has been translated to
+> English; translating a copy block **does not** make it the implemented
+> string. Where the two differ, the code wins, and the difference is a fact
+> about the product to be checked — not a licence to edit either one to match
+> the other.
 
 ---
 
-## §1 共用约定（先读）
+## Contents
 
-### 1.1 三个工作区的语气分工
+- §1 Shared conventions (read first)
+- §2 D. Supporter workspace (D1–D6)
+- §3 E. Moderation workspace (E1–E6)
+- §4 F. Safety workspace (F1–F6)
+- §5 H. Public and invitation surfaces (H1–H5)
+- §6 Reporter protection: a checkable checklist
+- §7 Evidence minimisation: checkable rules
+- §8 The list of changes to the existing implementation, and their effect on tests
+- §9 Design trade-offs (decided, with reasons)
+- §10 Open items (needing a product / ethics / legal decision)
 
-| 工作区 | 语气（Doc 20 §280–282） | 密度档（§315） | 绝不出现 |
+---
+
+## §1 Shared conventions (read first)
+
+### 1.1 The division of tone between the three workspaces
+
+| Workspace | Tone (Doc 20 §280–282) | Density level (§315) | Never appears |
 |---|---|---|---|
-| 支持者 | 平实、第二人称、明确「你不是本人」 | 参与者宽松档 `--space-scale-spacious` | 「代表本人」「你的记录」「你的故事」 |
-| 审核 | 循证、不煽动、按比例、指向规则、可供申诉复核 | 标准档 `--space-scale-standard` | 「恶意用户」「惯犯」「举报人说」 |
-| 安全 | 冷静、直接、非诊断、最小必要、面向行动 | 标准档（不用密集档：安全屏不比速度更重要的是不出错） | 「危机」「紧急」用于未确认信号；诊断性词（「抑郁」「自杀倾向」） |
+| Supporter | Plain, second person, explicit that **you are not this person** | The participant's spacious level, `--space-scale-spacious` | "on their behalf", "your records", "your story" |
+| Moderation | Evidence-based, non-inflammatory, proportionate, pointing at the rule, open to appeal and review | Standard, `--space-scale-standard` | "malicious user", "repeat offender", "the reporter says" |
+| Safety | Calm, direct, non-diagnostic, minimal, oriented to action | Standard (not dense: on a safety screen, what matters more than speed is not getting it wrong) | "crisis" or "emergency" for an unconfirmed signal; diagnostic words ("depression", "suicidal") |
 
-### 1.2 五类状态的统一口径（本文件所有状态矩阵沿用）
+### 1.2 The five states, defined once (used by every state matrix in this file)
 
-| 代号 | 含义 | HTTP 对应 | 呈现规则 |
+| Code | Meaning | HTTP | Presentation rule |
 |---|---|---|---|
-| **LOADING** | 请求进行中 | — | 文本态 `正在载入…`，`role="status"` + `aria-busy="true"`。**队列、决定、处置、批准、投递、锁定一律不得用骨架屏**（§225）——骨架屏会让「还没读到」看起来像「已经是空的」 |
-| **EMPTY** | 请求成功，结果为 0，且这是正常状态 | 200 | 必须回答四问（§226）：为什么空 / 这正常吗 / 你能做什么 / 去哪求助。空队列**不得**用祝贺性措辞（「太棒了，全部处理完！」）——它会激励清空而非正确处置 |
-| **ERROR** | 请求失败 | 5xx / 网络 | 说明发生了什么、有没有丢失输入、什么**没有**发生、能否安全重试、如何求助；技术码折叠为可选细节（§231） |
-| **FORBIDDEN** | 身份已知，角色无此权限 | 403 | 明说「你的角色不能做这件事」+ 这不是错误 + 谁能做 + 申请路径。**不得**同时暗示对象是否存在 |
-| **PROTECTED** | 受保护存在（DenyAndHideExistence） | 404 | 一律通用文案「无法显示这个内容。」**不得**区分「不存在」与「你无权看到」，不得出现「已被删除」「已被屏蔽」「该用户不存在」等任何可用于枚举的措辞（§27、ADR-050） |
+| **LOADING** | The request is in progress | — | The text state `Loading…`, with `role="status"` + `aria-busy="true"`. **Skeleton screens are forbidden for queues, decisions, dispositions, approvals, deliveries and locking** (§225) — a skeleton makes "not read yet" look like "already empty" |
+| **EMPTY** | The request succeeded, the result is 0, and this is a normal state | 200 | Must answer the four questions (§226): why is it empty / is this normal / what can you do / where can you get help. An empty queue **must not** use congratulatory wording ("Great, all done!") — that rewards clearing the queue rather than disposing of things correctly |
+| **ERROR** | The request failed | 5xx / network | State what happened, whether any input was lost, what did **not** happen, whether it is safe to retry, and how to get help; the technical code folds away as optional detail (§231) |
+| **FORBIDDEN** | The identity is known; the role does not hold this permission | 403 | Say plainly "your role cannot do this" + this is not an error + who can + how to request it. **Must not** simultaneously imply whether the object exists |
+| **PROTECTED** | Protected existence (DenyAndHideExistence) | 404 | Always the same generic copy, "This content cannot be shown." **Must not** distinguish "does not exist" from "you are not allowed to see it", and must never use wording usable for enumeration such as "has been deleted", "has been blocked" or "no such user" (§27, ADR-050) |
 
-> **FORBIDDEN 与 PROTECTED 必须是两套完全不同的文案，且两者都不得泄露对方的信息。**
-> 判据：把同一个 URL 交给两个不同角色，两人看到的页面若能拼出「这个对象存在」，即为设计缺陷。
+> **FORBIDDEN and PROTECTED must be two entirely different pieces of copy, and neither may leak the other's information.**
+> The test: give the same URL to two different roles, and if the two pages between them let you conclude "this object exists", that is a design defect.
 
-**通用文案原文（可直接落地）：**
+**The generic copy in full (ready to land):**
 
 ```
-LOADING    正在载入…
-EMPTY      （见各屏）
-ERROR      没能完成这次请求。你填写的内容还在，没有被提交。可以再试一次；如果仍然失败，请联系研究支持（见「帮助」）。
-           [展开技术细节]  错误码：{code}｜请求时间：{ts}
-FORBIDDEN  你当前的角色不能执行这项操作。这不是出错。
-           这项操作由 {角色名} 负责。如果你认为你应当有此权限，请通过「帮助」申请。
-PROTECTED  无法显示这个内容。
-           如果你是通过链接进来的，这个链接可能已经失效。返回上一层继续工作。
+LOADING    Loading…
+EMPTY      (see each screen)
+ERROR      This request could not be completed. What you typed is still here and has not been submitted. You can try again; if it keeps failing, contact research support (see "Help").
+           [show technical details]  Error code: {code} | Request time: {ts}
+FORBIDDEN  Your current role cannot carry out this action. Nothing has gone wrong.
+           This action is the responsibility of {role name}. If you believe you should have this permission, request it through "Help".
+PROTECTED  This content cannot be shown.
+           If you arrived here from a link, the link may no longer be valid. Go back a level and carry on with your work.
 ```
 
-### 1.3 确认模式的选用（§240–246）
+### 1.3 Choosing a confirmation pattern (§240–246)
 
-| 档 | 用于 | 组件 |
+| Tier | Used for | Component |
 |---|---|---|
-| 简单确认 | 可撤销、低影响（保存草稿、撤回自己的提交） | `<dialog role="alertdialog">`，一句话 + 两个等权按钮 |
-| 详细确认 | 高影响、可申诉（审核决定、关闭信号、暂停功能） | 结构化确认体：**对象 / 效果 / 期限 / 对方会看到什么 / 申诉路径 / 可逆性 / 审计** 七行 |
-| Step-up（MFA） | 转为安全事件、封禁、恢复访问 | 详细确认 + 认证强度提示；**在动作可见时就提示所需强度，不得等到提交才失败** |
-| 双人批准 | 本文件范围内不涉及（属研究者工作区） | — |
+| Simple confirmation | Reversible, low impact (saving a draft, withdrawing your own submission) | `<dialog role="alertdialog">`, one sentence + two buttons of equal weight |
+| Detailed confirmation | High impact, open to appeal (a moderation decision, closing a signal, suspending a feature) | A structured confirmation body of seven lines: **object / effect / duration / what the other person will see / appeal route / reversibility / audit** |
+| Step-up (MFA) | Converting to a safety event, banning, restoring access | Detailed confirmation + a notice of the authentication strength required; **state the strength required while the action is still visible, never let it fail only on submission** |
+| Two-person approval | Out of scope for this file (it belongs to the researcher workspace) | — |
 
-**不可协商的确认规则：**
+**Non-negotiable confirmation rules:**
 
-1. 一个对话框只确认一件事（DESIGN_BRIEF §2）。
-2. 「确认」与「返回」**视觉等重**，不得用颜色或尺寸诱导（无暗黑模式）。
-3. 确认对话框出现前**零网络请求**（现有组件测试已断言此行为，须保持）。
-4. 破坏性/不可变动作的确认按钮**必须点名动作**：`确认记录决定`，不得只写 `确认`。
-5. **不可变声明必须与申诉路径同屏出现**——只说不可改而不给出路，是设计缺陷。
+1. One dialog confirms one thing (DESIGN_BRIEF §2).
+2. "Confirm" and "Go back" carry **equal visual weight**; colour and size must not be used to steer (no dark patterns).
+3. **Zero network requests** before the confirmation dialog appears (the existing component tests assert this behaviour and it must be kept).
+4. The confirm button of a destructive or immutable action **must name the action**: `Confirm and record the decision`, never just `Confirm`.
+5. **A statement of immutability must appear on the same screen as the appeal route** — saying it cannot be changed while offering no way out is a design defect.
 
-### 1.4 徽章与状态呈现（颜色不得是唯一指示，§56、§311–312）
+### 1.4 Badges and state presentation (colour must not be the only indicator; §56, §311–312)
 
-每个状态徽章 = **图标 + 文字标签 +（可选）颜色**，且文字标签本身能独立表意。
+Every state badge = **an icon + a text label + (optionally) colour**, where the text label carries the meaning on its own.
 
-| 徽章 | 文字 | 图标语义 | 令牌 |
+| Badge | Text | Icon meaning | Token |
 |---|---|---|---|
-| 安全信号（未确认） | `信号 · 未确认` | 空心圆 | `--color-safety-signal` |
-| 安全事件（已确认） | `安全事件 · 已确认` | 实心方 | `--color-safety-event` |
-| 审核个案 | `个案 · {状态}` | 文件 | `--color-moderation` |
-| AI/自动来源 | `自动产生的信号（未经人工确认）` | 方括号 | `--color-ai` |
-| 不可变记录 | `已写入审计 · 不可修改` | 锁 | `--color-text-muted` |
-| 权限有效期 | `权限有效期至 {日期}` | 时钟 | `--color-info` |
+| Safety signal (unconfirmed) | `Signal · unconfirmed` | Hollow circle | `--color-safety-signal` |
+| Safety event (confirmed) | `Safety event · confirmed` | Solid square | `--color-safety-event` |
+| Moderation case | `Case · {state}` | Document | `--color-moderation` |
+| AI / automated source | `Signal raised automatically (not confirmed by a person)` | Square brackets | `--color-ai` |
+| Immutable record | `Written to the audit trail · cannot be changed` | Lock | `--color-text-muted` |
+| Permission expiry | `Permission valid until {date}` | Clock | `--color-info` |
 
-> **信号与事件的区分不得只靠颜色**：形状（空心/实心）+ 文字（未确认/已确认）+ 分区（不同 `<section>`，各自有标题与计数）三重冗余。
+> **Signal and event must not be distinguished by colour alone**: shape (hollow/solid) + words (unconfirmed/confirmed) + separation (different `<section>` elements, each with its own heading and count) give three redundant channels.
 
-### 1.5 线框记号
+### 1.5 Wireframe notation
 
 ```
-[按钮]        主要/次要按钮（视觉等重时并列书写）
-( )           单选   [ ] 复选（一律无预选）
-▸ / ▾         折叠 / 展开（默认折叠 = 需要显式动作才调取）
-⚑             需要 MFA 的动作
-🔒            写入后不可修改
-─────         区块分隔
-«…»           系统生成文本占位
+[Button]      Primary/secondary button (written side by side where they carry equal weight)
+( )           Radio    [ ] Checkbox (never pre-selected)
+▸ / ▾         Collapsed / expanded (collapsed by default = an explicit action is needed to retrieve it)
+⚑             An action requiring MFA
+🔒            Cannot be changed once written
+─────         A block separator
+«…»           A placeholder for system-generated text
 ```
 
-移动断点基准 360px；所有线框以 **单列** 表达，桌面仅做栏宽约束（`max-width: 44rem`）与可选的队列/详情两栏，**信息顺序在任何断点下不变**（§305）。
+The mobile baseline breakpoint is 360px; every wireframe is expressed as a **single column**, with desktop adding only a column-width constraint (`max-width: 44rem`) and an optional two-column queue/detail split. **The order of the information does not change at any breakpoint** (§305).
 
-### 1.6 全屏通用结构（D/E/F 三个工作区共享）
+### 1.6 The common full-screen structure (shared by the D/E/F workspaces)
 
 ```
 ┌────────────────────────────────┐
-│ [跳到主要内容]                  │  skip-link
+│ [Skip to main content]         │  skip-link
 ├────────────────────────────────┤
-│ 上下文横幅（I1）                │  ← 见 1.6.1
+│ Context banner (I1)            │  ← see 1.6.1
 ├────────────────────────────────┤
-│ <nav aria-label="…导航">        │  当前项 aria-current="page"
+│ <nav aria-label="… navigation">│  the current item carries aria-current="page"
 ├────────────────────────────────┤
 │ <main id="main">               │
-│   <h1> 屏名                     │
-│   …内容…                        │
+│   <h1> screen name             │
+│   …content…                    │
 │ </main>                        │
 ├────────────────────────────────┤
-│ <p role="status" aria-live>     │  状态播报区（常驻，空时不占视觉）
+│ <p role="status" aria-live>    │  the announcement region (permanent; takes no visual space when empty)
 └────────────────────────────────┘
 ```
 
-#### 1.6.1 上下文横幅（每屏必现，不可折叠）
+#### 1.6.1 The context banner (present on every screen, not collapsible)
 
 ```
 ┌────────────────────────────────┐
-│ 概念研究原型 · 合成数据          │
-│ 身份来自开发环境标识，不是真实认证 │
-│ 当前：{actorId}（{密码/MFA}级）  │
+│ Conceptual research prototype · synthetic data      │
+│ Identity comes from a development-environment       │
+│ header. This is not real authentication.            │
+│ Currently: {actorId} ({password/MFA} tier)          │
 └────────────────────────────────┘
 ```
 
-理由：THREAT_MODEL §6.1「无真实认证」是**固有高风险**。横幅是唯一能持续对操作者说明「你现在做的事没有认证背书」的位置，不得因为影响美观而折叠或只在登录屏出现。
+The reason: THREAT_MODEL §6.1, "no real authentication", is an **inherent high risk**. The banner is the only place that can go on telling an operator "what you are doing right now carries no authentication behind it", and it must not be collapsed for the sake of appearance or shown only on the sign-in screen.
 
-### 1.7 对设计系统（A1–A9 / I 系列）的消费清单
+### 1.7 What this file consumes from the design system (A1–A9 / the I series)
 
-本文件依赖以下令牌与组件；若基座命名不同，以基座为准并回改本文件：
+This file depends on the tokens and components below; where the foundation names something differently, the foundation wins and this file is corrected to match:
 
-- 颜色：`--color-surface-{base,raised,sunken}`、`--color-text-{default,muted,inverse}`、`--color-border-{default,strong}`、`--color-action-{primary,secondary}`、`--color-focus`、`--color-{info,success,warning,danger}`、`--color-safety-{signal,event}`、`--color-moderation`、`--color-ai`、`--color-disabled`
-- 间距：`--space-scale-{dense,standard,spacious}` 及 `--space-{1..8}`
-- 排版：`--type-{body,label,heading-{1,2,3},mono}`、`--type-measure`（行宽上限 ≤ 70 字符）
-- 焦点：`--focus-width`、`--focus-offset`、`--focus-color`
-- 形状：`--radius-{sm,md}`、`--border-width-{default,strong}`
-- 组件：I3 受保护存在呈现、I4 状态徽章、I10 投递状态、I11 加载/空、I13 错误分级、I15 确认模式族、I18 通知边界
+- Colour: `--color-surface-{base,raised,sunken}`, `--color-text-{default,muted,inverse}`, `--color-border-{default,strong}`, `--color-action-{primary,secondary}`, `--color-focus`, `--color-{info,success,warning,danger}`, `--color-safety-{signal,event}`, `--color-moderation`, `--color-ai`, `--color-disabled`
+- Spacing: `--space-scale-{dense,standard,spacious}` and `--space-{1..8}`
+- Typography: `--type-{body,label,heading-{1,2,3},mono}`, `--type-measure` (a measure of ≤ 70 characters)
+- Focus: `--focus-width`, `--focus-offset`, `--focus-color`
+- Shape: `--radius-{sm,md}`, `--border-width-{default,strong}`
+- Components: I3 protected-existence presentation, I4 state badges, I10 delivery states, I11 loading/empty, I13 error grading, I15 the confirmation pattern family, I18 notification boundaries
 
 ---
 
-## §2 D. 支持者工作区（D1–D6）
+## §2 D. Supporter workspace (D1–D6)
 
-> 贯穿全组的第一原则（Doc 20 §18、§128、§182）：**支持者不是本人。** 支持者提交的是「贡献」，本人接受后它仍然是**支持者的贡献**，永远不会变成**本人的证言**。界面措辞必须让这个区别无法误读——不是靠一句脚注，而是靠字段本身。
+> The first principle running through this whole group (Doc 20 §18, §128, §182): **a supporter is not the person themselves.** What a supporter submits is a "contribution", and once the person accepts it, it remains **the supporter's contribution** — it never becomes **the person's own testimony**. The interface wording must make that distinction impossible to misread, and not by way of a footnote but through the fields themselves.
 
-### D1 支持者首页
+### D1 Supporter home
 
-**目标 / 这一屏要回答的问题**
+**Purpose / the questions this screen answers**
 
-- 我现在被授权做什么、做不了什么？（可见权限）
-- 有没有等我处理的事？（邀请、本人请求的协助）
-- 我提交的东西现在在谁手里？
-- 出问题时我去哪里？
+- What am I currently authorised to do, and what can I not do? (visible permissions)
+- Is there anything waiting for me? (invitations, help the person has asked for)
+- Who has the things I submitted, right now?
+- Where do I go when something goes wrong?
 
-**线框（移动优先）**
+**Wireframe (mobile first)**
 
 ```
 概念研究原型 · 合成数据
