@@ -1271,78 +1271,78 @@ channels through "escalation contacts" first, then come back
 and record the disposition.
               [升级联系人清单]
 
-── 最小必要背景 ───────────────
-来源：参与者本人在「安全担忧」中提交
-时间：2026-08-03 10:12
-原文：«…»
-相关内容引用：消息 M-9921（1 条）
-  只引用与本信号相关的内容。
+── The minimum necessary background ──
+Source: submitted by the participant under "safety concerns"
+When: 2026-08-03 10:12
+As written: «…»
+Related content cited: message M-9921 (1)
+  Only content related to this signal is cited.
 
-── 当前状态（影响你能做什么）───
-同意状态：消息=允许 · 匹配=允许 · AI=不适用
-暂停状态：无
-既往安全历史：过去 12 个月 1 条已关闭信号
-  · 2026-02-11 · 关闭为非安全事件
-  不显示与安全无关的研究或评估数据。
+── Current state (it determines what you can do) ──
+Consent: messages = allowed · matching = allowed · AI = not applicable
+Suspension: none
+Previous safety history: 1 closed signal in the past 12 months
+  · 2026-02-11 · closed as not a safety event
+  Research or assessment data unrelated to safety is not shown.
 
-── 自动系统的提示（如有）───────
-[自动产生 · 未经人工确认]
-可能性提示：自伤风险相关表述
-这是提示，不是判断，也不是诊断。
+── What the automated system suggests (if anything) ──
+[Raised automatically · not confirmed by a person]
+Possible relevance: wording associated with self-harm risk
+This is a prompt. It is not a judgement, and it is not a diagnosis.
 
-── 结论（四选一，同等正当）─────
-( ) 关闭：不是安全事件
-( ) 继续观察
-( ) 升级：需要更高级别审查
-( ) 转为安全事件 ⚑（需要 MFA）
+── Conclusion (choose one of four; all equally legitimate) ──
+( ) Close: not a safety event
+( ) Keep watching
+( ) Escalate: needs higher-level review
+( ) Convert to a safety event ⚑ (requires MFA)
 
-理由（必填，四种结论都必填）：
+Reason (mandatory for all four conclusions):
 ┌────────────────────────────┐
 └────────────────────────────┘
 
-        [记录处置]
+        [Record the disposition]
 ```
 
-**中立性的具体设计手段（这是本组最容易违反的约束）**
+**The specific measures that keep this neutral (the constraint this group breaks most easily)**
 
-| 手段 | 规则 |
+| Measure | Rule |
 |---|---|
-| 排序 | 四个结论按「影响由小到大」自然排列，**不做视觉分组**，不把「转为事件」单独放在底部或用分隔线隔开 |
-| 视觉权重 | 四个单选项字号、行高、间距完全一致；`转为安全事件` 只多一个 ⚑ MFA 标记，**不加危险色** |
-| 措辞 | `关闭：不是安全事件` —— 不写「无需处理」「误报」「排除」；`转为安全事件` —— 不写「确认危险」「立案」 |
-| 必填对称 | 四种结论都必填理由、字数下限相同；**不得**只对「关闭」要求解释 |
-| 确认对称 | 四种结论都走**详细确认档**，结构完全一致 |
-| 无预选 | 单选组无预选。现有实现的 `<select>` 默认选中「关闭：不是安全事件」——这是实质性的默认倾向，必须改（§8） |
+| Ordering | The four conclusions run in the natural order of increasing impact, with **no visual grouping**; "convert to an event" is not set apart at the bottom or separated by a rule |
+| Visual weight | All four options share font size, line height and spacing exactly; `convert to a safety event` carries only the extra ⚑ MFA marker and **no danger colour** |
+| Wording | `Close: not a safety event` — never "no action needed", "false alarm" or "ruled out"; `convert to a safety event` — never "danger confirmed" or "case opened" |
+| Symmetric requirements | All four require a reason, with the same minimum length; requiring an explanation **only** for "close" is forbidden |
+| Symmetric confirmation | All four go through the **detailed confirmation tier**, with an identical structure |
+| Nothing pre-selected | The radio group pre-selects nothing. The current implementation's `<select>` defaults to "close: not a safety event", which is a substantive default leaning, and must be changed (§8, C-2 — still open as of 2026-08-16) |
 
-**状态矩阵**
+**State matrix**
 
-| 状态 | 呈现与文案原文 |
+| State | Presentation and copy in full |
 |---|---|
-| LOADING | `正在载入信号…`；结论区在背景载入完成前 `disabled`：`背景载入完成后才能记录处置。` |
-| EMPTY | 无相关内容引用时：`这条信号没有关联的平台内容。这不影响你作出结论——你可以只依据来源陈述判断。` |
-| ERROR | 安全关键错误：`没能载入这条信号的背景。**不要凭印象作处置。** 请重试；若持续失败，按值班流程通过其他渠道核实。[重试] [升级联系人清单]` |
-| FORBIDDEN | `你的角色不能分诊安全信号。这不是出错。请通过「升级联系人清单」转达。` |
-| PROTECTED | `无法显示这个内容。这条信号可能已由他人分诊。返回队列继续。` |
+| LOADING | `Loading the signal…`; the conclusion area is `disabled` until the background has loaded: `You can record a disposition once the background has loaded.` |
+| EMPTY | With no related content cited: `This signal has no platform content linked to it. That does not prevent you reaching a conclusion — you can judge on the source statement alone.` |
+| ERROR | A safety-critical error: `The background for this signal could not be loaded. **Do not make a disposition from impression.** Please try again; if it keeps failing, verify through another channel under the duty process. [Try again] [The escalation contact list]` |
+| FORBIDDEN | `Your role cannot triage safety signals. Nothing has gone wrong. Please pass it on through "the escalation contact list".` |
+| PROTECTED | `This content cannot be shown. This signal may have been triaged by somebody else. Go back to the queue and carry on.` |
 
-**无障碍要点**
+**Accessibility points**
 
-- 紧急限制说明是页面**第二个元素**（紧跟 `<h1>`），`role="note"`，不可折叠。
-- 四个结论在 `<fieldset><legend>结论（四种结论同等正当，都需要填写理由）</legend>`——legend 本身承载中立性声明。
-- MFA 提示在选中该项时通过 `aria-live="polite"` 播报，不用弹窗打断。
+- The note about what this is not for is the **second element on the page** (immediately after the `<h1>`), as `role="note"`, and is not collapsible.
+- The four conclusions sit in `<fieldset><legend>Conclusion (all four are equally legitimate and all require a reason)</legend>` — the legend itself carries the statement of neutrality.
+- The MFA notice is announced through `aria-live="polite"` when that option is selected, rather than interrupting with a dialog.
 
 ---
 
-### F4 关闭为非安全事件 / 转为安全事件
+### F4 Closing as not a safety event / converting to a safety event
 
-> 两个方向共用**同一个确认模板**，只有内容不同。这是「同等可达、措辞中立」的落地方式：同构的确认体本身就是中立性的证据。
+> Both directions share **one confirmation template**, differing only in content. This is how "equally reachable, neutrally worded" is actually delivered: an isomorphic confirmation body is itself the evidence of neutrality.
 
-**确认文案原文 —— 关闭为非安全事件**
+**Confirmation copy in full — closing as not a safety event**
 
 ```
-确认把信号 SS-2210 记录为「关闭：不是安全事件」？
+Record signal SS-2210 as "close: not a safety event"?
 
-对象：安全信号 SS-2210（参与者 P-118）
-结论：不构成安全事件
+Object: safety signal SS-2210 (participant P-118)
+Conclusion: does not constitute a safety event
 理由：«你填写的理由»
 后续支持：[ ] 安排后续观察  [ ] 转介研究支持
       [ ] 不需要后续
