@@ -645,133 +645,134 @@ Sending back: `Send this back to the drafter? The reason you wrote goes to resea
 
 ---
 
-### C7 干预配置（§67）
+### C7 Intervention configuration (§67)
 
-**① 目标与密度**：定义干预的目的、组件版本、路径、剂量、完成判据与保障。密度：dense 表单 + 组件版本表。
+**① Purpose and density**: define an intervention's purpose, component versions, pathway, dose, completion criteria and safeguards. Density: a dense form + the component version table.
 
-**② 线框**
+**② Wireframe**
 
 ```text
-干预 › IV-004 › 版本 v3（草稿）
+Interventions › IV-004 › version v3 (draft)
 ┌───────────────────────────────────────────────────────────────┐
-│ 目的*        [___________________________________]            │
-│ 结局映射*    [关联 RQ-001 的结局 O ▾]                          │
-├─ 组件与版本（精确版本，逐行）─────────────────────────────────┤
-│ 组件              │ 版本 │ 内容哈希      │ 顺序 │ 操作        │
-│ 生命故事提示集    │ v4   │ sha256:0a1b…  │ 1    │ [更换版本]  │
-│ 社区活动脚本      │ v2   │ sha256:77cd…  │ 2    │ [更换版本]  │
-│ ⓘ 组件版本变更会改变干预的同一性——变更后需要新的干预版本。    │
-├─ 路径 / 排程 / 剂量 ──────────────────────────────────────────┤
-│ 路径 [标准 ▾]  排程 [每周 2 次 ▾]  剂量 [20–30 分钟]           │
-│ 完成判据* [__________]   自适应范围 [±1 次/周]                 │
-├─ 角色与规则 ──────────────────────────────────────────────────┤
-│ 支持者角色 [仅协助记录 ▾]  生命故事规则 [参与者授权后可见 ▾]   │
-│ 社区规则 [园艺角 v2 ▾]     匹配规则 [沿用协议 ▾]               │
-│ AI 角色  [当前阶段：全部禁用（Level-5）]  🔒 不可在此开启      │
-├─ 保障 ────────────────────────────────────────────────────────┤
-│ ☑ 参与者可随时跳过任一活动      ☑ 安全信号可在活动内提交      │
-│                          [保存草稿] [提交批准（批准需要 MFA）] │
+│ Purpose*     [___________________________________]            │
+│ Outcome mapping* [linked to RQ-001's outcome O ▾]              │
+├─ Components and versions (exact versions, row by row) ────────┤
+│ Component            │ Version │ Content hash │ Order │ Action │
+│ Life-story prompt set │ v4     │ sha256:0a1b… │ 1     │ [Change version] │
+│ Community activity script │ v2 │ sha256:77cd… │ 2     │ [Change version] │
+│ ⓘ Changing a component version changes the intervention's identity — a new intervention version is required afterwards. │
+├─ Pathway / schedule / dose ───────────────────────────────────┤
+│ Pathway [standard ▾]  Schedule [twice weekly ▾]  Dose [20–30 minutes] │
+│ Completion criteria* [__________]   Adaptive range [±1 per week] │
+├─ Roles and rules ─────────────────────────────────────────────┤
+│ Supporter role [help with recording only ▾]  Life-story rule [visible once the participant grants it ▾] │
+│ Community rules [Gardening Corner v2 ▾]     Matching rules [follow the protocol ▾] │
+│ AI role  [current phase: entirely disabled (Level-5)]  🔒 cannot be switched on here │
+├─ Safeguards ──────────────────────────────────────────────────┤
+│ ☑ A participant may skip any activity at any time  ☑ A safety signal can be raised within an activity │
+│                     [Save draft] [Submit for approval (approval requires MFA)] │
+└───────────────────────────────────────────────────────────────┘
+```
+
+**③ State matrix**
+
+| State | Presentation |
+|---|---|
+| Loading | A skeleton for the component version table; the dropdowns are disabled until the version list has arrived |
+| Empty queue | No component versions available: `There are no component versions available yet. An intervention must cite exact component versions and cannot cite "the latest". [Go and create a component version]` |
+| Error | Citing an unapproved component version → `INVALID_STATE_TRANSITION`: `The component "Community activity script v2" has not been approved and cannot be part of an intervention.` |
+| Insufficient permission | Without `intervention.draft`: read-only + `You can view this intervention configuration but cannot edit it (it needs Researcher).` |
+| MFA required | Drafting and submitting do not; `intervention.approve` does. Beside the submit button: `After submitting, an approver approves it with strong authentication (MFA); you cannot approve a version you submitted yourself.` |
+
+**④ Confirmation copy**: `Submit intervention version v3 for approval? Submitting fixes the current combination of component versions (life-story prompt set v4, community activity script v2) and the content hash. An approver can only approve this exact combination.`
+
+**⑤ Accessibility**: the component table follows 1.9; "the AI role cannot be switched on" is a written explanation + a `disabled` control + `aria-describedby` pointing at the reason, and never a hidden control (hiding it would leave someone believing the capability does not exist, when the fact is that it is *forbidden* — §71 requires that a hidden sensitive capability be visibly stated as prohibited).
+
+---
+
+### C8 AI intervention configuration and change warnings (§68–69)
+
+**① Purpose and density**: display the AI's **effective configuration** and the **impact of a change**. In the current phase Level-5 is entirely prohibited — and **this is not "there is no such screen"; it is a screen that displays the fact of the prohibition and its reason**. Density: a dense read-only table + the change-warning panel.
+
+**② Wireframe**
+
+```text
+AI configuration › effective version (read-only)
+┌───────────────────────────────────────────────────────────────┐
+│ ⓘ Current phase: AI action Level-5 (entirely disabled). The configuration │
+│   below is the configuration surface of the future system being modelled; │
+│   no AI role is running now.                                   │
+├───────────────────────────────────────────────────────────────┤
+│ AI roles enabled   (none) — all disabled                       │
+│ Model alias        companion-draft-alias (not bound to a provider) │
+│ Provider restriction  approved providers only; 0 approved at present │
+│ Prompt version     prompt_v0 (not active)  hash sha256:1f20…   │
+│ Output schema      life-story-draft.v1                         │
+│ Retrieval sources  the participant's own content only; cross-participant retrieval is forbidden │
+│ Tool set           (empty)                                     │
+│ Action level       Level-5, entirely prohibited                │
+│ Memory policy      nothing retained (no session memory)        │
+│ Life-story rule    AI can only produce a draft, and never confirms testimony automatically │
+│ Community/matching rule  AI is forbidden from taking part in matching or mutual acceptance │
+│ Message rule       AI may draft; sending must be confirmed by the participant │
+│ Moderation/safety policy  an AI classification is not a safety event │
+│ Evaluation         not run                                     │
+│ Effective version  aicfg_v0  hash sha256:c440…     [View history] │
+└───────────────────────────────────────────────────────────────┘
+
+The change warning (shown when somebody attempts a modification)
+┌─ ⚠ This is a significant change ──────────────────────────────┐
+│ Participants affected   24 (synthetic)                         │
+│ Protocol in force       PR-002 v3 (approved)                   │
+│ Data impact             new: it would read participants' life-story drafts │
+│ Intervention fidelity   the intervention's content would change — it cannot be analysed together with the previous version │
+│ Re-evaluation required  yes (the AI evaluation suite has not been run) │
+│ Re-consent required     yes (model: a new purpose for the data) │
+│ Release method          staged (0 participants first, then widened by hand) │
+│ Rollback                can roll back to aicfg_v0; rolling back does not retract drafts already produced │
+│ ⓘ Level-5 is entirely prohibited at present, so this change cannot be │
+│   submitted. This panel shows what would happen if it could be. │
 └───────────────────────────────────────────────────────────────┘
 ```
 
 **③ 状态矩阵**
 
-| 态 | 呈现 |
+| State | Presentation |
 |---|---|
-| 加载 | 组件版本表骨架；下拉在版本清单到齐前禁用 |
-| 空队列 | 无可选组件版本：`还没有可用的组件版本。干预必须引用确切的组件版本，不能引用「最新」。[去创建组件版本]` |
-| 错误 | 引用了未批准的组件版本 → `INVALID_STATE_TRANSITION`：`组件「社区活动脚本 v2」还没有被批准，不能作为干预内容。` |
-| 权限不足 | 无 `intervention.draft`：只读 + `你可以查看这个干预配置，但不能编辑（需要 Researcher）。` |
-| 需要 MFA | 起草/提交不需要；`intervention.approve` 需要 MFA。提交按钮旁：`提交后由批准人以强认证（MFA）批准；你不能批准自己提交的版本。` |
+| Loading | A skeleton for the read-only table |
+| Empty queue | No version history: `There is no AI configuration history yet. The current configuration is the initial aicfg_v0.` |
+| Error | A failed read: `The AI configuration could not be loaded (<code>). Until it has loaded, do not assume the AI is either off or on. [Try again]` (fail-closed wording) |
+| Insufficient permission | Anyone who is not Researcher/ResearchApprover: the prompt content and its hash are not shown, and it says `The prompt content is not visible to your role.` |
+| MFA required | Nothing can be changed in the current phase, so there is no MFA action. At the top: `There is no change action available on this screen (Level-5, entirely prohibited).` |
 
-**④ 确认文案**：`确认提交干预版本 v3 批准？提交会固定当前的组件版本组合（生命故事提示集 v4、社区活动脚本 v2）与内容哈希。批准人只能批准这个确切组合。`
+**④ Confirmation copy** (the template for when it is switched on in future, shown here in its disabled state):
+`Change the AI configuration from aicfg_v0 to aicfg_v1? This changes the intervention content 24 participants encounter, and data from the old and new versions cannot be analysed together. Re-consent and re-evaluation are required. This action requires strong authentication (MFA).`
 
-**⑤ 无障碍**：组件表按 1.9；"AI 角色不可开启"是文字说明 + `disabled` 控件 + `aria-describedby` 指向原因，不是隐藏控件（隐藏会让人以为功能不存在，而事实是"被禁止"——§71 要求"被隐藏的敏感功能必须可见地写明禁止"）。
+**⑤ Accessibility**: the Level-5 prohibition is not implied by grey text but stated in words, `entirely disabled`; the change-warning panel is `role="note"` (not a dialog), and its eight impacts are a `<dl>`; the reason it "cannot be submitted" is in the button's `aria-describedby`.
 
 ---
 
-### C8 AI 干预配置与变更警告（§68–69）
+### C9 Community configuration (§70)
 
-**① 目标与密度**：展示 AI 的**有效配置**与**变更影响**。当前阶段 Level-5 全禁——**这不是"没有这个界面"，而是这个界面显示"被禁止"的事实与原因**。密度：dense 只读表 + 变更警告面板。
+**① Purpose and density**: configure a `CommunitySpace` and its rule versions. Density: standard. **Without a moderation owner it cannot be activated** (a hard requirement of §70).
 
-**② 线框**
-
-```text
-AI 配置 › 有效版本（只读）
-┌───────────────────────────────────────────────────────────────┐
-│ ⓘ 当前阶段：AI 行动等级 Level-5（全部禁用）。下列配置是被建模的│
-│   未来系统的配置面，现在没有任何 AI 角色在运行。               │
-├───────────────────────────────────────────────────────────────┤
-│ 启用的 AI 角色    （无）— 全部禁用                             │
-│ 模型别名          companion-draft-alias（未绑定供应商）        │
-│ 供应商限制        仅限已审批供应商；当前 0 个已审批            │
-│ 提示词版本        prompt_v0（未激活）  哈希 sha256:1f20…       │
-│ 输出模式          life-story-draft.v1                          │
-│ 检索来源          仅参与者本人内容；禁止跨参与者检索           │
-│ 工具集            （空）                                       │
-│ 行动等级          Level-5 全禁                                 │
-│ 记忆策略          不保留（无会话记忆）                         │
-│ 生命故事规则      AI 只能产出草稿，永不自动确认为证言           │
-│ 社区/匹配规则     禁止 AI 参与匹配与互相接受                    │
-│ 消息规则          AI 可起草，发送必须由参与者确认               │
-│ 审核/安全策略     AI 分类结果不是安全事件                       │
-│ 评估              未运行                                       │
-│ 有效版本          aicfg_v0  哈希 sha256:c440…      [查看历史]  │
-└───────────────────────────────────────────────────────────────┘
-
-变更警告（当有人尝试修改时）
-┌─ ⚠ 这是重大变更 ──────────────────────────────────────────────┐
-│ 受影响参与者   24 名（合成）                                   │
-│ 生效协议       PR-002 v3（已批准）                             │
-│ 数据类影响     新增：会读取参与者生命故事草稿                  │
-│ 干预保真度影响 干预内容将改变——不能与旧版本合并分析           │
-│ 需要重新评估   是（AI 评估套件未运行）                         │
-│ 需要重新同意   是（模型：新增数据用途）                        │
-│ 发布方式       分阶段（先 0 名，再手动扩大）                   │
-│ 回滚           可回滚到 aicfg_v0；回滚不撤销已产生的草稿       │
-│ ⓘ 当前 Level-5 全禁，这个变更无法提交。这个面板显示的是「如果 │
-│   可以变更，会发生什么」。                                     │
-└───────────────────────────────────────────────────────────────┘
-```
-
-**③ 状态矩阵**
-
-| 态 | 呈现 |
-|---|---|
-| 加载 | 只读表骨架 |
-| 空队列 | 无历史版本：`还没有 AI 配置历史。当前是初始配置 aicfg_v0。` |
-| 错误 | 读取失败：`AI 配置没能加载（<码>）。在加载出来之前，不要假设 AI 是关闭还是开启。[重试]`（失败关闭措辞） |
-| 权限不足 | 非 Researcher/ResearchApprover：不显示提示词内容与哈希，显示 `提示词内容对你的角色不可见。` |
-| 需要 MFA | 当前阶段不可变更，因此没有 MFA 动作。屏顶：`本屏没有可执行的变更动作（Level-5 全禁）。` |
-
-**④ 确认文案**（未来启用时的模板，现在以禁用态展示）：
-`确认把 AI 配置从 aicfg_v0 变更为 aicfg_v1？这会改变 24 名参与者接触到的干预内容，旧版本与新版本的数据不能合并分析。需要重新同意与重新评估。这个操作需要强认证（MFA）。`
-
-**⑤ 无障碍**：Level-5 禁用不用灰字暗示，用明确文字 `全部禁用`；变更警告面板是 `role="note"`（非弹窗），八项影响是 `<dl>`；"不能提交"的原因写在按钮的 `aria-describedby` 里。
-
----
-
-### C9 社区配置（§70）
-
-**① 目标与密度**：配置 `CommunitySpace` 与其规则版本。密度：标准。**没有审核负责人就不能激活**（§70 硬要求）。
-
-**② 线框**
+**② Wireframe**
 
 ```text
-社区 › 园艺角 › 配置
+Communities › Gardening Corner › configuration
 ┌───────────────────────────────────────────────────────────────┐
-│ 目的*        [___________________________]                     │
-│ 参与资格     [已入组且已同意「社区参与」▾]                     │
-│ 规则版本*    [CR-园艺角 v2  sha256:5ac9… ▾]  [查看规则全文]    │
-│ 审核负责人*  [（未指派）▾]  ⚠ 未指派                           │
-│ 内容类型     ☑ 文字  ☑ 图片  ☐ 音频（本阶段不启用）           │
-│ 可见性       [仅本社区成员 ▾]（默认最小可见性）                │
-│ 举报与审核   举报去向：审核工作区；举报人身份不进入社区视图     │
-│ 归档策略     [研究结束后只读归档 ▾]                            │
-│ 原型阶段     [概念研究（合成参与者）]                          │
+│ Purpose*     [___________________________]                     │
+│ Eligibility  [enrolled and has consented to "community participation" ▾] │
+│ Rule version* [CR-Gardening-Corner v2  sha256:5ac9… ▾]  [Read the rules in full] │
+│ Moderation owner* [(unassigned) ▾]  ⚠ unassigned               │
+│ Content types  ☑ text  ☑ images  ☐ audio (not enabled in this phase) │
+│ Visibility   [members of this community only ▾] (the minimum visibility by default) │
+│ Reporting and moderation  reports go to the moderation workspace; the reporter's identity never enters the community view │
+│ Archiving policy  [read-only archive after the study ends ▾]   │
+│ Prototype phase  [conceptual research (synthetic participants)] │
 ├───────────────────────────────────────────────────────────────┤
-│ [保存草稿]  [激活社区] ← 禁用：未指派审核负责人               │
-│ ⓘ 没有就位的审核负责人，社区不能激活。                        │
+│ [Save draft]  [Activate the community] ← disabled: no moderation owner assigned │
+│ ⓘ Without a moderation owner in place, a community cannot be activated. │
 └───────────────────────────────────────────────────────────────┘
 ```
 
