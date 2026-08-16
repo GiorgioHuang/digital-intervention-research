@@ -1872,73 +1872,74 @@ If other people also use this device:
 
 ---
 
-### H4 公开研究信息与支持联系
+### H4 Public study information and support contacts
 
-**目标 / 要回答的问题**
+**Purpose / the questions it answers**
 
-- 这是什么研究、谁在做、为什么？
-- 我的数据会怎样？
-- 我怎么联系到人？
-- **当前这个东西是什么阶段？**（必须诚实：概念研究原型）
+- What is this study, who is running it, and why?
+- What happens to my data?
+- How do I reach a person?
+- **What stage is this thing actually at?** (this must be honest: a conceptual research prototype)
 
-**线框**
+**Wireframe**
 
 ```
-<h1>关于这项研究</h1>
+<h1>About this study</h1>
 
 ┌────────────────────────────┐
-│ 当前状态：概念研究原型       │
+│ Current status: conceptual research prototype │
 │                            │
-│ 这是一个用**合成数据**演示的  │
-│ 研究平台原型。              │
-│ · 没有真实参与者            │
-│ · 没有在招募任何人          │
-│ · 尚未获得伦理批准          │
-│ · 页面中展示的同意与审批流程 │
-│   是对未来系统的设计模型     │
+│ This is a prototype of a research platform,   │
+│ demonstrated with **synthetic data**.         │
+│ · there are no real participants              │
+│ · nobody is being recruited                   │
+│ · ethics approval has not been obtained       │
+│ · the consent and approval flows shown here   │
+│   are design models of a future system        │
 └────────────────────────────┘
 
-── 这项研究想回答什么 ──────────
-«平白语言说明»
-[查看知识类型说明]
-  ⓘ 本站展示的每条结论都标注了它属于
-    哪一类知识（观察 / 推断 / 设计假设 /
-    原型观察等）。合成或模拟的结果
-    不会被当作经验证据呈现。
+── What this study is trying to answer ──
+«a plain-language explanation»
+[About the knowledge types]
+  ⓘ Every conclusion shown on this site is marked with
+    the kind of knowledge it is (observation / inference /
+    design hypothesis / prototype observation, and so on).
+    Synthetic or simulated results are never presented
+    as empirical evidence.
 
-── 谁在做 ─────────────────────
-«机构、负责人、资助来源、利益冲突声明»
+── Who is running it ──────────
+«the organisation, the lead, the funding source, the conflict-of-interest statement»
 
-── 参与意味着什么 ──────────────
-«平白语言：时间、内容、可退出»
+── What taking part involves ──
+«plain language: how much time, what is involved, that you can leave»
 
-── 你的数据 ───────────────────
-«收集什么、保存多久、谁能看到、如何退出»
+── Your data ──────────────────
+«what is collected, how long it is kept, who can see it, how to leave»
 
-── 联系我们 ───────────────────
-研究支持：«邮箱 / 电话»
-服务时间：工作日 09:00–17:00
-无障碍协助：«渠道»
-投诉与伦理问题：«独立渠道»
+── Contact us ─────────────────
+Research support: «email / telephone»
+Hours: weekdays 09:00–17:00
+Accessibility help: «channel»
+Complaints and ethics questions: «an independent channel»
 
-⚠ 本平台不是紧急求助渠道（完整说明）
+⚠ This platform is not an emergency service (the full explanation)
 ```
 
-**状态矩阵**
+**State matrix**
 
-| 状态 | 呈现与文案原文 |
+| State | Presentation and copy in full |
 |---|---|
-| LOADING | 静态页，通常无 LOADING |
-| EMPTY | 不适用 |
-| ERROR | `这个页面暂时无法完整显示。你仍然可以通过下面的方式联系研究支持：«静态兜底的联系方式»` ——联系方式必须硬编码在页面中，不依赖请求 |
-| FORBIDDEN | 不适用（公开页） |
-| PROTECTED | 不适用 |
+| LOADING | A static page; normally no LOADING state |
+| EMPTY | Not applicable |
+| ERROR | `This page cannot be shown in full at the moment. You can still contact research support in these ways: «the statically embedded contact details»` — the contact details must be hardcoded in the page and must not depend on a request |
+| FORBIDDEN | Not applicable (a public page) |
+| PROTECTED | Not applicable |
 
-**无障碍要点**
+**Accessibility points**
 
-- 「当前状态」块是页面第一个内容，载入时播报（这是防止「原型被误认为在运行的服务」的唯一保障）。
-- 联系方式用 `<address>`；电话号码是 `tel:` 链接且号码本身可见为文字。
-- 所有平白语言段落行宽 ≤70 字符，无术语未解释。
+- The "current status" block is the first content on the page and is announced on load (this is the only safeguard against the prototype being mistaken for a running service).
+- Contact details use `<address>`; a telephone number is a `tel:` link with the number itself visible as text.
+- Every plain-language paragraph keeps a measure of ≤70 characters, with no unexplained jargon.
 
 ---
 
@@ -1954,50 +1955,59 @@ If other people also use this device:
 **线框**
 
 ```
-<h1>无障碍声明</h1>
+<h1>Accessibility statement</h1>
 
-── 我们的目标 ─────────────────
-WCAG 2.2 AA，以及七种使用模式的可用性
-（视觉 / 低视力 / 听觉 / 运动 / 认知负荷 /
-低数字素养 / 间歇性使用）。
+── What we are aiming for ─────
+WCAG 2.2 AA, and usability across seven modes of use
+(vision / low vision / hearing / motor / cognitive load /
+low digital literacy / intermittent use).
 
-── 当前达到的程度：部分符合 ────
-诚实说明：我们做过代码层的基线检查，
-**尚未完成真实用户测试**，包括与老年
-参与者的测试。因此我们不能声称完全符合。
+── How far we have got: partially conformant ──
+Stated honestly: we have run baseline checks at the code level and
+**have not completed testing with real users**, including with older
+participants. We therefore cannot claim full conformance.
 
-已完成：
-· 200% 缩放不丢失内容
-· 所有可操作元素有可见焦点
-· 触控目标 ≥44 像素且互不重叠
-· 尊重「减少动效」系统设置
-· 状态变化会被屏幕阅读器播报
+Done:
+· content is not lost at 200% zoom
+· every operable element has a visible focus indicator
+· touch targets are ≥44 pixels and do not overlap
+· the "reduce motion" system setting is respected
+· changes of state are announced to screen readers
 
-尚未完成：
-· 自动化无障碍扫描尚未接入持续集成
-· 无障碍专家走查尚未进行
-· 辅助技术实验室测试尚未进行
-· 老年参与者真实用户测试尚未进行
-  （需先获得伦理批准）
+Not done:
+· automated accessibility scanning is not yet in continuous integration
+· an accessibility expert walkthrough has not been carried out
+· assistive-technology lab testing has not been carried out
+· real user testing with older participants has not been carried out
+  (it requires ethics approval first)
 
-── 你可以调整 ─────────────────
-· 字号与行距（三档）
-· 对比度（标准 / 高）
-· 简化模式（减少每屏内容）
-· 减少动效
-这些设置由你选择，**不会**根据你的年龄
-自动判定。
-[打开显示与阅读设置]
+── What you can adjust ────────
+· Text size (four steps)
+· Space between things (two)
+· Contrast (standard / high)
+· Movement (follow the system / reduced)
+· Light or dark (follow the system / light / dark)
+· Colour (standard / low stimulation, which removes the tinted backgrounds)
+You choose these settings; they are **never** determined automatically
+from your age.
+[Open display and reading settings]
+*(List corrected 2026-08-16: it previously named four settings including a
+"simplified mode (less on each screen)". `data-simplify` was removed on
+2026-08-13 — nothing set it and nothing carried the class it selected — while
+light/dark and low stimulation were added later and were missing here. An
+accessibility statement that lists a control the product does not have, and
+omits two it does, misinforms exactly the reader who most needs it to be
+accurate.)*
 
-── 遇到障碍怎么办 ──────────────
-请告诉我们，我们会记录为缺陷并修复。
-联系：«邮箱 / 电话 / 表单»
-回应时间：工作日 5 个工作日内
-如果这影响你参与研究，请同时联系研究支持。
+── If you hit a barrier ───────
+Please tell us. We record it as a defect and fix it.
+Contact: «email / telephone / form»
+Response time: within 5 working days
+If it is affecting your participation in the study, contact research support as well.
 
-── 本声明 ─────────────────────
-最后更新：«日期» · 评估方式：代码审查与
-自动化测试（未含真实用户测试）
+── About this statement ───────
+Last updated: «date» · Assessed by: code review and
+automated testing (not including real user testing)
 ```
 
 **状态矩阵**
