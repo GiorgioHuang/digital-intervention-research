@@ -457,72 +457,75 @@ Side by side: conflicting evidence for ga:loneliness
 
 ### C4 证据决定与快照（§62–63）
 
-**实施状态（2026-08-04）：部分实现。** 可就某份评审写决定、由第二人同意；同意时在同一事务写入**不可更改的 EvidenceSnapshot**，内容哈希上屏——那份快照才是后续工作引用的东西，因此确认文案直说「这是措辞还能改的最后一刻，之后要改只能是一份新决定」。三条措辞：（1）**结果词表是平台的，不是界面发明的**——数据库拒绝词表之外的值，且「已批准／已拒绝／暂定」**不是**结果；结果回答「证据说什么」，批准回答「谁同意了」，把两者合一会让一份决定因为有人签了字而读起来像已成定论。（2）**「证据相互冲突」是一等结果**（§60），按发现来写而不是按「没能得出结论」来写；只提供支持/反对的词表会把写决定的人往夸大某一侧推。（3）与「证据不足」**明确区分**：一个是找到了且互相矛盾，一个是几乎没找到。决定可以写在尚未批准的评审上——命令允许，界面因此**如实警告而不假装拦截**（界面自行收窄等于发明一条服务器没有的规则）；批准屏另标「同意这份决定并不等于批准那份评审」。
+**Implementation status (2026-08-04): partially implemented.** A decision can be written against a review and agreed by a second person; on agreement an **immutable EvidenceSnapshot** is written in the same transaction, with its content hash on screen — that snapshot is what later work cites, which is why the confirmation copy says outright that this is the last moment the wording can change, and that changing it afterwards means a new decision. Three points of wording: (1) **the outcome vocabulary belongs to the platform and is not invented by the interface** — the database rejects values outside it, and "approved / rejected / provisional" are **not** outcomes; an outcome answers "what does the evidence say" and approval answers "who agreed", and merging the two makes a decision read as settled because somebody signed it. (2) **"The evidence conflicts" is a first-class outcome** (§60), written as a finding rather than as a failure to reach a conclusion; a vocabulary offering only support and oppose pushes whoever writes the decision towards overstating one side. (3) It is **explicitly distinguished** from "insufficient evidence": one means things were found and they contradict each other, the other that almost nothing was found. A decision may be written against a review that has not been approved — the command allows it, so the interface **warns honestly rather than pretending to block** (an interface narrowing this on its own would be inventing a rule the server does not have); the approval screen additionally notes that "agreeing with this decision is not the same as approving that review".
 
-**未实现**：证据快照的独立浏览屏（当前只在决定行内显示哈希）。
+**Not implemented**: a browsing screen of its own for evidence snapshots (the hash is currently shown only inline on the decision).
 
-**① 目标与密度**：把一组证据引用收敛为**七选一的证据决定**，再冻结为**不可变快照**。密度：标准（这是决定屏，不是浏览屏）。**单屏一个决定**。
+**① Purpose and density**: converge a set of evidence citations into **one of seven evidence decisions**, then freeze it as an **immutable snapshot**. Density: standard (this is a decision screen, not a browsing screen). **One decision per screen.**
 
 **② 线框**
 
 ```text
-证据 › ER-004 › 证据决定
+Evidence › ER-004 › Evidence decision
 ┌───────────────────────────────────────────────────────────────┐
-│ 研究问题 RQ-001「数字化怀旧干预能否降低社区老年人的孤独感」    │
-│ 纳入引用 4 · 排除 3 · 暂缓 1                  [查看全部引用]  │
-│ ⚠ 其中 2 条被标记为冲突证据。冲突不会被自动消解。             │
-├─ 决定（七选一，必选其一）─────────────────────────────────────┤
-│ ( ) 支持                Support                                │
-│ ( ) 有条件支持          Support with Conditions   → 条件* [__] │
-│ ( ) 证据不足            Insufficient Evidence                  │
-│ (•) 证据冲突            Conflicting Evidence                   │
-│ ( ) 限制                Restrict                               │
-│ ( ) 不予推进            Do Not Proceed                         │
-│ ( ) 需要研究            Research Required                      │
-│ ⓘ 这是科学结论；它与「谁批准了这个决定」是两件事，分开记录。   │
-│ 适用性与局限*  [__________________________________________]    │
-│ 认识论标签*    [来源推导 ◆]（自动建议，可改；不得留空）        │
-│                                     [保存草稿] [提交决定]     │
+│ Research question RQ-001 "Can a digital reminiscence intervention │
+│ reduce loneliness among community-dwelling older adults?"      │
+│ Citations included 4 · excluded 3 · deferred 1  [View all citations] │
+│ ⚠ 2 of them are marked as conflicting evidence. Conflict is never resolved automatically. │
+├─ Decision (choose exactly one of seven) ──────────────────────┤
+│ ( ) Support                                                    │
+│ ( ) Support with Conditions   → conditions* [__]               │
+│ ( ) Insufficient Evidence                                      │
+│ (•) Conflicting Evidence                                       │
+│ ( ) Restrict                                                   │
+│ ( ) Do Not Proceed                                             │
+│ ( ) Research Required                                          │
+│ ⓘ This is the scientific conclusion. It is a different thing from │
+│   "who approved this decision", and the two are recorded separately. │
+│ Applicability and limitations*  [_____________________________] │
+│ Epistemic tag*  [source-derived ◆] (suggested automatically, editable; never blank) │
+│                                     [Save draft] [Submit the decision] │
 └───────────────────────────────────────────────────────────────┘
 
-证据 › ER-004 › 证据快照（创建前复核）
+Evidence › ER-004 › Evidence snapshot (review before creating)
 ┌───────────────────────────────────────────────────────────────┐
-│ 快照创建后不可更改。它会被协议版本引用为「批准时所依据的证据」│
+│ Once created, a snapshot cannot be changed. A protocol version cites it │
+│ as "the evidence this was approved on".                        │
 ├───────────────────────────────────────────────────────────────┤
-│ 纳入的知识引用（4）                                            │
+│ Knowledge citations included (4)                               │
 │  ┌────────────────┬──────────────┬──────────────┬───────────┐ │
-│  │ 外部标识        │ 检索标识(版本)│ 检索时刻     │ 来源系统  │ │
+│  │ External id    │ Search id (version) │ Searched  │ Source system │ │
 │  ├────────────────┼──────────────┼──────────────┼───────────┤ │
 │  │ ga:loneliness  │ sha256:4c1a… │ 08-03 11:02  │ graceage… │ │
 │  │ ga:ucla        │ sha256:77b0… │ 08-03 11:03  │ graceage… │ │
 │  └────────────────┴──────────────┴──────────────┴───────────┘ │
-│ 排除的引用（3）与理由                            [展开]        │
-│ 完整性  ⚠ 未覆盖：机构居住人群；理论节点仅 3 个（语料限制）    │
-│ 许可    未声明——不得据此再分发原文                            │
-│ 内容哈希  sha256:be31f0a9…（对纳入集合与理由的哈希）  [全文]   │
-│                                        [创建快照（不可更改）] │
+│ Citations excluded (3) and the reasons          [Expand]       │
+│ Completeness  ⚠ not covered: institutional populations; only 3 theory nodes (a limit of the corpus) │
+│ Licence  not stated — do not redistribute the original on this basis │
+│ Content hash  sha256:be31f0a9… (over the included set and the reasons) [full] │
+│                                        [Create the snapshot (immutable)] │
 └───────────────────────────────────────────────────────────────┘
 ```
 
 **③ 状态矩阵**
 
-| 态 | 呈现 |
+| State | Presentation |
 |---|---|
-| 加载 | 引用表骨架；决定单选组在数据到齐前禁用（防止对空集合做决定） |
-| 空队列 | 无纳入引用时**不允许**提交决定：`这个证据评审还没有纳入任何引用。没有引用的证据决定不成立。[回到检索]`（"证据不足"也必须基于至少一次检索记录） |
-| 错误 | `INVALID_STATE_TRANSITION`：`这个证据评审已经提交或已完成，不能再改决定。`；`VERSION_CONFLICT`：保留你写的适用性文本并提示重载 |
-| 权限不足 | 起草决定需 `evidence-decision.draft`（Researcher / EvidenceReviewer）；批准需 `evidence-decision.approve`（EvidenceReviewer）。研究者看到的批准按钮显示为 `批准由证据评审人完成（你没有这个权限）` |
-| 需要 MFA | 证据决定批准**只需确认，不需要 MFA**。屏顶条：`本屏没有需要强认证的动作。批准由证据评审人确认执行。`（**不得**错标为 MFA） |
+| Loading | A skeleton for the citation table; the decision radio group is disabled until the data has arrived (so a decision cannot be made against an empty set) |
+| Empty queue | With no citations included, submitting a decision is **not allowed**: `This evidence review has no citations included. An evidence decision with no citations does not stand. [Back to search]` ("insufficient evidence" must also rest on at least one recorded search) |
+| Error | `INVALID_STATE_TRANSITION`: `This evidence review has already been submitted or completed, and the decision can no longer be changed.`; `VERSION_CONFLICT`: keeps the applicability text you wrote and prompts a reload |
+| Insufficient permission | Drafting a decision needs `evidence-decision.draft` (Researcher / EvidenceReviewer); approving needs `evidence-decision.approve` (EvidenceReviewer). A researcher sees the approve button rendered as `Approval is done by an evidence reviewer (you do not hold this permission)` |
+| MFA required | Approving an evidence decision **requires confirmation only, not MFA**. The bar at the top says: `No action on this screen requires strong authentication. Approval is carried out by an evidence reviewer with a confirmation.` (Mislabelling it as MFA is **forbidden**) |
 
-**④ 确认文案**
+**④ Confirmation copy**
 
-- 提交决定：`确认提交这个证据决定（证据冲突 / Conflicting Evidence）？提交后记录你是提交人，批准由证据评审人完成；你不能批准自己提交的决定。`
-- 创建快照（这是不可逆动作，用 `alertdialog`）：
-  `创建证据快照？
-  快照会冻结当前纳入的 4 条引用、它们的检索标识与检索时刻，以及你写的排除理由。
-  内容哈希：sha256:be31f0a97c4d1e2b…（完整值）
-  快照创建后不可更改，也不能删除。协议批准会引用这个快照。`
-  按钮：`创建快照（不可更改）` / `返回复核`
+- Submitting the decision: `Submit this evidence decision (Conflicting Evidence)? Submitting records you as the submitter; approval is carried out by an evidence reviewer, and you cannot approve a decision you submitted yourself.`
+- Creating the snapshot (an irreversible action, so an `alertdialog`):
+  `Create the evidence snapshot?
+  The snapshot freezes the 4 citations currently included, their search identifiers and search times, and the exclusion reasons you wrote.
+  Content hash: sha256:be31f0a97c4d1e2b… (the full value)
+  Once created a snapshot cannot be changed and cannot be deleted. Protocol approval cites this snapshot.`
+  Buttons: `Create the snapshot (immutable)` / `Go back and review`
 
 **⑤ 无障碍**：七个选项是 `<fieldset><legend>证据决定</legend>` 的 radio 组，**无预选**（默认无选中，避免暗黑模式诱导）；中英文并列写在同一 `<label>` 内；引用表符合 1.9；哈希用 `<code>` + 可复制按钮，可访问名 `复制内容哈希`。
 
