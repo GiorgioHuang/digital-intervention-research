@@ -1,74 +1,76 @@
-# RESEARCHER_WORKSPACE — 研究者工作区与管理工作区设计规范
+# RESEARCHER_WORKSPACE — design specification for the researcher and administration workspaces
 
-> 覆盖 UI_INVENTORY C 节（研究者 17 项 C1–C17）与 G 节（管理 7 项 G1–G7），共 **24 个界面单元**。
-> 规范来源：Doc 20 v1.3 §17、§21、§37、§41、§57–91、§251–270；Doc 19 v1.3 §10（认识论十类）、§38（发现类型）；DESIGN_BRIEF 全部不可协商原则；THREAT_MODEL / SECURITY_AND_PRIVACY_PLAN；KNOWLEDGE_GRAPH_INTEGRATION（C3/C4 的证据检索已真实对接 Healthy Aging Knowledge Graph MCP）。
-> 交付形态：结构化规范 + ASCII 线框，不出视觉稿图片（DESIGN_BRIEF §7.3）。
-> 依赖：设计系统基座 A1–A9（令牌、图标、断点）在 `design/DESIGN_SYSTEM.md` 定义。本文件引用其令牌名（`--color-*` / `--space-N` / `--type-size-N` / `--density` / `--target-gap`）；**若两者不一致，以 DESIGN_SYSTEM.md 为准**，本文件的语义约束（哪个元素承担哪一类保障）不变。
-> 本文件不修改任何代码，不改动 design/ 下的其他文件。
-
----
-
-## 0. 读法与适用范围声明
-
-**阶段事实（必须在界面里说实话）**：当前是概念研究原型（ADR-061/062）。参与者是合成人物画像，数据是合成数据，供应商是模拟供应商，身份是 dev-header 桩。因此：
-
-- 研究者工作区里出现的**每一个数值、每一张表、每一个分析输出**都必须带数据来源标注：`[合成数据]`。
-- 任何屏幕都不得出现暗示"已获伦理批准"或"正在招募真实参与者"的措辞。
-- 同意屏、审批屏是**被建模的未来系统**的 UX 模型；研究者工作区里引用它们时用"（模型）"限定。
-
-**本文件的每个界面单元固定五段式**：① 目标与信息密度定位 ② ASCII 线框 ③ 状态矩阵（加载 / 空队列 / 错误 / 权限不足 / 需要 MFA 强认证） ④ 关键交互与确认文案原文 ⑤ 无障碍要点。
+> Covers UI_INVENTORY section C (17 researcher units, C1–C17) and section G (7 administration units, G1–G7) — **24 interface units** in total.
+> Source of specification: Doc 20 v1.3 §17, §21, §37, §41, §57–91, §251–270; Doc 19 v1.3 §10 (the ten epistemic types), §38 (finding types); every non-negotiable principle in DESIGN_BRIEF; THREAT_MODEL / SECURITY_AND_PRIVACY_PLAN; KNOWLEDGE_GRAPH_INTEGRATION (the evidence search in C3/C4 is genuinely connected to the Healthy Aging Knowledge Graph MCP).
+> Form of delivery: a structured specification + ASCII wireframes, with no visual mockup images (DESIGN_BRIEF §7.3).
+> Dependencies: the design system foundation A1–A9 (tokens, icons, breakpoints) is defined in `design/DESIGN_SYSTEM.md`. This file references its token names (`--color-*` / `--space-N` / `--type-size-N` / `--density` / `--target-gap`); **where the two disagree, DESIGN_SYSTEM.md wins**, and this file's semantic constraints (which element carries which guarantee) are unchanged.
+> This file changes no code and modifies no other file under design/.
 
 ---
 
-## 1. 研究者/管理工作区共用规则
+## 0. How to read this, and the statement of scope
 
-这一节是 24 个界面的共同底座。各界面章节只写差异，不重复这里的内容。
+**The facts of the phase (which the interface must tell the truth about)**: this is currently a conceptual research prototype (ADR-061/062). The participants are synthetic personas, the data is synthetic, the providers are simulators, and identity is the dev-header stub. Therefore:
 
-### 1.1 信息密度定位：允许高密度，不允许牺牲可读性
+- **Every number, every table and every analysis output** that appears in the researcher workspace must carry a data-source marking: `[synthetic data]`.
+- No screen may use wording implying that ethics approval has been obtained or that real participants are being recruited.
+- The consent and approval screens are UX models of the **future system being modelled**; where the researcher workspace refers to them, it qualifies them with "(model)".
 
-Doc 20 §17 要求研究者工作区为"信息密度"优化，§315 要求密集/标准/宽松三档**同源**。设计系统（design/DESIGN_SYSTEM.md）用**一套刻度 + `--density` 乘数**实现三档：dense = 0.75、standard = 1、spacious = 1.25。研究者/管理工作区在容器上设 `--density: .75`，**只缩间距，不缩字号**。硬下限如下（违反即设计错误）：
+**Every interface unit in this file follows the same five parts**: ① purpose and information-density position ② the ASCII wireframe ③ the state matrix (loading / empty queue / error / insufficient permission / strong authentication required) ④ key interactions and the confirmation copy in full ⑤ accessibility points.
 
-| 维度 | dense 档取值 | 硬下限（不可为密度让步） |
+---
+
+## 1. Rules shared by the researcher and administration workspaces
+
+This section is the common foundation for all 24 interfaces. The per-interface sections record only what differs and do not repeat any of this.
+
+### 1.1 Information density: high density is allowed; sacrificing readability is not
+
+Doc 20 §17 requires the researcher workspace to be optimised for information density, and §315 requires the dense/standard/spacious levels to come from **one source**. The design system (design/DESIGN_SYSTEM.md) implements the three levels with **one scale + a `--density` multiplier**: dense = 0.75, standard = 1, spacious = 1.25. The researcher and administration workspaces set `--density: .75` on their container, which **compresses spacing only, never the font size**. The hard floors are below, and breaching one is a design error:
+
+| Dimension | Value at dense | Hard floor (never conceded to density) |
 |---|---|---|
-| 正文字号 | `--type-size-1`（1rem = 18px @ 根 112.5%）——**dense 不改字号** | 承载语义的文本不得低于 `--type-size-1`；`--type-size-0`（15px）只允许用于 `<small>` 里的时间戳/单位；不存在"微型次级标签"（§314） |
-| 行高 | 密集表格单元用 `--type-leading-snug`（1.4） | ≥ 1.4；段落型文字（解释、限制、理由）回到标准正文行高 |
-| 表格行高 | 内容行 `--space-5`（dense ≈ 20px）内边距 | **含交互控件的行 ≥ 2.75rem（44px）**，见 1.9 |
-| 列间距 | `--space-3`（dense ≈ 10px） | 相邻可点目标间净距 ≥ `--target-gap`，**任何情况下不得重叠**（已发生过真实缺陷：44px 按钮落在 29px 行框里互相压叠）；密集表格的行内动作必须用 `::before` 把命中区扩到 44px（见 DESIGN_SYSTEM 相应条目） |
-| 行宽（measure） | 表格不限，散文块 ≤ 76 字符 | 说明/后果/理由类文本 ≤ 76 字符 |
-| 每屏主要决定 | 1 个 | 单屏不得并列两个高影响决定（DESIGN_BRIEF §2） |
+| Body font size | `--type-size-1` (1rem = 18px at a 112.5% root) — **dense does not change the font size** | Text carrying meaning must never fall below `--type-size-1`; `--type-size-0` (15px) is allowed only for timestamps and units inside `<small>`; there is no such thing as a "tiny secondary label" (§314) |
+| Line height | Dense table cells use `--type-leading-snug` (1.4) | ≥ 1.4; prose text (explanations, limits, reasons) returns to the standard body line height |
+| Table row height | Content rows take `--space-5` padding (dense ≈ 20px) | **A row containing an interactive control is ≥ 2.75rem (44px)**, see 1.9 |
+| Column spacing | `--space-3` (dense ≈ 10px) | The clear gap between adjacent tappable targets is ≥ `--target-gap`, and **they must never overlap under any circumstances** (this has already been a real defect: 44px buttons inside a 29px line box, overlapping each other); row-level actions in a dense table must extend the hit area to 44px with `::before` (see the corresponding item in DESIGN_SYSTEM) |
+| Measure | Unlimited in tables; ≤ 76 characters for prose blocks | Explanatory, consequence and reason text is ≤ 76 characters |
+| Primary decisions per screen | 1 | A single screen must never place two high-impact decisions side by side (DESIGN_BRIEF §2) |
 
-**密度的正确做法是"列多、行紧、层级清"，不是"字小、对比低、间距挤"。** 高密度通过以下手段获得，而不是通过缩小字号：
+**Density is achieved by "more columns, tighter rows, clearer hierarchy", not by "smaller text, lower contrast, cramped spacing".** High density comes from the following, never from reducing the font size:
 
-1. 表格默认列少（5–7 列），其余列进"列选择"（§251），**保存视图**记住选择；
-2. 长标识符（`pv_7`、`sha256:…`）默认截断显示 + 完整值放 `title` 与可复制按钮，但**版本号与哈希在审批屏永远完整显示**（见 1.4）；
-3. 详情走"行展开"或右侧详情栏，不走弹窗堆叠；
-4. 移动端表格降级为卡片列表（§251：不得仅靠横向溢出）。
+1. Tables default to few columns (5–7), with the rest behind a "choose columns" control (§251), and a **saved view** remembering the choice;
+2. Long identifiers (`pv_7`, `sha256:…`) are truncated by default with the full value in `title` and a copy button — but **version numbers and hashes are always shown in full on an approval screen** (see 1.4);
+3. Detail is reached by expanding a row or through a detail panel on the right, never by stacking dialogs;
+4. On mobile, tables degrade to card lists (§251: horizontal overflow alone is not acceptable).
 
-### 1.2 认识论标签系统（Doc 19 §10 十类 → 视觉规范）
+### 1.2 The epistemic tag system (Doc 19 §10's ten types → a visual specification)
 
-**这是研究者工作区最重要的组件。** 任何结论性元素都必须能回答"这是哪一类知识"。
+**This is the most important component in the researcher workspace.** Any element that states a conclusion must be able to answer "what kind of knowledge is this".
 
-组件名：`EpistemicTag`。呈现 = **图标 + 中文名 + （首次出现时）英文原名**，颜色只作辅助（§311 颜色不得是唯一状态指示）。边框形态编码"确立程度"，且形态本身也不是唯一指示——中文名已经说清楚。
+Component name: `EpistemicTag`. Presentation = **icon + label + (on first appearance) the formal term**, with colour only as support (§311, colour must not be the only state indicator). The border form encodes how well established something is, and the form is not the only indicator either — the label already says it.
 
-| 类 | 中文标签 | 英文 | 图标 | 边框形态 | 附加强制说明 |
+> *(Corrected 2026-08-16: this table previously had a "Chinese label" column and an "English" column, from when the interface was Chinese. Since D-9 every interface string is English, so the label column below is the label a reader actually sees, and the formal term is kept beside it because several of them — "source-derived", "deductive consequence" — are terms of art from Doc 19 that the plain label alone would blur.)*
+
+| Type | Label | Formal term | Icon | Border | Additional requirement |
 |---|---|---|---|---|---|
-| 1 | 定义 | definition | ▣ | 实线 | — |
-| 2 | 来源推导 | source-derived | ◆ | 实线 | **必须同屏显示来源**（DOI/PMID/文档节号） |
-| 3 | 演绎结论 | deductive consequence | ⊢ | 实线 | 必须可展开显示前提 |
-| 4 | 设计假设 | design assumption | ◇ | 虚线 | 尾注"这是假设，尚未验证。" |
-| 5 | 模拟观察 | simulated observation | ◌ | 点线 | 尾注"来自模拟运行，不是经验证据。" + 种子/场景标识 |
-| 6 | 原型观察 | prototype observation | ◎ | 点线 | 尾注"来自原型执行记录，不是经验证据。" + 运行标识 |
-| 7 | 推断 | inference | ↝ | 虚线 | 必须可展开显示推断依据 |
-| 8 | 推测命题 | speculative proposition | ？ | 虚线 | 尾注"这是推测，没有来源支持。" |
-| 9 | 矛盾 | contradiction | ⚠ | 双线粗框 | **永不折叠、永不默认隐藏**（Doc 19 §40） |
-| 10 | 未来经验问题 | future empirical question | ⧗ | 虚线 | 尾注"当前研究不能回答这个问题。" |
+| 1 | Definition | definition | ▣ | Solid | — |
+| 2 | From a source | source-derived | ◆ | Solid | **The source must be shown on the same screen** (DOI/PMID/document section) |
+| 3 | Follows deductively | deductive consequence | ⊢ | Solid | The premises must be expandable |
+| 4 | Design assumption | design assumption | ◇ | Dashed | Footnote: "this is an assumption and has not been verified." |
+| 5 | Simulated observation | simulated observation | ◌ | Dotted | Footnote: "this comes from a simulated run and is not empirical evidence." + the seed/scenario identifier |
+| 6 | Prototype observation | prototype observation | ◎ | Dotted | Footnote: "this comes from a prototype execution record and is not empirical evidence." + the run identifier |
+| 7 | Inference | inference | ↝ | Dashed | The basis for the inference must be expandable |
+| 8 | Speculation | speculative proposition | ？ | Dashed | Footnote: "this is speculation and no source supports it." |
+| 9 | Contradiction | contradiction | ⚠ | Double, heavy | **Never collapsed and never hidden by default** (Doc 19 §40) |
+| 10 | Future empirical question | future empirical question | ⧗ | Dashed | Footnote: "the current research cannot answer this question." |
 
-规则：
+Rules:
 
-- **未标注 = 阻断**。缺少认识论标签的结论性内容不允许保存/提交；表单校验文案：`这段内容还没有认识论标签。请选择它属于哪一类知识。`
-- **合成数据永不呈现为经验证据**：类 5/6 的标签旁固定跟随数据来源徽标 `[合成数据]`，且该徽标在导出与报告中同样携带（C17）。
-- 屏幕阅读器：`EpistemicTag` 渲染为 `<span class="epi" role="note"><span class="visually-hidden">知识类型：</span>模拟观察（simulated observation）</span>`；尾注是同一 `role="note"` 内的正文，不做 tooltip。
-- 排序/筛选：任何列出结论的表格必须支持按认识论类别筛选，且**筛掉"矛盾"类需要显式动作并在表头显示"已隐藏 N 条矛盾"**。
+- **Untagged = blocked.** Content stating a conclusion without an epistemic tag cannot be saved or submitted; the form validation copy is: `This has no epistemic tag yet. Choose which kind of knowledge it is.`
+- **Synthetic data is never presented as empirical evidence**: tags of types 5 and 6 always carry the `[synthetic data]` source badge beside them, and that badge travels into exports and reports as well (C17).
+- Screen readers: `EpistemicTag` renders as `<span class="epi" role="note"><span class="visually-hidden">Knowledge type: </span>Simulated observation (simulated observation)</span>`; the footnote is body text inside the same `role="note"`, never a tooltip.
+- Sorting and filtering: any table listing conclusions must support filtering by epistemic type, and **filtering out the "contradiction" type requires an explicit action and shows "N contradictions hidden" in the table header**.
 
 ### 1.3 三级认识论阶梯：分析输出 ≠ 解释 ≠ 发现
 
