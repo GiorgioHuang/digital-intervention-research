@@ -322,10 +322,14 @@ export const contrast = (a, b) => {
 
 | Token | Value |
 |---|---|
-| `--type-family-ui` | `system-ui, -apple-system, 'PingFang SC', 'Noto Sans CJK SC', 'Microsoft YaHei', sans-serif` |
+| `--type-family-ui` | `Inter, 'Source Sans 3', 'Atkinson Hyperlegible', 'Noto Sans', system-ui, -apple-system, 'PingFang SC', 'Noto Sans CJK SC', 'Microsoft YaHei', sans-serif` |
 | `--type-family-mono` | `ui-monospace, SFMono-Regular, Menlo, 'Noto Sans Mono CJK SC', monospace` |
 
-No web fonts are downloaded: readability offline takes priority over visual consistency (trade-off §H.2). The monospace family is used **only** for identifiers (`pt_b`, `dv_9`, version hashes) — text of that kind has to be checkable character by character (Doc 20 §54, "approval against an exact version").
+No web fonts are downloaded: readability offline takes priority over visual consistency (trade-off §H.2). The named faces at the head of the stack are used when the reader already has them installed, and the stack falls back through the system font otherwise — nothing is fetched over the network either way.
+
+**Why the CJK faces are still in the stack.** Every string in the interface is English (D-9), so they are never needed for the interface itself. They are there for **content people write**: a participant's life story, a message, a community post, a display name. What the interface is written in and what a person may type into it are two different questions, and dropping the fallbacks would answer the second one for them — a name in Chinese would render in whatever the browser chose last, which is how mismatched glyph heights and tofu boxes appear inside otherwise ordinary text.
+
+The monospace family is used **only** for identifiers (`pt_b`, `dv_9`, version hashes) — text of that kind has to be checkable character by character (Doc 20 §54, "approval against an exact version").
 
 #### A.2.2 The type scale (a single scale, shared by all three density levels)
 
@@ -363,13 +367,13 @@ Any body line height below 1.5 is **forbidden** (Doc 20 §314).
 | `--type-weight-semibold` | `600` | Headings, buttons |
 | `--type-weight-bold` | `700` | Only the object named in a confirmation dialog (recipient, community name, version number) |
 
-**`font-weight: 300` and below is forbidden** (Doc 20 §314, "very light text"); **paragraph-level `text-transform: uppercase` is forbidden** (no effect on Chinese, but it applies to identifiers and terms in English).
+**`font-weight: 300` and below is forbidden** (Doc 20 §314, "very light text"); **paragraph-level `text-transform: uppercase` is forbidden** — now that every interface string is English this is a live constraint rather than a dormant one, because uppercased running text removes the ascender and descender shapes a reader uses to recognise words, and it is read as shouting.
 
 #### A.2.5 Letter spacing
 
 | Token | Value | Use |
 |---|---|---|
-| `--type-tracking-normal` | `0` | All Chinese text |
+| `--type-tracking-normal` | `0` | All body text. The faces at the head of the stack are already spaced for reading at body sizes, and tracking added on top of that separates letters into shapes the eye has to reassemble |
 | `--type-tracking-mono` | `0.02em` | Monospace identifiers, to make character-by-character checking easier |
 
 #### A.2.6 Measure (line width)
@@ -377,7 +381,7 @@ Any body line height below 1.5 is **forbidden** (Doc 20 §314).
 | Token | Value | Use |
 |---|---|---|
 | `--measure-narrow` | `28rem` | Dialog body text, single-column forms |
-| `--measure-default` | `36rem` | Participant body text (roughly 34–40 Chinese characters per line) |
+| `--measure-default` | `36rem` | Participant body text (648px at an 18px root, i.e. roughly 70 characters per line — inside the 45–75 the reading research supports) |
 | `--measure-wide` | `56rem` | Researcher/staff tables and side-by-side comparison |
 
 The readable width of `<main>` = `min(100%, var(--measure-default))`; staff workspaces are raised to `--measure-wide`. This replaces the existing `body { max-width: 44rem }` (see §F).
@@ -540,7 +544,10 @@ The full rules are in §B.4.
 | `--icon-stroke` | `2` | Constant; raised to `2.5` in high-contrast mode |
 | `--icon-gap` | `var(--space-2)` | The gap between icon and text |
 
-**Icons that must carry a text label and must never appear alone** (listed explicitly in Doc 20 §320): AI, Block, Report, Visibility, Safety, Draft. This system tightens that to: **no icon may ever appear alone** — there is no such thing as an icon-only button here. The reasons: icon semantics are more ambiguous in a Chinese-language interface, and an icon-only button's accessible name depends on `aria-label`, which conflicts with the existing "the visible words are the accessible name" test strategy (§G).
+**Icons that must carry a text label and must never appear alone** (listed explicitly in Doc 20 §320): AI, Block, Report, Visibility, Safety, Draft. This system tightens that to: **no icon may ever appear alone** — there is no such thing as an icon-only button here. Two reasons:
+
+1. **The six Doc 20 names are exactly the ones with no settled pictogram.** There is no glyph a reader reliably reads as "this was written by a machine", "this person can no longer reach you", or "only you can see this" — unlike, say, a printer or a magnifying glass. The people using this are older adults and people with low digital confidence, for whom a guessed icon is not a small cost: guessing wrong about Block or Visibility means acting on a belief about who can see them that is false.
+2. **An icon-only button's accessible name has to come from `aria-label`**, which separates the accessible name from the visible words and conflicts with the existing test strategy, where the visible words *are* the accessible name (§G).
 
 **The shapes must differ from one another** (this is the channel that distinguishes them in greyscale and for colour-blind readers):
 
@@ -619,7 +626,7 @@ Disabled is not an exception to the state triple, it is an instance of it:
 
 1. **The greyscale check**: screenshot under `filter: grayscale(1)`; every state is still distinguishable (manual, folded into the R1 expert walkthrough).
 2. **The bare-HTML check**: disable all CSS; every state's words are still readable in the document flow (automatable: `document.body.innerText` contains the state name).
-3. **The `content` grep**: hits from `grep -n "content: *['\"][^'\"]" styles.css` must not contain Chinese or any state word.
+3. **The `content` grep**: hits from `grep -n "content: *['\"][^'\"]" styles.css` must not contain any state word.
 
 ---
 
@@ -1265,9 +1272,30 @@ Three places deviate from this section, on the facts:
 
 ## §F CSS draft (paste straight into `apps/web/src/styles.css`)
 
-> **This draft has not been written into `apps/web/src/styles.css`**; per the brief it is delivered as an appendix only.
-> How to land it: **replace** the entire contents of the existing file (every behaviour of the existing 95 lines is preserved or strengthened in this draft: the 18px root font size, rem dimensions, visible focus, 44px targets, the skip link, reduced-motion, and the `main li` block-level button patch).
-> Once landed, the items marked "needs a code change" in §G must be carried out at the same time, or some of the rules (such as flex spacing replacing `{' '}`) will not take effect.
+> ## ⚠️ SUPERSEDED — do not paste this draft over the current stylesheet
+>
+> This is the **v0.1 draft**, written when the palette was blue and
+> `apps/web/src/styles.css` was 95 lines long. Both statements stopped being
+> true when the system was re-palletised to Calm Teal & Warm Sand: the
+> primary action colour here is `#1a4fa0`, and in the live stylesheet it is
+> `#287c78`. The whole colour section below is the old palette.
+>
+> The **live stylesheet is the source of truth** for every token value, and
+> `apps/web/test/design-tokens.test.ts` asserts against it, not against this
+> appendix. Anyone following the original instruction below — "replace the
+> entire contents of the existing file" — would revert the palette, the
+> capability-adaptive modes and the staff desktop layout in one paste.
+>
+> This section is kept because the *structure* it lays out is still the
+> structure in use — the ordering of the token layers, what belongs in
+> `:root`, the two-ring focus treatment, the R1–R5 target rules. Read it for
+> the shape, take the values from the stylesheet.
+>
+> *(Original note, kept as written: this draft has not been written into
+> `apps/web/src/styles.css`; per the brief it is delivered as an appendix
+> only. Once landed, the items marked "needs a code change" in §G must be
+> carried out at the same time, or some of the rules — such as flex spacing
+> replacing `{' '}` — will not take effect.)*
 
 ```css
 /* =============================================================
@@ -2127,11 +2155,11 @@ Plus all 34 button strings queried by name (`Save draft`, `Confirm publish`, `Go
 **H.1 | No icon library and no icon font; every icon is inline SVG, and there is no such thing as an icon-only button.**
 The cost: drawing the icons and accepting their greyscale distinguishability becomes manual work; buttons are wider, and three actions no longer fit on one mobile row.
 What it buys: zero dependencies, works offline, and the accessible name is always identical to the visible words (exactly aligned with the existing test strategy of 34 queries by name). It also satisfies Doc 20 §320's "AI/Block/Report/Visibility/Safety/Draft must carry a text label" naturally.
-The approach rejected: a compact toolbar of icons with `aria-label` — it separates the accessible name from the visible words, which is especially dangerous in a Chinese-language interface.
+The approach rejected: a compact toolbar of icons with `aria-label` — it separates the accessible name from the visible words, so what a screen reader announces and what a sighted person reads become two strings that can drift apart, with only one of them under test.
 
-**H.2 | No web fonts are downloaded; system font families are used.**
-The cost: Chinese glyphs are inconsistent across platforms (PingFang / Microsoft YaHei / Noto differ in weight and in the glyphs themselves), so the typographic precision of the design falls.
-What it buys: no font flash on first paint, readable offline, no tofu boxes on a low-bandwidth connection, and no privacy leak to a third-party font CDN (a THREAT_MODEL concern).
+**H.2 | No web fonts are downloaded; the named faces are used only where already installed, otherwise the system family.**
+The cost: the rendered face varies by platform. A reader with Inter installed and a reader without it see different typography, so the design's typographic precision is not something this system controls. The same applies to the CJK fallbacks used for content people write.
+What it buys: no font flash on first paint, readable offline, nothing to fetch on a low-bandwidth connection, and no privacy leak to a third-party font CDN (a THREAT_MODEL concern).
 
 **H.3 | Breakpoints in `rem` rather than `px`.**
 The cost: a user who has set their browser font size to 32px gets a single-column layout even on a 1280px-wide desktop — staff may feel this "wastes the screen".
@@ -2159,8 +2187,13 @@ Doc 20 §304 says mobile uses "bottom or compact primary navigation"; which of t
 - Top horizontal scrolling: costs no vertical space, but six 44px items must scroll horizontally at 320px wide, and a horizontally scrolling navigation is unfriendly to screen readers and switch devices.
 This document specifies the current state (a top `flex-wrap: wrap`), **but this needs real user testing (R3) to decide**, and should not be settled unilaterally by a design agent.
 
-**I.3 | Setting the Safety semantic colour to purple (`#5B2080` / `#D9B8F2`)**
-The reason is that it must be distinguishable from both danger (red) and moderation (teal). But purple is associated with mourning or religion in some cultural contexts; Doc 20 §320 requires icons to have had a cultural review, and the same applies to colour. **This needs confirmation from a cultural and ethics review**, particularly in a Chinese-language context. The alternative: a deep orange-brown (but that sits too close to warning).
+**I.3 | ~~Setting the Safety semantic colour to purple (`#5B2080` / `#D9B8F2`)~~ — CLOSED**
+This item asked for a cultural review of a purple Safety colour, on the grounds that purple carries associations with mourning or religion in some contexts. It is closed twice over and is kept here only so the reasoning is not lost:
+
+- **The colour was ruled, not reviewed into place.** D-8 settled Safety as **blue**, and D-82 reaffirmed it when the owner's status-colour rules asked for a confirmed SafetyEvent to use Error — red means a destructive action or a blocked operation, and **a person being unwell is neither**. The live token is the navy `--color-safety-fg: #2a4470` (§A.1.1), not a purple.
+- **The distinguishability problem this item was really about did not go away**, and is handled in §A.1.3 instead: Safety, info and matching are all in the blue family, so Safety is carried by the ⬡ icon and the word "safety", with colour demoted to a secondary cue. The severity gradient the purple was reaching for is built inside the safety family (unreviewed signal = warning; confirmed and still needing someone = safety at full strength; resolved or closed = quiet, and never `success`).
+
+No cultural review is outstanding for this token. Doc 20 §320's requirement that **icons** have a cultural review still stands and is unrelated to this item.
 
 **I.4 | Whether Read-Aloud is in scope for the prototype**
 Doc 20 §286 lists it as one of the modes, and §298–300 specify voice interaction and multimodal consent. This involves: browser TTS or server-side TTS (the latter has a data-egress problem, see THREAT_MODEL); whether what is read aloud includes other people's messages (a privacy boundary); and the privacy risk of reading aloud on a shared device (§306 explicitly requires discretion).

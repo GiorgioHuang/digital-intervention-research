@@ -2206,3 +2206,35 @@
   tests:
     - packages/database/test/deploy-smoke.test.ts
   status: implemented
+
+- implementation_id: IMP-DOCS-EN-DESIGN-SYSTEM-154
+  module: WEB
+  summary: >-
+    DESIGN_SYSTEM.md converted to English, and the nine places that reasoned
+    from a Chinese-language interface updated rather than translated. The
+    tracking token no longer describes itself as applying to "all Chinese
+    text"; the uppercase prohibition is restated as a live constraint now that
+    every string is English; the measure is stated as what 36rem actually is
+    (648px, roughly 70 characters) instead of a count of Chinese characters;
+    and the icon-only prohibition is justified by the two reasons that still
+    hold, namely that the six Doc 20 names have no settled pictogram, and that
+    an icon-only accessible name must come from aria-label, separating it from
+    the visible words the tests assert on. The CJK faces stay in the font
+    stack with a corrected reason - they are not needed for the interface but
+    are needed for content people write - and the A.2.1 table now matches the
+    live stylesheet exactly, verified by comparison rather than by eye. Two
+    stale items were found while doing it. I.3 still requested a cultural
+    review of a purple Safety colour that D-8 and D-82 had already ruled blue
+    and that the live navy token contradicts, so it is closed with the
+    distinguishability problem recorded as handled in A.1.3 instead. The F CSS
+    appendix still instructed a reader to replace the entire stylesheet with
+    the pre-teal palette, which would revert the palette, the
+    capability-adaptive modes and the staff desktop layout in one paste; it
+    now opens with a superseded banner saying to read it for structure and
+    take values from the stylesheet.
+  status: implemented
+  trace_ids: [ATR-024]
+  adr_ids: [ADR-020]
+  code: ["design/DESIGN_SYSTEM.md", "design/DESIGN_DECISIONS.md"]
+  tests: ["apps/web/test/design-tokens.test.ts"]
+  docs: ["design/DESIGN_DECISIONS.md D-89", "design/DESIGN_SYSTEM.md §A.2", "design/DESIGN_SYSTEM.md §I.3"]
