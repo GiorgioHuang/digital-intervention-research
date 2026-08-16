@@ -1,33 +1,43 @@
 /* =============================================================
-   健康老龄化研究平台 — 设计系统基座 v0.1
+   Healthy Ageing Research Platform — design system foundation v0.1
    Doc 20 v1.3 §285–320 / WCAG 2.2 AA
-   规则：组件样式只引用 semantic 令牌；本文件之外不得出现字面色值/px/ms。
+   The rule: component styles reference semantic tokens only; no literal
+   colour value, px or ms may appear outside this file.
    ============================================================= */
 
-/* ---------- 1. 令牌：非颜色（主题无关） ---------- */
+/* ---------- 1. Tokens: non-colour (theme-independent) ---------- */
 :root {
-  /* -- 能力自适应的乘数（§C） -- */
+  /* -- The capability-adaptive multipliers (§C) -- */
   --scale-font: 1;
-  /* 密度是两个乘数的积，不是一个值。
-     使用者选的「更宽松」是一件事，员工工作区比参与者端信息密度稍高是另一
-     件事（所有者：研究工作区更理性、密度稍高）。写成一个值，后设的那个会
-     整个盖掉前一个——于是一位选了「更宽松」的研究人员进到员工屏，他的选择
-     就没了。两个乘数相乘，两件事都还在。
-     注意：`--density` 的 calc 在声明它的那个元素上就算完了，不会因为后代
-     重定义了 `--density-surface` 而重算。所以员工工作区那条规则必须把
-     `--density` 一起重写一遍——只改 `--density-surface` 是无效的。 */
+  /* Density is the product of two multipliers, not one value.
+     The "more spacious" a person chose is one thing; a staff workspace
+     carrying slightly higher information density than the participant side
+     is another (owner: the research workspace is more rational, a little
+     denser). Written as a single value, whichever is set later overwrites
+     the other entirely — so a researcher who chose "more spacious" walks
+     into a staff screen and their choice is gone. Multiplying two
+     multipliers keeps both facts.
+     Note: the calc for `--density` is resolved on the element that declares
+     it, and is not recomputed because a descendant redefined
+     `--density-surface`. So the staff-workspace rule has to restate
+     `--density` as well — changing only `--density-surface` does nothing. */
   --density-user: 1;
   --density-surface: 1;
   --density: calc(var(--density-user) * var(--density-surface));
 
-  /* -- 排版 (§A.2) -- */
-  /* 所有者推荐 Inter / Source Sans 3 / Atkinson Hyperlegible / Noto Sans。
-     这里按名字优先使用**本机已装**的那几支，但**不下载任何 Web 字体**
-     （§0.3 的硬约束，也是这批使用者的现实：低带宽、旧设备、离线）。
-     一次 woff2 往返换来的字形差异，抵不上首屏文字晚出现几秒——而"字还
-     没出来"对低数字信心的使用者读起来就是"坏了"。
-     没装这些字体的机器落到 system-ui：iOS/macOS 是 SF、Android 是 Roboto、
-     Windows 是 Segoe UI，三支都是人文无衬线，本来就符合所有者的方向。 */
+  /* -- Typography (§A.2) -- */
+  /* The owner recommends Inter / Source Sans 3 / Atkinson Hyperlegible /
+     Noto Sans. These are named first so that whichever of them is **already
+     installed** is used, but **no web font is downloaded** (the hard
+     constraint of §0.3, and also the reality for these users: low
+     bandwidth, old devices, offline).
+     The difference in letterforms bought by one woff2 round trip is not
+     worth the text appearing seconds later — and "the words have not come
+     up yet" reads, to a user with low digital confidence, as "it is
+     broken".
+     A machine with none of them installed falls through to system-ui:
+     SF on iOS/macOS, Roboto on Android, Segoe UI on Windows. All three are
+     humanist sans faces, which already matches the owner's direction. */
   --type-family-ui: Inter, 'Source Sans 3', 'Atkinson Hyperlegible', 'Noto Sans', system-ui,
     -apple-system, 'PingFang SC', 'Noto Sans CJK SC', 'Microsoft YaHei', sans-serif;
   --type-family-mono: ui-monospace, SFMono-Regular, Menlo, 'Noto Sans Mono CJK SC', monospace;
@@ -56,10 +66,11 @@
   --measure-narrow: 28rem;
   --measure-default: 36rem;
   --measure-wide: 56rem;
-  /* 桌面工作区外框上限。不是行长上限——行长仍由 --measure-default 管。 */
+  /* The outer bound of a desktop workspace. Not a limit on line length —
+     line length is still governed by --measure-default. */
   --measure-desktop: 96rem;
 
-  /* -- 间距 (§A.3)：单一刻度 × 密度乘数 -- */
+  /* -- Spacing (§A.3): one scale × the density multiplier -- */
   --space-0: 0;
   --space-1: calc(0.25rem * var(--density));
   --space-2: calc(0.5rem * var(--density));
@@ -71,37 +82,40 @@
   --space-8: calc(4rem * var(--density));
   --space-9: calc(6rem * var(--density));
 
-  /* -- 形状与描边 (§A.4) -- */
-  /* 所有者：圆角 8–12px，参与者卡片 12–16px，"圆角但不过度卡通"。
-     1rem = 18px（根字号 112.5%），所以下面三档在默认字号下分别是
-     9px / 11.25px / 13.5px。
-     上限卡在 13.5px 而不是 16px：§0.2 禁止 ≥16px 的大圆角卡片——参与者
-     是成年人，不是需要被哄的人。两条要求的交集是 12–13.5px，取 0.75rem。 */
+  /* -- Shape and stroke (§A.4) -- */
+  /* Owner: radii of 8–12px, participant cards 12–16px, "rounded but not
+     over-cartoonish".
+     1rem = 18px (a 112.5% root font size), so the three steps below are
+     9px / 11.25px / 13.5px at the default font size.
+     The ceiling sits at 13.5px rather than 16px: §0.2 forbids cards with
+     radii ≥16px — participants are adults, not people to be coaxed. The
+     intersection of the two requirements is 12–13.5px, so 0.75rem. */
   --radius-0: 0;
-  --radius-1: 0.5rem;    /* 控件：按钮、输入框、徽章外的小块 */
-  --radius-2: 0.625rem;  /* 卡片、面板、状态块 */
-  --radius-3: 0.75rem;   /* 参与者卡片、Life Story 区域 */
+  --radius-1: 0.5rem;    /* Controls: buttons, inputs, small blocks other than badges */
+  --radius-2: 0.625rem;  /* Cards, panels, state blocks */
+  --radius-3: 0.75rem;   /* Participant cards, the Life Story area */
   --radius-pill: 999rem;
   --border-hairline: 1px;
   --border-default: 2px;
   --border-strong: 3px;
   --border-emphasis: 4px;
 
-  /* -- 焦点 (§A.5)：恒定，不随密度/字号缩放 -- */
+  /* -- Focus (§A.5): constant; does not scale with density or font size -- */
   --focus-ring-width: 3px;
   --focus-ring-offset: 2px;
   --focus-halo-width: 2px;
   --focus-ring-total: calc(var(--focus-ring-width) + var(--focus-ring-offset));
 
-  /* -- 触控目标 (§A.8)：恒定 -- */
-  /* 勾选框/单选钮的方框边长。它不等于 --target-min：方框本身画多大，与
-     手指能点多大是两件事——整行（方框 + 标签）才是触控目标。 */
+  /* -- Touch targets (§A.8): constant -- */
+  /* The side length of a checkbox/radio box. It is not --target-min: how
+     big the box is drawn and how big a finger can hit are two different
+     things — the whole row (box + label) is the touch target. */
   --control-tick-size: 1.5rem;
   --target-min: 2.75rem;
   --target-gap: 0.5rem;
   --target-hit-slop: 0.25rem;
 
-  /* -- 动效 (§A.6) -- */
+  /* -- Motion (§A.6) -- */
   --motion-duration-instant: 0ms;
   --motion-duration-fast: 120ms;
   --motion-duration-normal: 200ms;
@@ -110,7 +124,7 @@
   --motion-ease-enter: cubic-bezier(0, 0, 0.2, 1);
   --motion-ease-exit: cubic-bezier(0.4, 0, 1, 1);
 
-  /* -- 层级 (§A.7)：elevation 不表示置信度或权威 -- */
+  /* -- Layering (§A.7): elevation does not signify confidence or authority -- */
   --elevation-0: none;
   --elevation-1: 0 1px 2px rgb(11 18 32 / 0.1), 0 0 0 1px rgb(11 18 32 / 0.06);
   --elevation-2: 0 4px 12px rgb(11 18 32 / 0.14), 0 0 0 1px rgb(11 18 32 / 0.08);
@@ -122,7 +136,7 @@
   --layer-dialog: 40;
   --layer-live: 50;
 
-  /* -- 图标 (§A.9) -- */
+  /* -- Icons (§A.9) -- */
   --icon-size-1: 1em;
   --icon-size-2: 1.25em;
   --icon-size-3: 1.5em;
@@ -130,132 +144,162 @@
   --icon-gap: var(--space-2);
 }
 
-/* ---------- 2. 令牌：颜色 — Light（默认） (§A.1.1) ---------- */
-/* 主题 "Calm Teal & Warm Sand"（所有者定稿，2026-08-13）。
-   温和、可信、理性的人文科技：不做传统医院系统，也不做未来感 AI 产品。
+/* ---------- 2. Tokens: colour — Light (the default) (§A.1.1) ---------- */
+/* The "Calm Teal & Warm Sand" theme (settled by the owner, 2026-08-13).
+   Gentle, trustworthy, rational humane technology: neither a traditional
+   hospital system nor a futuristic AI product.
 
-   两层色阶，是这份主题能同时"好看"和"看得清"的全部原因：
+   Two tiers of the same colour are the whole reason this theme can be both
+   good-looking and legible at once:
 
-     图形层（≥3:1）   边框、图标、结构条、色块  → 用所有者给的原值
-     文字层（≥4.5:1） 任何要被读的字            → 同色相加深后的值
+     Graphic tier (≥3:1)  borders, icons, structural bars, colour blocks
+                          → the owner's values, as given
+     Text tier (≥4.5:1)   anything that has to be read
+                          → the same hue, darkened
 
-   文字层不是另换一个颜色，而是把同一个颜色**按 RGB 等比缩放**变暗：HSL
-   的色相与饱和度在等比缩放下完全不变，只有明度降低。所以 teal 文字仍然
-   是所有者那支 teal（#287C78 → #267571，hsl 177/51 完全一致，只有明度
-   32→30），不是"另一支更暗的绿"。
+   The text tier is not a substitute colour; it is the same colour darkened
+   by **uniform RGB scaling**. Under uniform scaling the HSL hue and
+   saturation are exactly unchanged and only the lightness falls. So teal
+   text is still the owner's teal (#287C78 → #267571: hsl 177/51 identical,
+   lightness 32→30), not "some other, darker green".
 
-   为什么必须分两层：所有者给的 Warning #B7791F 在页面底上是 3.42:1，
-   作为边框合格，作为字不合格（门槛 4.5）。**同一个色值既当边框又当正文，
-   要么边框太淡、要么字看不清**，二选一都错。分层之后两边都拿到对的值，
-   而看得见的那一层——边框、图标、状态条——原样保留了所有者的调色板。
+   Why two tiers are unavoidable: the owner's Warning #B7791F is 3.42:1
+   against the page. That passes as a border and fails as text (the
+   threshold is 4.5). **One value used for both a border and body text
+   leaves only a choice between a border that is too faint and text that is
+   hard to read** — and both are wrong. Splitting the tiers gives each side
+   the right value, while the tier you actually see as colour — borders,
+   icons, status bars — keeps the owner's palette untouched.
 
-   实测值见每行注释，脚本 = design/DESIGN_SYSTEM.md §A.1.5，
-   断言 = apps/web/test/design-tokens.test.ts（改动任一色值即失败）。 */
+   Measured values are in the comment on each line; the script is
+   design/DESIGN_SYSTEM.md §A.1.5 and the assertions are in
+   apps/web/test/design-tokens.test.ts (changing any colour value fails). */
 :root {
-  /* 页面是温和中性色，卡片是纯白：所有者的 Background / Surface 分工。
-     这与旧版相反（旧版页面纯白、卡片灰），是"轻量 SaaS"观感的来源。 */
+  /* The page is a gentle neutral and cards are pure white: the owner's
+     Background / Surface division of labour. This is the reverse of the old
+     version (white page, grey cards), which is where the "lightweight SaaS"
+     look came from. */
   --color-surface-page: #f7f8f6;
   --color-surface-raised: #ffffff;
   --color-surface-sunken: #f0f3f1;
   --color-surface-inverse: #243331;
   --color-surface-scrim: rgb(20 37 35 / 0.55);
 
-  --color-text-primary: #243331;   /* 12.38:1 / page，13.18:1 / raised */
-  --color-text-secondary: #566461; /*  5.81:1 / page，6.19:1 / raised */
+  --color-text-primary: #243331;   /* 12.38:1 / page, 13.18:1 / raised */
+  --color-text-secondary: #566461; /*  5.81:1 / page, 6.19:1 / raised */
   --color-text-inverse: #ffffff;   /* 12.38:1 / inverse */
-  --color-text-link: #267571;      /*  5.10:1 / page，5.43:1 / raised */
+  --color-text-link: #267571;      /*  5.10:1 / page, 5.43:1 / raised */
 
-  --color-border-subtle: #d8dedb;  /* 装饰专用，1.28:1（所有者 Border） */
-  --color-border-default: #74817e; /*  3.80:1 / page — 仅图形，绝不当字 */
+  --color-border-subtle: #d8dedb;  /* decorative only, 1.28:1 (owner's Border) */
+  --color-border-default: #74817e; /*  3.80:1 / page — graphic only, never text */
   --color-border-strong: #566461;  /*  5.81:1 / page */
 
-  --color-action-primary-bg: #287c78;        /* 4.95:1 与白字（所有者 Primary 600） */
+  --color-action-primary-bg: #287c78;        /* 4.95:1 with white text (owner's Primary 600) */
   --color-action-primary-fg: #ffffff;
-  --color-action-primary-bg-hover: #216b67;  /* 6.24:1 与白字（所有者 Primary Hover） */
-  --color-action-primary-bg-active: #1b5b57; /* 7.83:1 与白字 */
+  --color-action-primary-bg-hover: #216b67;  /* 6.24:1 with white text (owner's Primary Hover) */
+  --color-action-primary-bg-active: #1b5b57; /* 7.83:1 with white text */
   --color-action-secondary-fg: #267571;      /* 5.43:1 / raised */
   --color-action-secondary-border: #287c78;  /* 4.95:1 / raised */
-  --color-action-secondary-bg-hover: #ddeeeb; /* 所有者 Primary 100 */
+  --color-action-secondary-bg-hover: #ddeeeb; /* owner's Primary 100 */
 
-  --color-focus-ring: #142523; /* ≥13.9:1 与任一 surface 与 halo */
+  --color-focus-ring: #142523; /* ≥13.9:1 against any surface and against the halo */
   --color-focus-halo: #ffffff;
 
   --color-info-bg: #e8f0f7;
-  --color-info-fg: #3e6f9e;        /* 4.59:1 / info-bg（所有者原值即达标） */
+  --color-info-fg: #3e6f9e;        /* 4.59:1 / info-bg (the owner's value already passes) */
   --color-info-border: #3e6f9e;    /* 4.96:1 / page */
   --color-success-bg: #e7f3ec;
   --color-success-fg: #2e7b59;     /* 4.50:1 / success-bg */
-  --color-success-border: #2f7d5b; /* 4.69:1 / page（所有者 Success） */
+  --color-success-border: #2f7d5b; /* 4.69:1 / page (owner's Success) */
   --color-warning-bg: #fbf1dc;
   --color-warning-fg: #97641a;     /* 4.51:1 / warning-bg */
-  --color-warning-border: #b7791f; /* 3.42:1 / page（所有者 Warning） */
+  --color-warning-border: #b7791f; /* 3.42:1 / page (owner's Warning) */
   --color-danger-bg: #f9e8e7;
   --color-danger-fg: #b34848;      /* 4.50:1 / danger-bg */
-  --color-danger-border: #b84a4a;  /* 4.79:1 / page（所有者 Error） */
+  --color-danger-border: #b84a4a;  /* 4.79:1 / page (owner's Error) */
   --color-danger-solid-bg: #a03f3f;
   --color-danger-solid-fg: #ffffff; /* 6.05:1 */
-  /* Safety 保持与 danger 不同的色族（D-8：安全事件不是错误）。这里用比
-     info 更深的蓝，与 Matching 的蓝拉开明度差。 */
+  /* Safety stays in a different family from danger (D-8: a safety event is
+     not an error). This is a blue deeper than info, pulled away from
+     Matching's blue in lightness. */
   --color-safety-bg: #e6ecf4;
   --color-safety-fg: #2a4470;      /* 8.18:1 / safety-bg */
   --color-safety-border: #2a4470;  /* 9.13:1 / page */
   --color-moderation-bg: #e3f0ef;
   --color-moderation-fg: #1a5451;  /* 7.40:1 / moderation-bg */
   --color-moderation-border: #1a5451; /* 8.11:1 / page */
-  /* AI：低饱和蓝紫，**只做标记**，绝不铺满。Doc 19 §10 与所有者要求一致：
-     AI 产出不得比参与者自己的内容拥有更强的视觉权威。 */
+  /* AI: a low-saturation blue-violet that **marks only** and never fills.
+     Doc 19 §10 agrees with the owner's requirement: AI output must not
+     carry more visual authority than a participant's own content. */
   --color-ai-bg: #f0eff8;
   --color-ai-fg: #6c6898;          /* 4.52:1 / ai-bg */
-  --color-ai-border: #7773a8;      /* 4.10:1 / page（所有者 AI Accent） */
+  --color-ai-border: #7773a8;      /* 4.10:1 / page (owner's AI Accent) */
 
-  /* -- 区域强调色（所有者按功能区划分） -- */
-  /* Story：Life Story、回忆卡片、引用、温和提示、空状态。
-     Sand 绝不做主按钮色——按钮的一致性比区域气氛重要。 */
+  /* -- Zone accent colours (the owner's division by area) -- */
+  /* Story: Life Story, memory cards, quotations, gentle prompts, empty
+     states. Sand is never a primary button colour — consistency of buttons
+     matters more than the atmosphere of a zone. */
   --color-story-bg: #f5e9d8;
   --color-story-fg: #86633d;       /* 4.53:1 / story-bg */
-  --color-story-border: #b18351;   /* 3.16:1 / page（所有者 Sand 500 加深至门槛） */
-  --color-story-surface: #fcf8f2;  /* 所有者 Sand 50：Life Story 区域底 */
-  /* Community：主 teal 之上一点柔和绿。不做鲜艳社交 Feed。 */
+  --color-story-border: #b18351;   /* 3.16:1 / page (owner's Sand 500, darkened to the threshold) */
+  --color-story-surface: #fcf8f2;  /* owner's Sand 50: the Life Story area background */
+  /* Community: a softer green alongside the primary teal. Not a bright
+     social feed. */
   --color-community-bg: #e9f1ea;
-  --color-community-fg: #52745a;   /* 4.55:1 / community-bg，4.92:1 / page */
-  --color-community-border: #6b9674; /* 3.16:1 / page（所有者 Community 加深至门槛） */
-  /* Matching 偏蓝＝探索与选择；Connection 回到主 teal＝关系已稳定。
-     两者故意不同色，因为它们是同一条路上前后两个不同的事实。 */
+  --color-community-fg: #52745a;   /* 4.55:1 / community-bg, 4.92:1 / page */
+  --color-community-border: #6b9674; /* 3.16:1 / page (owner's Community, darkened to the threshold) */
+  /* Matching leans blue = exploring and choosing; Connection returns to the
+     primary teal = the relationship has settled. They are deliberately
+     different colours, because they are two different facts at two points
+     on the same path. */
   --color-matching-bg: #e9eff4;
-  --color-matching-fg: #4d6f8f;    /* 4.55:1 / matching-bg，4.95:1 / page */
-  --color-matching-border: #587fa3; /* 3.96:1 / page（所有者 Matching Accent） */
+  --color-matching-fg: #4d6f8f;    /* 4.55:1 / matching-bg, 4.95:1 / page */
+  --color-matching-border: #587fa3; /* 3.96:1 / page (owner's Matching Accent) */
 
   --color-disabled-bg: #f0f3f1;
   --color-disabled-fg: #69706e;    /* 4.54:1 / disabled-bg */
   --color-disabled-border: #b6bfbc;
 }
 
-/* ---------- 3. 令牌：颜色 — Dark (§A.1.2) ---------- */
-/* 所有者定调（2026-08-13）：这个项目**不优先做深色模式**。使用者包含长者
-   与低数字信心人群，深色下的边界、状态与低对比文字更难控制；研究表格与
-   Life Story 的照片和文字也更适合温暖浅色。优先级给了 Light、高对比 Light
-   与低刺激模式。
+/* ---------- 3. Tokens: colour — Dark (§A.1.2) ---------- */
+/* The owner's ruling (2026-08-13): this project **does not treat dark mode
+   as a priority**. The people using it include older adults and people with
+   low digital confidence; borders, states and low-contrast text are all
+   harder to control in the dark, and the photographs and text of a research
+   table or a Life Story suit a warm light ground better. Priority went to
+   Light, high-contrast Light and the low-stimulation mode.
 
-   那为什么这里还有一整套？因为它**已经在了**——偏好面板有开关、系统
-   `prefers-color-scheme` 也会命中它。「不优先」不等于「可以是坏的」：留一
-   个跟着旧蓝色主题的深色模式，会让选了它的人看到另一个产品。所以按同一
-   支 teal 重新配色，并交给同一个对比度测试守。它不是这一版的重点，但它
-   不许是错的。
+   So why is there a whole set of values here? Because it **is already
+   present** — there is a switch in the preferences panel, and the system's
+   `prefers-color-scheme` reaches it too. "Not a priority" does not mean
+   "allowed to be bad": leaving a dark mode still dressed in the old blue
+   theme would show anyone who chose it a different product. So it is
+   re-palletised around the same teal and guarded by the same contrast test.
+   It is not the focus of this release, but it is not allowed to be wrong.
 
-   深色下把颜色**朝白色插值**变亮（浅色下是朝黑等比变暗）：色相角保持不变，
-   饱和度自然下降——这正是深色界面需要的，高饱和亮色在暗底上会晕。 */
-/* `:not([data-theme='light'])` 是「一律用浅色」这个偏好的**全部实现**。
-   它值一行，因为浅色值本来就写在上面的 `:root` 里：设上 data-theme='light'
-   之后这一整块不再命中，浅色自然生还——**不需要把 40 个色值再抄一遍**。
+   In the dark theme colours are lightened by **interpolating towards
+   white** (in light they are darkened by uniform scaling towards black):
+   the hue angle stays put and the saturation naturally falls — which is
+   exactly what a dark interface needs, because a highly saturated bright
+   colour haloes against a dark ground. */
+/* `:not([data-theme='light'])` is the **entire implementation** of the
+   "always light" preference. It costs one line because the light values are
+   already in the `:root` above: once data-theme='light' is set this whole
+   block stops matching and light survives on its own — **there is no need
+   to copy 40 colour values a second time**.
 
-   为什么只提供「跟随设备 / 一律浅色」，没有「一律深色」：那一个才需要副本
-   （在浅色设备上强制深色，必须再写一份深色值），而所有者已定深色不作优先。
-   一个偏好如果要靠复制一整套色值来实现，它的成本就不再是一个开关的成本。
+   "Always dark" is the one option that does need a duplicate set, because
+   forcing dark on a light device requires the dark values a second time.
+   It is provided, on the owner's ruling — see section 3b below, which
+   carries the reasoning and the test that keeps the two copies identical.
 
-   这条守卫我在 2026-08-13 当天删过一次，理由是「没人设过 data-theme」。
-   属实，但删错了：**没有写入方，正确的动作是补写入方，不是把钩子也拆掉。**
-   拆掉之后，系统设成深色的人就再也没有回到浅色的路——而浅色正是这个项目
-   为长者与低数字信心使用者专门设计的那一套。 */
+   I deleted this guard once, on 2026-08-13, on the grounds that "nothing
+   ever sets data-theme". That was true, and deleting it was the wrong
+   action: **when a capability has no writer, the correct move is to build
+   the writer, not to tear out the hook as well.** With it gone, anyone
+   whose system was set to dark had no route back to light — and light is
+   precisely the set this project designed for older adults and users with
+   low digital confidence. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
     --color-surface-page: #12181a;
@@ -331,19 +375,25 @@
 }
 
 
-/* ---------- 3b. 深色：使用者显式选择（所有者裁定，2026-08-13） ---------- */
-/* 三个选项：跟随系统（默认）、浅色、深色。前两个不需要这一整块——浅色值本来
-   就在 `:root`，"一律浅色"只靠上面那个 `:not([data-theme='light'])` 就成立。
-   **只有"一律深色"需要它**：在浅色设备上强制深色，必须再有一份深色值。
+/* ---------- 3b. Dark: chosen explicitly by the user (owner's ruling, 2026-08-13) ---------- */
+/* Three options: follow the system (the default), light, and dark. The
+   first two need none of this block — the light values are already in
+   `:root`, so "always light" holds through the `:not([data-theme='light'])`
+   above on its own. **Only "always dark" needs this**: forcing dark on a
+   light device requires a second copy of the dark values.
 
-   我先前以"这会多出一份必须永远保持一致的副本"为由没有做这个选项。所有者
-   裁定要做，理由成立——**使用者能不能自己决定，比我少维护一份副本重要**。
-   但那份风险不会因为决定而消失，所以它被管住了：`design-tokens.test.ts` 里
-   有一条断言，逐个令牌比对这一块与上面媒体查询那一块，**键集合与色值必须
-   完全相同**，改一处忘另一处立刻红。
+   I had previously left this option out, on the grounds that it adds a copy
+   that must be kept in step forever. The owner ruled that it should exist,
+   and the reasoning holds — **whether a person can decide for themselves
+   matters more than my having one fewer copy to maintain**. The risk does
+   not disappear because of the ruling, so it is contained instead: there is
+   an assertion in `design-tokens.test.ts` comparing this block against the
+   media-query block above token by token, requiring **the same key set and
+   the same colour values**, so changing one and forgetting the other goes
+   red immediately.
 
-   这也正是这份副本上一次被删掉的原因（D-78）：当时它没有任何写入方，也没有
-   任何东西守着它。现在两样都有了。 */
+   That is also exactly why this copy was deleted once before (D-78): at the
+   time it had no writer and nothing watching it. It now has both. */
 :root[data-theme='dark'] {
   --color-surface-page: #12181a;
   --color-surface-raised: #1a2224;
