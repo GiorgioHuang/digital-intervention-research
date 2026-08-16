@@ -1238,76 +1238,76 @@ Buttons: `Confirm and approve this export` / `Reject` opens its own dialog (one 
 
 ### G1 管理仪表盘与系统状态（§41）
 
-**① 目标与密度**：运行健康度总览。**研究发现与审核决定不是管理 KPI**（§41 硬要求）——因此仪表盘上**不得出现**"发现数""审核处理量""参与者数"。密度：dense 卡片网格。
+**① Purpose and density**: an overview of operational health. **Research findings and moderation decisions are not administrative KPIs** (a hard requirement of §41) — so "number of findings", "moderation throughput" and "number of participants" **must not appear** on this dashboard. Density: a dense card grid.
 
-**② 线框**
+**② Wireframe**
 
 ```text
-管理工作区 › 仪表盘
+Administration workspace › dashboard
 ┌───────────────────────────────────────────────────────────────────────┐
-│ ⓘ 管理工作区只管运行与访问…（边界横幅，见上）                        │
+│ ⓘ The administration workspace governs running and access only… (the boundary banner, above) │
 ├───────────────────────────────────────────────────────────────────────┤
-│ ┌ 服务健康 ────────────┐ ┌ 作业与死信 ───────┐ ┌ 集成 ────────────┐ │
-│ │ API 正常  worker 正常│ │ 失败作业 3        │ │ 知识库 MCP 正常  │ │
-│ │ 调度器 正常          │ │ 死信 1（最早 2h） │ │ 邮件供应商 模拟  │ │
-│ │ 数据库 正常          │ │ [打开作业队列]    │ │ 对象存储 正常    │ │
-│ └──────────────────────┘ └───────────────────┘ └──────────────────┘ │
-│ ┌ 安全告警 ────────────┐ ┌ 备份 ─────────────┐ ┌ 删除传播 ────────┐ │
-│ │ 破窗访问 0 次（24h） │ │ 上次成功 06:00    │ │ 待传播 1（撤回）  │ │
-│ │ 认证失败率 正常      │ │ 恢复演练 未进行 ⚠│ │ 超时未完成 0      │ │
-│ └──────────────────────┘ └───────────────────┘ └──────────────────┘ │
-│ ┌ 功能旗标 ────────────┐ ┌ 支持问题 ─────────┐                       │
-│ │ 已开启 4 / 共 11     │ │ 待处理 2          │                       │
-│ │ 与安全相关的旗标 0   │ │                   │                       │
-│ └──────────────────────┘ └───────────────────┘                       │
-│ ⓘ 这里不显示研究发现、审核决定或参与者内容。                          │
+│ ┌ Service health ──────┐ ┌ Jobs and dead letters ┐ ┌ Integrations ───┐ │
+│ │ API ok  worker ok    │ │ Failed jobs 3         │ │ Knowledge MCP ok │ │
+│ │ Scheduler ok         │ │ Dead letters 1 (oldest 2h) │ │ Email provider simulated │ │
+│ │ Database ok          │ │ [Open the job queue]  │ │ Object storage ok │ │
+│ └──────────────────────┘ └───────────────────────┘ └─────────────────┘ │
+│ ┌ Security alerts ─────┐ ┌ Backups ──────────────┐ ┌ Deletion propagation ┐ │
+│ │ Break-glass access 0 (24h) │ │ Last success 06:00 │ │ Awaiting propagation 1 (a withdrawal) │ │
+│ │ Authentication failure rate normal │ │ Restore rehearsal not carried out ⚠ │ │ Overdue and unfinished 0 │ │
+│ └──────────────────────┘ └───────────────────────┘ └─────────────────┘ │
+│ ┌ Feature flags ───────┐ ┌ Support issues ───────┐                     │
+│ │ Enabled 4 of 11      │ │ Awaiting attention 2  │                     │
+│ │ Safety-related flags 0 │ │                     │                     │
+│ └──────────────────────┘ └───────────────────────┘                     │
+│ ⓘ Research findings, moderation decisions and participant content are not shown here. │
 └───────────────────────────────────────────────────────────────────────┘
 ```
 
-**③ 状态矩阵**
+**③ State matrix**
 
-| 态 | 呈现 |
+| State | Presentation |
 |---|---|
-| 加载 | 逐卡片骨架 |
-| 空队列 | `没有失败作业。` `没有待处理的支持问题。` |
-| 错误 | **健康度探测失败必须显式**：`这一项的健康状态无法确定（<码>）。不要当作「正常」。[重试]` |
-| 权限不足 | 非 SystemAdministrator/OrganisationAdministrator：整屏替换为 `你的角色不能访问管理工作区。` |
-| 需要 MFA | 仪表盘只读，无 MFA 动作；跳转到 G3/G4/G6/G7 的链接文字带 `（其中的变更需要强认证）` |
+| Loading | A skeleton per card |
+| Empty queue | `No failed jobs.` `No support issues awaiting attention.` |
+| Error | **A failed health probe must be explicit**: `The health of this item cannot be determined (<code>). Do not treat it as "ok". [Try again]` |
+| Insufficient permission | Anyone who is not SystemAdministrator/OrganisationAdministrator: the whole screen is replaced with `Your role cannot access the administration workspace.` |
+| MFA required | The dashboard is read-only and has no MFA actions; links to G3/G4/G6/G7 carry `(changes there require strong authentication)` in the link text |
 
-**④ 关键交互**：无高影响动作。**禁止**在仪表盘上放"重跑全部失败作业"这类批量按钮（一次一个有意义的决定）。
+**④ Key interactions**: no high-impact actions. Bulk buttons such as "re-run all failed jobs" on the dashboard are **forbidden** (one meaningful decision at a time).
 
-**⑤ 无障碍**：每卡片 `<section aria-labelledby>`；健康状态用文字（`正常`/`无法确定`/`异常`）+ 图标，不用纯色点；`role="status"` 在刷新后播报一次汇总。
+**⑤ Accessibility**: each card is a `<section aria-labelledby>`; health status is words (`ok`/`cannot be determined`/`faulty`) + an icon, never a plain coloured dot; `role="status"` announces one summary after a refresh.
 
 ---
 
 ### G2 用户与组织（§21）
 
-**① 目标与密度**：账号与组织的运行性管理。**不得显示参与者的研究内容**。密度：dense 表格。
+**① Purpose and density**: operational management of accounts and organisations. **A participant's research content must not be displayed.** Density: a dense table.
 
-**② 线框**
+**② Wireframe**
 
 ```text
-管理 › 用户                          组织 [全部 ▾] [列选择] [保存视图]
-┌──────────────┬──────────┬──────────┬────────┬────────┬─────────────┐
-│ 账号标识     │ 显示名   │ 组织     │ 角色数 │ 状态   │ 操作        │
-├──────────────┼──────────┼──────────┼────────┼────────┼─────────────┤
-│ researcher_lin│ 林研究员 │ ORG-01   │ 1      │ 启用   │ [查看 lin]  │
-│ approver_wu   │ 吴批准人 │ ORG-01   │ 1      │ 启用   │ [查看 wu]   │
-│ SP-002        │ （参与者）│ ORG-01  │ 1      │ 启用   │ [查看 SP-002]│
-└──────────────┴──────────┴──────────┴────────┴────────┴─────────────┘
-ⓘ 参与者账号在这里只显示账号事实（启用/停用、角色、组织）。
-  同意、生命故事、消息、匹配、举报内容在管理工作区一律不可见。
+Administration › users                Organisation [all ▾] [Choose columns] [Save view]
+┌───────────────┬──────────────┬──────────┬───────┬─────────┬──────────────┐
+│ Account id    │ Display name │ Organisation │ Roles │ State │ Action       │
+├───────────────┼──────────────┼──────────┼───────┼─────────┼──────────────┤
+│ researcher_lin│ Lin (researcher) │ ORG-01 │ 1     │ Active  │ [View lin]   │
+│ approver_wu   │ Wu (approver)    │ ORG-01 │ 1     │ Active  │ [View wu]    │
+│ SP-002        │ (participant)    │ ORG-01 │ 1     │ Active  │ [View SP-002]│
+└───────────────┴──────────────┴──────────┴───────┴─────────┴──────────────┘
+ⓘ A participant account shows only account facts here (active/suspended, roles, organisation).
+  Consent, life stories, messages, matches and report content are never visible in the administration workspace.
 ```
 
-**③ 状态矩阵**
+**③ State matrix**
 
-| 态 | 呈现 |
+| State | Presentation |
 |---|---|
-| 加载 | 表格骨架 |
-| 空队列 | `这个组织还没有用户。[邀请用户]` |
-| 错误 | 常规；`RESOURCE_NOT_FOUND` 统一受保护存在文案 |
-| 权限不足 | 无 `user.view`：`你的角色不能查看用户列表。` |
-| 需要 MFA | 查看与邀请不需要 MFA；**角色变更在 G3**（仅需确认，不需 MFA——不得错标）。屏顶：`本屏没有需要强认证的动作。` |
+| Loading | A table skeleton |
+| Empty queue | `This organisation has no users yet. [Invite a user]` |
+| Error | The usual; `RESOURCE_NOT_FOUND` takes the shared protected-existence copy |
+| Insufficient permission | Without `user.view`: `Your role cannot view the user list.` |
+| MFA required | Viewing and inviting do not require MFA; **role changes are in G3** (confirmation only, not MFA — mislabelling this is forbidden). At the top: `No action on this screen requires strong authentication.` |
 
 **④ 确认文案**：邀请用户：`确认向 <邮箱> 发出邀请？邀请会创建一个待激活账号，不会授予任何角色。角色需要单独指派。`（**默认无角色**——最小权限）
 
