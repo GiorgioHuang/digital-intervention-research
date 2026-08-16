@@ -108,17 +108,41 @@ describe('choosing where uploaded bytes go', () => {
     const { readFileSync } = await import('node:fs');
     const { join } = await import('node:path');
     const yaml = readFileSync(join(process.cwd(), '..', '..', '..', '.github', 'workflows', 'deploy.yml'), 'utf8');
-    const guarded = yaml.slice(yaml.indexOf('R2_PRESENT=true'), yaml.indexOf('gcloud run deploy'));
-    expect(guarded, 'the R2 block is no longer in deploy.yml in the expected shape').toContain('R2_PRESENT');
+
+    // Cut the window out by named anchors, and fail on a missing anchor
+    // rather than on what a missing anchor produces. This test read the
+    // window as slice(indexOf(start), indexOf(end)) with both searched
+    // from the top of the file, and a comment added elsewhere in the
+    // workflow happened to contain the end phrase — so the end index came
+    // out ahead of the start, the window came out empty, and the failure
+    // read as "the R2 block is gone" when the R2 block was untouched. An
+    // end anchor is searched forward FROM the start, and each anchor is
+    // asserted found on its own, so what breaks says which anchor moved.
+    const cut = (text: string, from: string, to: string, what: string) => {
+      const start = text.indexOf(from);
+      expect(start, `${what}: could not find ${JSON.stringify(from)} in deploy.yml`).toBeGreaterThan(-1);
+      const end = text.indexOf(to, start + from.length);
+      expect(end, `${what}: could not find ${JSON.stringify(to)} after ${JSON.stringify(from)}`).toBeGreaterThan(-1);
+      return text.slice(start, end);
+    };
+
+    const guarded = cut(yaml, 'R2_PRESENT=true', 'gcloud run deploy "', 'the R2 block');
     // Every setting is attached inside the same branch, and that branch
     // requires each of the four to be present.
-    const attach = guarded.slice(guarded.indexOf('if [ "$R2_PRESENT" = true ]'), guarded.indexOf('else'));
+    const attach = cut(guarded, 'if [ "$R2_PRESENT" = true ]', '\n          else', 'the all-present branch');
     for (const v of ['R2_ACCESS_KEY_ID', 'R2_SECRET_ACCESS_KEY', 'R2_ACCOUNT_ID', 'R2_BUCKET']) {
       expect(attach, `${v} must be attached only inside the all-present branch`).toContain(v);
     }
+    // Against the loop that does the checking, not against the whole
+    // block: the "R2 not configured" notice below it names both secrets
+    // in prose, so asserting on the block passed with one of them dropped
+    // from the check — a guard satisfied by its own explanatory message
+    // (D-84), found by mutation-testing this very test.
+    const presence = cut(guarded, 'for S in ', '\n          done', 'the secret-presence loop');
     for (const s of ['HADI_R2_ACCESS_KEY_ID', 'HADI_R2_SECRET_ACCESS_KEY']) {
-      expect(guarded, `${s} presence must be checked`).toContain(s);
+      expect(presence, `${s} presence must be checked, not merely mentioned`).toContain(s);
     }
+    expect(presence, 'a missing secret must turn R2_PRESENT off').toContain('R2_PRESENT=false');
     expect(guarded).toMatch(/vars\.R2_ACCOUNT_ID[\s\S]*vars\.R2_BUCKET[\s\S]*R2_PRESENT=false/);
   });
 });
