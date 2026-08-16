@@ -175,199 +175,199 @@ This file depends on the tokens and components below; where the foundation names
 **Wireframe (mobile first)**
 
 ```
-概念研究原型 · 合成数据
-身份来自开发环境标识，不是真实认证
+Conceptual research prototype · synthetic data
+Identity comes from a development-environment header, not real authentication
 ────────────────────────────────
-<h1>支持者主页</h1>
+<h1>Supporter home</h1>
 
-你在这里协助 «林女士»。
-所有内容是否被采纳，都由她本人决定。
-你不能代替她做决定，也不能代替她发言。
+You are here to help «Mrs Lin».
+Whether anything is taken up is hers to decide.
+You cannot decide for her, and you cannot speak for her.
 
-── 待你处理 ───────────────────
-▸ 1 份邀请等待你答复
-  [查看邀请]
-▸ 她请你协助 1 项活动准备
-  [查看请求]
+── Waiting for you ────────────
+▸ 1 invitation awaiting your answer
+  [View the invitation]
+▸ She has asked for your help preparing 1 activity
+  [View the request]
 
-── 你当前的权限 ───────────────
-关系：家庭成员（她确认）
-用途：协助生命故事补充
-可访问：生命故事档案「童年」范围
-可执行：提交贡献（不含编辑、不含发布）
-权限有效期至 2026-12-31
-限制：不能查看她已有的条目内容
-              [查看完整权限]
+── What you can currently do ──
+Relationship: family member (confirmed by her)
+Purpose: helping add to a life story
+Can access: the "childhood" scope of the life-story archive
+Can do: submit contributions (not edit, not publish)
+Permission valid until 2026-12-31
+Limits: you cannot see the content of her existing entries
+              [See the full permissions]
 
-── 你提交的贡献 ───────────────
-共 3 条 · 1 条等待她审阅
-              [查看我的贡献]
+── The contributions you submitted ──
+3 in total · 1 awaiting her review
+              [See my contributions]
 
-── 需要帮助时 ─────────────────
-[报告一个问题]   [帮助与联系方式]
+── If you need help ───────────
+[Report a problem]   [Help and contacts]
 ```
 
-**状态矩阵**
+**State matrix**
 
-| 状态 | 呈现与文案原文 |
+| State | Presentation and copy in full |
 |---|---|
-| LOADING | `正在载入…`（各区块分别载入，权限区块**最先**载入；权限未知时不得渲染任何可提交的动作） |
-| EMPTY | 无待办时：`现在没有需要你处理的事。这很正常——协助按她的节奏进行，不需要你主动找事做。你可以随时查看你的权限或已提交的贡献。` |
-| ERROR | 通用 ERROR 文案；权限区块单独失败时：`暂时读不到你的权限范围。在读到之前，提交入口不会开放——这是为了避免你提交一份最终不被允许的内容。[重试]` |
-| FORBIDDEN | `你的角色不能进入支持者主页。这不是出错。如果你认为这是误设，请通过「帮助」联系研究支持。` |
-| PROTECTED | 通用 PROTECTED 文案（当被协助者已撤销关系或本人退出研究时，也走这一条——**不得**显示「她已撤销你的权限」，见 D6 与 §6） |
+| LOADING | `Loading…` (each block loads separately, and the permissions block loads **first**; while the permissions are unknown, no submittable action may be rendered) |
+| EMPTY | With nothing waiting: `There is nothing for you to deal with right now. That is normal — helping goes at her pace, and you do not need to go looking for something to do. You can look at your permissions or the contributions you have submitted at any time.` |
+| ERROR | The generic ERROR copy; when the permissions block alone fails: `Your permissions cannot be read at the moment. Until they can, the way to submit stays closed — this is so you do not submit something that turns out not to be allowed. [Try again]` |
+| FORBIDDEN | `Your role cannot open the supporter home. Nothing has gone wrong. If you think this is a mistake, contact research support through "Help".` |
+| PROTECTED | The generic PROTECTED copy (this is also the path taken when the person being supported has revoked the relationship or has left the study — it **must not** say "she has revoked your permissions"; see D6 and §6) |
 
-**关键交互与确认文案**
+**Key interactions and confirmation copy**
 
-- 首页**不承载任何提交动作**，只做分派。理由：一次一个有意义的决定。
-- 「查看完整权限」是导航，不是对话框——权限是要被读的，不是要被确认掉的。
+- The home screen **carries no submitting action at all**; it only routes. The reason: one meaningful decision at a time.
+- "See the full permissions" is navigation, not a dialog — permissions are there to be read, not to be confirmed away.
 
-**无障碍要点**
+**Accessibility points**
 
-- `<h1>` 后立即是身份与边界说明段落，屏幕阅读器第一屏即听到「所有内容是否被采纳，都由她本人决定」。
-- 每个区块是 `<section aria-labelledby>`；待办数量写进标题：`待你处理（1 项）`，避免只有视觉徽章。
-- 列表项动作按钮为块级、整行可点（styles.css 现有 `main li > button` 规则），触控目标 ≥44px 且行间距 ≥8px 不重叠。
-- 宽松密度档；行宽 ≤70 字符；200% 缩放下单列不横向滚动。
+- The paragraph stating the identity and the boundary comes immediately after the `<h1>`, so a screen reader hears "whether anything is taken up is hers to decide" on the first screen.
+- Each block is a `<section aria-labelledby>`; the number waiting goes into the heading — `Waiting for you (1)` — rather than existing only as a visual badge.
+- Action buttons in list items are block-level and clickable across the full row (the existing `main li > button` rule in styles.css), with touch targets ≥44px and ≥8px between rows so they never overlap.
+- The spacious density level; a measure of ≤70 characters; a single column at 200% zoom with no horizontal scrolling.
 
 ---
 
-### D2 邀请与权限复核（可见权限）
+### D2 Invitations and permission review (visible permissions)
 
-**实施状态（2026-08-04）：部分实现。** 已实现「你支持的人」：支持者能读到自己被写进的授权关系（`relationship.view-own`，取数一律用请求上下文里的 actor，**不接受任何标识参数**——没有东西可以拿来指向别人的关系），逐条显示对方姓名、关系状态与**这条关系允许做什么**（点号动作键不上屏，译成人话）。此前支持者无从知道自己支持谁、被授权做什么，而贡献表单还要求填一个只能从系统外被告知的 archive 标识，整条路径对没拿到内部 id 的人根本不可用；现在写入位置由 `life-story.contribute` 这道**已经在管贡献的**权限来回答（能贡献就能知道往哪贡献），对方还没建生命故事时如实说「还没有可以补充的东西」，而不是给一个空表单。
+**Implementation status (2026-08-04): partially implemented.** "The people you support" is built: a supporter can read the granted relationships they have been written into (`relationship.view-own`, always fetched using the actor in the request context and **accepting no identifier parameter** — there is nothing that could be used to point at somebody else's relationship), showing for each one the other person's name, the relationship's state, and **what this relationship allows** (dotted action keys never reach the screen; they are rendered in plain words). Previously a supporter had no way to know whom they supported or what they were authorised to do, while the contribution form required an archive identifier that could only be learned from outside the system — so the whole path was unusable to anyone who had not been handed an internal id. Where a contribution goes is now answered by `life-story.contribute`, the permission that **already governs contributing** (if you can contribute, you can find out where to), and when the other person has no life story yet the screen says honestly that there is nothing to add to, rather than presenting an empty form.
 
-**刻意不做的两件事**：（1）**不报告对方的同意状态**——同意是参与者的，把它显示给支持者，等于让他推断出参与者没打算告诉他的事；界面只说「你实际能做什么还取决于他们的同意选择，那是他们的，这里不显示」。（2）**不显示屏蔽**——参与者屏蔽某人时对方不被通知（B7 已如此声明），因此关系仍显示为 Active 而操作会被拒绝；这是有意的，措辞已避免把关系状态说成「你一定能做到」。
+**Two things deliberately not done**: (1) **the other person's consent status is not reported** — consent belongs to the participant, and showing it to a supporter would let them infer something the participant had not chosen to tell them; the interface says only "what you can actually do also depends on their consent choices, which are theirs and are not shown here". (2) **Blocks are not shown** — when a participant blocks somebody, that person is not notified (B7 already states this), so the relationship still displays as Active while the operation is refused; this is deliberate, and the wording avoids presenting a relationship state as "you will definitely be able to do this".
 
-**尚未实现**：邀请的接受与拒绝仍只在参与者一侧（UI_INVENTORY B20）；支持者主动退出（自己撤回）没有命令。
+**Not yet implemented**: accepting and declining an invitation is still only on the participant's side (UI_INVENTORY B20); and a supporter withdrawing themselves has no command.
 
 **目标 / 要回答的问题**
 
-- 谁邀请我、为了什么？
-- 我会拿到什么、拿不到什么、到什么时候？
-- 我可以拒绝吗？拒绝会怎样？
-- 之后谁能收回？（答案必须是：本人随时可以，我自己也可以退出）
+- Who invited me, and what for?
+- What will I get, what will I not get, and until when?
+- May I decline? What happens if I do?
+- Who can take it back afterwards? (the answer must be: she can at any time, and I can withdraw myself)
 
-**线框**
+**Wireframe**
 
 ```
-<h1>协助邀请</h1>
+<h1>Invitation to help</h1>
 
-«林女士» 邀请你作为她的支持者。
-她随时可以更改或收回这项授权。
+«Mrs Lin» has invited you to be her supporter.
+She can change or withdraw this at any time.
 
-── 这份邀请包含什么 ───────────
-关系类型：家庭成员
-用途：协助补充生命故事中的童年部分
-你可以访问：生命故事档案 · 仅「童年」范围
-你可以执行：
-  · 提交内容建议（提交给她审阅）
-  · 撤回你自己尚未被审阅的建议
-你不能：
-  · 查看她已有的条目内容
-  · 编辑或删除她的内容
-  · 代替她发布任何内容
-  · 查看她的消息、匹配、评估或研究数据
-有效期至：2026-12-31（到期自动结束）
-她的当前同意：允许支持者贡献（她可随时撤回）
+── What this invitation covers ──
+Relationship type: family member
+Purpose: helping add the childhood part of a life story
+You can access: the life-story archive · the "childhood" scope only
+You can:
+  · submit suggested content (submitted for her to review)
+  · withdraw your own suggestions before she has reviewed them
+You cannot:
+  · see the content of her existing entries
+  · edit or delete her content
+  · publish anything on her behalf
+  · see her messages, matches, assessments or research data
+Valid until: 2026-12-31 (it ends automatically)
+Her current consent: supporter contributions allowed (she can withdraw this at any time)
 
-── 你的答复 ───────────────────
-[接受这份邀请]      [谢绝]
-两个选择同等有效。谢绝不会通知她以外的任何人，
-也不会影响你们之间的关系记录。
+── Your answer ────────────────
+[Accept this invitation]      [Decline]
+Both choices are equally valid. Declining notifies nobody
+but her, and does not affect the record of your relationship.
 ```
 
-**状态矩阵**
+**State matrix**
 
-| 状态 | 呈现与文案原文 |
+| State | Presentation and copy in full |
 |---|---|
-| LOADING | `正在载入邀请…`（**不得**先渲染按钮后补内容：先解释再询问，答复按钮在权限清单渲染完成前为 `disabled` 并说明 `正在载入邀请内容，载入完成后才能答复。`） |
-| EMPTY | `你现在没有待答复的邀请。这很正常。如果有人邀请你协助，它会出现在这里。` |
-| ERROR | 通用 ERROR + `你的答复没有被提交，邀请仍然有效。` |
-| FORBIDDEN | 通用 FORBIDDEN |
-| PROTECTED | 通用 PROTECTED。**邀请已被本人撤回、已过期、或从不存在，三种情况呈现完全一致** |
+| LOADING | `Loading the invitation…` (the buttons **must not** be rendered before the content: explain first, ask second. The answer buttons stay `disabled` until the permission list has rendered, and say `The invitation is still loading; you can answer once it has.`) |
+| EMPTY | `You have no invitations awaiting an answer. That is normal. If somebody invites you to help, it will appear here.` |
+| ERROR | The generic ERROR copy + `Your answer was not submitted, and the invitation is still valid.` |
+| FORBIDDEN | The generic FORBIDDEN copy |
+| PROTECTED | The generic PROTECTED copy. **An invitation withdrawn by the person, one that has expired, and one that never existed are presented identically** |
 
-**确认文案原文**
+**Confirmation copy in full**
 
-接受：
-
-```
-确认接受这份协助邀请？
-· 你将获得：向「童年」范围提交内容建议
-· 你不会获得：查看、编辑或发布她的内容
-· 有效期：至 2026-12-31，到期自动结束
-· 她随时可以收回；你也可以随时退出
-· 这次接受会记入审计记录  🔒
-[确认接受]        [返回]
-```
-
-谢绝：
+Accepting:
 
 ```
-确认谢绝这份邀请？
-· 你不会获得任何访问权限
-· 她会看到你没有接受，但看不到理由
-· 你之后仍然可以被再次邀请
-[确认谢绝]        [返回]
+Accept this invitation to help?
+· You will get: submitting suggested content to the "childhood" scope
+· You will not get: seeing, editing or publishing her content
+· Valid: until 2026-12-31, ending automatically
+· She can withdraw it at any time; you can withdraw at any time too
+· Accepting is written to the audit record  🔒
+[Confirm and accept]        [Go back]
 ```
 
-**无障碍要点**
+Declining:
 
-- 「你可以」「你不能」两个列表都用 `<ul>` 且**长度可比**——不能把限制压缩成一行小字（§314 禁止微型次级标签）。
-- `role="alertdialog"` + `aria-labelledby` 指向确认标题；打开时焦点落在标题，关闭时焦点回到触发按钮。
-- 两个答复按钮在 DOM 顺序与视觉顺序一致，同宽同权重；**不得**给「接受」加主色而「谢绝」用文字链。
+```
+Decline this invitation?
+· You will get no access at all
+· She will see that you did not accept, but not why
+· You can still be invited again later
+[Confirm and decline]        [Go back]
+```
+
+**Accessibility points**
+
+- The "you can" and "you cannot" lists are both `<ul>` and of **comparable length** — the limits must not be compressed into one line of small text (§314 forbids tiny secondary labels).
+- `role="alertdialog"` + `aria-labelledby` pointing at the confirmation title; focus lands on the title when it opens and returns to the triggering button when it closes.
+- The two answer buttons match in DOM order and visual order, with the same width and weight; **giving "accept" the primary colour while "decline" is a text link is forbidden**.
 
 ---
 
-### D3 生命故事贡献提交
+### D3 Submitting a Life Story contribution
 
-**目标 / 要回答的问题**
+**Purpose / the questions it answers**
 
-- 我在为哪一段内容补充？
-- 这段内容我是怎么知道的？（来源先于断言）
-- 提交之后会发生什么？（答案：只到她手里，不发布、不成为证言）
-- 提交后我还能改吗？
+- Which piece of content am I adding to?
+- How do I know this? (provenance before assertion)
+- What happens after I submit? (the answer: it goes to her and no further — it is not published and does not become testimony)
+- Can I still change it after submitting?
 
-**线框**
+**Wireframe**
 
 ```
-<h1>提交一份贡献</h1>
+<h1>Submit a contribution</h1>
 
-你的补充会先送到 «林女士» 手里，由她决定是否采纳。
-提交不会发布任何内容，也不会成为她的证言。
+What you add goes to «Mrs Lin» first, and she decides whether to take it up.
+Submitting publishes nothing, and does not make it her testimony.
 
-── 你在补充哪一段 ─────────────
-( ) 为已有条目补充：«1958 年的夏天»
-( ) 提出一个新条目的建议
-（可选范围来自她给你的授权，不能自行扩大）
+── Which piece you are adding to ──
+( ) Add to an existing entry: «The summer of 1958»
+( ) Suggest a new entry
+(The scopes offered come from what she granted you; they cannot be widened.)
 
-── 你想补充的内容 ─────────────
+── What you want to add ───────
 ┌────────────────────────────┐
 │                            │
 └────────────────────────────┘
-草稿只有你能看到，直到你提交。
+Only you can see a draft until you submit it.
 
-── 这段内容你是怎么知道的 ──────
-( ) 我亲身经历
-( ) 她本人告诉我的
-( ) 其他家人转述
-( ) 来自文件、照片或书信
-( ) 我不确定
-（必填。她审阅时会看到这一项。）
+── How you know this ──────────
+( ) I was there myself
+( ) She told me
+( ) Another family member passed it on
+( ) From a document, photograph or letter
+( ) I am not sure
+(Required. She will see this when she reviews it.)
 
-署名：以你的名义提交（«王先生»）
-      —— 贡献始终署你的名，不会转到她名下
+Attribution: submitted in your name («Mr Wang»)
+      —— a contribution always carries your name, and never moves to hers
 
-[提交给她审阅]      [保存草稿]
+[Submit for her to review]      [Save draft]
 ```
 
-**状态矩阵**
+**State matrix**
 
-| 状态 | 呈现与文案原文 |
+| State | Presentation and copy in full |
 |---|---|
-| LOADING | 范围选项载入中时提交按钮 `disabled`：`正在读取你被授权的范围…` |
-| EMPTY | 无可提交范围时：`你目前没有可以补充的范围。这可能是因为她还没有授权具体条目，或授权已到期。你可以查看你的权限，或等她发出新的邀请。[查看我的权限]` |
-| ERROR | `没能提交。你写的内容还在这里，没有发送出去。可以再试一次；如果仍然失败，请从「帮助」联系研究支持。` |
-| FORBIDDEN | `你的角色不能提交生命故事贡献。这不是出错。` |
-| PROTECTED | 通用 PROTECTED。**现有实现把 404 解释为「需要参与者本人已批准你们的关系并同意『支持者贡献』」——这是设计缺陷：它把「本人的同意状态」泄露给了支持者。** 必须改为通用文案，见 §8 |
+| LOADING | While the scope options load, the submit button is `disabled`: `Reading the scopes you have been granted…` |
+| EMPTY | With no scope available: `There is nothing you can add to at the moment. That may be because she has not granted access to a specific entry, or because the grant has expired. You can look at your permissions, or wait for her to send a new invitation. [See my permissions]` |
+| ERROR | `This could not be submitted. What you wrote is still here and has not been sent. You can try again; if it keeps failing, contact research support from "Help".` |
+| FORBIDDEN | `Your role cannot submit life-story contributions. Nothing has gone wrong.` |
+| PROTECTED | The generic PROTECTED copy. **The current implementation explains a 404 as "this requires the participant to have approved your relationship and consented to supporter contributions" — that is a design defect: it leaks the person's consent status to the supporter.** It must be changed to the generic copy; see §8 |
 
 **确认文案原文**
 
