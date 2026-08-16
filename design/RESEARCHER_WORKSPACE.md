@@ -1175,66 +1175,66 @@ Buttons: `Confirm and approve this finding` / `Go back and review`
 
 ### C17 报告与受控导出（§91）— 已有局部实现（导出审批队列）
 
-**① 目标与密度**：报告版本 + 受控导出全链：申请 → 批准（MFA）→ 生成 → 投递 → 回执 → 过期。**"已生成"不是"已投递"**（§91 硬要求）。密度：标准 + dense 队列表。
+**① Purpose and density**: report versions + the full controlled-export chain: request → approve (MFA) → generate → deliver → receipt → expiry. **"Generated" is not "delivered"** (a hard requirement of §91). Density: standard + a dense queue table.
 
-**实施状态（2026-08-04）**：**报告一侧**（开报告 / 写版本 / 他人批准）已实现——此前本节名字里的「报告」没有任何界面，只有导出半边有屏，报告版本审批队列因此永远没有东西可批。批准即固定该版本：数据库触发器拒绝改动已批准版本的内容，更正只能是新版本；起草人不能批准自己写的版本（命令 + 数据库 CHECK），行内在按钮之前说明；`report.approve` 只要求确认，**不是 MFA 级**，屏上不谎称需要强认证。导出一侧：申请、批准（MFA + 职责分离）、**生成、投递记录、签收记录**已实现（研究者工作区内「等待执行的导出」区块，`listExportsToCarryOut` 以 `export.generate` 为门——能干这活就能看到活）。此前**批准就是终点**：没有任何查询列出已批准的请求，包永远不会被生成，投递也永远不会被记录；一个索取自己信息副本的人会被如实告知「已同意」，然后再也没有下文——不是因为谁拒绝了，而是因为任何界面都无法走下一步。三态措辞守住 §91：`Approved` 写「还没有生成包」，`Generated` 写「包已存在，尚未交付任何人」，`Delivered` 写「已记录为交付，接收方尚未确认」。**「记录我已交付」是人对自己行为的记录，不是平台的动作**——平台不发送任何东西，按钮因此不叫「投递」。已签收（`Received`）离开队列：把已完成的工作留在待办列表里，是让待办列表不再被人看的做法。**过期未实现**（没有任何命令或字段承载导出的过期）。
+**Implementation status (2026-08-04)**: **the reports side** (open a report / write a version / have somebody else approve it) is implemented — the "reports" in this section's title previously had no interface at all, only the export half had a screen, and so the report-version approval queue never had anything in it to approve. Approval fixes that version: a database trigger refuses any change to the content of an approved version, and a correction can only be a new version; the drafter cannot approve their own version (command + database CHECK), stated in the row before the button; and `report.approve` requires confirmation only and is **not at the MFA tier**, so the screen does not falsely claim strong authentication is needed. On the export side: requesting, approving (MFA + separation of duties), and **generating, recording delivery and recording receipt** are implemented (the "exports waiting to be carried out" block in the researcher workspace, with `listExportsToCarryOut` gated on `export.generate` — if you can do the work you can see the work). Previously **approval was the end of the line**: no query listed approved requests, the package would never be generated, and delivery would never be recorded; somebody asking for a copy of their own information would be told honestly that it had been agreed and then hear nothing further — not because anyone refused, but because no interface could take the next step. The three states' wording holds §91: `Approved` says "no package has been generated yet", `Generated` says "the package exists and has been given to nobody", and `Delivered` says "recorded as delivered; the recipient has not confirmed". **"Record that I have delivered it" is a person's record of their own action, not an action by the platform** — the platform sends nothing, which is why the button is not called "deliver". Once received (`Received`) it leaves the queue: leaving finished work in a to-do list is how a to-do list stops being read. **Expiry is not implemented** (no command or field carries the expiry of an export).
 
 **② 线框**
 
 ```text
-导出 › 新建申请
+Exports › new request
 ┌───────────────────────────────────────────────────────────────┐
-│ 报告类型* [统计复核用数据集 ▾]   受众* [外部统计伙伴 ▾]        │
-│ 目的*     [_____________________________________]              │
-│ 接收方*   [_____________________________________]              │
-│ 精确来源* [dv_9（已锁定，sha256:aa71…）] [+ 添加来源]          │
-│ 去标识*   ( ) 假名化   ( ) 匿名化                              │
-│ ⓘ 研究导出没有「可识别」选项——平台不会生成可识别的研究导出。 │
-│ 限制      [仅用于约定目的；不得再分发]  有效期 [30 天]         │
-│ ⓘ 导出内容会携带 [合成数据] 标记；接收方看到的是合成数据。    │
-│                                            [提交导出申请]     │
+│ Report type* [dataset for statistical review ▾]  Audience* [external statistical partner ▾] │
+│ Purpose*   [_____________________________________]             │
+│ Recipient* [_____________________________________]             │
+│ Exact sources* [dv_9 (locked, sha256:aa71…)] [+ Add a source]  │
+│ De-identification*  ( ) pseudonymised   ( ) anonymised         │
+│ ⓘ A research export has no "identifiable" option — the platform does not generate identifiable research exports. │
+│ Restrictions [for the agreed purpose only; not to be redistributed]  Valid for [30 days] │
+│ ⓘ The export carries the [synthetic data] marking; what the recipient sees is synthetic data. │
+│                                            [Submit the export request] │
 └───────────────────────────────────────────────────────────────┘
 
-导出 › ex_5 › 状态（诚实的状态机）
- ① 已申请 → ② 已批准（approver_wu，MFA，08-03 12:10）
- → ③ 已生成（12:12，清单 sha256:5e90…） → ④ 已投递给供应商（12:13）
- → ⑤ 回执：未确认
- ⓘ 「已生成」不等于「已投递」；「已投递给供应商」不等于「接收方已收到」。
+Exports › ex_5 › status (an honest state machine)
+ ① Requested → ② Approved (approver_wu, MFA, 08-03 12:10)
+ → ③ Generated (12:12, manifest sha256:5e90…) → ④ Handed to the provider (12:13)
+ → ⑤ Receipt: not confirmed
+ ⓘ "Generated" is not "delivered"; "handed to the provider" is not "the recipient received it".
 ```
 
 **③ 状态矩阵**
 
-| 态 | 呈现 |
+| State | Presentation |
 |---|---|
-| 加载 | 队列骨架；来源下拉在锁定版本清单到齐前禁用 |
-| 空队列 | 待批准导出为空：`现在没有待决定的导出申请。`；无可选来源：`没有可导出的来源。导出只能引用已锁定的数据集版本或已批准的报告版本。` |
-| 错误 | `EXPORT_REQUIRES_APPROVAL`：`导出必须先获得批准。[提交批准申请]`；`DEIDENTIFICATION_REQUIRED`：指出哪个来源不满足；投递失败：`投递失败——接收方没有收到。这不是「可能收到了」。[查看失败原因]` |
-| 权限不足 | 申请需 `export.request`（Researcher）；批准需 `export.approve`（ResearchApprover）。研究者在队列里看到自己的申请，决定按钮禁用 + `这是你申请的，你不能批准它。` |
-| 需要 MFA | 申请不需要；**批准需要 MFA**。屏顶：`本屏的强认证动作：导出批准（需要 MFA）。` |
+| Loading | A queue skeleton; the source dropdown is disabled until the list of locked versions has arrived |
+| Empty queue | No exports awaiting approval: `There are no export requests awaiting a decision.`; no sources available: `There are no exportable sources. An export can only cite a locked dataset version or an approved report version.` |
+| Error | `EXPORT_REQUIRES_APPROVAL`: `An export must be approved first. [Submit an approval request]`; `DEIDENTIFICATION_REQUIRED`: names which source does not meet it; a failed delivery: `Delivery failed — the recipient did not receive it. This is not "they may have received it". [See why it failed]` |
+| Insufficient permission | Requesting needs `export.request` (Researcher); approving needs `export.approve` (ResearchApprover). A researcher sees their own request in the queue with the decision button disabled + `You requested this, so you cannot approve it.` |
+| MFA required | Requesting does not; **approving does**. At the top: `Strong-authentication actions on this screen: approve an export (requires MFA).` |
 
-**④ 确认文案（批准，原文）**
+**④ Confirmation copy (approval, in full)**
 
 ```
-确认批准导出申请 ex_5？
-接收方：stats-partner（外部）
-目的：外部统计复核
-来源：dv_9（已锁定，sha256:aa71c3e0d9f4b218…）
-去标识：假名化
-有效期：30 天；限制：仅用于约定目的，不得再分发
-批准之后数据会离开平台边界。这次批准会以你的身份署名并写入审计。
-导出内容标记为 [合成数据]。
-这个操作需要强认证（MFA）。
+Approve export request ex_5?
+Recipient: stats-partner (external)
+Purpose: external statistical review
+Source: dv_9 (locked, sha256:aa71c3e0d9f4b218…)
+De-identification: pseudonymised
+Valid for: 30 days; restrictions: for the agreed purpose only, not to be redistributed
+After approval the data leaves the platform's boundary. This approval is signed in your name and written to the audit trail.
+The export is marked [synthetic data].
+This action requires strong authentication (MFA).
 ```
-按钮：`确认批准这次导出` / `拒绝` 走独立对话框（一次只确认一件事） / `返回`
+Buttons: `Confirm and approve this export` / `Reject` opens its own dialog (one thing confirmed at a time) / `Go back`
 
-**⑤ 无障碍**：状态机是 `<ol>` + 每步 `已完成 / 进行中 / 未开始` 文字；`回执：未确认` 必须是文字（不用灰点）；去标识 radio 无预选；批准与拒绝是两个独立按钮，各自的确认对话框只确认一件事。
+**⑤ Accessibility**: the state machine is an `<ol>` with each step carrying the words `done / in progress / not started`; `Receipt: not confirmed` must be words (never a grey dot); the de-identification radios pre-select nothing; approve and reject are two separate buttons, and each one's confirmation dialog confirms one thing only.
 
 ---
 
 ## 3. G. 管理工作区（G1–G7）
 
-> **全局边界（每屏顶部固定 `role="note"`，不可关闭）**：
-> `管理工作区只管运行与访问：账号、角色、集成、作业、旗标、审计。它不授予研究、审核或安全权威——研究结论、审核决定、安全处置都不在这里做，也不在这里显示。`
+> **The global boundary (a permanent `role="note"` at the top of every screen, not dismissible)**:
+> `The administration workspace governs running and access only: accounts, roles, integrations, jobs, flags and audit. It grants no research, moderation or safety authority — research conclusions, moderation decisions and safety dispositions are neither made here nor shown here.`
 
 ### G1 管理仪表盘与系统状态（§41）
 
