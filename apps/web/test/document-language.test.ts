@@ -41,6 +41,9 @@ describe('the declared language of the document', () => {
   it('titles the page in that language', () => {
     const title = /<title>([^<]*)<\/title>/.exec(html)?.[1] ?? '';
     expect(title.length).toBeGreaterThan(0);
-    expect(title).not.toMatch(/[㐀-䶿一-鿿]/);
+    // The Han ranges are written as escapes rather than as literal
+    // characters, so a repository-wide search for Chinese does not match
+    // the one file whose job is to find it.
+    expect(title).not.toMatch(/[\u3400-\u4dbf\u4e00-\u9fff]/);
   });
 });
