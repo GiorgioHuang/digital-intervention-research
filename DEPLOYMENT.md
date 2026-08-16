@@ -204,3 +204,13 @@ How to sign in (**only under `AUTH_MODE=dev-header`**; once Sign in with Google 
 The access password: opening `<url>/?token=<token>` for the first time stores it in this browser and strips it from the address bar (so the address in your history does not contain the token). If you have cleared site data or moved to another device, any request returns 401 and a banner appears at the top of the interface saying an access password is needed for this environment; you can type it straight in there, without having to hunt for the link with the token in it.
 
 The same works locally: `DATABASE_URL=… pnpm seed:demo`.
+
+## If a deploy fails with "Another migration is already running"
+
+It means two deploys overlapped. `node-pg-migrate` takes a lock so that exactly one migration touches the database at a time, and that error is the lock doing its job — what was wrong is that two deploys were asking.
+
+It happened on 2026-08-16: two pushes a couple of minutes apart produced two CI runs, each of which fired its own deploy, and the two overlapped. The workflow now has a `concurrency` group so a second deploy queues behind the first instead of racing it, and `packages/database/test/deploy-smoke.test.ts` asserts the group is there.
+
+**Do not "fix" this by clearing the lock or adding `--no-lock`.** The lock is what stops two migrations applying to one database at once, and a half-applied migration is a far worse problem than a deploy that waits. If the error appears again with no overlapping run in the Actions list, the lock row in `migration_admin` has been left behind by a killed process — that is worth investigating rather than clearing, because something killed a migration mid-flight.
+
+**The reason this mattered was never mainly the red build.** Two `gcloud run deploy` calls carrying different commits race, and whichever finishes last is the revision serving traffic — so the deployed code can quietly be older than `main`, with nothing red anywhere to say so. The failed migration was the visible half of the defect; that is the silent half.

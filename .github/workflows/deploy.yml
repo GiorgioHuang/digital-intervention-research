@@ -18,6 +18,30 @@ permissions:
   contents: read
   id-token: write # keyless Workload Identity Federation
 
+# One deploy at a time, because two of them share a database and a service.
+#
+# Observed 2026-08-16: two pushes a couple of minutes apart produced two CI
+# runs, each of which fired its own deploy, and the two ran concurrently
+# (06:02:38-06:06:11 and 06:04:50-06:08:17). A later run then died with
+# `Failed to release migration lock / Another migration is already running`
+# — node-pg-migrate takes a lock so that exactly one migration touches a
+# database at a time, and it was doing its job; what was wrong was that two
+# deploys were asking.
+#
+# The migration failure is the visible half and the lesser one. The silent
+# half is worse: two `gcloud run deploy` calls carrying different commits
+# race, and whichever finishes last is the revision serving traffic — so
+# the deployed code can quietly be older than main, with nothing red
+# anywhere to say so.
+#
+# `cancel-in-progress: false` is deliberate. Cancelling the run that holds
+# the migration lock is how a lock is left behind, and a half-applied
+# migration is worse than a queued deploy. Superseded runs wait rather than
+# die; the queue drains in commit order.
+concurrency:
+  group: deploy-cloud-run
+  cancel-in-progress: false
+
 jobs:
   deploy:
     runs-on: ubuntu-latest

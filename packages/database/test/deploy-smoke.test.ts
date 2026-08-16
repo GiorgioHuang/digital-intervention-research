@@ -166,3 +166,65 @@ describe('the deploy workflow only deploys this repository', () => {
     expect(workflow).toContain('ref: ${{ github.event.workflow_run.head_sha || github.sha }}');
   });
 });
+
+/**
+ * Only one deploy at a time.
+ *
+ * Two pushes a couple of minutes apart produce two CI runs, each firing its
+ * own deploy — and on 2026-08-16 the two overlapped, after which a later
+ * run died with `Another migration is already running`. node-pg-migrate's
+ * lock was doing exactly its job; what was wrong was that two deploys were
+ * asking.
+ *
+ * The migration failure is the visible half and the lesser one. The silent
+ * half is worse: two `gcloud run deploy` calls carrying different commits
+ * race, and whichever finishes last is the revision serving traffic, so the
+ * deployed code can quietly be older than main with nothing red to say so.
+ *
+ * A `concurrency:` block is a few lines with no visible effect when it is
+ * working, which makes it exactly the kind of thing a refactor drops
+ * without anything going red — the same argument D-88 makes about the
+ * `if:` guard above, and the reason both are asserted rather than trusted.
+ */
+describe('the deploy workflow runs one deploy at a time', () => {
+  const raw = readFileSync(
+    join(fileURLToPath(new URL('../../../', import.meta.url)), '.github/workflows/deploy.yml'),
+    'utf8',
+  );
+  /**
+   * Comments are stripped before anything is asserted, and the first
+   * version of this file is why.
+   *
+   * The `cancel-in-progress` check read the file as written and passed with
+   * the setting flipped to `true` — because the comment above it contains
+   * the words "`cancel-in-progress: false` is deliberate", and a sentence
+   * explaining the setting satisfied the assertion about the setting. That
+   * is D-84's finding reproduced exactly: a guard that its own comment can
+   * satisfy has commented itself into uselessness.
+   */
+  const workflow = raw
+    .split('\n')
+    .map((line) => (/^\s*#/.test(line) ? '' : line.replace(/\s#.*$/, '')))
+    .join('\n');
+
+  it('declares a concurrency group at the workflow level', () => {
+    // Workflow level, not job level: a job-level group would still let two
+    // runs start and race, because the guard has to cover the whole
+    // migrate-then-deploy sequence rather than one step of it.
+    const beforeJobs = workflow.slice(0, workflow.indexOf('\njobs:'));
+    expect(beforeJobs, 'no workflow-level concurrency group — two deploys can race').toMatch(
+      /^concurrency:\s*$/m,
+    );
+    expect(beforeJobs).toMatch(/^\s+group:\s*\S+/m);
+  });
+
+  it('queues a superseded run rather than cancelling it', () => {
+    /* Cancelling the run that holds the migration lock is how a lock gets
+       left behind, and a half-applied migration is worse than a deploy that
+       waits. The default for `cancel-in-progress` is false, but it is
+       written out because the reason is not obvious from its absence — and
+       somebody optimising CI time would otherwise set it to true and think
+       it harmless. */
+    expect(workflow.replace(/\s+/g, ' ')).toContain('cancel-in-progress: false');
+  });
+});
