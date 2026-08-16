@@ -539,105 +539,106 @@ Record that you gave help with "setting up the device"?
 **D6-a 报告一个问题 · 线框**
 
 ```
-<h1>报告一个问题</h1>
+<h1>Report a problem</h1>
 
-先选类型，不同类型走不同的处理路径。
+Choose the type first; different types take different routes.
 
-( ) 系统或操作问题（打不开、按钮没反应）
-    → 研究支持处理，通常 2 个工作日内回复
-( ) 隐私方面的担心（我看到了不该看到的内容）
-    → 研究支持 + 隐私负责人
-( ) 有人在骚扰或不当接触
-    → 由审核团队人工查看
-( ) 我担心她的安全
-    → 由安全团队人工查看
-( ) 其他
+( ) A problem with the system or with using it (it will not open, a button does nothing)
+    → handled by research support, usually a reply within 2 working days
+( ) A privacy concern (I saw something I should not have)
+    → research support + the privacy lead
+( ) Somebody is harassing or approaching people inappropriately
+    → looked at by a person on the moderation team
+( ) I am worried about her safety
+    → looked at by a person on the safety team
+( ) Something else
 
-── 发生了什么（用你自己的话）───
+── What happened (in your own words) ──
 ┌────────────────────────────┐
 └────────────────────────────┘
 
-⚠ 本平台不是紧急求助渠道。
-如果有人正处于危险之中，请直接拨打当地
-紧急电话；本平台的处理不是即时的。
-研究支持的服务时间：工作日 09:00–17:00。
+⚠ This platform is not an emergency service.
+If somebody is in danger, call your local emergency
+number directly; nothing here happens immediately.
+Research support hours: weekdays 09:00–17:00.
 
-[提交]
+[Submit]
 ```
 
-**D6-b 访问被撤销 · 线框**
+**D6-b access revoked · wireframe**
 
 ```
-<h1>访问已结束</h1>
+<h1>Your access has ended</h1>
 
-你对 «林女士» 相关内容的访问已于
-2026-08-01 结束。
+Your access to things relating to «Mrs Lin»
+ended on 2026-08-01.
 
-这可能是因为授权到期、被更改，或研究安排变动。
-具体原因不会在这里显示。
+This may be because the grant expired, was changed, or
+because the research arrangements changed.
+The specific reason is not shown here.
 
-你已经提交过的内容不受影响，
-它们的去留由她决定。
+What you already submitted is unaffected;
+whether it stays is hers to decide.
 
-[返回主页]      [帮助与联系方式]
+[Back to home]      [Help and contacts]
 ```
 
-**状态矩阵**
+**State matrix**
 
-| 状态 | 呈现与文案原文 |
+| State | Presentation and copy in full |
 |---|---|
-| LOADING | `正在载入…` |
-| EMPTY | 报告历史为空：`你还没有提交过报告。这很正常。` |
-| ERROR | 通用 ERROR + `你的报告没有提交出去。内容还在，请再试一次。如果这是安全方面的紧急情况，请不要在这里等待——按上面的紧急说明处理。` |
-| FORBIDDEN | 通用 FORBIDDEN（报告入口原则上对所有支持者开放，故极少出现） |
-| PROTECTED | **访问被撤销走的就是 PROTECTED 的显式版本**：D6-b 只说「已结束」+ 生效时间 + 通用原因，绝不显示「她撤销了你的权限」「她已退出研究」「她屏蔽了你」 |
+| LOADING | `Loading…` |
+| EMPTY | With no report history: `You have not submitted any reports. That is normal.` |
+| ERROR | The generic ERROR copy + `Your report was not submitted. What you wrote is still here — please try again. If this is a safety emergency, do not wait here; follow the emergency note above.` |
+| FORBIDDEN | The generic FORBIDDEN copy (reporting is open to every supporter in principle, so this appears very rarely) |
+| PROTECTED | **Revoked access is the explicit form of PROTECTED**: D6-b says only "it has ended" + the effective date + a generic reason, and never "she revoked your permissions", "she has left the study" or "she blocked you" |
 
-**确认文案原文**
+**Confirmation copy in full**
 
 ```
-确认提交这份报告？
-· 会看到它的人：{按类型}研究支持 / 审核团队 / 安全团队
-· 由人工查看，不会由自动系统单独作决定
-· 她本人不会自动看到你提交了报告
-· 提交后你会在「我的报告」里看到进度：已收到 → 审阅中 → 已处理
-[确认提交]        [返回]
+Submit this report?
+· Who will see it: {by type} research support / the moderation team / the safety team
+· A person will look at it; no automated system decides on its own
+· She is not automatically told that you submitted a report
+· After submitting, you can follow it under "My reports": received → being reviewed → dealt with
+[Confirm and submit]        [Go back]
 ```
 
-**无障碍要点**
+**Accessibility points**
 
-- 紧急限制说明**在提交按钮之前**，且是 `role="note"` 的常驻段落，不是 tooltip、不是折叠块。
-- 类型单选组每项都带一行「会走到哪里」的说明，说明与选项通过 `aria-describedby` 关联。
-- D6-b 页面加载时焦点落在 `<h1>`，并用 `role="status"` 播报一次「访问已结束」。
+- The note about what this is not for sits **before the submit button**, as a permanent `role="note"` paragraph — never a tooltip and never a collapsed block.
+- Each option in the type radio group carries a line saying where it goes, associated with the option through `aria-describedby`.
+- On D6-b, focus lands on the `<h1>` when the page loads, and "your access has ended" is announced once via `role="status"`.
 
 ---
 
-## §3 E. 审核工作区（E1–E6）
+## §3 E. Moderation workspace (E1–E6)
 
-> 贯穿全组的三条硬约束：
-> **(1) 举报人身份绝不出现，也不得通过时间、措辞或排序间接暴露（§6 有可检验检查表）。**
-> **(2) 证据最小化：只呈现处置所必需的内容，不铺开被举报者的完整历史（§7）。**
-> **(3) 决定不可变：确认文案必须说明「记录一旦作出不可修改」，并同屏给出申诉与恢复路径。**
+> Three hard constraints run through this whole group:
+> **(1) The reporter's identity never appears, and must not be exposed indirectly through timing, wording or ordering either (§6 has a checkable checklist).**
+> **(2) Evidence minimisation: present only what the disposition requires, never lay out the reported person's full history (§7).**
+> **(3) Decisions are immutable: the confirmation copy must state that a record cannot be changed once made, and give the appeal and restoration route on the same screen.**
 
-### E1 审核仪表盘
+### E1 Moderation dashboard
 
-**目标 / 要回答的问题**
+**Purpose / the questions it answers**
 
-- 现在有什么在等我，按什么顺序？
-- 有没有快到期的（申诉期限、处理时限）？
-- 有没有需要转给安全团队的？
+- What is waiting for me right now, and in what order?
+- Is anything close to a deadline (an appeal window, a handling deadline)?
+- Is there anything that needs handing to the safety team?
 
-**线框**
+**Wireframe**
 
 ```
-<h1>审核仪表盘</h1>
+<h1>Moderation dashboard</h1>
 
-审核判断的是内容与行为，不是举报人。
-队列中不包含举报人身份。
+Moderation judges content and conduct, not the person who reported it.
+The queue contains no reporter identities.
 
-── 需要处理 ───────────────────
-待分配个案            7  [打开队列]
-分配给我的            3  [查看]
-超过处理时限的        1  [查看]
+── Needing attention ──────────
+Cases awaiting assignment    7  [Open the queue]
+Assigned to me               3  [View]
+Past the handling deadline   1  [View]
 
 ── 有期限的 ───────────────────
 申诉待复核            2  · 最近期限：3 天后
