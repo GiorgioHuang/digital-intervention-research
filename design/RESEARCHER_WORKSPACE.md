@@ -976,74 +976,74 @@ Safety (minimum necessary)
 
 ---
 
-### C14 数据集定义 → 变量 → 生成 → 质量复核 → 锁定（§78–83）— 已有局部实现（可锁定队列 + 锁定）
+### C14 Dataset definition → variables → generation → quality review → lock (§78–83) — partially implemented (the lockable queue + locking)
 
-**① 目标与密度**：五段式流水线；**锁定是本工作区最强的人工权威动作之一（人工 + MFA + 不可逆）**。密度：dense（变量表、质量问题表）+ 标准（锁定确认）。
+**① Purpose and density**: a five-stage pipeline; **locking is one of the strongest human-authority actions in this workspace (human + MFA + irreversible)**. Density: dense (the variable table, the quality-problem table) + standard (the lock confirmation).
 
-**实施状态（2026-08-04）：整条链已可达。** 此前**只有最后一步（锁定）有界面**——写定义、批准定义、生成版本、完成质量复核这四步没有任何界面能执行，于是可锁定队列**永远不可能通过产品被填满**：一个队列填不满的决策屏，等于从没被人用过。现在研究者一侧有「数据集」区块（写定义 / 生成版本 / 记录质量复核完成，`listDatasetWork` 以 `dataset.define` 为门——能干这活就能看到活干到哪了），批准人一侧新增「数据集定义」决策屏（`listDefinitionsAwaitingApproval`）。措辞守三条：变量字典即「装什么进去」，**消息正文默认排除、未列出的就不包含**（ADR-034），批准确认把这句话放在控件旁；**起草人不能批准自己写的定义**（命令与数据库 CHECK 双重强制），行内在按钮之前就说明，不是提交后才报错；「记录质量复核完成」是**人对自己行为的记录**，不叫「批准」，并明说它不是锁定。**批准定义不是 MFA 级**（`dataset.approve-definition` 只要求确认，锁定才要求 MFA）——屏上不谎称需要强认证，夸大一个动作的代价是另一种不诚实，且会教人忽略那些真实的提示。
+**Implementation status (2026-08-04): the whole chain is now reachable.** Previously **only the last step, locking, had an interface** — writing a definition, approving it, generating a version and completing the quality review could none of them be carried out from any screen, so the lockable queue **could never be filled through the product**: a decision screen whose queue cannot be filled has never been used by anyone. There is now a "Datasets" block on the researcher's side (write a definition / generate a version / record that the quality review is complete, with `listDatasetWork` gated on `dataset.define` — if you can do the work you can see how far it has got), and a new "dataset definitions" decision screen on the approver's side (`listDefinitionsAwaitingApproval`). Three points of wording: the variable dictionary is "what goes in", **message bodies are excluded by default and what is not listed is not included** (ADR-034), and the approval confirmation puts that sentence beside the control; **a drafter cannot approve their own definition** (enforced both by the command and by a database CHECK), stated in the row before the button rather than raised as an error after submission; and "record that the quality review is complete" is **a person's record of their own action**, is not called "approve", and says plainly that it is not locking. **Approving a definition is not at the MFA tier** (`dataset.approve-definition` requires confirmation only; locking is what requires MFA) — the screen does not falsely claim strong authentication is needed, because overstating an action's cost is its own kind of dishonesty and teaches people to ignore the notices that are real.
 
 **② 线框（锁定确认屏为重点）**
 
 ```text
-数据集 › DD-003 › 变量构建
-┌────────────┬──────────┬──────────┬────┬────────┬──────┬──────┬────────┐
-│ 变量名     │ 来源     │ 来源版本 │类型│ 派生   │缺失  │敏感度│ 同意   │
-├────────────┼──────────┼──────────┼────┼────────┼──────┼──────┼────────┤
-│ ucla_total │ 评估M08  │ v2       │数值│ 求和   │按题  │中    │ 研究参与│
-│ msg_count  │ 消息M07  │ v3       │计数│ 元数据 │无    │高    │ 消息    │
-│ ⚠ 私人内容默认排除：消息正文、生命故事正文不在可选来源里。            │
-│ 纳入理由*（每个变量必填）                                             │
+Datasets › DD-003 › variable construction
+┌────────────┬──────────┬───────────┬──────┬──────────┬─────────┬──────────┬──────────┐
+│ Variable   │ Source   │ Source ver│ Type │ Derivation│Missing  │Sensitivity│ Consent  │
+├────────────┼──────────┼───────────┼──────┼──────────┼─────────┼──────────┼──────────┤
+│ ucla_total │ Assessment M08 │ v2  │Numeric│ Sum      │per item │ Medium   │ study participation │
+│ msg_count  │ Messages M07   │ v3  │Count │ Metadata │none     │ High     │ messaging │
+│ ⚠ Private content is excluded by default: message bodies and life-story bodies are not among the selectable sources. │
+│ Reason for inclusion* (required for every variable)                    │
 └───────────────────────────────────────────────────────────────────────┘
 
-数据集 › dv_9 › 锁定确认
+Datasets › dv_9 › lock confirmation
 ┌───────────────────────────────────────────────────────────────────────┐
-│ ⓘ 本屏的强认证动作：锁定数据集版本（需要 MFA）。你当前是 MFA 级认证。 │
-├─ 你正在锁定的对象 ────────────────────────────────────────────────────┤
-│ DatasetVersion  dv_9   版本号 v1   定义 DD-003（已批准 v2）           │
-│ 清单哈希 sha256:aa71c3e0d9f4b21… [全文][复制]                          │
-├─ 复核清单（全部必须显式确认）─────────────────────────────────────────┤
-│ ☑ 血缘完整：来源 3 个，版本均已固定           [查看血缘]              │
-│ ☑ 撤回与同意处理：2 名参与者撤回，其数据已按规则排除                  │
-│ ☑ 质量与去标识：假名化；未解决问题 0 个（阻断级 0）                   │
-│ ☑ 消息与社交变量边界：仅元数据，无正文        [查看边界]              │
-│ ☑ 清单与校验和已复核                                                  │
-│ ☑ 兼容的分析计划：AP-002（已批准）                                    │
-│ 数据截止  2026-08-01 23:59 CST                                        │
-│ 行数/实体数  行 1,248 · 实体 24（在可安全显示的范围内）               │
-│ 限制  仅用于 RP-001；不得再分发                                       │
+│ ⓘ Strong-authentication actions on this screen: lock a dataset version (requires MFA). You are currently at the MFA tier. │
+├─ What you are locking ────────────────────────────────────────────────┤
+│ DatasetVersion  dv_9   Version v1   Definition DD-003 (approved, v2)  │
+│ Manifest hash sha256:aa71c3e0d9f4b21… [full][copy]                     │
+├─ Review checklist (every item must be confirmed explicitly) ──────────┤
+│ ☑ Lineage complete: 3 sources, all versions pinned      [View lineage] │
+│ ☑ Withdrawals and consent handled: 2 participants withdrew, and their data is excluded per the rules │
+│ ☑ Quality and de-identification: pseudonymised; 0 unresolved problems (0 blocking) │
+│ ☑ Message and social variable boundaries: metadata only, no bodies [View boundaries] │
+│ ☑ Manifest and checksums reviewed                                      │
+│ ☑ A compatible analysis plan: AP-002 (approved)                        │
+│ Data cut-off  2026-08-01 23:59 CST                                     │
+│ Rows / entities  1,248 rows · 24 entities (within the range safe to display) │
+│ Restrictions  for RP-001 only; not to be redistributed                 │
 ├───────────────────────────────────────────────────────────────────────┤
-│ 锁定后这个版本不可更改，分析只能针对锁定版本运行。锁定不可撤销。      │
-│                                        [锁定这个数据集版本（需要 MFA）]│
-├─ 锁定进度（提交后）───────────────────────────────────────────────────┤
-│ ① 已查看确认  ② 已提交确认  ③ 锁定命令处理中…  ④ 已锁定 / 命令失败    │
-│ ⓘ 在拥有该领域的模块确认之前，这里不会显示「已锁定」。               │
+│ Once locked this version cannot be changed, and analysis can only run against a locked version. Locking cannot be undone. │
+│                                   [Lock this dataset version (requires MFA)] │
+├─ Lock progress (after submitting) ────────────────────────────────────┤
+│ ① Reviewed  ② Confirmation submitted  ③ Lock command processing…  ④ Locked / command failed │
+│ ⓘ This never shows "locked" until the module that owns the domain has confirmed it. │
 └───────────────────────────────────────────────────────────────────────┘
 ```
 
 **③ 状态矩阵**
 
-| 态 | 呈现 |
+| State | Presentation |
 |---|---|
-| 加载 | 复核清单项逐项加载，**未加载完成的项不显示为已勾选**；锁定按钮在所有项到齐前禁用 |
-| 空队列 | 可锁定队列空：`现在没有可以锁定的数据集版本。数据集版本需要先完成质量复核。` |
-| 错误 | `DATASET_LOCK_NOT_READY`：列出未满足项并可跳转；`LINEAGE_INCOMPLETE`：`血缘信息不完整，不能锁定。缺失：来源「评估 M08」的版本未固定。`；**命令失败**显示为进度③→"命令失败"，**绝不显示「已锁定」** |
-| 权限不足 | 无 `dataset.lock`：显示完整只读复核清单 + `你可以查看复核清单，但不能锁定（需要 ResearchApprover）。` |
-| 需要 MFA | 密码级：锁定按钮禁用 + `锁定数据集版本需要强认证（MFA）。你当前是密码级认证，请以 MFA 重新登录后再来。` |
+| Loading | The checklist items load one by one, and **an item that has not finished loading is never shown as ticked**; the lock button is disabled until every item has arrived |
+| Empty queue | An empty lockable queue: `There are no dataset versions available to lock. A dataset version has to complete its quality review first.` |
+| Error | `DATASET_LOCK_NOT_READY`: lists the unmet items, each linked; `LINEAGE_INCOMPLETE`: `The lineage is incomplete and this cannot be locked. Missing: the version of the source "Assessment M08" is not pinned.`; **a command failure** shows as progress ③ → "command failed", and **"locked" is never displayed** |
+| Insufficient permission | Without `dataset.lock`: the full checklist is shown read-only + `You can view the checklist but cannot lock it (it needs ResearchApprover).` |
+| MFA required | At the password tier: the lock button is disabled + `Locking a dataset version requires strong authentication (MFA). You are at the password tier; sign in again with MFA and come back.` |
 
-**④ 确认文案（原文）**
+**④ Confirmation copy (in full)**
 
 ```
-确认锁定 DatasetVersion dv_9（版本 v1）？
-清单哈希：sha256:aa71c3e0d9f4b218c7e5309fbb4d1a62（完整值）
-数据截止：2026-08-01 23:59 CST；行 1,248；实体 24。
-锁定后这个版本不可更改，也不能删除。此后的分析只能针对这个锁定版本运行。
-参与者之后撤回同意，不会改写这个已锁定的数据集——撤回会体现在后续版本里。
-这次锁定会以 approver_wu 的身份署名并写入审计。
-这个操作需要强认证（MFA）。锁定不可撤销。
+Lock DatasetVersion dv_9 (version v1)?
+Manifest hash: sha256:aa71c3e0d9f4b218c7e5309fbb4d1a62 (the full value)
+Data cut-off: 2026-08-01 23:59 CST; 1,248 rows; 24 entities.
+Once locked, this version cannot be changed and cannot be deleted. Analysis from now on can only run against this locked version.
+If a participant withdraws consent later, this locked dataset is not rewritten — the withdrawal appears in subsequent versions.
+This lock is signed in the name of approver_wu and written to the audit trail.
+This action requires strong authentication (MFA). Locking cannot be undone.
 ```
-按钮：`锁定这个数据集版本` / `返回复核`
+Buttons: `Lock this dataset version` / `Go back and review`
 
-**⑤ 无障碍**：复核清单是 `<ul>`，每项 `✔/✘` 配文字（`已满足`/`未满足`）；进度四段用 `<ol>` + `aria-current="step"`，状态变化经 `role="status"` 播报（`锁定命令已提交，正在处理。` → `已锁定。`）；确认对话框内哈希完整、可换行；变量表按 1.9。
+**⑤ Accessibility**: the checklist is a `<ul>` with each `✔/✘` paired with words (`met`/`not met`); the four progress stages are an `<ol>` + `aria-current="step"`, with changes announced through `role="status"` (`The lock command has been submitted and is processing.` → `Locked.`); the hash inside the confirmation dialog is complete and allowed to wrap; the variable table follows 1.9.
 
 ---
 
