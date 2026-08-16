@@ -778,68 +778,68 @@ Communities › Gardening Corner › configuration
 
 **③ 状态矩阵**
 
-| 态 | 呈现 |
+| State | Presentation |
 |---|---|
-| 加载 | 规则版本下拉禁用直至清单到齐 |
-| 空队列 | 无规则版本：`还没有社区规则版本。社区必须绑定一个确切的规则版本才能激活。[创建规则版本]` |
-| 错误 | 激活时审核负责人被撤职 → `INVALID_STATE_TRANSITION`：`审核负责人已不在岗，社区没有激活。请重新指派。` |
-| 权限不足 | 无 `community.create`：只读 + `需要 OrganisationAdministrator 或 Researcher。` |
-| 需要 MFA | 社区创建/激活**不需要** MFA。屏顶：`本屏没有需要强认证的动作。` |
+| Loading | The rule-version dropdown is disabled until the list has arrived |
+| Empty queue | No rule versions: `There are no community rule versions yet. A community must be bound to an exact rule version before it can be activated. [Create a rule version]` |
+| Error | The moderation owner is removed during activation → `INVALID_STATE_TRANSITION`: `The moderation owner is no longer in post, and the community was not activated. Please assign another.` |
+| Insufficient permission | Without `community.create`: read-only + `This needs OrganisationAdministrator or Researcher.` |
+| MFA required | Creating and activating a community do **not** require MFA. At the top: `No action on this screen requires strong authentication.` |
 
-**④ 确认文案**：
-`确认激活社区「园艺角」？激活后，符合资格的参与者会看到这个社区并可以加入。规则版本 CR-园艺角 v2（sha256:5ac9…）会作为加入时展示的确切规则。审核负责人：moderator_zhang。`
+**④ Confirmation copy**:
+`Activate the community "Gardening Corner"? Once activated, eligible participants will see this community and can join it. Rule version CR-Gardening-Corner v2 (sha256:5ac9…) becomes the exact set of rules shown when they join. Moderation owner: moderator_zhang.`
 
-**⑤ 无障碍**：`激活社区` 按钮禁用时，`aria-describedby` 指向禁用原因文本；勾选框组用 `<fieldset><legend>`；"默认最小可见性"是**默认值**且在标签处写明"默认"。
+**⑤ Accessibility**: while the `Activate the community` button is disabled, `aria-describedby` points at the text giving the reason; checkbox groups use `<fieldset><legend>`; "the minimum visibility by default" is a **default value** and the label says "default" explicitly.
 
 ---
 
-### C10 匹配 / 互相接受 / 连接策略配置（§71）
+### C10 Matching / mutual acceptance / connection policy configuration (§71)
 
-**① 目标与密度**：配置匹配策略。**这一屏的设计要点是"能力的缺席必须可见"**：不得提供任何"自动互相接受 / 自动连接 / 自动消息"的选项，并且要写明这是被禁止的，而不是尚未实现。密度：dense 表单。
+**① Purpose and density**: configure the matching policy. **The design point of this screen is that the absence of a capability must be visible**: no option for "automatic mutual acceptance / automatic connection / automatic messaging" may be offered, and it must be stated that this is *forbidden* rather than not yet built. Density: a dense form.
 
-**② 线框**
+**② Wireframe**
 
 ```text
-匹配策略 › PR-002
+Matching policy › PR-002
 ┌───────────────────────────────────────────────────────────────┐
-│ 目的*             [___________________________]                │
-│ 允许用于匹配的属性  ☑ 声明的兴趣  ☑ 语言  ☐ 所在城市          │
-│ 禁止用于匹配的属性（不可更改，制度性禁止）                     │
-│   ✗ 健康状况  ✗ 认知评估结果  ✗ 消息内容  ✗ 生命故事内容      │
-│   ✗ 任何未向参与者披露的推断属性                               │
-│   ⓘ 这些不是「暂未支持」，是被禁止的。                         │
-│ 匹配解释规则*     [必须用参与者能读懂的话说明为什么被推荐 ▾]   │
-│ 候选上限 [3/周]   候选有效期 [14 天]                           │
-│ 匹配决定取值      感兴趣 / 暂时不 / 忽略（可撤回：是）         │
-│   ⓘ 「暂时不」与「感兴趣」在参与者界面里等重，不得诱导。      │
-│ 公平性复核        [每 30 天 ▾]   上次复核：未进行              │
-│ 屏蔽处理          屏蔽后互不出现，且不透露屏蔽的存在           │
-│ 互相接受来源      仅参与者本人的双向明示                       │
-│ 互相接受有效期    [30 天]  失效条件：撤回同意 / 屏蔽 / 过期    │
-│ 连接激活          单次使用；一次互相接受只能激活一个连接       │
-│ 沟通依据          [平台内消息 ▾]                               │
-│ 连接请求功能      [停用]（本阶段）                             │
-│ 分阶段启用        [阶段 1：仅生成候选，不启用消息 ▾]           │
+│ Purpose*          [___________________________]                │
+│ Attributes allowed for matching  ☑ stated interests  ☑ language  ☐ city │
+│ Attributes forbidden for matching (not editable; an institutional prohibition) │
+│   ✗ health status  ✗ cognitive assessment results  ✗ message content  ✗ life-story content │
+│   ✗ any inferred attribute that has not been disclosed to the participant │
+│   ⓘ These are not "not supported yet". They are forbidden.     │
+│ Match explanation rule* [must explain in words the participant can read why they were suggested ▾] │
+│ Candidate limit [3/week]   Candidate validity [14 days]        │
+│ Match decision values  Interested / Not for now / Ignore (withdrawable: yes) │
+│   ⓘ "Not for now" and "Interested" carry equal weight in the participant's interface and must not be nudged. │
+│ Fairness review    [every 30 days ▾]   Last review: not carried out │
+│ Blocking behaviour  once blocked, neither appears to the other, and the existence of the block is never disclosed │
+│ Source of mutual acceptance  only an explicit two-way action by the participants themselves │
+│ Mutual acceptance validity [30 days]  Lapses on: consent withdrawn / a block / expiry │
+│ Connection activation  single use; one mutual acceptance can activate only one connection │
+│ Communication basis [in-platform messages ▾]                   │
+│ Connection requests [disabled] (this phase)                    │
+│ Staged rollout     [stage 1: generate candidates only, messaging not enabled ▾] │
 ├───────────────────────────────────────────────────────────────┤
-│ 制度性禁止（本界面永不提供）                                   │
-│  ✗ 自动产生互相接受   ✗ 自动建立连接   ✗ 自动发送消息         │
-│                                        [保存草稿] [提交批准]  │
+│ Institutional prohibitions (this interface never offers these) │
+│  ✗ automatically produced mutual acceptance   ✗ automatically established connections   ✗ automatically sent messages │
+│                                        [Save draft] [Submit for approval] │
 └───────────────────────────────────────────────────────────────┘
 ```
 
-**③ 状态矩阵**
+**③ State matrix**
 
-| 态 | 呈现 |
+| State | Presentation |
 |---|---|
-| 加载 | 禁止项区块**先渲染**（静态，不依赖网络）——保证任何加载状态下"禁止"都可见 |
-| 空队列 | 无历史策略：`还没有匹配策略。在策略批准之前，匹配不会产生任何候选。` |
-| 错误 | 保存失败：常规可恢复错误；**禁止项不受任何错误态影响** |
-| 权限不足 | 只读 + `你可以查看匹配策略，但不能修改（需要 Researcher）。` |
-| 需要 MFA | 提交不需要；批准走协议/审批链（MFA）。屏顶：`本屏没有需要强认证的动作；策略的批准在协议审批中完成（需要 MFA）。` |
+| Loading | The prohibitions block **renders first** (it is static and needs no network) — so "forbidden" is visible in every loading state |
+| Empty queue | No policy history: `There is no matching policy yet. Until a policy is approved, matching produces no candidates at all.` |
+| Error | A failed save: an ordinary recoverable error; **the prohibitions are unaffected by any error state** |
+| Insufficient permission | Read-only + `You can view the matching policy but cannot change it (it needs Researcher).` |
+| MFA required | Submitting does not; approval goes through the protocol/approval chain (MFA). At the top: `No action on this screen requires strong authentication; the policy is approved as part of protocol approval (which requires MFA).` |
 
-**④ 确认文案**：`确认提交匹配策略？策略只有在被批准后才生效。当前阶段设定为「阶段 1：仅生成候选，不启用消息」——参与者不会因此收到任何消息。`
+**④ Confirmation copy**: `Submit the matching policy? A policy takes effect only once approved. The current phase is set to "stage 1: generate candidates only, messaging not enabled" — no participant will receive a message as a result of this.`
 
-**⑤ 无障碍**：禁止属性列表用 `<ul>` + 文字 `禁止`（`✗` 加 `aria-hidden`）；"制度性禁止"区块 `role="note"`；每个禁止项都是完整句子，屏幕阅读器逐条可读。
+**⑤ Accessibility**: the forbidden-attribute list is a `<ul>` with the word `forbidden` (the `✗` carries `aria-hidden`); the "institutional prohibitions" block is `role="note"`; each prohibition is a complete sentence, readable one by one by a screen reader.
 
 ---
 
