@@ -369,84 +369,89 @@ Research projects › RP-001 › Research questions
 
 ### C3 证据检索与结果卡（§59–61）— 真实 KG 对接
 
-**实施状态（2026-08-04）：部分实现。** 检索、建评审、附引用、提交、他人批准这条链已可达；此前检索能调、附引用能调，**但没有任何查询列出评审**，于是一份评审只能由在产品之外记着标识的人来建、来加、来提交，链尾的评审队列也没有任何人够得到。三条措辞守住本节的要求：（1）**先出处、后论断（§51）**——结果卡先出「来源系统 · 外部标识 · 版本」，再出标题与摘要；摘要是检索系统对一篇东西的说法，出处才是让人判断要不要信它的东西。（2）**检索失败不写成「没有证据」**——上游不可达返回 503，屏上显示为错误，绝不显示空结果；「问不到」与「没有」是两件事。（3）**解析失败的引用不被渲染成引用**——解析不到时记录以原始标识作标题、来源写 `unknown`，若与已解析的并排照常渲染，就把「我们找不到这个」变成了看起来像一条引用的东西；因此逐条标注解析状态，批准屏还在控件旁统计「N 条中有 M 条未与来源核对过，批准并不会去核对它们」。
+**Implementation status (2026-08-04): partially implemented.** The chain of search → create a review → attach citations → submit → have somebody else approve is now reachable. Previously the search could be called and citations could be attached, **but no query listed reviews at all** — so a review could only be created, added to and submitted by somebody keeping the identifier in their head outside the product, and nobody could reach the review queue at the end of the chain. Three points of wording hold this section's requirements: (1) **provenance before assertion (§51)** — a result card leads with "source system · external identifier · version" and only then gives the title and abstract; the abstract is the search system's account of a thing, whereas the provenance is what lets a person judge whether to believe it. (2) **A failed search is never written as "no evidence"** — an unreachable upstream returns 503 and appears on screen as an error, never as an empty result; "we could not ask" and "there is none" are different facts. (3) **A citation that fails to resolve is not rendered as a citation** — when it does not resolve, the record takes the raw identifier as its title with the source `unknown`, and rendering that alongside resolved ones as though nothing were different would turn "we cannot find this" into something that looks like a citation. Each one is therefore marked with its resolution status, and the approval screen additionally counts beside the control: "M of N have not been checked against a source, and approving does not check them."
 
-冲突证据的呈现（§60）与证据快照已随 C4 实现。
+The presentation of conflicting evidence (§60) and the evidence snapshot came with C4.
 
-**① 目标与密度**：把外部知识图谱的检索结果变成**可审阅的证据材料**，而不是"答案"。密度：dense 列表 + 右侧详情栏（桌面）；手机为卡片流 + 详情下钻。**这一屏的数据是真的（真实 MCP 调用），但图谱内容是人工策展种子语料**——必须说清楚。
+**① Purpose and density**: turn search results from an external knowledge graph into **reviewable evidence material**, not into "answers". Density: a dense list + a detail panel on the right (desktop); on mobile, a card stream with drill-down to detail. **The data on this screen is real (a genuine MCP call), but the graph's content is a hand-curated seed corpus** — and that must be said plainly.
 
 **② 线框**
 
 ```text
-证据 › 检索
+Evidence › Search
 ┌───────────────────────────────────────────────────────────────────────┐
-│ ⓘ 检索结果来自外部知识库 graceage-knowledge-mcp（真实调用）。         │
-│   图谱内容是人工策展的种子语料，规模有限，不足以支撑完整证据综述。    │
-│   [来源推导] 检索结果不是本平台的研究结论；只有你人工附加的引用       │
-│   才会成为平台状态。                                                  │
+│ ⓘ Results come from the external knowledge base graceage-knowledge-mcp (a genuine call). │
+│   The graph's content is a hand-curated seed corpus, limited in size and │
+│   not sufficient to support a complete evidence review.                │
+│   [source-derived] A search result is not a research conclusion of this │
+│   platform; only a citation you attach by hand becomes platform state. │
 ├───────────────────────────────────────────────────────────────────────┤
-│ 检索问题* [loneliness in older adults ______________] [检索]          │
-│ 绑定到研究问题 [RQ-001 ▾]   证据评审 [ER-004（草稿）▾ | 新建]        │
-├─ 结果 5 条 ── 筛选：[强度 全部▾][研究设计 全部▾][冲突 仅看▢] 排序：[相关度▾]│
+│ Search question* [loneliness in older adults ________] [Search]       │
+│ Bound to research question [RQ-001 ▾]   Evidence review [ER-004 (draft) ▾ | New] │
+├─ 5 results ── Filter: [Strength all▾][Design all▾][Conflicts only▢] Sort: [Relevance▾]│
 │                                                                       │
-│ ┌ 1 ── ga:loneliness ────────────────────────────── 强度：高 ⚠冲突 ┐ │
-│ │ 出处 DOI:10.1177/1088868310377394 · 设计 系统综述/元分析          │ │
-│ │ 检索标识 sha256:4c1a…e097 · 检索时刻 2026-08-03 11:02             │ │
-│ │ 人群 65+ 社区居住 · 情境 非临床 · 方向 降低风险                   │ │
-│ │ ⚠ 存在冲突证据 2 条                        [并排比较冲突证据]     │ │
-│ │ 摘要（上游内容，非本平台结论）：…                                 │ │
-│ │ 决定：( )纳入 ( )排除 ( )暂缓  理由*[__________] [附加为引用]     │ │
+│ ┌ 1 ── ga:loneliness ──────────────────────── Strength: high ⚠conflict ┐│
+│ │ Provenance DOI:10.1177/1088868310377394 · Design systematic review/meta-analysis │ │
+│ │ Search identifier sha256:4c1a…e097 · Searched 2026-08-03 11:02    │ │
+│ │ Population 65+ community-dwelling · Setting non-clinical · Direction reduces risk │ │
+│ │ ⚠ 2 pieces of conflicting evidence exist   [Compare conflicts side by side] │ │
+│ │ Abstract (upstream content, not a conclusion of this platform): …  │ │
+│ │ Decision: ( )Include ( )Exclude ( )Defer  Reason*[______] [Attach as a citation] │ │
 │ └───────────────────────────────────────────────────────────────────┘ │
-│ ┌ 2 ── ga:digital-reminiscence ─────────────────── 强度：低 ────────┐ │
-│ │ ⚠ 证据强度较低——不足以支撑干预决定，只能支持「需要进一步研究」。 │ │
-│ │ 间接证据：来源人群为混合年龄，与本研究人群（65+）不一致。         │ │
+│ ┌ 2 ── ga:digital-reminiscence ──────────────── Strength: low ──────┐ │
+│ │ ⚠ The evidence is weaker — not enough to support an intervention decision, │ │
+│ │   only enough to support "further research is needed".            │ │
+│ │ Indirect evidence: the source population is mixed-age and does not │ │
+│ │   match this study's population (65+).                            │ │
 │ │ …                                                                 │ │
 │ └───────────────────────────────────────────────────────────────────┘ │
-│ ┌ 证据缺口 ─────────────────────────────────────────────────────────┐ │
-│ │ 关于「数字化怀旧干预对孤独感的效果」没有检索到直接证据。          │ │
-│ │ 这本身是研究发现的一部分。        [记录为知识缺口]                │ │
+│ ┌ Evidence gap ─────────────────────────────────────────────────────┐ │
+│ │ No direct evidence was found on "the effect of digital reminiscence │ │
+│ │ interventions on loneliness".                                      │ │
+│ │ That is itself part of the research finding. [Record as a knowledge gap] │ │
 │ └───────────────────────────────────────────────────────────────────┘ │
 └───────────────────────────────────────────────────────────────────────┘
 ```
 
-冲突并排比较（§61）：
+The side-by-side conflict comparison (§61):
 
 ```text
-并排比较：ga:loneliness 的冲突证据
+Side by side: conflicting evidence for ga:loneliness
 ┌──────────────────────────┬──────────────────────────┐
 │ A  DOI:10.1177/108886…   │ B  PMID:29710…           │
-│ 方向 降低风险            │ 方向 无显著影响          │
-│ 设计 系统综述/元分析     │ 设计 随机对照试验        │
-│ 人群 65+ 社区            │ 人群 75+ 机构居住        │
-│ 强度 高                  │ 强度 中                  │
+│ Direction reduces risk   │ Direction no significant effect │
+│ Design systematic review/meta-analysis │ Design randomised controlled trial │
+│ Population 65+ community │ Population 75+ institutional │
+│ Strength high            │ Strength moderate        │
 ├──────────────────────────┴──────────────────────────┤
-│ ⚠ 这两条证据不一致。不要取平均，也不要只取其中一条。│
-│   请在证据决定里显式记录这个冲突。                  │
-│   建议的证据决定取值：Conflicting Evidence（冲突证据）│
+│ ⚠ These two disagree. Do not average them, and do not │
+│   simply take one of them.                            │
+│   Record this conflict explicitly in the evidence decision. │
+│   Suggested evidence-decision value: Conflicting Evidence │
 └─────────────────────────────────────────────────────┘
 ```
 
 **③ 状态矩阵**
 
-| 态 | 呈现 |
+| State | Presentation |
 |---|---|
-| 加载 | 检索按钮进入 `aria-busy`，文案 `正在检索外部知识库…`；**超过 15 秒**（语义检索冷路径真实存在）追加 `外部知识库的语义检索有时需要十几秒，仍在等待。`；不设自动超时取消（客户端 45 秒） |
-| 空队列 | **区分两种空**：① 真的没有匹配 → 证据缺口卡（见线框），提供 `记录为知识缺口`；② 结果被筛选清空 → `当前筛选下没有结果。[清除筛选]`，并显示被筛掉的数量 |
-| 错误 | `DEPENDENCY_UNAVAILABLE`：整块替换为 `检索没有完成——外部知识库现在连不上。这不代表「没有证据」。[重试]`，**绝不显示空列表**；`PROVIDER_TIMEOUT` 同理 |
-| 权限不足 | 无 `evidence.search`：`你的角色不能检索证据（需要 Researcher）。` 参与者身份访问一律 403 |
-| 需要 MFA | 检索与附加引用**不需要** MFA。屏顶强认证条显示：`本屏没有需要强认证的动作。` |
+| Loading | The search button takes `aria-busy` with the copy `Searching the external knowledge base…`; **after 15 seconds** (the semantic search's cold path genuinely is that slow) it adds `Semantic search against the external knowledge base sometimes takes upwards of ten seconds. Still waiting.`; there is no automatic timeout cancellation (the client's own limit is 45 seconds) |
+| Empty queue | **Two kinds of empty, distinguished**: ① genuinely no match → the evidence gap card (see the wireframe), offering `Record as a knowledge gap`; ② results filtered to nothing → `No results under the current filter. [Clear the filter]`, showing how many were filtered out |
+| Error | `DEPENDENCY_UNAVAILABLE`: the whole block is replaced with `The search did not complete — the external knowledge base cannot be reached right now. This does not mean "there is no evidence". [Try again]`, and **an empty list is never shown**; `PROVIDER_TIMEOUT` behaves the same way |
+| Insufficient permission | Without `evidence.search`: `Your role cannot search evidence (it needs Researcher).` Access from a participant identity is always 403 |
+| MFA required | Searching and attaching citations do **not** require MFA. The strong-authentication bar at the top says: `No action on this screen requires strong authentication.` |
 
-**④ 关键交互与确认文案**
+**④ Key interactions and confirmation copy**
 
-- 附加为引用（确认对话框，因为这是"外部内容进入平台状态"的时刻）：
-  `把这条外部证据附加为引用？
-  会记录：外部标识 <ga:loneliness>、检索标识（版本）<sha256:4c1a…e097>、检索时刻 <2026-08-03 11:02>、以及你写的理由。
-  附加之后，这条引用属于证据评审 ER-004，可以被排除但不会被删除。`
-  按钮：`确认附加` / `返回`
-- 记录为知识缺口：`把「<问题>」记录为知识缺口？这会成为一条带 [未来经验问题] 标签的研究记录，不是一个结论。`
-- 排除/暂缓必须写理由，按钮在理由为空时禁用，说明文字：`排除也是研究记录的一部分，请写清理由。`
+- Attaching as a citation (a confirmation dialog, because this is the moment external content enters platform state):
+  `Attach this external evidence as a citation?
+  What will be recorded: the external identifier <ga:loneliness>, the search identifier (version) <sha256:4c1a…e097>, the time searched <2026-08-03 11:02>, and the reason you wrote.
+  Once attached, this citation belongs to evidence review ER-004. It can be excluded, but it will not be deleted.`
+  Buttons: `Confirm and attach` / `Go back`
+- Recording a knowledge gap: `Record "<question>" as a knowledge gap? This becomes a research record tagged [future empirical question], not a conclusion.`
+- Excluding or deferring requires a reason; the button is disabled while the reason is empty, with the explanation: `An exclusion is part of the research record too — please write down why.`
 
-**⑤ 无障碍**：结果列表是 `<ol>`，每条 `<li>` 内 `<h3>` 为外部标识；筛选变更后 `role="status"` 播报 `筛选后 3 条，其中 1 条有冲突证据。`；"⚠ 冲突"必须有文字"存在冲突证据"，不靠图标；并排比较用 `<table>` 两列，列头为 A/B 的出处；`[在来源系统打开]` 为外链，加 `（在新窗口打开）`。
+**⑤ Accessibility**: the result list is an `<ol>` with an `<h3>` inside each `<li>` carrying the external identifier; after a filter change `role="status"` announces `3 results after filtering, 1 of which has conflicting evidence.`; "⚠ conflict" must carry the words "conflicting evidence exists" and never rest on the icon; the side-by-side comparison is a two-column `<table>` with A/B provenance as the column headers; `[Open in the source system]` is an external link and adds `(opens in a new window)`.
 
 ---
 
