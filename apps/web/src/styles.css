@@ -325,7 +325,7 @@
     --color-action-secondary-border: #3a958f;
     --color-action-secondary-bg-hover: #16302e;
 
-    --color-focus-ring: #eef6f4; /* ≥14.5:1 与任一 surface；15.4:1 与 halo */
+    --color-focus-ring: #eef6f4; /* ≥14.5:1 against any surface; 15.4:1 against the halo */
     --color-focus-halo: #06090a;
 
     --color-info-bg: #13253a;
@@ -367,7 +367,7 @@
     --color-disabled-fg: #8a9491;
     --color-disabled-border: #3d4749;
 
-    /* dark 下阴影不可见：改用描边环作为浮层边界（≥3:1） */
+    /* Shadows are invisible in dark: use an outline ring as the overlay boundary (≥3:1) */
     --elevation-1: 0 0 0 1px var(--color-border-default);
     --elevation-2: 0 0 0 1px var(--color-border-default), 0 4px 12px rgb(0 0 0 / 0.6);
     --elevation-3: 0 0 0 1px var(--color-border-strong), 0 10px 28px rgb(0 0 0 / 0.7);
@@ -418,7 +418,7 @@
   --color-action-secondary-border: #3a958f;
   --color-action-secondary-bg-hover: #16302e;
 
-  --color-focus-ring: #eef6f4; /* ≥14.5:1 与任一 surface；15.4:1 与 halo */
+  --color-focus-ring: #eef6f4; /* ≥14.5:1 against any surface; 15.4:1 against the halo */
   --color-focus-halo: #06090a;
 
   --color-info-bg: #13253a;
@@ -460,24 +460,25 @@
   --color-disabled-fg: #8a9491;
   --color-disabled-border: #3d4749;
 
-  /* dark 下阴影不可见：改用描边环作为浮层边界（≥3:1） */
+  /* Shadows are invisible in dark: use an outline ring as the overlay boundary (≥3:1) */
   --elevation-1: 0 0 0 1px var(--color-border-default);
   --elevation-2: 0 0 0 1px var(--color-border-default), 0 4px 12px rgb(0 0 0 / 0.6);
   --elevation-3: 0 0 0 1px var(--color-border-strong), 0 10px 28px rgb(0 0 0 / 0.7);
 }
-/* 显式深色 + 高对比。与上面同理，同一条测试一起守。 */
+/* Explicit dark + high contrast. Same reasoning as above, guarded by the same test. */
 :root[data-theme='dark'][data-contrast='high'] {
   --color-surface-page: #000000;
   --color-text-primary: #ffffff;       /* 21.00:1 / #000000 */
   --color-text-secondary: #e9ecf2;
   --color-border-default: #e9ecf2;
   --color-border-strong: #ffffff;
-  --color-action-primary-bg: #8fd6d0;  /* 12.86:1 与 #000000 前景 */
+  --color-action-primary-bg: #8fd6d0;  /* 12.86:1 against a #000000 foreground */
   --color-action-primary-fg: #000000;
 }
 
-/* ---------- 4. 能力自适应模式覆盖 (§C) ---------- */
-/* 绝不按年龄或分组自动判定：这些属性只能由用户显式设置写到 <html> 上。 */
+/* ---------- 4. Capability-adaptive mode overrides (§C) ---------- */
+/* Never determined automatically by age or by group: these attributes are
+   written onto <html> only by an explicit user setting. */
 :root[data-font-scale='lg'] { --scale-font: 1.125; }
 :root[data-font-scale='xl'] { --scale-font: 1.25; }
 :root[data-font-scale='xxl'] { --scale-font: 1.5; }
@@ -486,11 +487,13 @@
 :root[data-density='standard'] { --density-user: 1; --density: calc(var(--density-user) * var(--density-surface)); }
 :root[data-density='spacious'] { --density-user: 1.25; --density: calc(var(--density-user) * var(--density-surface)); }
 
-/* 高对比 Light：所有者列为比完整深色模式更值得优先的三种模式之一。
-   做法不是"换一套颜色"，而是把同一支 teal 继续压暗、把中性色推到两端，
-   让高对比与标准模式看起来仍是同一个产品——换掉色相会让切换的人以为
-   自己进错了系统。
-   OS 信号作初始值，用户显式选择优先。 */
+/* High-contrast Light: one of the three modes the owner ranked above a
+   full dark mode. The approach is not "a different set of colours" but the
+   same teal darkened further with the neutrals pushed to the extremes, so
+   that high contrast and standard still look like the same product —
+   changing the hue would make someone who switched think they had landed in
+   the wrong system.
+   The OS signal is the initial value; an explicit user choice wins. */
 @media (prefers-contrast: more) {
   :root:not([data-contrast='standard']) {
     --color-surface-page: #ffffff;
@@ -506,73 +509,80 @@
     --color-action-secondary-fg: #16504d;
     --color-action-secondary-border: #20625f;
     --color-info-bg: #f5f8fb;
-    --color-info-fg: #31577d;              /* 7.06:1 / info-bg（标准模式是 4.59） */
+    --color-info-fg: #31577d;              /* 7.06:1 / info-bg(standard is 4.59) */
     --color-success-bg: #f4faf6;
-    --color-success-fg: #246045;           /* 7.00:1（标准 4.50） */
+    --color-success-fg: #246045;           /* 7.00:1(standard 4.50) */
     --color-warning-bg: #fdf9ef;
-    --color-warning-fg: #754d14;           /* 7.06:1（标准 4.51） */
+    --color-warning-fg: #754d14;           /* 7.06:1(standard 4.51) */
     --color-danger-bg: #fcf5f4;
-    --color-danger-fg: #8d3939;            /* 7.02:1（标准 4.50） */
+    --color-danger-fg: #8d3939;            /* 7.02:1(standard 4.50) */
     --color-safety-bg: #f4f6fa;
-    --color-safety-fg: #2a4470;            /* 8.99:1（标准 8.18） */
+    --color-safety-fg: #2a4470;            /* 8.99:1(standard 8.18) */
     --color-moderation-bg: #f2f8f8;
-    --color-moderation-fg: #1a5451;        /* 8.05:1（标准 7.40） */
+    --color-moderation-fg: #1a5451;        /* 8.05:1(standard 7.40) */
     --color-ai-bg: #f8f8fc;
-    --color-ai-fg: #545177;                /* 7.03:1（标准 4.52） */
+    --color-ai-fg: #545177;                /* 7.03:1(standard 4.52) */
     --color-story-bg: #fbf5ed;
-    --color-story-fg: #6a4e30;             /* 7.06:1（标准 4.53） */
+    --color-story-fg: #6a4e30;             /* 7.06:1(standard 4.53) */
     --color-community-bg: #f5f9f6;
-    --color-community-fg: #415b47;         /* 7.03:1（标准 4.55） */
+    --color-community-fg: #415b47;         /* 7.03:1(standard 4.55) */
     --color-matching-bg: #f5f8fa;
-    --color-matching-fg: #3d5771;          /* 7.03:1（标准 4.55） */
+    --color-matching-fg: #3d5771;          /* 7.03:1(standard 4.55) */
     --border-default: 3px;
     --icon-stroke: 2.5;
   }
 }
 :root[data-contrast='high'] {
-  --color-surface-page: #ffffff;         /* 高对比下页面回到纯白，拉满与文字的差 */
+  --color-surface-page: #ffffff;         /* In high contrast the page returns to pure white, maximising the gap to the text */
   --color-text-primary: #000000;         /* 21.00:1 / #ffffff */
   --color-text-secondary: #1b2624;       /* 15.85:1 / #ffffff */
   --color-text-link: #16504d;            /*  8.15:1 / #ffffff */
   --color-border-subtle: #566461;
   --color-border-default: #1b2624;
   --color-border-strong: #000000;
-  --color-action-primary-bg: #20625f;    /*  7.06:1 与白字 */
+  --color-action-primary-bg: #20625f;    /*  7.06:1 with white text */
   --color-action-primary-bg-hover: #164543;
   --color-action-primary-bg-active: #0e2c2b;
   --color-action-secondary-fg: #16504d;
   --color-action-secondary-border: #20625f;
-  /* 语义族也必须一起抬。第一版只抬了正文、链接与按钮，十个语义族**一个
-     没动**——于是打开「更高对比」的人，正文从 12.38:1 变成 21:1，而
-     warning / danger / story / ai 四块**原封不动停在 4.50 上下**，也就是
-     整屏最难读的东西一点没变。**选这个模式的人，正是最需要把"被拒绝了"
-     那句话看清楚的人。** 现改为把每一族都推到 AAA（≥7:1）：底更接近白，
-     字沿同一色相继续压暗。断言见 design-tokens.test.ts——高对比模式下
-     每一族都必须**严格高于**标准模式，否则这个模式只是个名字。 */
+  /* The semantic families have to come up too. The first version raised
+     only body text, links and buttons and left all ten semantic families
+     **untouched** — so someone who turned on "higher contrast" got body
+     text going from 12.38:1 to 21:1 while warning / danger / story / ai
+     **stayed exactly where they were at around 4.50**, meaning the hardest
+     things on the screen to read did not change at all. **The person who
+     chooses this mode is precisely the person who most needs to be able to
+     read the sentence saying they were declined.** Every family is now
+     pushed to AAA (≥7:1): the background closer to white, the text
+     darkened further along the same hue. The assertion is in
+     design-tokens.test.ts — under high contrast every family must be
+     **strictly higher** than in standard mode, or the mode is only a
+     name. */
   --color-info-bg: #f5f8fb;
-  --color-info-fg: #31577d;              /* 7.06:1 / info-bg（标准模式是 4.59） */
+  --color-info-fg: #31577d;              /* 7.06:1 / info-bg(standard is 4.59) */
   --color-success-bg: #f4faf6;
-  --color-success-fg: #246045;           /* 7.00:1（标准 4.50） */
+  --color-success-fg: #246045;           /* 7.00:1(standard 4.50) */
   --color-warning-bg: #fdf9ef;
-  --color-warning-fg: #754d14;           /* 7.06:1（标准 4.51） */
+  --color-warning-fg: #754d14;           /* 7.06:1(standard 4.51) */
   --color-danger-bg: #fcf5f4;
-  --color-danger-fg: #8d3939;            /* 7.02:1（标准 4.50） */
+  --color-danger-fg: #8d3939;            /* 7.02:1(standard 4.50) */
   --color-safety-bg: #f4f6fa;
-  --color-safety-fg: #2a4470;            /* 8.99:1（标准 8.18） */
+  --color-safety-fg: #2a4470;            /* 8.99:1(standard 8.18) */
   --color-moderation-bg: #f2f8f8;
-  --color-moderation-fg: #1a5451;        /* 8.05:1（标准 7.40） */
+  --color-moderation-fg: #1a5451;        /* 8.05:1(standard 7.40) */
   --color-ai-bg: #f8f8fc;
-  --color-ai-fg: #545177;                /* 7.03:1（标准 4.52） */
+  --color-ai-fg: #545177;                /* 7.03:1(standard 4.52) */
   --color-story-bg: #fbf5ed;
-  --color-story-fg: #6a4e30;             /* 7.06:1（标准 4.53） */
+  --color-story-fg: #6a4e30;             /* 7.06:1(standard 4.53) */
   --color-community-bg: #f5f9f6;
-  --color-community-fg: #415b47;         /* 7.03:1（标准 4.55） */
+  --color-community-fg: #415b47;         /* 7.03:1(standard 4.55) */
   --color-matching-bg: #f5f8fa;
-  --color-matching-fg: #3d5771;          /* 7.03:1（标准 4.55） */
+  --color-matching-fg: #3d5771;          /* 7.03:1(standard 4.55) */
   --border-default: 3px;
   --icon-stroke: 2.5;
 }
-/* 深色 + 高对比。跟着上面的媒体查询走，因为深色本身就只由系统设置决定。 */
+/* Dark + high contrast. It follows the media query above, because dark
+   itself is determined solely by the system setting. */
 @media (prefers-color-scheme: dark) {
   :root[data-contrast='high']:not([data-theme='light']) {
     --color-surface-page: #000000;
@@ -580,22 +590,28 @@
     --color-text-secondary: #e9ecf2;
     --color-border-default: #e9ecf2;
     --color-border-strong: #ffffff;
-    --color-action-primary-bg: #8fd6d0;  /* 12.86:1 与 #000000 前景 */
+    --color-action-primary-bg: #8fd6d0;  /* 12.86:1 against a #000000 foreground */
     --color-action-primary-fg: #000000;
   }
 }
 
-/* 简化模式（`data-simplify`）已移除，2026-08-13。
-   它两头都是空的：没有任何代码设过这个属性，而且**全应用没有一个元素带
-   `.optional`**，所以就算设上，它能做的也只有把行高从 1.6 改成 1.8——那件事
-   「行距」偏好本来就在做。给它补一个开关，等于造出一个写着「简化」、按下去
-   只是把行距变宽的控件；照 D-75 的判法，这一类要删，不要建。
-   真要做「一次只做一件事」的简化视图，那是信息架构的工作，不是一条 CSS。 */
+/* The simplified mode (`data-simplify`) was removed on 2026-08-13.
+   It was empty at both ends: no code ever set the attribute, and **not one
+   element in the whole application carries `.optional`**, so even if it were
+   set, all it could do is change a line height from 1.6 to 1.8 — which the
+   line-spacing preference already does. Giving it a switch would mean
+   building a control labelled "simplify" that, when pressed, only widens
+   the line spacing; by the D-75 test, this class of thing is to be deleted,
+   not built.
+   A genuine "one thing at a time" simplified view is information-architecture
+   work, not a line of CSS. */
 
-/* 低刺激模式：去掉全部 tint 底，只留描边与文字。
-   所有者列为优先做的三种模式之一。新增的三个区域色（story/community/
-   matching）必须一起列进来——漏掉任何一个，选了"低刺激"的人仍会看到
-   一片色块，而那正是他选它要躲开的东西。 */
+/* Low-stimulation mode: remove every tint background, leaving strokes and
+   text. One of the three modes the owner ranked as a priority. The three
+   zone colours added later (story/community/matching) have to be listed
+   here too — miss any one of them and somebody who chose "low stimulation"
+   still sees a block of colour, which is precisely what they chose it to
+   avoid. */
 :root[data-stimulation='low'] {
   --color-info-bg: var(--color-surface-page);
   --color-success-bg: var(--color-surface-page);
@@ -610,21 +626,21 @@
   --color-matching-bg: var(--color-surface-page);
 }
 
-/* ---------- 5. 基础排版与文档 ---------- */
+/* ---------- 5. Base typography and the document ---------- */
 :root {
   font-family: var(--type-family-ui);
-  font-size: calc(112.5% * var(--scale-font)); /* 18px 基准 × 用户字号 */
+  font-size: calc(112.5% * var(--scale-font)); /* the 18px baseline × the user's font size */
   line-height: var(--type-leading-normal);
   color-scheme: light dark;
   color: var(--color-text-primary);
   background-color: var(--color-surface-page);
-  /* 粘性头/尾不得遮住 Tab 到的元素 (§D.5) */
+  /* A sticky header/footer must not cover an element reached by Tab (§D.5) */
   scroll-padding-block: var(--space-8);
 }
 
 html,
 body {
-  /* 最后一道防线：任何触发它的布局都是缺陷 (§B.3.1) */
+  /* The last line of defence: any layout that triggers it is a defect (§B.3.1) */
   overflow-x: clip;
 }
 
@@ -633,7 +649,7 @@ body {
   padding: 0;
   color: var(--color-text-primary);
   background-color: var(--color-surface-page);
-  /* 长标识符不撑破布局 */
+  /* A long identifier must not burst the layout */
   overflow-wrap: anywhere;
   word-break: normal;
 }
