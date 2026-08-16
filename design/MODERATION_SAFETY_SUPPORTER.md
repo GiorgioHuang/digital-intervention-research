@@ -644,80 +644,82 @@ Past the handling deadline   1  [View]
 申诉待复核            2  · 最近期限：3 天后
 恢复复核              1
 
-── 与安全相关 ─────────────────
-已关联安全信号的个案   2
-  提示：安全判断由安全团队作出，
-  这里只显示关联，不显示安全评估结论。
+── Safety-related ─────────────
+Cases linked to a safety signal   2
+  Note: safety judgements are made by the safety team.
+  Only the link is shown here, never the conclusion of
+  a safety assessment.
 
-── 参考 ───────────────────────
-[社区规则版本]  [处置尺度参考]  [帮助]
+── Reference ──────────────────
+[Community rule versions]  [Disposition scale reference]  [Help]
 ```
 
-**状态矩阵**
+**State matrix**
 
-| 状态 | 呈现与文案原文 |
+| State | Presentation and copy in full |
 |---|---|
-| LOADING | 每个计数位显示 `…`，`aria-busy="true"`；**不得显示 0** —— 未读到不是零 |
-| EMPTY | `现在没有待处理的个案。这是正常状态，不需要处理。队列有新内容时会出现在这里。`（**禁止**祝贺式措辞） |
-| ERROR | `没能读取队列计数。这不代表没有待处理个案——请重试。[重试]` |
-| FORBIDDEN | `你的角色不能查看审核仪表盘。这不是出错。审核队列按角色隔离：批准人看不到审核队列，审核人也看不到批准队列。` |
-| PROTECTED | 仪表盘只呈现聚合计数，不呈现对象；单个对象的 PROTECTED 在 E2/E3 处理 |
+| LOADING | Each count shows `…` with `aria-busy="true"`; **it must not show 0** — not yet read is not zero |
+| EMPTY | `There are no cases waiting. This is a normal state and needs nothing from you. New items will appear here when the queue has them.` (congratulatory wording is **forbidden**) |
+| ERROR | `The queue counts could not be read. This does not mean there are no cases waiting — please try again. [Try again]` |
+| FORBIDDEN | `Your role cannot view the moderation dashboard. Nothing has gone wrong. The queues are separated by role: an approver cannot see the moderation queue, and a moderator cannot see the approval queue.` |
+| PROTECTED | The dashboard presents aggregate counts only, never objects; PROTECTED for an individual object is handled in E2/E3 |
 
-**无障碍要点**
+**Accessibility points**
 
-- 每个计数是链接/按钮的可访问名的一部分：`打开队列（7 个待分配个案）`，不能靠视觉并置。
-- 计数变化通过 `aria-live="polite"` 播报一次，不得轮询高频播报（否则屏幕阅读器用户无法工作）。
+- Each count is part of the accessible name of its link or button — `Open the queue (7 cases awaiting assignment)` — rather than relying on visual adjacency.
+- A change in the counts is announced once through `aria-live="polite"`; frequent polled announcements are forbidden (they make the screen unusable for a screen-reader user).
 
 ---
 
-### E2 报告队列（举报人身份不出现）
+### E2 The report queue (the reporter's identity never appears)
 
-**目标 / 要回答的问题**
+**Purpose / the questions it answers**
 
-- 哪一件最该先处理？
-- 每一件是关于什么的、涉及哪个社区、哪条规则？
-- **不该回答的问题：这是谁举报的。**
+- Which one should be dealt with first?
+- What is each one about, which community does it involve, and which rule?
+- **The question it must not answer: who reported this.**
 
-**线框**
+**Wireframe**
 
 ```
-<h1>待处理个案</h1>
+<h1>Cases waiting</h1>
 
-队列不显示举报人身份，也不显示举报时刻。
-依据举报人身份或推测的身份作出处置，属于违规。
+The queue shows neither who reported something nor when they reported it.
+Acting on the reporter's identity, or on a guess at it, is a breach.
 
-排序：优先级 → 处理时限   [更改排序]
-筛选：[全部] [分配给我] [超时]
+Sort: priority → deadline   [Change sorting]
+Filter: [All] [Assigned to me] [Overdue]
 
 ┌────────────────────────────┐
-│ 个案 MC-1043                │
-│ 优先级：高                   │
-│ 类型：骚扰                   │
-│ 对象类型：社区帖子           │
-│ 社区：园艺角                 │
-│ 收到时间：1–3 天前 ⓘ         │
-│ 报告数量：2                  │
-│ 分配：未分配                 │
-│ 自动信号：[有 · 未确认] ⓘ    │
-│ 安全关联：无                 │
-│ 处理时限：2 天后             │
-│           [打开个案]         │
+│ Case MC-1043                │
+│ Priority: high              │
+│ Type: harassment            │
+│ Object type: community post │
+│ Community: Gardening Corner │
+│ Received: 1–3 days ago ⓘ    │
+│ Number of reports: 2        │
+│ Assignment: unassigned      │
+│ Automated signal: [yes · unconfirmed] ⓘ │
+│ Safety link: none           │
+│ Deadline: in 2 days         │
+│           [Open the case]   │
 └────────────────────────────┘
 
-ⓘ 收到时间按区间显示（不足 24 小时 /
-  1–3 天 / 超过 3 天），以避免通过精确
-  时间推断举报人。
-ⓘ 自动信号只是提示，未经人工确认，
-  不得单独作为处置依据。
+ⓘ The time received is shown as a band (under 24 hours /
+  1–3 days / more than 3 days), so that the reporter
+  cannot be inferred from a precise time.
+ⓘ An automated signal is only a prompt. It has not been
+  confirmed by a person and must never be the sole basis
+  for a disposition.
 ```
 
-**举报人保护的具体设计手段（这一屏是最高风险面）**
+**The specific measures protecting the reporter (this screen is the highest-risk surface)**
 
-| 泄露通道 | 设计对策 |
+| Leak channel | Design countermeasure |
 |---|---|
-| 直接字段 | 载荷层已保证不含 reporterId（THREAT_MODEL §5，e2e 断言原始 JSON）；**前端不得新增任何回填** |
-| 精确时间 | 队列只显示**区间**（<24h / 1–3 天 / >3 天）；精确时间戳仅在 E3 的证据区、且属于**内容**时间而非**举报**时间 |
-| 排序 | 默认排序为 `优先级 → 处理时限`，**不提供按举报时间排序**；同优先级同时限内的顺序为个案 ID 的稳定散列序，不是入队序 |
+| A direct field | The payload layer already guarantees no reporterId (THREAT_MODEL §5; the e2e test asserts against the raw JSON); **the frontend must never add one back** |
+| Precise timing | The queue shows **bands** only (<24h / 1–3 days / >3 days); a precise timestamp appears only in E3's evidence area, and only as the time of the **content**, never of the **report** |
+| Ordering | The default sort is `priority → deadline`, and **sorting by report time is not offered**; within the same priority and deadline the order is a stable hash of the case ID, not the order of arrival |
 | 措辞 | 举报人自述文本**不进入队列卡片**（见 E3 的分级展开） |
 | 数量 | 只显示报告数量的**分档**（1 / 2–4 / 5 以上）以支持比例判断，不显示精确计数随时间的变化曲线 |
 
