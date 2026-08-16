@@ -1,13 +1,13 @@
 import { useEffect } from 'react';
 import { staffApi, type PendingExportItem, type StaffSession } from '../../staff-api.js';
 import {
-  AuthStrengthNote,
   ConfirmDecision,
   ExactVersionBlock,
   SeparationOfDutiesLine,
   useDecision,
   useQueue,
 } from './shared.js';
+import { StrongAuthBar } from '../StrongAuthBar.js';
 
 /**
  * Export decisions. Approving and rejecting go through the same
@@ -76,10 +76,9 @@ export function ExportDecisions({ session }: { session: StaffSession }) {
   return (
     <section aria-labelledby="export-decisions-heading">
       <h2 id="export-decisions-heading">Exports waiting for a decision</h2>
-      <AuthStrengthNote
-        needsMfa
-        authStrength={session.authStrength}
-        action="Deciding an export — approving and rejecting alike"
+      <StrongAuthBar
+        session={session}
+        actions={[{ key: 'export.approve', label: 'Deciding an export — approving and rejecting alike' }]}
       />
       <p>
         This list is what the queue held when it was loaded. It carries no version marker, so refresh before deciding if

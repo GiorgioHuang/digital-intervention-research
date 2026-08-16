@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { SafetyEvents } from './SafetyEvents.js';
 import { staffActionError, staffLoadError } from '../errors.js';
+import { StrongAuthBar } from './StrongAuthBar.js';
 import { staffApi, type StaffSession, type TriageQueueItem } from '../staff-api.js';
 
 type Disposition = 'Closed as Not a Safety Event' | 'Escalated' | 'Converted to Safety Event';
@@ -88,6 +89,17 @@ export function StaffSafetyTriagePanel({ session }: { session: StaffSession }) {
         The disposition is a human responsibility: an automated system can only raise a signal and can never create a safety
         event. Every disposition needs a written reason.
       </p>
+      {/*
+        §1.6: what needs strong authentication, once, at the top. Converting
+        is the only action here that does — recording a disposition and
+        closing do not, and saying so matters as much as naming the one that
+        does: a reviewer who believes the whole screen is gated postpones
+        the triage entirely.
+      */}
+      <StrongAuthBar
+        session={session}
+        actions={[{ key: 'safety-event.create', label: 'Converting a signal to a safety event' }]}
+      />
       <p>
         <button onClick={() => void loadQueue()}>View signals waiting for triage</button>
       </p>

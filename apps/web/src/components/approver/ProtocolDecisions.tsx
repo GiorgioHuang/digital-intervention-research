@@ -1,7 +1,6 @@
 import { useEffect } from 'react';
 import { staffApi, type ProtocolInReview, type StaffSession } from '../../staff-api.js';
 import {
-  AuthStrengthNote,
   ConfirmDecision,
   ExactVersionBlock,
   RefuseControl,
@@ -9,6 +8,7 @@ import {
   useDecision,
   useQueue,
 } from './shared.js';
+import { StrongAuthBar } from '../StrongAuthBar.js';
 
 /**
  * Protocol version decisions. Two actions live here and they are not the
@@ -41,10 +41,11 @@ export function ProtocolDecisions({ session }: { session: StaffSession }) {
   return (
     <section aria-labelledby="protocol-decisions-heading">
       <h2 id="protocol-decisions-heading">Protocol versions in review</h2>
-      <AuthStrengthNote needsMfa authStrength={session.authStrength} action="Approving a protocol version" />
-      <p role="note">
-        Activating an approved version needs your confirmation only — it is not in the strong-authentication tier.
-      </p>
+      <StrongAuthBar
+        session={session}
+        actions={[{ key: 'protocol.approve', label: 'Approving a protocol version' }]}
+        notInTier={['Activating an approved version']}
+      />
 
       <p>
         <button onClick={() => void queue.refresh()}>Refresh the list</button>

@@ -2,13 +2,13 @@ import { useEffect, useState } from 'react';
 import { staffLoadError } from '../../errors.js';
 import { staffApi, type AnalysisApprovalsPayload, type StaffSession } from '../../staff-api.js';
 import {
-  AuthStrengthNote,
   ConfirmDecision,
   ExactVersionBlock,
   RefuseControl,
   SeparationOfDutiesLine,
   useDecision,
 } from './shared.js';
+import { StrongAuthBar } from '../StrongAuthBar.js';
 
 /**
  * The three approvals along the analysis chain: plan, interpretation,
@@ -149,7 +149,7 @@ export function AnalysisDecisions({ session }: { session: StaffSession }) {
 
       <h3>Findings</h3>
       {/* The one MFA-tier decision on this screen, and the only one that says so. */}
-      <AuthStrengthNote needsMfa authStrength={session.authStrength} action="Approving a research finding" />
+      <StrongAuthBar session={session} actions={[{ key: 'finding.approve', label: 'Approving a research finding' }]} />
       {a.findings.length === 0 && <p>No finding is waiting.</p>}
       {a.findings.map((f) => {
         const own = f.draftedByActorId === session.actorId;

@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
 import { staffApi, type BreakGlassRecordItem, type StaffSession } from '../staff-api.js';
 import {
-  AuthStrengthNote,
   ConfirmDecision,
   ExactVersionBlock,
   useDecision,
   useQueue,
 } from './approver/shared.js';
+import { StrongAuthBar } from './StrongAuthBar.js';
 
 /**
  * Emergency access: the declaration, and the review that follows it.
@@ -82,7 +82,7 @@ function RecordEmergencyAccess({ session }: { session: StaffSession }) {
         Recording it is not optional after the fact and not private: every record goes into a queue that a different
         person reviews, and it cannot be reviewed by whoever recorded it.
       </p>
-      <AuthStrengthNote needsMfa authStrength={session.authStrength} action="Recording emergency access" />
+      <StrongAuthBar session={session} actions={[{ key: 'break-glass.execute', label: 'Recording emergency access' }]} />
       <p>
         <label htmlFor="bg-reason">Why — what happened, in your own words</label>
         <textarea id="bg-reason" value={reason} rows={3} onChange={(e) => setReason(e.target.value)} />
@@ -172,11 +172,9 @@ function BreakGlassReviews({ session }: { session: StaffSession }) {
         undo anything and does not close any access — the access, if there was any, happened elsewhere and is over or
         is not. What a review does is say, on the record, whether it should have happened.
       </p>
-      <AuthStrengthNote
-        needsMfa={false}
-        authStrength={session.authStrength}
-        action="Reviewing an emergency access record"
-      />
+      {/* Reviewing is not in the strong-authentication tier; the bar says so
+          rather than going quiet, because silence reads as an omission. */}
+      <StrongAuthBar session={session} actions={[]} />
       <p>
         <button onClick={() => void queue.refresh()}>Refresh the list</button>
       </p>

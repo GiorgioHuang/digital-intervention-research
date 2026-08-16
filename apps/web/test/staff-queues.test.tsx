@@ -193,11 +193,19 @@ describe('staff work queues replace manual identifier entry', () => {
     });
     const activate = screen.getByRole('button', { name: 'Activate this protocol version' });
     expect(activate).toHaveProperty('disabled', false);
+    /**
+     * Both halves are now in one bar at the top rather than two notes at
+     * separate points down the screen (§1.6). Splitting them left the
+     * reader to assemble the answer; together they are the answer — and
+     * telling somebody an action needs strong authentication when it does
+     * not is how a step-up prompt stops being a decision and becomes a
+     * reflex.
+     */
     const notes = screen.getAllByRole('note').map((n) => n.textContent ?? '');
-    expect(notes.some((t) => t.includes('Approving a protocol version') && t.includes('strong authentication'))).toBe(true);
-    expect(
-      notes.some((t) => t.includes('Activating') && t.includes('not in the strong-authentication tier')),
-    ).toBe(true);
+    const bar = notes.find((t) => t.includes('Strong authentication on this screen')) ?? '';
+    expect(bar).toContain('Approving a protocol version');
+    expect(bar).toContain('Activating an approved version');
+    expect(bar).toContain('needs your confirmation only');
   });
 
   /**

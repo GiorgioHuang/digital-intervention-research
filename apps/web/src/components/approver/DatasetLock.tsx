@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { staffApi, type LockableVersion, type StaffSession } from '../../staff-api.js';
-import { AuthStrengthNote, ConfirmDecision, ExactVersionBlock, useDecision, useQueue } from './shared.js';
+import { ConfirmDecision, ExactVersionBlock, useDecision, useQueue } from './shared.js';
+import { StrongAuthBar } from '../StrongAuthBar.js';
 
 /**
  * Dataset version locking. The manifest hash is the whole point of the
@@ -35,7 +36,7 @@ export function DatasetLock({ session }: { session: StaffSession }) {
   return (
     <section aria-labelledby="dataset-lock-heading">
       <h2 id="dataset-lock-heading">Dataset versions that can be locked</h2>
-      <AuthStrengthNote needsMfa authStrength={session.authStrength} action="Locking a dataset version" />
+      <StrongAuthBar session={session} actions={[{ key: 'dataset.lock', label: 'Locking a dataset version' }]} />
       <p>
         A locked version cannot be changed afterwards, and analysis can only run against a locked version. Check the
         manifest hash against the one you reviewed before locking.

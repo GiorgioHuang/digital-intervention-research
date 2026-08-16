@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react';
 import { staffApi, type PendingApprovalItem, type StaffSession } from '../../staff-api.js';
 import {
-  AuthStrengthNote,
   ConfirmDecision,
   ExactVersionBlock,
   SeparationOfDutiesLine,
   useDecision,
   useQueue,
 } from './shared.js';
+import { StrongAuthBar } from '../StrongAuthBar.js';
 
 /**
  * M15 approval records — the general governance decisions that are not one
@@ -45,10 +45,9 @@ export function ApprovalRecords({ session }: { session: StaffSession }) {
   return (
     <section aria-labelledby="approval-records-heading">
       <h2 id="approval-records-heading">Approval records waiting for a decision</h2>
-      <AuthStrengthNote
-        needsMfa
-        authStrength={session.authStrength}
-        action="Recording an approval decision — approving and rejecting alike"
+      <StrongAuthBar
+        session={session}
+        actions={[{ key: 'approval.decide', label: 'Recording an approval decision — approving and rejecting alike' }]}
       />
 
       <p>

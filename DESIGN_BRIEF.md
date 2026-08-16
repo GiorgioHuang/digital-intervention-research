@@ -53,7 +53,7 @@ The interface must distinguish and make visible the labels: observation / infere
 - React 18 + Vite, no UI framework dependency; styling is a single CSS file, no CSS-in-JS
 - Tokens are delivered as CSS custom properties (`--color-…` / `--space-…` / `--type-…`), supporting light and dark (`color-scheme: light dark` is enabled at `styles.css:634`)
 - Components are semantic HTML (`<nav> <main> <section> <ul> <button> <dialog role=alertdialog>`); **div soup must not be introduced for visual reasons**, because the existing accessibility assertions query by role and accessible name
-- The 386 existing front-end tests (49 files) query elements by accessible name — for example `getByRole('button', { name: 'Save draft' })`. **Changing the words changes the tests**; if a change is needed, list it explicitly in the deliverable
+- The 390 existing front-end tests (50 files) query elements by accessible name — for example `getByRole('button', { name: 'Save draft' })`. **Changing the words changes the tests**; if a change is needed, list it explicitly in the deliverable
 - Mobile first: real use happens on a phone (verified)
 
 ## 7. What the deliverable must contain
