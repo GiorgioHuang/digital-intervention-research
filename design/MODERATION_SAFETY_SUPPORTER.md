@@ -1343,79 +1343,79 @@ Record signal SS-2210 as "close: not a safety event"?
 
 Object: safety signal SS-2210 (participant P-118)
 Conclusion: does not constitute a safety event
-理由：«你填写的理由»
-后续支持：[ ] 安排后续观察  [ ] 转介研究支持
-      [ ] 不需要后续
-对方会看到：默认不通知本人；若你勾选了
-      「告知本人」，本人会看到
-      「你提出的安全担忧已由安全团队查看」
-信号保留：原始信号会完整保留，不会被删除
-可逆性：这条处置记录不可修改。若后续出现
-      新情况，应新建信号，而不是改写这一条
-审计：以你的身份署名写入审计  🔒
+Reason: «the reason you wrote»
+Follow-up support: [ ] arrange further observation  [ ] refer to research support
+      [ ] no follow-up needed
+They will see: by default the person is not notified; if you tick
+      "tell the person", they will see
+      "the safety concern you raised has been looked at by the safety team"
+The signal is kept: the original signal is kept in full and is not deleted
+Reversibility: this disposition record cannot be changed. If something new
+      comes up later, raise a new signal rather than rewriting this one
+Audit: written to the audit trail in your name  🔒
 
-[确认记录处置]        [返回]
+[Confirm and record the disposition]        [Go back]
 ```
 
-**确认文案原文 —— 转为安全事件（MFA）**
+**Confirmation copy in full — converting to a safety event (MFA)**
 
 ```
-确认把信号 SS-2210 转为安全事件？
+Convert signal SS-2210 into a safety event?
 
-对象：安全信号 SS-2210（参与者 P-118）
-结论：确认为安全事件
-类别：{必填}   严重度：{必填}
-与干预的关联性：{必填：相关/可能相关/不相关/无法判定}
-受影响的干预或功能：{必填}
-立即动作：{至少选一项，或明确选择「暂不采取动作」}
-监测安排：{必填}
-上报要求：{是/否，及依据}
-负责人：{你}
-理由：«你填写的理由»
-信号保留：原始信号会完整保留
-可逆性：这条记录不可修改。事件本身可以在
-      后续被关闭，但不会被删除
-认证：这项操作需要 MFA 级认证 ⚑
-审计：以你的身份署名写入审计  🔒
+Object: safety signal SS-2210 (participant P-118)
+Conclusion: confirmed as a safety event
+Category: {mandatory}   Severity: {mandatory}
+Relationship to the intervention: {mandatory: related / possibly related / unrelated / cannot be determined}
+Interventions or features affected: {mandatory}
+Immediate action: {choose at least one, or explicitly choose "no action for now"}
+Monitoring arrangement: {mandatory}
+Reporting requirement: {yes/no, and on what basis}
+Owner: {you}
+Reason: «the reason you wrote»
+The signal is kept: the original signal is kept in full
+Reversibility: this record cannot be changed. The event itself can be closed
+      later, but it is never deleted
+Authentication: this action requires MFA-tier authentication ⚑
+Audit: written to the audit trail in your name  🔒
 
-[确认转为安全事件]        [返回]
+[Confirm and convert to a safety event]        [Go back]
 ```
 
-**「同等可达」的落地判据（可检验）**
+**The checkable test of "equally reachable"**
 
-1. 两个动作在同一个单选组内，DOM 距离相同，无中间分隔元素。
-2. 两个确认对话框的字段行数差 ≤ 2 行，且**逐行同构**（对象/结论/理由/保留/可逆性/审计对齐）。
-3. 两个确认按钮的可访问名长度与视觉尺寸一致，颜色令牌相同（`--color-action-primary`），**都不使用 `--color-danger`**。
-4. 从「开始分诊」到任一确认，交互次数相同（选择 → 填理由 → 记录 → 确认 = 4 步）。
+1. The two actions are in the same radio group, the same DOM distance apart, with no separating element between them.
+2. The two confirmation dialogs differ by ≤ 2 field rows and are **isomorphic line by line** (object / conclusion / reason / what is kept / reversibility / audit all align).
+3. The two confirm buttons match in accessible-name length and visual size and use the same colour token (`--color-action-primary`); **neither uses `--color-danger`**.
+4. The number of interactions from "start triage" to either confirmation is the same (choose → write the reason → record → confirm = 4 steps).
 
-**状态矩阵**
+**State matrix**
 
-| 状态 | 呈现与文案原文 |
+| State | Presentation and copy in full |
 |---|---|
-| LOADING | 提交中：`正在记录处置…`，按钮 `disabled` |
-| EMPTY | 不适用 |
-| ERROR | `没能记录这个处置。你填写的内容还在。**信号仍然是未分诊状态，仍然需要处理。** 请重试。[重试]` ——不得让人误以为已经处理完 |
-| FORBIDDEN | MFA 不足：`转为安全事件需要 MFA 级认证，你当前是密码级。**没有任何内容被改动，信号仍未分诊。** 你可以以 MFA 重新登录后再处理，或选择「升级：需要更高级别审查」把它交给有权限的人。` |
-| PROTECTED | `无法显示这个内容。这条信号可能已由他人分诊。` |
+| LOADING | While submitting: `Recording the disposition…`, with the button `disabled` |
+| EMPTY | Not applicable |
+| ERROR | `The disposition could not be recorded. What you wrote is still here. **The signal is still untriaged and still needs dealing with.** Please try again. [Try again]` — it must not leave anyone believing it is finished |
+| FORBIDDEN | Insufficient MFA: `Converting to a safety event requires MFA-tier authentication and you are at the password tier. **Nothing has been changed and the signal is still untriaged.** You can sign in again with MFA and then handle it, or choose "escalate: needs higher-level review" to pass it to somebody who holds the permission.` |
+| PROTECTED | `This content cannot be shown. This signal may have been triaged by somebody else.` |
 
-**无障碍要点**
+**Accessibility points**
 
-- MFA 需求在**选中时**即提示（现有实现已有 `role="note"` 提示，保留），而不是提交后才失败。
-- 确认对话框内 `<dl>` 结构，`aria-describedby` 指向整个列表；焦点进入时在标题。
-- 记录成功后播报：`处置已记录。信号 SS-2210 已关闭为非安全事件。` 或 `处置已记录。安全事件 SE-0042 已创建。`
+- The MFA requirement is stated **when the option is selected** (the current implementation already has a `role="note"` for this; keep it), never as a failure after submission.
+- The confirmation dialog uses a `<dl>` structure with `aria-describedby` pointing at the whole list; focus lands on the title on entry.
+- After a successful record it announces: `The disposition has been recorded. Signal SS-2210 is closed as not a safety event.` or `The disposition has been recorded. Safety event SE-0042 has been created.`
 
 ---
 
-### F5 SafetyEvent 视图与安全动作
+### F5 The SafetyEvent view and safety actions
 
-**目标 / 要回答的问题**
+**Purpose / the questions it answers**
 
-- 这个事件确认了什么？（类别、严重度、关联性）
-- 现在有哪些动作、谁负责、做完了没有？
-- 现在处于什么监测与暂停状态？
-- 时间线上发生过什么？
+- What has this event confirmed? (category, severity, relationship)
+- What actions exist now, who owns them, and are they done?
+- What monitoring and suspension state is it in?
+- What has happened on the timeline?
 
-**线框**
+**Wireframe**
 
 ```
 <h1>安全事件 SE-0042</h1>
