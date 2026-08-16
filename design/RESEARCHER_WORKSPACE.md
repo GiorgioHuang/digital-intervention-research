@@ -1363,107 +1363,110 @@ Administration › user researcher_lin › roles
 
 ---
 
-### G4 集成与 AI 供应商配置（§21）
+### G4 Integrations and AI provider configuration (§21)
 
-**① 目标与密度**：外部集成的连接与状态。**AI 供应商配置在此只做"连接与凭据"，AI 的研究用途配置在 C8**——两者必须分开，管理不得决定 AI 在研究中的角色。密度：dense 表 + 详情。
+**① Purpose and density**: the connection and status of external integrations. **AI provider configuration here covers only "connection and credentials"; how AI is used in research is configured in C8** — the two must stay separate, and administration must never decide the role AI plays in research. Density: a dense table + detail.
 
-**② 线框**
+**② Wireframe**
 
 ```text
-管理 › 集成
-┌──────────────────┬────────┬────────────┬──────────┬──────────────┐
-│ 集成             │ 模式   │ 端点       │ 状态     │ 操作         │
-├──────────────────┼────────┼────────────┼──────────┼──────────────┤
-│ 知识库（MCP）    │ mcp    │ ack.icar…  │ 正常     │ [查看 KG]    │
-│ 邮件供应商       │ 模拟   │ （模拟）   │ 模拟中   │ [查看 邮件]  │
-│ 对象存储         │ 真实   │ …          │ 正常     │ [查看 存储]  │
-└──────────────────┴────────┴────────────┴──────────┴──────────────┘
-ⓘ「模拟」就是模拟：模拟供应商不会把任何东西送到任何人手上。
+Administration › integrations
+┌──────────────────┬───────────┬────────────┬──────────────┬──────────────┐
+│ Integration      │ Mode      │ Endpoint   │ Status       │ Action       │
+├──────────────────┼───────────┼────────────┼──────────────┼──────────────┤
+│ Knowledge base (MCP) │ mcp   │ <endpoint> │ ok           │ [View KG]    │
+│ Email provider   │ simulated │ (simulated)│ simulating   │ [View email] │
+│ Object storage   │ real      │ …          │ ok           │ [View storage] │
+└──────────────────┴───────────┴────────────┴──────────────┴──────────────┘
+ⓘ "Simulated" means simulated: a simulated provider does not put anything into anybody's hands.
 
-知识库（MCP）详情
- 模式 [simulator | mcp]  当前 mcp   ⓘ 切到 simulator 会让证据检索
-   返回确定性的模拟结果——研究者界面会显示为「模拟」，不是真实检索。
- 端点 <知识图谱端点>   超时 45s   上次成功调用 11:02
- 失败策略 失败关闭：连不上时返回「检索没有完成」，绝不返回空结果。
- ⓘ AI 供应商的凭据在这里管理；AI 在研究中的角色由协议与 AI 配置
-   （研究者工作区）决定，不在这里决定。
-                                   [修改配置（需要强认证 MFA）]
+Knowledge base (MCP) detail
+ Mode [simulator | mcp]  currently mcp   ⓘ Switching to simulator makes evidence
+   search return deterministic simulated results — the researcher's interface
+   shows them as "simulated", not as a real search.
+ Endpoint <knowledge graph endpoint>   Timeout 45s   Last successful call 11:02
+ Failure policy  fail closed: when it cannot be reached it returns "the search did not complete", and never an empty result.
+ ⓘ AI provider credentials are managed here; the role AI plays in research is
+   decided by the protocol and the AI configuration (in the researcher
+   workspace), not here.
+                                   [Change the configuration (requires strong authentication, MFA)]
 ```
 
-**③ 状态矩阵**
+**③ State matrix**
 
-| 态 | 呈现 |
+| State | Presentation |
 |---|---|
-| 加载 | 状态列显示 `正在探测…`，**不预设"正常"** |
-| 空队列 | `还没有配置任何集成。` |
-| 错误 | 探测失败：`无法确定这个集成的状态（<码>）。不要当作正常。[重试]` |
-| 权限不足 | 无 `system.configure`：只读 + `你可以查看集成状态，但不能修改（需要 SystemAdministrator）。` |
-| 需要 MFA | 修改配置需要 MFA。屏顶：`本屏的强认证动作：修改集成配置（需要 MFA）。` |
+| Loading | The status column shows `probing…` and **never presumes "ok"** |
+| Empty queue | `No integrations have been configured yet.` |
+| Error | A failed probe: `The status of this integration cannot be determined (<code>). Do not treat it as ok. [Try again]` |
+| Insufficient permission | Without `system.configure`: read-only + `You can view integration status but cannot change it (it needs SystemAdministrator).` |
+| MFA required | Changing the configuration requires MFA. At the top: `Strong-authentication actions on this screen: change an integration's configuration (requires MFA).` |
 
-**④ 确认文案**：
-`确认把知识库集成从 mcp 切换为 simulator？
-研究者的证据检索将改为返回确定性的模拟结果，界面会标注为「模拟」。
-已经附加的引用不受影响，它们记录的是当时的检索标识。
-这个操作需要强认证（MFA），会署名并写入审计。`
+**④ Confirmation copy**:
+`Switch the knowledge-base integration from mcp to simulator?
+Researchers' evidence searches will start returning deterministic simulated results, and the interface will mark them as "simulated".
+Citations already attached are unaffected; they record the search identifier as it was at the time.
+This action requires strong authentication (MFA), is signed, and is written to the audit trail.`
 
-**⑤ 无障碍**：状态列文字化（`正常`/`模拟中`/`无法确定`）；密钥类字段永不明文回显，显示 `已设置（不显示）` + `[更换]`；表格按 1.9。
+**⑤ Accessibility**: the status column is in words (`ok`/`simulating`/`cannot be determined`); secret fields are never echoed in the clear and show `set (not displayed)` + `[Replace]`; the table follows 1.9.
 
 ---
 
-### G5 作业与死信队列（§21）
+### G5 Jobs and the dead-letter queue (§21)
 
-**① 目标与密度**：运行性作业与死信处理。密度：dense 表。**重放是逐条决定，不做"全部重放"**。
+**① Purpose and density**: operational jobs and dead-letter handling. Density: a dense table. **A replay is decided one item at a time; there is no "replay everything".**
 
-**② 线框**
+**② Wireframe**
 
 ```text
-管理 › 作业 › 死信队列（1）
-┌────────┬────────────────┬──────┬────────────┬────────────────────┐
-│ 作业   │ 类型           │ 尝试 │ 最早失败   │ 操作               │
-├────────┼────────────────┼──────┼────────────┼────────────────────┤
-│ job_31 │ 撤回传播       │ 5    │ 2h 前      │ [查看 job_31]      │
-│        │ 影响：SP-002 的撤回还没有传播到所有下游。                │
-│        │ 错误：DEPENDENCY_UNAVAILABLE（对象存储超时）              │
-│        │ [重放这一条] [标记为需要人工处理]                        │
-└────────┴────────────────┴──────┴────────────┴────────────────────┘
-ⓘ 死信不会自动消失，也不会自动重放。每一条都需要一个人决定。
-ⓘ 与参与者权利有关的作业（撤回传播、删除传播）在这里置顶。
+Administration › jobs › dead-letter queue (1)
+┌────────┬──────────────────────┬──────────┬───────────────┬────────────────────┐
+│ Job    │ Type                 │ Attempts │ First failed  │ Action             │
+├────────┼──────────────────────┼──────────┼───────────────┼────────────────────┤
+│ job_31 │ Withdrawal propagation │ 5      │ 2h ago        │ [View job_31]      │
+│        │ Impact: SP-002's withdrawal has not propagated to everything downstream. │
+│        │ Error: DEPENDENCY_UNAVAILABLE (object storage timeout)  │
+│        │ [Replay this one] [Mark as needing a person]            │
+└────────┴──────────────────────┴──────────┴───────────────┴────────────────────┘
+ⓘ A dead letter does not disappear on its own and is never replayed automatically. Each one needs a person to decide.
+ⓘ Jobs bearing on a participant's rights (withdrawal propagation, deletion propagation) are pinned to the top here.
 ```
 
-**③ 状态矩阵**
+**③ State matrix**
 
-| 态 | 呈现 |
+| State | Presentation |
 |---|---|
-| 加载 | 表格骨架 |
-| 空队列 | `没有死信。所有作业都已成功处理。` |
-| 错误 | 重放失败：`重放没有成功（<码>）。这一条仍在死信队列里。` |
-| 权限不足 | `你的角色不能处理作业队列（需要 SystemAdministrator）。` |
-| 需要 MFA | 重放/标记**不需要** MFA（不是权威动作，是运行动作）。屏顶：`本屏没有需要强认证的动作。` |
+| Loading | A table skeleton |
+| Empty queue | `There are no dead letters. Every job has been processed successfully.` |
+| Error | A failed replay: `The replay did not succeed (<code>). This one is still in the dead-letter queue.` |
+| Insufficient permission | `Your role cannot work the job queue (it needs SystemAdministrator).` |
+| MFA required | Replaying and marking do **not** require MFA (these are operational actions, not authority actions). At the top: `No action on this screen requires strong authentication.` |
 
-**④ 确认文案**：`确认重放 job_31（撤回传播，SP-002）？重放会重新尝试把这次撤回传播到下游。如果再次失败，它会留在死信队列。`
+**④ Confirmation copy**: `Replay job_31 (withdrawal propagation, SP-002)? Replaying tries again to propagate this withdrawal downstream. If it fails again it stays in the dead-letter queue.`
 
-**⑤ 无障碍**：影响与错误是行展开内容（`aria-expanded` 控制），不是 tooltip；置顶的权利相关作业在 `<caption>` 中说明排序规则。
+**⑤ Accessibility**: the impact and the error are row-expansion content (controlled by `aria-expanded`), never a tooltip; the sorting rule that pins rights-related jobs to the top is explained in the `<caption>`.
 
 ---
 
-### G6 功能旗标（§21）
+### G6 Feature flags (§21)
 
-**① 目标与密度**：旗标的开关与影响。**旗标不能用来绕过同意、审核或安全**——界面要写明。密度：dense 表。
+**① Purpose and density**: switching flags and their impact. **A flag must never be used to bypass consent, moderation or safety** — and the interface says so. Density: a dense table.
 
-**② 线框**
+**② Wireframe**
 
 ```text
-管理 › 功能旗标
-┌────────────────────┬──────┬──────────────────────────┬────────────┐
-│ 旗标               │ 状态 │ 影响                     │ 操作       │
-├────────────────────┼──────┼──────────────────────────┼────────────┤
-│ matching.enabled   │ 关闭 │ 参与者看不到「认识新朋友」│ [查看]     │
-│ community.enabled  │ 开启 │ 社区在参与者首页可见     │ [查看]     │
-│ ai.companion       │ 关闭 │ 受 Level-5 全禁约束，     │ 锁定       │
-│                    │      │ 这个旗标不能被开启       │            │
-└────────────────────┴──────┴──────────────────────────┴────────────┘
-ⓘ 旗标只能关闭或开启功能的可见性与可用性。旗标不能绕过同意检查、
-  审核流程或安全规则——那些由权限引擎与协议决定，不受旗标影响。
+Administration › feature flags
+┌────────────────────┬────────┬────────────────────────────────┬──────────┐
+│ Flag               │ State  │ Impact                         │ Action   │
+├────────────────────┼────────┼────────────────────────────────┼──────────┤
+│ matching.enabled   │ off    │ Participants do not see "Meet new people" │ [View] │
+│ community.enabled  │ on     │ The community is visible on the participant home │ [View] │
+│ ai.companion       │ off    │ Bound by the Level-5 prohibition;│ locked   │
+│                    │        │ this flag cannot be switched on │          │
+└────────────────────┴────────┴────────────────────────────────┴──────────┘
+ⓘ A flag can only switch a feature's visibility and availability off or on. A flag cannot
+  bypass a consent check, a moderation process or a safety rule — those are decided by the
+  permission engine and the protocol, and no flag affects them.
 ```
 
 **③ 状态矩阵**
