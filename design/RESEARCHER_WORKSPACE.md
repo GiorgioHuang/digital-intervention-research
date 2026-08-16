@@ -925,54 +925,54 @@ Participant SP-002 (pseudonymous)
 
 **④ Confirmation copy**: changing the purpose of access: `Change the purpose of access to "safety review"? This visit is written to the audit trail under that purpose. Choose it only when it genuinely is a safety review.`
 
-**⑤ 无障碍**：研究代码列是 `<th scope="row">`；安全列的 `⚠开放` 写作 `有开放的安全信号`；Tab 组用 `role="tablist"` + `aria-selected` + `aria-controls`，禁用 Tab 用 `aria-disabled="true"` 并保留在 Tab 序中（这样屏幕阅读器用户知道有这些分区且知道自己没权限）。
+**⑤ Accessibility**: the study-code column is a `<th scope="row">`; the safety column's `⚠ open` is written as `has an open safety signal`; the tab group uses `role="tablist"` + `aria-selected` + `aria-controls`, and a disabled tab uses `aria-disabled="true"` while remaining in the tab order (so a screen-reader user knows the sections exist and knows they lack permission).
 
 ---
 
 ### C13 干预与评估监测（§75–77）
 
-**① 目标与密度**：区分十种干预交付状态与八种评估状态，**完成永不从"已指派"推断**（§75 硬要求）。密度：dense 矩阵表 + 图表（图表须带 §253 全部元数据）。
+**① Purpose and density**: distinguish the ten intervention delivery states from the eight assessment states, and **never infer completion from "assigned"** (a hard requirement of §75). Density: a dense matrix table + charts (which must carry all of §253's metadata).
 
-**② 线框**
+**② Wireframe**
 
 ```text
-监测 › 干预交付                                     周期 [近 4 周 ▾]
-┌──────────┬────┬────┬────┬────┬────┬────┬────┬────┬────┬────┐
-│ 活动     │指派│提供│查看│开始│部分│完成│跳过│拒绝│失败│中断│
-├──────────┼────┼────┼────┼────┼────┼────┼────┼────┼────┼────┤
-│ 生命故事 │ 24 │ 22 │ 18 │ 14 │  3 │  9 │  4 │  2 │  1 │  1 │
-│ 社区活动 │ 24 │ 20 │ 15 │ 11 │  2 │  8 │  3 │  1 │  1 │  0 │
-└──────────┴────┴────┴────┴────┴────┴────┴────┴────┴────┴────┘
-ⓘ 「完成」只来自明确的完成事件，不由「已指派」推断。
-ⓘ [合成数据] 这是运行监测，不是研究结果。不得作为效果证据。
+Monitoring › intervention delivery                  Period [last 4 weeks ▾]
+┌──────────┬────────┬────────┬──────┬───────┬───────┬─────────┬──────┬────────┬──────┬────────────┐
+│ Activity │Assigned│Provided│Viewed│Started│Partial│Completed│Skipped│Declined│Failed│Interrupted │
+├──────────┼────────┼────────┼──────┼───────┼───────┼─────────┼──────┼────────┼──────┼────────────┤
+│ Life story│ 24    │ 22     │ 18   │ 14    │  3    │  9      │  4   │  2     │  1   │  1         │
+│ Community activity│ 24 │ 20 │ 15   │ 11    │  2    │  8      │  3   │  1     │  1   │  0         │
+└──────────┴────────┴────────┴──────┴───────┴───────┴─────────┴──────┴────────┴──────┴────────────┘
+ⓘ "Completed" comes only from an explicit completion event and is never inferred from "assigned".
+ⓘ [synthetic data] This is operational monitoring, not a research result. It must not be used as evidence of effect.
 
-监测 › 评估
-┌──────────┬──────┬────┬────┬────┬────┬────┬──────┬────┐
-│ 评估     │已排期│到期│开始│暂停│完成│拒绝│已作废│逾期│
-│ 基线     │ 24   │ 0  │ 24 │ 0  │ 22 │ 1  │ 1    │ 0  │
-│ 随访 4 周│ 24   │ 5  │ 12 │ 2  │ 10 │ 0  │ 0    │ 2  │
-└──────────┴──────┴────┴────┴────┴────┴────┴──────┴────┘
-缺失原因（在权限允许时显示）：拒绝 1 · 技术失败 1 · 未知 3
-ⓘ 「未知」就是未知，不填补、不推断。
+Monitoring › assessments
+┌──────────┬─────────┬────┬───────┬──────┬─────────┬────────┬────────┬───────┐
+│ Assessment│Scheduled│Due │Started│Paused│Completed│Declined│Voided  │Overdue│
+│ Baseline  │ 24      │ 0  │ 24    │ 0    │ 22      │ 1      │ 1      │ 0     │
+│ Follow-up 4 weeks│ 24│ 5 │ 12    │ 2    │ 10      │ 0      │ 0      │ 2     │
+└──────────┴─────────┴────┴───────┴──────┴─────────┴────────┴────────┴───────┘
+Reasons for missingness (shown where permission allows): declined 1 · technical failure 1 · unknown 3
+ⓘ "Unknown" means unknown. It is not filled in and it is not inferred.
 
-安全（最小必要）
- 开放安全信号 2 · 当前暂停 1 · 需要跟进 1 · 对本项目的影响：入组暂停
- ⓘ 详细的安全审阅在安全工作区进行，不在这里。
+Safety (minimum necessary)
+ Open safety signals 2 · currently suspended 1 · needing follow-up 1 · effect on this project: enrolment suspended
+ ⓘ Detailed safety review happens in the safety workspace, not here.
 ```
 
-**③ 状态矩阵**
+**③ State matrix**
 
-| 态 | 呈现 |
+| State | Presentation |
 |---|---|
-| 加载 | 矩阵表骨架，列头先渲染（状态名是固定词表） |
-| 空队列 | `所选周期内没有交付记录。` + `这不代表没有发生——请确认周期与筛选。` |
-| 错误 | 部分聚合失败：`有 1 项指标没能计算（<码>）。表里那一格显示「未计算」，不显示 0。` ——**绝不用 0 代替失败** |
-| 权限不足 | 缺失原因列对无权限角色显示 `缺失原因对你的角色不可见。`；安全区仅显示计数 |
-| 需要 MFA | 无 MFA 动作 |
+| Loading | A matrix skeleton with the column headers rendered first (the state names are a fixed vocabulary) |
+| Empty queue | `There are no delivery records in the selected period.` + `That does not mean nothing happened — check the period and the filters.` |
+| Error | A partial aggregation failure: `1 measure could not be computed (<code>). That cell shows "not computed" rather than 0.` — **0 must never stand in for a failure** |
+| Insufficient permission | The missingness-reason column shows `Reasons for missingness are not visible to your role.` to roles without permission; the safety block shows counts only |
+| MFA required | No MFA actions |
 
-**④ 关键交互**：无高影响动作（只读监测）。可下钻到 C12 参与者详情；下钻链接可访问名含研究代码。
+**④ Key interactions**: no high-impact actions (this is read-only monitoring). It can drill down to the C12 participant detail; the drill-down link's accessible name contains the study code.
 
-**⑤ 无障碍**：矩阵表每列表头 `<th scope="col">` 用完整状态名（不缩写）；数字单元格 `aria-label` 形如 `生命故事，完成，9 人`；图表（若使用）必须提供 `<table>` 数据替代（§253），并带标题/单位/分母/时间范围/来源/不确定性；`未计算` 是文字，不是空格。
+**⑤ Accessibility**: each column header in the matrix is a `<th scope="col">` carrying the full state name (never abbreviated); numeric cells have an `aria-label` of the form `Life story, completed, 9 people`; charts (where used) must provide a `<table>` data alternative (§253) carrying the title, units, denominator, time range, source and uncertainty; `not computed` is words, never a blank.
 
 ---
 
