@@ -157,100 +157,100 @@ Requiring confirmation but **not** MFA (mislabelling these as MFA is "over-warni
 
 Forbidden: raising the strong-authentication requirement only after a click; and treating `STEP_UP_AUTHENTICATION_REQUIRED` as a normal path — its appearance is by definition a failure of forewarning, and the interface should say `You should have been told this in advance. Please report this to the platform maintainers.`
 
-### 1.7 来源先于断言：证据卡规范（C3/C4 核心，全局复用）
+### 1.7 Provenance before assertion: the evidence card specification (the core of C3/C4, reused throughout)
 
-组件名 `EvidenceResultCard`（Doc 20 §60）。**强弱证据不得同等呈现**。
+Component name `EvidenceResultCard` (Doc 20 §60). **Strong and weak evidence must not be presented as equals.**
 
-固定字段顺序（来源在断言之前）：
+The fixed field order (provenance comes before the assertion):
 
 ```text
-┌─ 证据结果 ─────────────────────────────────────────────────────┐
-│ ① 出处   DOI:10.1177/1088868310377394           [在来源系统打开]│
-│ ② 来源系统  graceage-knowledge-mcp                              │
-│    检索标识（版本）  sha256:4c1a…e097   检索时刻 2026-08-03 11:02│
-│ ③ 研究设计  系统综述 / 元分析                                    │
-│ ④ 证据强度  高（tier: high，score 80）  ← 上游策展元数据 [来源推导]│
-│ ⑤ 人群相关性  65+ 社区居住老年人   ⑥ 情境  非临床                │
-│ ⑦ 证据方向  降低风险（reduces_risk_of）                          │
-│ ⑧ 冲突标记  ⚠ 存在冲突证据（2 条）        [并排比较]             │
-│ ⑨ 许可      未声明（不得据此再分发）                             │
-│ ⑩ 标题与摘要  Social participation and loneliness…              │
-│    「摘要是上游内容，不是本平台结论。」                          │
-│ ── 决定 ──  ( ) 纳入   ( ) 排除   ( ) 暂缓   理由：[__________]  │
+┌─ Evidence result ─────────────────────────────────────────────┐
+│ ① Provenance  DOI:10.1177/1088868310377394   [Open in the source system]│
+│ ② Source system  graceage-knowledge-mcp                        │
+│    Search identifier (version)  sha256:4c1a…e097   Searched 2026-08-03 11:02│
+│ ③ Study design  systematic review / meta-analysis              │
+│ ④ Evidence strength  high (tier: high, score 80) ← upstream curation metadata [source-derived]│
+│ ⑤ Population relevance  community-dwelling adults 65+   ⑥ Setting  non-clinical│
+│ ⑦ Direction  reduces risk (reduces_risk_of)                    │
+│ ⑧ Conflict marker  ⚠ conflicting evidence exists (2)  [Compare side by side]│
+│ ⑨ Licence  not stated (do not redistribute on this basis)      │
+│ ⑩ Title and abstract  Social participation and loneliness…     │
+│    "The abstract is upstream content, not a conclusion of this platform."│
+│ ── Decision ──  ( ) Include   ( ) Exclude   ( ) Defer   Reason: [__________]│
 └───────────────────────────────────────────────────────────────┘
 ```
 
-强制规则：
+Mandatory rules:
 
-- **不得把证据压缩成单一置信度颜色**（§60）。强度用"分层文字 + 研究设计 + 分数"三者共同表达。
-- **弱/间接/缺失证据显式呈现**，且**不与强证据同等版式**：
-  - 强（`tier: high`）：完整卡片，实线边框。
-  - 中/低（`moderate`/`low`）：卡片顶部加一行 `证据强度较低——不足以支撑干预决定，只能支持"需要进一步研究"。`
-  - 间接（人群/情境不匹配）：加 `间接证据：来源人群与本研究人群不一致（<差异>）。`
-  - **缺失**：不是"没有结果"，而是一张显式的 `证据缺口卡`：`在这个问题上没有检索到证据。这本身是研究发现的一部分。` 并提供 `记录为知识缺口` 动作。
-  - **冲突**：`⚠ 冲突证据` 永远可见，提供 §61 要求的并排比较视图；冲突不得被"平均"或"取最高"。
-- **来源系统的 certainty/quality 是上游策展元数据**，卡片上明确标 `[来源推导]`，措辞：`这是来源系统给出的评级，不是本平台的判断。`
-- **依赖不可用绝不折叠成"未找到证据"**：`DEPENDENCY_UNAVAILABLE`（HTTP 503）显示为"检索没有完成"，见 1.8 错误态。
+- **Evidence must never be compressed into a single confidence colour** (§60). Strength is expressed by three things together: the tier in words, the study design, and the score.
+- **Weak, indirect and missing evidence are shown explicitly**, and **not in the same format as strong evidence**:
+  - Strong (`tier: high`): the full card, solid border.
+  - Moderate/low (`moderate`/`low`): a line at the top of the card reading `The evidence is weaker — not enough to support an intervention decision, only enough to support "further research is needed".`
+  - Indirect (population or setting mismatch): add `Indirect evidence: the source population differs from this study's population (<difference>).`
+  - **Missing**: not "no results" but an explicit `evidence gap card`: `No evidence was found on this question. That is itself part of the research finding.` with a `Record as a knowledge gap` action.
+  - **Conflicting**: `⚠ conflicting evidence` is always visible, with the side-by-side comparison view §61 requires; conflict must never be averaged away or resolved by taking the highest.
+- **The source system's certainty/quality is upstream curation metadata**, marked `[source-derived]` on the card, worded: `This is the rating the source system gave, not a judgement by this platform.`
+- **An unavailable dependency must never collapse into "no evidence found"**: `DEPENDENCY_UNAVAILABLE` (HTTP 503) is shown as "the search did not complete"; see the error states in 1.8.
 
-### 1.8 五态矩阵的通用定义
+### 1.8 The five-state matrix, defined once
 
-每个界面章节的状态矩阵只写"该屏特有内容"；下列为通用底座。
+Each interface section's state matrix records only what is specific to that screen; the common foundation is below.
 
-| 态 | 触发 | 通用呈现 | 通用文案 |
+| State | Trigger | Common presentation | Common copy |
 |---|---|---|---|
-| 加载 | 请求未返回 | 骨架保留最终布局的行数与列宽（防跳动）；`aria-busy="true"` 于区域容器；`role="status"` 播报一次 | `正在加载…`（超过 3 秒追加：`还在加载，网络可能较慢。`） |
-| 空队列 | 200 且 0 条 | **不用插图占位**；一句事实 + 一个下一步动作 | `现在没有待办。`（各屏具体化，见章节） |
-| 错误 | 4xx/5xx | 分级：可恢复 / 阻断 / 安全关键 / 安全性关键（§231–237）；显示错误码 + 中文解释 + **下一步**；不指责用户 | 见下表 |
-| 权限不足 | `AUTHORISATION_DENIED` / `SPECIFIC_PERMISSION_REQUIRED` | 屏内替换主区，不跳转；说明缺哪个权限、向谁申请 | `你的角色没有这个操作的权限。需要 <角色名>。可以联系你所在组织的管理员申请。` |
-| 需要 MFA | 会话认证强度 < 要求 | 按钮禁用 + 屏顶强认证条 + 就地说明（1.6） | `这个操作需要强认证（MFA）。你当前是密码级认证。` |
+| Loading | The request has not returned | The skeleton preserves the final layout's row count and column widths (to prevent jumping); `aria-busy="true"` on the region container; announced once via `role="status"` | `Loading…` (after 3 seconds, add: `Still loading; the connection may be slow.`) |
+| Empty queue | 200 with 0 rows | **No illustration placeholder**; one sentence of fact + one next action | `There is nothing waiting.` (made specific per screen; see the sections) |
+| Error | 4xx/5xx | Graded: recoverable / blocking / safety-critical / security-critical (§231–237); shows the error code + an explanation + **the next step**; never blames the user | See the table below |
+| Insufficient permission | `AUTHORISATION_DENIED` / `SPECIFIC_PERMISSION_REQUIRED` | Replaces the main area in place, without navigating away; says which permission is missing and whom to ask | `Your role does not hold the permission for this action. It needs <role>. You can ask your organisation's administrator for it.` |
+| MFA required | The session's authentication strength is below what is required | The button is disabled + the strong-authentication bar at the top + an explanation in place (1.6) | `This action requires strong authentication (MFA). You are authenticated at the password tier.` |
 
-错误码 → 中文文案（研究者/管理工作区统一表；未列出的按"未预期错误"处理）：
+Error code → copy (one table for the researcher and administration workspaces; anything not listed is treated as an unexpected error):
 
-| 码 | 分级 | 文案 | 下一步 |
+| Code | Grade | Copy | Next step |
 |---|---|---|---|
-| `RESOURCE_NOT_FOUND` | 阻断 | `找不到这个对象，或者你没有权限看到它。` | `请确认标识，或联系有权限的同事。`（受保护存在：不得区分"不存在"与"无权限"） |
-| `VERSION_CONFLICT` | 可恢复 | `这个对象在你查看期间被改动了。` | `[重新载入最新版本]`（保留你已填写的理由文本） |
-| `CONFIRMATION_REQUIRED` | 可恢复 | `这个操作需要明确确认。` | 打开确认对话框 |
-| `STEP_UP_AUTHENTICATION_REQUIRED` | 阻断 | `这个操作需要强认证（MFA）。界面本该提前告诉你——这是一个缺陷。` | `请以 MFA 重新登录；并把这个情况报告给平台维护者。` |
-| `AUTHORISATION_DENIED`（自批准） | 阻断 | `这是你提交的，按职责分离规则你不能批准它。` | `请另一位批准人处理。` |
-| `INVALID_STATE_TRANSITION` | 阻断 | `这个对象当前的状态不允许这个操作。` | 显示当前状态与允许的下一步 |
-| `IMMUTABLE_RESOURCE` | 阻断 | `这个对象已经不可更改。` | `如需变更，创建新版本。` |
-| `DATASET_LOCK_NOT_READY` | 阻断 | `这个数据集版本还不能锁定。` | 列出未满足的前置项并可跳转 |
-| `LINEAGE_INCOMPLETE` | 阻断 | `血缘信息不完整，不能继续。` | 指出缺失的来源版本 |
-| `DEIDENTIFICATION_REQUIRED` | 阻断 | `这个导出没有满足去标识要求。` | 指出哪个来源不满足 |
-| `EXPORT_REQUIRES_APPROVAL` | 可恢复 | `导出必须先获得批准。` | `[提交批准申请]` |
-| `CONSENT_REQUIRED` / `PURPOSE_NOT_PERMITTED` | 阻断（安全性关键） | `这份数据的同意范围/使用目的不允许这个操作。` | `请检查你选择的研究目的；如确有需要，走协议变更。` |
-| `DEPENDENCY_UNAVAILABLE` | 可恢复 | `检索没有完成——外部知识库现在连不上。这不代表"没有证据"。` | `[重试]`；**禁止显示空结果列表** |
-| `DATA_QUALITY_FAILURE` | 阻断 | `数据质量规则未通过。` | 跳转质量问题清单 |
-| `AUDIT_UNAVAILABLE` | 安全关键 | `审计日志暂时不可写，因此这个操作没有执行。` | `请稍后重试；不要绕过。` |
+| `RESOURCE_NOT_FOUND` | Blocking | `This object cannot be found, or you do not have permission to see it.` | `Check the identifier, or ask a colleague who has permission.` (Protected existence: "does not exist" and "not permitted" must not be distinguished) |
+| `VERSION_CONFLICT` | Recoverable | `This object was changed while you were looking at it.` | `[Reload the latest version]` (keeping any reason text you have typed) |
+| `CONFIRMATION_REQUIRED` | Recoverable | `This action needs explicit confirmation.` | Open the confirmation dialog |
+| `STEP_UP_AUTHENTICATION_REQUIRED` | Blocking | `This action requires strong authentication (MFA). The interface should have told you in advance — that is a defect.` | `Sign in again with MFA, and report this to the platform maintainers.` |
+| `AUTHORISATION_DENIED` (self-approval) | Blocking | `You submitted this, so under separation of duties you cannot approve it.` | `Ask another approver to handle it.` |
+| `INVALID_STATE_TRANSITION` | Blocking | `This object's current state does not allow this action.` | Show the current state and the permitted next steps |
+| `IMMUTABLE_RESOURCE` | Blocking | `This object can no longer be changed.` | `To change it, create a new version.` |
+| `DATASET_LOCK_NOT_READY` | Blocking | `This dataset version cannot be locked yet.` | List the unmet preconditions, each linked |
+| `LINEAGE_INCOMPLETE` | Blocking | `The lineage is incomplete and this cannot continue.` | Name the missing source version |
+| `DEIDENTIFICATION_REQUIRED` | Blocking | `This export does not meet the de-identification requirement.` | Name which source does not meet it |
+| `EXPORT_REQUIRES_APPROVAL` | Recoverable | `An export must be approved first.` | `[Submit an approval request]` |
+| `CONSENT_REQUIRED` / `PURPOSE_NOT_PERMITTED` | Blocking (security-critical) | `The consent scope or purpose of use for this data does not allow this action.` | `Check the research purpose you selected; if it is genuinely needed, go through a protocol amendment.` |
+| `DEPENDENCY_UNAVAILABLE` | Recoverable | `The search did not complete — the external knowledge base cannot be reached right now. This does not mean "there is no evidence".` | `[Try again]`; **showing an empty result list is forbidden** |
+| `DATA_QUALITY_FAILURE` | Blocking | `The data quality rules did not pass.` | Link to the list of quality problems |
+| `AUDIT_UNAVAILABLE` | Safety-critical | `The audit log cannot be written at the moment, so this action was not carried out.` | `Try again later; do not work around it.` |
 
-### 1.9 表格与键盘：无障碍基线（所有列表屏共用）
+### 1.9 Tables and the keyboard: the accessibility baseline (shared by every list screen)
 
-- 语义：`<table>` + `<caption>`（可视或 `visually-hidden`）+ `<thead><th scope="col">` + 行内 `<th scope="row">` 承载主标识。**不用 div 网格**（现有 a11y 测试依赖角色与可访问名）。
-- 排序：`<th aria-sort="ascending|descending|none">` + 表头内 `<button>`，按钮可访问名形如 `按 提交时间 排序（当前：升序）`。排序完成后 `role="status"` 播报 `已按提交时间升序排列，共 12 行。`
-- 行内动作：**每个动作按钮的可访问名必须唯一且含对象标识**（例如 `打开 pv_7f3a91c2`），否则屏幕阅读器与测试都无法区分。
-- 触控：含动作的行 `min-height: 2.75rem`；动作列 `display:flex; gap: .5rem;` 且按钮 `min-height: 2.75rem`——**禁止把 44px 目标塞进 29px 行框**（历史缺陷）。
-- 键盘：表格为普通 Tab 序（不做 grid roving tabindex，除非列 > 12 且已单独做可用性验证）；行展开用 `<button aria-expanded>` 控制紧随其后的行。
-- 分页：`<nav aria-label="分页">`；页码变化后播报 `第 2 页，共 5 页，显示第 26–50 条。`
-- 筛选：筛选变更后播报结果数 `筛选后 7 条。`；**"隐藏了矛盾/低强度证据"必须显式播报**。
-- 移动端（< 48rem）：表格转卡片列表，每卡片一个 `<h3>` 为主标识；不靠横向滚动。若某表确需横向滚动，滚动容器 `tabindex="0"` + `role="region"` + `aria-label`。
-- 200% 缩放：列选择自动降到"必要列"，不出现横向页面滚动。
+- Semantics: `<table>` + `<caption>` (visible or `visually-hidden`) + `<thead><th scope="col">` + a `<th scope="row">` in each row carrying the primary identifier. **No div grids** (the existing a11y tests depend on roles and accessible names).
+- Sorting: `<th aria-sort="ascending|descending|none">` + a `<button>` inside the header cell, with an accessible name of the form `Sort by submitted time (currently: ascending)`. After sorting, `role="status"` announces `Sorted by submitted time, ascending, 12 rows.`
+- Row actions: **each action button's accessible name must be unique and contain the object's identifier** (for example `Open pv_7f3a91c2`), or neither a screen reader nor a test can tell them apart.
+- Touch: rows containing an action have `min-height: 2.75rem`; the action column is `display:flex; gap: .5rem;` with buttons at `min-height: 2.75rem` — **never force a 44px target into a 29px line box** (a defect that has actually happened).
+- Keyboard: tables use the ordinary Tab order (no grid roving tabindex unless there are more than 12 columns and it has been separately usability-tested); row expansion uses a `<button aria-expanded>` controlling the row immediately after it.
+- Pagination: `<nav aria-label="Pagination">`; after a page change it announces `Page 2 of 5, showing rows 26–50.`
+- Filtering: after a filter change it announces the result count, `7 rows after filtering.`; **"contradictions / low-strength evidence have been hidden" must be announced explicitly**.
+- Mobile (< 48rem): tables become card lists, each card with an `<h3>` as its primary identifier; never relying on horizontal scrolling. Where a table genuinely needs to scroll horizontally, the scroll container gets `tabindex="0"` + `role="region"` + `aria-label`.
+- 200% zoom: the column selection drops automatically to the essential columns, and the page never scrolls horizontally.
 
-### 1.10 工作区边界横幅（G 节强制、C 节适用）
+### 1.10 The workspace boundary banner (mandatory in section G, applicable in section C)
 
-Doc 20 §21：**管理不授予研究、审核或安全权威**。§41：研究发现与审核决定不是管理 KPI。
+Doc 20 §21: **administration grants no research, moderation or safety authority**. §41: research findings and moderation decisions are not administrative KPIs.
 
-管理工作区每屏顶部固定一条非装饰性的边界说明（`role="note"`，不可关闭）：
+Every administration screen carries a permanent, non-decorative boundary statement at the top (`role="note"`, not dismissible):
 
-`管理工作区只管运行与访问：账号、角色、集成、作业、旗标、审计。它不授予研究、审核或安全权威——研究结论、审核决定、安全处置都不在这里做，也不在这里显示。`
+`The administration workspace governs running and access only: accounts, roles, integrations, jobs, flags and audit. It grants no research, moderation or safety authority — research conclusions, moderation decisions and safety dispositions are neither made here nor shown here.`
 
-研究者工作区对应的边界说明（出现在 C1、C13）：
+The corresponding boundary statement in the researcher workspace (appearing in C1 and C13):
 
-`研究者工作区显示的安全信息是最小必要指标。详细的安全审阅在安全工作区进行，不在这里。`
+`The safety information shown in the researcher workspace is the minimum necessary indicator. Detailed safety review happens in the safety workspace, not here.`
 
 ---
 
-## 2. C. 研究者工作区（C1–C17）
+## 2. C. Researcher workspace (C1–C17)
 
 ### C1 研究者仪表盘（Doc 20 §37）
 
