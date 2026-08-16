@@ -1624,79 +1624,80 @@ Reversibility: the suspension can be lifted; **this suspension record cannot be 
 
 ---
 
-## §5 H. 公共与邀请 surface（H1–H5）
+## §5 H. Public and invitation surfaces (H1–H5)
 
-> 共同约束（§22）：**这些界面暴露最少信息。** 未认证 surface 不得泄露某个人是否是参与者、是否被邀请、是否已激活。
+> The shared constraint (§22): **these interfaces expose the least information possible.** An unauthenticated surface must never reveal whether a given person is a participant, has been invited, or has activated an account.
 
-### H1 登录 / 身份入口（当前为 dev-header 桩 + 访问口令横幅）
+### H1 Sign-in / identity entry (currently the dev-header stub + the access-password banner)
 
-**目标 / 要回答的问题**
+**Purpose / the questions it answers**
 
-- 这是什么环境？（答案必须是：研究原型的开发环境）
-- 我现在填的东西是不是认证？（答案必须是：**不是**）
-- 我要去哪个工作区？
-- 访问口令是什么、为什么要它？
+- What environment is this? (the answer must be: the development environment of a research prototype)
+- Is what I am typing authentication? (the answer must be: **no**)
+- Which workspace am I going to?
+- What is the access password, and why is it needed?
 
-> **这一屏最容易犯的设计错误，是把开发桩做得像真登录。**
-> 一个漂亮的登录卡片 + 密码框 + 「登录」按钮，会让操作者（以及演示的观众、评审人）误以为存在认证。THREAT_MODEL 把「无真实认证」列为固有高风险；界面必须**主动对抗**这个误解，而不是保持中立。
+> **The easiest design mistake to make on this screen is to make the development stub look like a real sign-in.**
+> A handsome sign-in card + a password field + a "Sign in" button leads an operator — and an audience at a demonstration, and a reviewer — to believe authentication exists. THREAT_MODEL lists "no real authentication" as an inherent high risk, and the interface must **actively work against** that misreading rather than stay neutral about it.
 
-**线框**
+**Wireframe**
 
 ```
 ┌────────────────────────────────┐
-│ ⚠ 开发环境身份桩 · 不是认证     │
+│ ⚠ Development identity stub · not authentication │
 │                                │
-│ 这个环境没有身份认证。          │
-│ 下面填写的标识**不会被验证**——  │
-│ 系统会直接相信你填写的身份。    │
+│ This environment has no identity authentication. │
+│ The identifiers you type below **are not         │
+│ verified** — the system simply believes whoever  │
+│ you say you are.                                 │
 │                                │
-│ 因此：                         │
-│ · 这里只有合成数据，没有真实的人 │
-│ · 这个环境不得对外开放          │
-│ · 你在这里的操作不代表任何真实   │
-│   的授权或批准                  │
+│ Therefore:                     │
+│ · there is only synthetic data here, no real people │
+│ · this environment must not be opened to the public │
+│ · what you do here does not represent any real   │
+│   authorisation or approval                      │
 │                                │
-│ 正式的身份认证（OIDC）尚未实施， │
-│ 待 ADR-104 决定。               │
+│ Proper identity authentication (OIDC) is not yet │
+│ implemented, pending ADR-104.  │
 └────────────────────────────────┘
 
-<h1>健康老龄化研究平台（开发环境）</h1>
+<h1>Healthy Ageing Research Platform (development environment)</h1>
 
-── 选择要进入的工作区 ────────────
-( ) 参与者
-( ) 支持者
-( ) 员工
+── Choose the workspace to enter ──
+( ) Participant
+( ) Supporter
+( ) Staff
 
-── 填写开发环境标识 ─────────────
-（随所选工作区显示对应字段）
+── Enter the development-environment identifiers ──
+(the fields shown follow the workspace chosen)
 
-参与者：
-  账户标识（actor id）      [        ]
-  参与者标识（participant id）[      ]
+Participant:
+  Account identifier (actor id)      [        ]
+  Participant identifier (participant id) [    ]
 
-员工：
-  账户标识（actor id）      [        ]
-  声明的认证强度            [下拉]
-    · 密码级（MFA 级操作会被拒绝）
+Staff:
+  Account identifier (actor id)      [        ]
+  Claimed authentication strength    [dropdown]
+    · password tier (MFA-tier actions will be refused)
     · MFA
-  ⓘ 这是你**声明**的强度，不是验证结果。
-    服务端据此裁决，但没有任何东西
-    验证过你确实完成了 MFA。
+  ⓘ This is the strength you **claim**, not a verified
+    result. The server decides on the basis of it, but
+    nothing has verified that you actually completed MFA.
 
-        [以这个身份进入]
+        [Enter as this identity]
 
-── 环境访问口令 ─────────────────
-这个环境在一个共享访问口令之后。
-口令是**环境的门**，不是你的账号：
-· 所有人共用同一个口令
-· 它不区分个人，也不能单独撤销某个人
-· 它不能替代认证
+── The environment's access password ──
+This environment sits behind a shared access password.
+The password is **the door to the environment**, not your account:
+· everybody shares the same password
+· it does not distinguish between people, and it cannot be revoked for one person
+· it is not a substitute for authentication
 
-访问口令  [••••••••]   [保存口令]
-口令只保存在这台设备的浏览器里。
+Access password  [••••••••]   [Save the password]
+The password is stored only in this device's browser.
 
 ────────────────────────────────
-[公开研究信息]  [无障碍声明]  [联系支持]
+[Public study information]  [Accessibility statement]  [Contact support]
 ```
 
 **为未来 OIDC 留出的结构（不改信息架构即可替换）**
