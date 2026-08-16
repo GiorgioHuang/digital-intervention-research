@@ -874,80 +874,82 @@ Request evidence beyond the current scope?
 如果记录有误，只能通过申诉或恢复流程处理，
 原始记录会被保留。
 
-── 处置 ───────────────────────
-( ) 不成立，关闭
-( ) 警告
-( ) 隐藏内容
-( ) 移除内容
-( ) 限制功能        期限：[  ] 天
-( ) 断开连接
-( ) 暂停账号 ⚑      期限：[  ] 天
-( ) 封禁 ⚑
-⚑ 需要 MFA 级认证。你当前是密码级。
+── Disposition ────────────────
+( ) Not upheld, close
+( ) Warning
+( ) Hide the content
+( ) Remove the content
+( ) Restrict features      Duration: [  ] days
+( ) Disconnect
+( ) Suspend the account ⚑  Duration: [  ] days
+( ) Ban ⚑
+⚑ Requires MFA-tier authentication. You are currently at the password tier.
 
-── 依据 ───────────────────────
-规则：园艺角社区规则 v3 · 第 4 条 ▾
-证据：[✓] 帖子 SP-7781 v2
-      [ ] 举报人陈述（已展开）
-理由（必填，申诉复核时会被阅读）：
+── Basis ──────────────────────
+Rule: Gardening Corner community rules v3 · clause 4 ▾
+Evidence: [✓] post SP-7781 v2
+      [ ] the reporter's account (opened)
+Reason (mandatory; it will be read on an appeal review):
 ┌────────────────────────────┐
 └────────────────────────────┘
 
-── 比例说明（必填）─────────────
-为什么这个处置与行为相称？
+── Proportionality (mandatory) ──
+Why is this disposition proportionate to the conduct?
 ┌────────────────────────────┐
 └────────────────────────────┘
 
-── 对方会看到 ─────────────────
-«系统据上述生成的参与者可读说明预览»
-[编辑给对方的说明]
+── What the other person will see ──
+«a preview of the participant-readable explanation generated from the above»
+[Edit the explanation they will see]
 
-── 申诉 ───────────────────────
-可申诉：是 · 期限 14 天
-        [记录决定]
+── Appeal ─────────────────────
+Can be appealed: yes · within 14 days
+        [Record the decision]
 ```
 
-**确认文案原文（详细确认档，七行结构）**
+**Confirmation copy in full (the detailed tier, seven-line structure)**
 
 ```
-确认对个案 MC-1043 记录决定「隐藏内容」？
+Record the decision "hide the content" on case MC-1043?
 
-对象：社区帖子 SP-7781（版本 2），作者账号 A-2291
-效果：该帖子对所有人不可见；账号不受限制
-期限：无限期（可通过恢复流程解除）
-对方会看到：「你在『园艺角』的一条帖子已被隐藏，
-      依据社区规则 v3 第 4 条。你可以在 14 天内申诉。」
-申诉：可申诉，期限 14 天；由未参与本次决定的人复核
-可逆性：内容可以通过恢复流程重新可见；
-      但**本条决定记录本身不可修改、不可删除**
-审计：以你的身份署名写入审计  🔒
+Object: community post SP-7781 (version 2), author account A-2291
+Effect: the post becomes invisible to everyone; the account is not restricted
+Duration: indefinite (it can be lifted through the restoration process)
+They will see: "A post of yours in 'Gardening Corner' has been hidden,
+      under clause 4 of community rules v3. You can appeal within 14 days."
+Appeal: yes, within 14 days; reviewed by somebody who took no part in this decision
+Reversibility: the content can be made visible again through the restoration
+      process, but **this decision record itself cannot be changed or deleted**
+Audit: written to the audit trail in your name  🔒
 
-[确认记录决定]        [返回修改]
+[Confirm and record the decision]        [Go back and change it]
 ```
 
-MFA 档动作（暂停 / 封禁）追加一行，且**在选中该项时立即提示**，不等到提交：
+MFA-tier actions (suspend / ban) add a line, and it appears **the moment the option is selected**, never on submission:
 
 ```
-这项处置需要 MFA 级认证。你当前是密码级认证，
-提交会被服务端拒绝。请以 MFA 重新登录后再处理，
-或改选不需要 MFA 的处置。
+This disposition requires MFA-tier authentication. You are currently
+at the password tier, and submitting will be refused by the server.
+Sign in again with MFA before handling it, or choose a disposition
+that does not require MFA.
 ```
 
-**状态矩阵**
+**State matrix**
 
-| 状态 | 呈现与文案原文 |
+| State | Presentation and copy in full |
 |---|---|
-| LOADING | 提交中：按钮进入 `正在记录…` 且 `disabled`，**不得允许重复点击**（幂等由服务端保证，但界面不应制造重复意图） |
-| EMPTY | 不适用（本屏无列表）。若个案已被他人结案：`这个个案已经结案，不能再记录决定。[查看已记录的决定]` |
-| ERROR | `没能记录这个决定。你填写的理由和比例说明都还在。**没有任何处置生效。** 可以再试一次。[重试] ▸技术细节` |
-| FORBIDDEN | 权限不足（含 MFA 不足）：`这项处置需要 MFA 级认证，你当前是密码级。没有任何内容被改动。[了解如何提升认证强度]` |
-| PROTECTED | 通用 PROTECTED |
+| LOADING | While submitting, the button becomes `Recording…` and `disabled`; **repeat clicks must not be allowed** (idempotence is guaranteed by the server, but the interface should not manufacture a repeated intent) |
+| EMPTY | Not applicable (this screen has no list). If somebody else has closed the case: `This case has been closed and no further decision can be recorded. [View the decision that was recorded]` |
+| ERROR | `This decision could not be recorded. The reason and the proportionality note you wrote are both still here. **No disposition has taken effect.** You can try again. [Try again] ▸technical details` |
+| FORBIDDEN | Insufficient permission (including insufficient MFA): `This disposition requires MFA-tier authentication and you are at the password tier. Nothing has been changed. [How to raise your authentication strength]` |
+| PROTECTED | The generic PROTECTED copy |
 
-**无障碍要点**
+**Accessibility points**
 
-- 处置为 `<fieldset><legend>处置</legend>` 的单选组，**无预选**（现有实现用 `<select>` 且默认选中「警告」——见 §8，这是暗黑模式风险：默认值等于一个未经选择的处置）。
-- 确认对话框 `role="alertdialog"`，七行结构用 `<dl>`；打开时焦点在标题，`aria-describedby` 指向整个 `<dl>`。
-- 「确认记录决定」与「返回修改」等宽等重；不得把「返回」做成文字链。
+- The disposition is a radio group in `<fieldset><legend>Disposition</legend>` with **nothing pre-selected**, or an equivalent that pre-selects nothing.
+  *(Checked against the code 2026-08-16 and corrected: this previously said the implementation used a `<select>` defaulting to "warning" and referred to §8. That was true of the version rebuilt on 2026-08-05 and is no longer. `StaffModeratorPanel.tsx` now renders one button per decision from a `CHOICES` table, each with its effect stated beside it rather than in a tooltip, and nothing is chosen until a button is pressed — so the dark-pattern risk the note described, a default amounting to a disposition nobody chose, has been removed. The implementation also carries only the five decisions that genuinely act (Dismiss / Hide / Remove / Restore / Warn); see §8 for the five deliberately absent.)*
+- The confirmation dialog is `role="alertdialog"` with the seven-line structure as a `<dl>`; focus lands on the title when it opens, and `aria-describedby` points at the whole `<dl>`.
+- "Confirm and record the decision" and "Go back and change it" are the same width and weight; "go back" must never be a text link.
 - 记录成功后播报：`决定已记录，以你的身份署名，不可修改。个案已从队列移除。`
 
 ---
@@ -2045,33 +2047,40 @@ WCAG 2.2 AA，以及七种使用模式的可用性
 
 ---
 
-## §8 对现有实现的改动清单与测试影响
+## §8 Changes needed to the existing implementation, and their effect on tests
 
-> DESIGN_BRIEF §6：「改文案即改测试」。以下逐条列出。
-> 保留的可访问名：`查看待处理个案`、`处理此个案`、`记录决定`、`确认记录`、`查看待处理信号`、`处理此信号`、`提交处置`、`进入`、`查看我的贡献`、`提交贡献`、`保存口令`、`提交报告`。
+> DESIGN_BRIEF §6: "changing copy changes the tests". Each item is listed below.
+> Accessible names preserved: `View open cases`, `Handle this case`, `Record the decision`, `Confirm`, `View pending signals`, `Handle this signal`, `Submit the disposition`, `Enter`, `View my contributions`, `Submit a contribution`, `Save the password`, `Submit a report`.
 
-### 8.1 必改（当前实现存在设计错误）
+> **Status re-verified against the code on 2026-08-16.** This list was written
+> as a snapshot and had never been revisited, so it claimed defects that were
+> fixed months ago while other entries were still live. Every row below was
+> checked by reading the component named in it. Two are now done, one is
+> partly done, and six are still open — the six matter, and they were easy to
+> lose among the two that no longer applied.
 
-| # | 位置 | 问题 | 改法 | 测试影响 |
+### 8.1 Must fix (design errors in the current implementation)
+
+| # | Location | Problem | Fix | Status (2026-08-16) |
 |---|---|---|---|---|
-| C-1 | `SupporterApp.tsx` 404 分支文案「未能提交：需要参与者本人已批准你们的关系并同意『支持者贡献』。」 | **向支持者泄露了本人的关系批准与同意状态**（受保护存在被解释了） | 改为通用 PROTECTED：`无法完成这次提交。如果你不确定自己现在能补充什么，请查看你的权限。` | `moderator-supporter.test.tsx` 若断言该文案需同步；当前测试断言的是按钮名，预计无影响，需复核 |
-| C-2 | `StaffSafetyTriagePanel.tsx` 处置为 `<select>`，默认选中「关闭：不是安全事件」 | **默认值等于一个未经选择的处置结论**，违反「无预选」与「关闭/转换同等」 | 改为无预选的 `<fieldset>` 单选组，四项（关闭 / 继续观察 / 升级 / 转为事件） | `staff-panels.test.tsx` 中对 `triage-disposition` 的 `<select>` 交互需改为单选点击；**必改** |
-| C-3 | `StaffSafetyTriagePanel.tsx` 确认按钮名为 `确认` | 违反「确认按钮必须点名动作」 | 改为 `确认记录处置` | `staff-panels.test.tsx:49` `getByRole('button', { name: '确认' })` → `'确认记录处置'`；**必改** |
-| C-4 | `StaffModeratorPanel.tsx` 处置为 `<select>`，默认选中「警告」 | 同 C-2 | 改为无预选单选组 | `moderator-supporter.test.tsx` 中对 `mod-decision` 的交互需改；**必改** |
-| C-5 | `StaffModeratorPanel.tsx` 确认文案只说「不可更改」 | **缺申诉与恢复路径**（不可协商约束） | 采用 §E4 七行确认体，含「申诉」「可逆性」两行 | 若测试断言确认文案文本需同步；当前断言按钮名，预计无影响 |
-| C-6 | `StaffModeratorPanel.tsx` 队列卡片直接渲染 `reportDescription`（举报人自述原文） | **举报人自述可能包含自述身份信息，且它出现在队列层** | 队列层只显示 `reportCategory`；自述原文移入 E3 的默认折叠区 | 需复核 `moderator-supporter.test.tsx` 是否断言描述文本 |
-| C-7 | `SupporterApp.tsx` 状态标签把「不是本人证言」放在括号里 | 括号是可被忽略的排版信号 | 改为独立字段 `是否为本人证言：否`，每张卡片都有 | 若测试断言 `已被接受（作为你的贡献记录，不是本人证言）` 需同步 |
-| C-8 | `App.tsx` / `StaffApp.tsx` 开发桩登录 | 「开发登录桩」只有一句话，且没有说明「填写的身份不会被验证」 | 采用 §H1 的告警块（`role="alert"`，含四条后果） | 新增内容，预计不破坏现有断言（`进入` 按钮名保留） |
-| C-9 | 全部面板：错误只显示 `未成功：{code}` | 违反 §231（未说明保存状态、未说明什么没有发生、无恢复路径） | 采用 §1.2 通用 ERROR 结构 + 各屏专属补充句 | 若测试断言错误文本需同步 |
+| C-1 | `SupporterApp.tsx`, the 404 branch: "Not submitted: this needs the participant to have approved your relationship and to have consented to supporter contributions." | **Leaks the participant's relationship approval and consent status to their supporter** (protected existence is explained away) | Use the generic PROTECTED copy: `This submission could not be completed. If you are not sure what you can add to at the moment, look at your permissions.` | ❌ **STILL OPEN** — the string is at `SupporterApp.tsx:149`, unchanged. This is the most serious item in the list: it is a privacy leak, not a wording preference |
+| C-2 | `StaffSafetyTriagePanel.tsx`: the disposition is a `<select>` whose first and therefore default option is "Close as not a safety event" | **A default value amounts to a triage conclusion nobody chose**, breaking both "nothing pre-selected" and "closing and converting carry equal weight" | Replace with a `<fieldset>` radio group with nothing pre-selected, four options (close / keep watching / escalate / convert to an event) | ❌ **STILL OPEN** — the `<select>` is at line 81 and `DISPOSITIONS[0]` is still the closing option |
+| C-3 | `StaffSafetyTriagePanel.tsx`: the confirm button is named `Confirm` | Breaks "a confirm button must name the action" | Rename to `Confirm and record the disposition` | ❌ **STILL OPEN** — line 119 is still a bare `Confirm` |
+| C-4 | `StaffModeratorPanel.tsx`: the disposition was a `<select>` defaulting to "warning" | Same as C-2 | Replace with a radio group with nothing pre-selected | ✅ **DONE** — the panel now renders one button per decision from a `CHOICES` table, each stating its effect beside the control rather than in a tooltip, and nothing is chosen until a button is pressed |
+| C-5 | `StaffModeratorPanel.tsx`: the confirmation says only that it cannot be changed | **No appeal route and no reversibility line** (a non-negotiable constraint) | Adopt the seven-line confirmation body from §E4, including the "appeal" and "reversibility" lines | ❌ **STILL OPEN** — the dialog carries the label, the effect, and "It is written to the audit trail in your name and cannot be changed", and stops there. Stating immutability while offering no way out is precisely what rule 5 of §1.3 forbids |
+| C-6 | `StaffModeratorPanel.tsx`: the queue card renders `reportDescription` directly (the reporter's own account) | **The reporter's own account may contain identifying information about them, and it appears at the queue level** | Show only `reportCategory` at the queue level; move the account itself into E3's collapsed-by-default area | ❌ **STILL OPEN** — line 124 renders `Reported as {reportCategory}: {reportDescription}` on the card. This is the §6 reporter-protection surface, and the queue is the screen §E2 identifies as the highest-risk one |
+| C-7 | `SupporterApp.tsx`: the status label puts "not their own testimony" inside a parenthesis | A parenthesis is a typographic signal that can be skipped over | Make it a field of its own, `Is this the person's testimony: no`, on every card | ❌ **STILL OPEN** — line 75 is still `Accepted (recorded as your contribution, not as their own testimony)` |
+| C-8 | `App.tsx` / `StaffApp.tsx`, the development stub sign-in | The stub had one sentence and did not say that the identity entered is never verified | Adopt the §H1 warning block (`role="alert"`, with its four consequences) | ⚠️ **PARTLY DONE** — `App.tsx:213–215` now says "Development sign-in stub… Nothing here verifies who you are — this is not authentication (ADR-104)", which covers the core omission. It is not yet the §H1 block with all four consequences enumerated |
+| C-9 | Every panel: errors showed only `Not successful: {code}` | Breaks §231 (does not say what was saved, what did **not** happen, or how to recover) | Adopt the §1.2 generic ERROR structure plus each screen's own additional sentence | ✅ **DONE** — the panels call `staffLoadError` / `staffActionError` from `errors.ts`, which separates a failed read from a refused command and states the reason and the next step |
 
-### 8.2 建议改（非错误，但离规范有距离）
+### 8.2 Suggested (not errors, but short of the specification)
 
-| # | 位置 | 建议 |
+| # | Location | Suggestion |
 |---|---|---|
-| S-1 | 队列载入是手动按钮（`查看待处理个案`） | 保留手动按钮（对间歇性使用友好），但进入面板时自动载入一次；按钮改为 `刷新队列`——**此改动会破坏现有测试**，故列为建议，需产品确认 |
-| S-2 | 个案/信号标识为手工输入框 | 从队列点击后自动填入并显示为只读摘要；手工输入保留为「开发环境」折叠区 |
-| S-3 | 所有面板的 `role="status"` 单一播报区 | 保留，但错误应同时用 `role="alert"`（严重度分级，§232） |
-| S-4 | `styles.css` 无令牌 | 由 A1–A9 交付；本文件所引用令牌见 §1.7 |
+| S-1 | The queue loads from a manual button (`View open cases`) | Keep the manual button (it suits intermittent use) but load once automatically on entering the panel, and rename it `Refresh the queue` — **this change would break existing tests**, so it is listed as a suggestion pending product confirmation |
+| S-2 | Case and signal identifiers are typed into a text field | Fill them in automatically on clicking through from the queue and show them as a read-only summary; keep manual entry in a collapsed "development environment" area |
+| S-3 | Every panel has a single `role="status"` announcement region | Keep it, but errors should also use `role="alert"` (severity grading, §232) |
+| S-4 | `styles.css` has no tokens | Delivered by A1–A9; the tokens this file references are listed in §1.7. *(This row is itself out of date: the stylesheet has had tokens since 2026-08-04 and now carries 133 of them.)* |
 
 ---
 
