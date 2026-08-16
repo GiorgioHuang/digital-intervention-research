@@ -1,2947 +1,3210 @@
-# 参与者工作区 — 界面设计规范
+# Participant workspace — interface design specification
 
-> 范围：UI_INVENTORY.md B 节 19 项（B1–B7 已实现、B8–B19 未实现）。
-> 规范来源：Doc 20 v1.3 §16、§36、§95–178、§205–220；约束来源：DESIGN_BRIEF.md、ADR-050、ADR-020、ACCESSIBILITY_TEST_PLAN.md。
-> 阶段声明（ADR-061/062）：全部合成数据、模拟供应商、dev-header 身份桩。本文件描述的同意屏与审批屏是**被建模的未来系统**的 UX 模型，界面不得暗示已获伦理批准或正在招募真实参与者。
+> Scope: the 19 items of UI_INVENTORY.md section B (B1–B7 implemented, B8–B19 not).
+> Specification sources: Doc 20 v1.3 §16, §36, §95–178, §205–220; constraint sources: DESIGN_BRIEF.md, ADR-050, ADR-020, ACCESSIBILITY_TEST_PLAN.md.
+> Phase statement (ADR-061/062): entirely synthetic data, simulated providers, a dev-header identity stub. The consent and approval screens described here are a UX model **of the future system being modelled**, and the interface must not imply that ethics approval has been obtained or that real participants are being recruited.
 >
-> 本文件不定义颜色/字号/间距的具体值——那属于设计系统基座（A1–A9）。本文件引用令牌名，不引用色值。
-
----
-
-## 目录
-
-- [0. 共用规则](#0-共用规则)（读 B1–B19 之前必须先读）
-- [B1 首页（任务清单）](#b1-首页任务清单)
-- [B2 我的同意选择](#b2-我的同意选择)
-- [B3 消息：会话列表](#b3-消息会话列表)
-- [B4 消息：会话详情与发送确认](#b4-消息会话详情与发送确认)
-- [B5 认识新朋友（匹配）](#b5-认识新朋友匹配)
-- [B6 社区](#b6-社区)
-- [B7 帮助与安全](#b7-帮助与安全)
-- [B8 我的研究](#b8-我的研究)
-- [B9 生命故事：档案首页](#b9-生命故事档案首页)
-- [B10 生命故事：创建 / AI 起草 / 确认为证言](#b10-生命故事创建--ai-起草--确认为证言)
-- [B11 生命故事：可见性与受众选择](#b11-生命故事可见性与受众选择)
-- [B12 生命故事：撤回与导出](#b12-生命故事撤回与导出)
-- [B13 无障碍与偏好设置](#b13-无障碍与偏好设置)
-- [B14 公开档案编辑与预览](#b14-公开档案编辑与预览)
-- [B15 评估（基线 / 随访）](#b15-评估基线--随访)
-- [B16 活动与互动：准备 / 完成 / 反思](#b16-活动与互动准备--完成--反思)
-- [B17 报告与屏蔽中心](#b17-报告与屏蔽中心)
-- [B18 暂停与退出](#b18-暂停与退出)
-- [B19 AI 伴侣](#b19-ai-伴侣)
-- [附录 A：B1–B7 当前实现 → 目标设计 差异清单](#附录-ab1b7-当前实现--目标设计-差异清单)
-- [附录 B：现有实现与 Doc 20 的实质性偏差](#附录-b现有实现与-doc-20-的实质性偏差)
-- [附录 C：需要产品决策的未决项](#附录-c需要产品决策的未决项)
-
----
-
-## 0. 共用规则
-
-以下规则适用于 B1–B19 每一屏。各屏只写**偏离或补充**之处，不重复。
-
-### 0.1 屏幕骨架（移动优先，单列）
-
-```text
-┌──────────────────────────────────┐
-│ [跳到主要内容]  ← 键盘首个可聚焦元素 │
-├──────────────────────────────────┤
-│ <header> 上下文横幅（仅在有话要说时） │
-│  · 环境提示（合成研究原型）           │
-│  · 访问口令缺失（role=alert）        │
-│  · 全局降级/离线                     │
-├──────────────────────────────────┤
-│ <main id="main-content">          │
-│  h1  屏幕标题                       │
-│  p   一句话说明「这一屏是干什么的」    │
-│  ── 区块 1（最重要的决定或任务）      │
-│  ── 区块 2                         │
-│  ── …                              │
-│  <p role="status" aria-live=polite>│ ← 每屏恰好一个
-│ </main>                           │
-├──────────────────────────────────┤
-│ <nav aria-label="主导航">          │ ← 移动端置底，桌面端置左
-│  首页 / 我的研究 / 我的生命故事 /    │
-│  消息 / 社区 / 认识新朋友 /          │
-│  我的同意选择 / 设置 / 帮助与安全     │
-└──────────────────────────────────┘
-```
-
-- **每屏一个 `h1`**，与导航项名称一致或为其自然扩写。当前实现中 ConsentPanel / MatchingPanel / CommunityPanel / SafetyPanel 以 `h2` 作为屏幕主标题——目标设计统一为 `h1`（不改可访问名，仅改 role 级别，见附录 A）。
-- 导航项数量固定，不随内容增减；不显示任何数字角标。
-- 桌面（≥64rem）：导航固定左栏 16rem，`main` 最大 48rem 居中，不引入第二列内容栏。平板（≥40rem）：导航横排置顶。移动（<40rem）：导航置底、每项 ≥44px 且相邻项间距 ≥8px（不得重叠，ACCESSIBILITY_TEST_PLAN 已记录过真实缺陷）。
-
-> **本节的 9 项目的地与「移动端置底单行」在 320px 下不相容——这是规范内部的冲突，不是实现偷懒。**
-> 算术：9 × 44px + 8 × 8px = 460px > 320px，任何字号下都装不下；实测英文标签在 `--type-size-0` 下需要 53–77px，五项即已超出 390px 的可用宽度（见 DESIGN_DECISIONS D-10）。
-> 现行实现按 D-10 取**四项**（Home / Consent / Messages / Help），其余目的地从首页任务清单进入；底部栏在放大到 200%/400% 时换行成多行而非横滚。
-> 若要恢复到 9 项，必须先决定分层方式（例如底部四项 + 「更多」二级面板，或桌面左栏九项、移动端四项），这项决定尚未做出，因此 A1.4「导航扩为 9 项」在移动端**处于阻塞状态**。
-
-### 0.2 绝对禁止清单（Doc 20 §354；违反即为设计错误）
-
-| 禁止 | 适用范围 |
-|---|---|
-| 未读数、消息计数、红点 | 全部导航与列表 |
-| 点赞、表情计数、浏览量、"热门""推荐给你" | B6 社区、B9 生命故事、B14 公开档案 |
-| 算法排序 | B6 feed 严格按时间倒序；B5 候选按到期时间升序，**不按分数** |
-| 连续打卡、进度条压力、"你已 3 天未…" | 全部提醒与 B8/B15/B16 |
-| 隐藏的兼容度分数 | B5 |
-| 把 AI 草稿呈现为证言 | B10、B19 |
-| 用 Toast 作为高影响动作的唯一确认 | 发送、发布、屏蔽、撤回同意、确认证言、退出 |
-| 用颜色作为唯一状态指示 | 全部状态徽章 |
-| 以年龄作标签（"老年人""长者模式"） | 全部文案与 B13 模式命名 |
-
-### 0.3 按钮层级与标签规则（Doc 20 §323–324）
-
-- 一个决定区最多一个 Primary。**「一次一个有意义的决定」**：同屏不得并列两个高影响 Primary。
-- 标签 = 动词 + 具体对象。确认按钮必须点名对象：`确认发布到「园艺角」`，不得写 `确定` / `好` / `继续`。
-- 取消按钮说明"不做什么"：`返回，不发送` / `返回，不撤回` / `返回，不屏蔽`。
-- **中立性检验**（无暗黑模式）：`感兴趣` / `暂时不` / `不再显示这个人` 三者必须同尺寸、同字重、同色令牌、同顺序（视觉等重），且不得有一个是 Primary。
-- 破坏性动作（屏蔽、撤回、退出、删除）用 `--color-action-destructive`，但**同时**带图标与"不可自动恢复"文字说明——颜色不是唯一指示。
-
-### 0.4 确认模式族（Doc 20 §241–246）
-
-| 级别 | 用于 | 呈现 |
-|---|---|---|
-| 简单确认 | 低风险可撤销（保存草稿、静音） | 内联提示 + 撤销链接，不弹对话框 |
-| 详细确认 | 发送消息、发布帖子、确认证言、更改可见性、开启匹配、加入社区、屏蔽 | `role="alertdialog"`，含**被确认对象的确切版本/内容原文** |
-| 加强确认（step-up） | 平台公开可见性、导出全部生命故事、退出全部研究 | 详细确认 + 二次输入（重新键入操作名）；本阶段以 dev-header 桩模拟 |
-| 双人批准 | 参与者工作区**不使用** | — |
-| 人工复核 | B19 AI 提议的高影响动作 | 显示"等待人工复核"状态，不得静默通过 |
-
-**对话框规范（全部级别通用）**：`role="alertdialog"` + `aria-labelledby`（标题）+ `aria-describedby`（后果段落）；打开时焦点移到对话框标题；`Esc` 与取消按钮等价；关闭后焦点返回触发按钮；焦点不得逃出对话框。
-
-### 0.5 状态矩阵的五个必答状态
-
-每屏必须为下列五种情形定义呈现。缺任何一项视为设计未完成。
-
-| 状态 | 通用规则 |
-|---|---|
-| **加载** | 说明"正在做什么"（`正在加载你的会话…`），保留布局高度，不做假进度条；高影响动作在服务器确认前不得显示为已完成（Doc 20 §224）。骨架屏只用于低风险列表，**不得**用于投递状态、审批、匹配结果、安全决定（§225）。 |
-| **空** | 解释①为什么空 ②这是否正常 ③你可以做什么 ④去哪求助。**不得**暗示失败或个人缺陷（§226）。 |
-| **错误** | 说明①发生了什么 ②你的内容有没有保存 ③什么**没有**发生 ④怎么恢复 ⑤重试是否安全 ⑥怎么找人。技术错误码只作为可展开的次要细节（§231）。按 Informational / 可恢复 / 阻断 / 安全关键 / 安全性关键 分级（§232–237）。 |
-| **无权限（可解释）** | 仅当"缺的是参与者自己的一个选择"时才解释。文案指向可执行的下一步：`要使用这个功能，需要你先在「我的同意选择」中同意「社区参与」。`——**不透露任何他人信息或资源存在性**。 |
-| **受保护存在**（ADR-050） | 统一呈现，**不区分"不存在"与"你无权访问"**。见 0.6。 |
-
-### 0.6 受保护存在的统一呈现（ADR-050，全屏适用）
-
-后端对受保护资源一律 `DenyAndHideExistence → 404`。前端必须用**同一段文案**呈现 404 与 403，绝不因两者措辞不同而泄露差异。
-
-> **可访问名：`这个页面现在打不开`**（`h1`）
+> This file does not define concrete values for colour, type size or spacing — those belong to the design system foundation (A1–A9). It cites token names, never colour values.
 >
-> 正文原文：
-> ```
-> 这个链接现在打不开。可能是内容已经不在了，也可能是你现在没有查看它的权限。
-> 我们不会告诉你是哪一种——这是为了保护每个人的隐私，包括你。
-> 你可以回到首页，或者联系研究团队。
-> ```
-> 动作：`回到首页`（Primary）、`联系研究团队`（Secondary）。
+> **On the wording in this file (D-9).** Every string quoted in a wireframe or a confirmation below is the **intent** of that copy. The English strings in the implementation are the current source of truth for the exact phrasing, and the front-end tests query by accessible name — so changing the words in the product means changing the tests, and this document follows rather than governs. What does not vary is the honesty constraint behind each string: a delivery state may not be overstated, protected existence must be indistinguishable from absence, a draft must say only you can see it, and a contribution is not testimony.
 
-**推论（对 B7/B17 是硬约束）**：任何允许自由输入他人标识并据此给出成功/失败反馈的表单，都是存在性探测通道。参与者工作区**不得**存在这样的表单——屏蔽与报告只能从已有上下文（会话、候选卡、帖子、连接）发起。见附录 B 偏差 #1。
+---
 
-### 0.7 live region 与播报规则
+## Contents
 
-- 每屏恰好一个 `<p role="status" aria-live="polite">`，只播报**操作结果**（成功/失败/状态变化），不播报纯导航。
-- 严重错误（安全关键、安全性关键、访问口令缺失）用独立 `role="alert"`，不复用 status 区。
-- **禁止**：把服务器返回的持久状态渲染在 live region 里当作状态显示（当前 ConsentPanel 的 `<p aria-live="off">状态：…</p>` 混淆了"最后一次操作结果"与"当前同意状态"，见附录 A）。
-- 列表刷新后播报条数与口径：`已更新：3 条会话。`——不播报未读数（没有未读数）。
+- [0. Shared rules](#0-shared-rules) (read before any of B1–B19)
+- [B1 Home (the task list)](#b1-home-the-task-list)
+- [B2 My consent choices](#b2-my-consent-choices)
+- [B3 Messages: the conversation list](#b3-messages-the-conversation-list)
+- [B4 Messages: a conversation and the send confirmation](#b4-messages-a-conversation-and-the-send-confirmation)
+- [B5 Meeting new people (matching)](#b5-meeting-new-people-matching)
+- [B6 Community](#b6-community)
+- [B7 Help and safety](#b7-help-and-safety)
+- [B8 My research](#b8-my-research)
+- [B9 Life Story: the archive home](#b9-life-story-the-archive-home)
+- [B10 Life Story: create / AI draft / confirm as testimony](#b10-life-story-create--ai-draft--confirm-as-testimony)
+- [B11 Life Story: visibility and audience](#b11-life-story-visibility-and-audience)
+- [B12 Life Story: withdrawal and export](#b12-life-story-withdrawal-and-export)
+- [B13 Accessibility and preferences](#b13-accessibility-and-preferences)
+- [B14 Public profile editing and preview](#b14-public-profile-editing-and-preview)
+- [B15 Assessments (baseline / follow-up)](#b15-assessments-baseline--follow-up)
+- [B16 Activities and interactions: prepare / complete / reflect](#b16-activities-and-interactions-prepare--complete--reflect)
+- [B17 Reporting and blocking centre](#b17-reporting-and-blocking-centre)
+- [B18 Pausing and leaving](#b18-pausing-and-leaving)
+- [B19 AI companion](#b19-ai-companion)
+- [Appendix A: B1–B7, the gap between what is implemented and the target design](#appendix-a-b1b7-the-gap-between-what-is-implemented-and-the-target-design)
+- [Appendix B: substantive deviations between the implementation and Doc 20](#appendix-b-substantive-deviations-between-the-implementation-and-doc-20)
+- [Appendix C: open items needing a product decision](#appendix-c-open-items-needing-a-product-decision)
 
-### 0.8 状态徽章通用构造（Doc 20 §56，颜色不得唯一）
+---
 
+## 0. Shared rules
+
+The rules below apply to every screen B1–B19. Each screen records only its **deviations or additions**, never a repetition.
+
+### 0.1 The screen skeleton (mobile first, single column)
+
+```text
+┌──────────────────────────────────────┐
+│ [Skip to main content] ← first focusable │
+├──────────────────────────────────────┤
+│ <header> context banner (only when     │
+│          there is something to say)    │
+│  · environment notice (synthetic       │
+│    research prototype)                 │
+│  · access token missing (role=alert)   │
+│  · global degradation / offline        │
+├──────────────────────────────────────┤
+│ <main id="main-content">              │
+│  h1  the screen's title                │
+│  p   one sentence on what this screen  │
+│      is for                            │
+│  ── block 1 (the most important        │
+│      decision or task)                 │
+│  ── block 2                            │
+│  ── …                                  │
+│  <p role="status" aria-live=polite>    │ ← exactly one per screen
+│ </main>                               │
+├──────────────────────────────────────┤
+│ <nav aria-label="Main">               │ ← bottom on mobile, left on desktop
+│  Home / My research / My life story /  │
+│  Messages / Community / Meeting new    │
+│  people / My consent choices /         │
+│  Settings / Help and safety            │
+└──────────────────────────────────────┘
 ```
-[图标] 标签文字 · 时间   ⓘ说明（可展开）
-```
-三要素缺一不可：图标（形状可区分，不依赖颜色）+ 中文标签 + 可展开的一句话解释。徽章不得只有颜色，也不得只有图标。
 
-### 0.9 投递状态词表（诚实措辞；已在 `apps/web/src/api.ts` 实现，设计沿用不改）
+- **One `h1` per screen**, matching its navigation item's name or a natural expansion of it. In the current implementation ConsentPanel / MatchingPanel / CommunityPanel / SafetyPanel use an `h2` as the screen's main heading — the target design standardises on `h1` (the accessible name does not change, only the role level; see Appendix A).
+- The number of navigation items is fixed and does not grow or shrink with content; no numeric badge is ever shown.
+- Desktop (≥64rem): navigation is a fixed 16rem left column and `main` is centred at a maximum of 48rem, with no second content column introduced. Tablet (≥40rem): navigation is a row at the top. Mobile (<40rem): navigation is at the bottom, each item ≥44px with ≥8px between neighbours (they must not overlap — ACCESSIBILITY_TEST_PLAN records a real defect here).
 
-| 领域状态 | 参与者可见文案 | 说明（可展开） |
+> **The nine destinations in this section are incompatible with "a single row at the bottom on mobile" at 320px — that is a conflict inside the specification, not the implementation cutting corners.**
+> The arithmetic: 9 × 44px + 8 × 8px = 460px > 320px, which does not fit at any type size; measured, English labels need 53–77px at `--type-size-0`, so five items already exceed the usable width at 390px (see DESIGN_DECISIONS D-10).
+> The current implementation takes **four** per D-10 (Home / Consent / Messages / Help), with the remaining destinations reached from the home page's task list; the bottom bar wraps to multiple lines at 200%/400% zoom rather than scrolling horizontally.
+> Returning to nine requires first deciding the tiering (four at the bottom plus a "More" secondary panel, say, or nine in the desktop left column and four on mobile), and that decision has not been made — so A1.4, "expand the navigation to nine", is **blocked** on mobile.
+
+### 0.2 The absolute prohibitions (Doc 20 §354; a violation is a design error)
+
+| Prohibited | Where it applies |
+|---|---|
+| Unread counts, message counts, red dots | all navigation and all lists |
+| Likes, reaction counts, view counts, "trending" / "recommended for you" | B6 community, B9 Life Story, B14 public profile |
+| Algorithmic ordering | B6's feed is strictly reverse chronological; B5's candidates ascend by expiry time and **never by score** |
+| Streaks, progress-bar pressure, "you haven't … for 3 days" | all reminders and B8/B15/B16 |
+| A hidden compatibility score | B5 |
+| Presenting an AI draft as testimony | B10, B19 |
+| A toast as the only confirmation of a high-impact action | sending, publishing, blocking, withdrawing consent, confirming testimony, leaving |
+| Colour as the only state indicator | all status badges |
+| Age as a label ("the elderly", "senior mode") | all copy and B13's mode names |
+
+### 0.3 Button hierarchy and label rules (Doc 20 §323–324)
+
+- At most one Primary per decision area. **"One meaningful decision at a time"**: two high-impact Primaries may never sit side by side on one screen.
+- A label is a verb plus a specific object. A confirmation button must name the object: `Confirm publishing to "Gardening Corner"`, never `OK` / `Yes` / `Continue`.
+- A cancel button says what will **not** happen: `Back, don't send` / `Back, don't withdraw` / `Back, don't block`.
+- **The neutrality test** (no dark patterns): `Interested` / `Not now` / `Don't show me this person again` must be identical in size, weight, colour token and order (visually equal in weight), and none of them may be a Primary.
+- Destructive actions (block, withdraw, leave, delete) use `--color-action-destructive`, **and also** carry an icon and the words "this cannot be undone automatically" — colour is never the only indicator.
+
+### 0.4 The family of confirmation patterns (Doc 20 §241–246)
+
+| Level | Used for | Presentation |
 |---|---|---|
-| Not Submitted | `草稿 — 尚未发送` | 只有你能看到。 |
-| Queued | `已确认，排队发送中` | 你已确认发送，系统正在处理。 |
-| Sent to Provider | `已提交给发送服务` | 已交给负责投递的服务，还不知道结果。 |
-| Provider Accepted | `发送服务已接受（对方尚未收到）` | 投递服务收下了这条消息。**这不等于对方收到了。** |
-| Delivered | `已送达对方` | 投递服务确认已送达。是否被阅读，我们不知道。 |
-| Delivery Failed | `发送失败 — 可重试` | 没有送达。你的内容还在，可以再试一次。 |
-| Delivery Unknown | `送达状态未知 — 正在核实，不代表成功` | 我们暂时不知道结果。**未知就是未知**，不会自动变成"已送达"。 |
+| Simple confirmation | low-risk and reversible (save a draft, mute) | an inline notice + an undo link, no dialog |
+| Detailed confirmation | sending a message, publishing a post, confirming testimony, changing visibility, turning matching on, joining a community, blocking | `role="alertdialog"`, containing **the exact version or verbatim content of what is being confirmed** |
+| Reinforced confirmation (step-up) | Platform Public visibility, exporting an entire life story, leaving all research | a detailed confirmation + a second input (retyping the name of the action); simulated by the dev-header stub in this phase |
+| Two-person approval | **not used** in the participant workspace | — |
+| Human review | B19's high-impact actions proposed by AI | show a "waiting for human review" state; never pass silently |
 
-**硬规则**：界面永远不得在没有归属域结果的情况下把 `失败`/`未知` 改写为 `已送达`；不得在仅"确认成功"时显示 `已发送`；不显示已读回执（本阶段未启用）。
+**Dialog requirements (all levels)**: `role="alertdialog"` + `aria-labelledby` (the title) + `aria-describedby` (the consequences paragraph); focus moves to the dialog's title on open; `Esc` is equivalent to the cancel button; focus returns to the triggering button on close; focus may not escape the dialog.
 
-### 0.10 术语表（稳定，不得同义替换）
+### 0.5 The five states every screen must answer
 
-同意 / 撤回同意 / 证言 / 草稿 / 发布 / 连接（建立联系）/ 互相表示了兴趣 / 受众 / 可见性 / 审核 / 安全信号 / 屏蔽 / 报告 / 暂停 / 退出。
+Every screen must define its presentation for the five situations below. A missing one means the design is not finished.
 
-### 0.11 语言（Doc 20 §277–284）
-
-第二人称、短句、平实；不居高临下；不使用"老年人""长者""银发"等年龄标签；拒绝与失败文案先说**下一步能做什么**，不指责；不承诺疗效（"这会让你不那么孤独" ✗）。
-
----
-
-## B1 首页（任务清单）
-
-**文档**：Doc 20 §36、§107 | **状态**：已实现（`apps/web/src/App.tsx`）
-
-### 目标与这一屏要回答的问题
-
-首页是**今天要做的事的清单**，不是可以无限往下刷的东西。它回答：
-
-1. 我现在在这个研究的哪一步？
-2. 今天有什么事等着我做？（且这个清单是**有限的、会做完的**）
-3. 我上次没写完的东西在哪？
-4. 有没有到期的评估？
-5. 出事了我找谁？我想停下来怎么办？
-
-**它不回答**："别人在干什么"。首页没有他人内容。
-
-### 线框（移动）
-
-```text
-┌────────────────────────────────────┐
-│ h1  今天想做什么？                   │
-│ p   下面是现在轮到你的事。做完就没有了—— │
-│     这里不会一直有新东西冒出来。         │
-│                                    │
-│ ┌ 你在研究的哪一步 ────────────────┐ │
-│ │ [◐] 第 2 阶段 · 共 4 阶段          │ │
-│ │ 已参与 3 周                       │ │
-│ │ [查看我的研究 →]                   │ │
-│ └──────────────────────────────────┘ │
-│                                    │
-│ h2  现在轮到你的事（3）              │
-│ ┌ 任务卡 ────────────────────────┐ │
-│ │ [!] 随访问卷                      │ │
-│ │ 大约 10 分钟 · 本周内完成即可        │ │
-│ │ 可以中途暂停，答过的会保留。          │ │
-│ │ [开始随访问卷]                     │ │
-│ └──────────────────────────────────┘ │
-│ ┌ 任务卡 ────────────────────────┐ │
-│ │ [✎] 你有 1 篇没写完的生命故事草稿    │ │
-│ │ 只有你能看到                       │ │
-│ │ [继续写这篇草稿]                    │ │
-│ └──────────────────────────────────┘ │
-│ ┌ 任务卡 ────────────────────────┐ │
-│ │ [✉] 张阿姨给你发了消息              │ │
-│ │ （不显示条数，不显示内容预览）        │ │
-│ │ [打开这个会话]                     │ │
-│ └──────────────────────────────────┘ │
-│                                    │
-│ h2  你随时可以做的事                 │
-│ ・[写消息给已经联系的人]              │
-│ ・[去社区看看（可选）]                │
-│ ・[认识新朋友（可选）]                │
-│ ・[查看或更改我的同意选择]             │
-│ ・[调整字号、对比度与阅读方式]          │
-│                                    │
-│ h2  需要帮助或想停下来               │
-│ ・[获取帮助或报告问题]                │
-│ ・[暂停或退出研究]                    │
-│                                    │
-│ p[role=status]                     │
-└────────────────────────────────────┘
-```
-
-桌面（≥64rem）：同样单列，`main` 宽 48rem 居中；任务卡横向不分栏——**不做双列网格**，避免"一次两个决定"。
-
-### 信息层级与区块顺序（不可调换）
-
-1. `h1` + 一句"清单会做完"的期待管理
-2. **你在研究的哪一步**（当前阶段，只读，指向 B8）
-3. **现在轮到你的事**：到期评估 > 未完成草稿 > 待你决定的社交动作（互相接受待你确认 / 新消息）。每类最多 1 张卡，超过 1 条折叠为"打开列表"。
-4. **你随时可以做的事**（无时间压力，可选性写在标签里）
-5. **需要帮助或想停下来**（永远在首页可见，不藏在设置里；Doc 20 §354 "hiding withdrawal" 是反模式）
-
-### 状态矩阵
-
-| 状态 | 呈现 |
+| State | General rule |
 |---|---|
-| 加载 | `正在看看今天有什么事…` 保留三张卡的高度占位；区块 4/5 立即可用（不依赖网络），先渲染。 |
-| 空（没有任务） | `h2 现在轮到你的事` 下：`现在没有需要你做的事。这很正常——研究不是每天都有安排。想做点什么的话，下面这些随时可以。` **不显示"太棒了""继续保持"之类的激励语。** |
-| 错误 | 区块 2/3 内联可恢复错误：`没能取得今天的任务清单。你的内容没有丢失，也没有任何东西被改动。` + `再试一次` + `联系研究团队`。区块 4/5 仍可用。 |
-| 无权限 | 首页不会整屏无权限；单个任务卡的目标若需同意，卡片改写为：`这个功能需要你先同意「社区参与」。` + `去我的同意选择`。 |
-| 受保护存在 | 任务卡指向的对象已不可见时，卡片**静默消失**，不留"某某内容已被删除"的痕迹；刷新后 status 区仅播报 `清单已更新。` |
+| **Loading** | say what is being done (`Loading your conversations…`), preserve the layout height, and never show a fake progress bar; a high-impact action must not display as complete before the server confirms it (Doc 20 §224). Skeleton screens are only for low-risk lists and **never** for delivery states, approvals, match results or safety decisions (§225). |
+| **Empty** | explain (1) why it is empty, (2) whether that is normal, (3) what you can do, (4) where to get help. It must **not** imply failure or a personal shortcoming (§226). |
+| **Error** | say (1) what happened, (2) whether your content was saved, (3) what did **not** happen, (4) how to recover, (5) whether retrying is safe, (6) how to reach a person. A technical error code is a secondary, expandable detail only (§231). Graded as Informational / recoverable / blocking / safety-critical / security-critical (§232–237). |
+| **Not permitted (explicable)** | explain only when **what is missing is a choice of the participant's own**. The copy points at an actionable next step: `To use this you first need to agree to "Community participation" under My consent choices.` — and **discloses nothing about another person or the existence of a resource**. |
+| **Protected existence** (ADR-050) | one uniform presentation that **does not distinguish "does not exist" from "you are not permitted"**. See 0.6. |
 
-### 关键交互与确认文案
+### 0.6 The uniform presentation of protected existence (ADR-050, all screens)
 
-首页**不承载任何需要确认的动作**——它只做导航。这是刻意的：确认发生在目标屏，那里才有完整后果说明（"先解释再询问"）。
+The backend answers `DenyAndHideExistence → 404` for every protected resource. The front end must present 404 and 403 with **the same copy**, never leaking the difference through a difference in wording.
 
-### 无障碍要点
-
-- 焦点顺序：跳过链接 → h1 → 阶段卡 → 任务卡（按 DOM 顺序）→ 可选动作 → 帮助/退出 → 导航。
-- 每张任务卡是 `<li>`，卡内**只有一个**可聚焦按钮；卡片整体不可点（避免"整卡热区 + 内部按钮"的重叠命中）。
-- 按钮为块级、宽度 100%、`min-height: 2.75rem`，`<li>` 间距 ≥0.75rem（现有 CSS 已实现，保留）。
-- 任务数量写进 `h2` 文本（`现在轮到你的事（3）`），供屏幕阅读器一次获知规模；**这不是未读数**——它是"还没做完的任务数"，做完即归零消失。
-- `role="status"` 播报刷新结果。
-
----
-
-## B2 我的同意选择
-
-**文档**：Doc 20 §95–102 | **状态**：已实现（`ConsentPanel.tsx`，当前 6 个范围——平台实际门控的全部，见 D-2）
-
-**配套新增屏「谁能访问我」（`WhoHasAccess.tsx`，UI_INVENTORY B20）**：同意管的是「能对我的信息做什么」，授权关系管的是「由谁」，**权限引擎两者都要**——`participant.view-shared` 同时要求 `requiresRelationship` 与 `supporter-involvement` 同意。此前只有前一半上屏，参与者的工作区因此没法说出他的数据实际处于什么状态。`relationship.approve` 与 `relationship.revoke` 一直是 `ownerOnly`，却没有任何查询列出关系：提议在等一个他看不到的批准，已生效的授权也无法被唯一有权终止的人终止。新屏把两者都变成可达，并明说这两道闸互不代替（终止授权不改同意，改同意不终止授权）。**注意**：关系创建后的初始状态是 `PendingVerification`，但平台里没有任何东西会去「验证」——参与者的决定是唯一的出路，因此措辞与 `Proposed` 完全一致，不能写成「正在核验对方身份」，那会描述一道无人执行的检查，并诱使人凭它同意。
-
-### 目标与这一屏要回答的问题
-
-1. 我到底同意了什么？现在的状态是什么？（**当前状态必须常驻可见**）
-2. 每一项，说"是"会发生什么，说"不"会发生什么，能不能只同意一部分？
-3. 哪些是必需的、哪些是可选的？
-4. 我怎么改？改了以后已经发生的事怎么办？
-
-### 线框（移动，"我的同意选择"总览）
-
-```text
-┌────────────────────────────────────┐
-│ h1  我的同意选择                     │
-│ p   每一项都是单独的选择。拒绝其中任何   │
-│     一项，都不影响其他选择，也不影响你   │
-│     随时退出研究的权利。               │
-│ [同意书版本 v1.3 · 你在 2026-07-02 做  │
-│  出选择]  [查看同意回执]              │
-│                                    │
-│ h2  必需的（不同意就无法参与研究）      │
-│ ┌ 同意项 ──────────────────────┐ │
-│ │ h3 参与研究                      │ │
-│ │ [●] 当前：已同意 · 2026-07-02     │ │← 状态徽章常驻
-│ │ 为什么问：研究团队需要记录你的参与    │ │
-│ │ 涉及哪些信息：你的参与记录、评估答案  │ │
-│ │ 谁能看到：研究团队（不含其他参与者）  │ │
-│ │ 说「是」会怎样：…                  │ │
-│ │ 说「不」会怎样：你不会进入本研究      │ │
-│ │ 怎么改：随时可以在这里撤回           │ │
-│ │ [同意「参与研究」][拒绝「参与研究」]  │ │← 等重
-│ │ [撤回「参与研究」的同意]            │ │
-│ └──────────────────────────────────┘ │
-│                                    │
-│ h2  可选的                          │
-│ ┌ 同意项（带限制选项） ────────────┐ │
-│ │ h3 生命故事分享                   │ │
-│ │ [○] 当前：还没有选择               │ │
-│ │ …（同上六段）…                     │ │
-│ │ [同意「生命故事分享」]              │ │
-│ │ [有条件地同意…]  ← 打开限制选择      │ │
-│ │ [拒绝「生命故事分享」]              │ │
-│ └──────────────────────────────────┘ │
-│  …（其余同意项，按 §97 分组）…        │
-│                                    │
-│ h2  你随时可以                       │
-│ ・[查看我的同意回执]                  │
-│ ・[暂停或退出研究]                    │
-│ p[role=status]                     │
-└────────────────────────────────────┘
-```
-
-### 信息层级与区块顺序
-
-1. `h1` + "每项独立、不影响退出权" 的开场（**必须在任何选择控件之前**——先解释再询问）
-2. 同意书版本 + 上次决定时间 + 回执入口
-3. **必需的** 分组
-4. **可选的** 分组（按 §97 的 22 个范围分主题小组：研究与评估 / 生命故事 / 社交 / AI / 数据使用与联系）
-5. 回执与退出入口
-
-**同意项卡片内部顺序固定（§98 八要素）**：标题 → **当前状态** → 为什么问 → 涉及哪些信息 → 谁能看到 → 说是/说不/有条件的后果 → 是否必需 → 怎么改 → 选择控件。控件永远在解释之后。
-
-### 状态矩阵
-
-| 状态 | 呈现 |
-|---|---|
-| 加载 | `正在读取你现在的同意选择…`；**在读到之前不渲染任何选择按钮**（防止参与者对着未知的当前状态做操作）。 |
-| 空（尚未做过任何选择） | 顶部提示：`你还没有做过选择。下面每一项默认都是「还没有选择」——不是「已同意」。` 全部徽章为 `还没有选择`。 |
-| 错误（读取失败） | 阻断级：`没能读取你的同意选择，所以这一页暂时不能做改动——避免你在看不到当前状态的情况下做决定。` + `再试一次` + `联系研究团队`。选择控件全部禁用并说明原因。 |
-| 错误（提交失败） | 可恢复：`没有改成功。你的同意选择还是刚才那样，没有任何改动。` + 原因（可展开错误码）+ `再试一次`。 |
-| 无权限 | 不适用——参与者永远可以看自己的同意选择。 |
-| 受保护存在 | 不适用（自有资源）。若 URL 指向他人的同意记录 → 0.6 统一页面。 |
-
-### 关键交互与确认文案原文
-
-**同意（无需对话框，可直接改）**
-> 结果播报：`已记录：你同意「参与研究」。你随时可以撤回。`
-
-**拒绝**
-> 结果播报：`已记录：你拒绝「加入社区」。这不影响你的其他选择。`
-
-**有条件地同意**（打开一个只做一件事的对话框）
-> 标题：`为「生命故事分享」加上条件`
-> 正文：`你可以同意这一项，同时保留一些限制。你选的限制会写进同意记录。`
-> 选项（复选，无预选）：`不用于公开展示` / `不允许被引用` / `不允许下载` / `随访结束后不再使用`
-> Primary：`保存「生命故事分享」的条件`　Secondary：`返回，不更改`
-
-**撤回**（详细确认；对话框一次只处理一项）
-> 标题：`撤回「参与研究」的同意`
-> 正文原文：
-> ```
-> 撤回之后：
-> ・平台会停止为这个目的使用你的信息。
-> ・已经锁定的研究数据集不会被改写——这是研究记录的完整性要求，我们不能事后修改它。
-> ・不会再有你的新数据进入这些数据集。
-> ・这不会自动退出整个研究；如果你想全部停止，请用「暂停或退出研究」。
-> ```
-> Primary：`确认撤回「参与研究」`　Secondary：`返回，不撤回`
-> 结果播报：`已撤回「参与研究」的同意。你可以在同意回执里看到这次更改。`
-
-**知识检查（§99，新增）**：不是考试。四道单选，答错**不阻断**，只展开一段解释。
-> 题干示例：`私密的生命故事会不会自动变成公开的？`
-> 答错后文案：`不会自动变成公开的。可见性只在你自己明确更改时才会变。要不要再看一遍这一段？` + `再看一遍` / `我明白了，继续`
-> **禁止**："回答错误""不及格"等羞辱性措辞。
-
-**同意确认摘要（§100，新增，提交前一屏）**
-> 标题：`确认你的同意选择`
-> 列出：同意了哪些 / 拒绝了哪些 / 加了什么条件 / 支持者参与 / AI 相关 / 社交相关 / 数据使用
-> Primary：`提交我的同意选择`（不写"提交"或"确定"）
-
-**同意回执（§101，新增，独立可回访屏）**：日期、同意书版本号、逐项选择、限制、是否有人协助你完成、由谁记录、以及 `更改我的同意选择` / `暂停或退出研究` 两个入口。回执主视图不放法律条文长文，长文放"查看完整同意书文本（v1.3）"折叠区。
-
-### 无障碍要点
-
-- 每个同意项是 `<li>`，内含 `h3`；状态徽章紧随 `h3`，构造见 0.8。
-- 三个（或四个）选择按钮**不得**用 radio 组实现——radio 的"已选中"视觉会让"尚未选择"和"已拒绝"难以区分，且预选风险高。用等重按钮 + 常驻状态徽章。
-- 撤回对话框：`role="alertdialog"`，`aria-labelledby` 指向标题，`aria-describedby` 指向后果段落；焦点入标题；关闭返回"撤回…"按钮。
-- 知识检查每题是独立 `fieldset` + `legend`；解释区用 `aria-live="polite"` 就地展开，不跳页。
-- 200% 缩放：卡片内六段说明改为可折叠（`<details>`），默认展开首段"为什么问"，其余折叠——**折叠不得隐藏后果说明**，"说不会怎样"必须默认可见。
-
----
-
-## B3 消息：会话列表
-
-**文档**：Doc 20 §157–158 | **状态**：已实现（`MessagesScreen.tsx`）
-
-### 目标与这一屏要回答的问题
-
-1. 我现在可以跟谁说话？**为什么**可以跟这个人说话？（CommunicationBasis）
-2. 哪些会话已经在进行？
-3. 有哪些已建立的连接还没开始会话？
-4. 我要停止跟某人来往怎么办？
-
-**不回答**："谁在线""谁读了我的消息""我有几条未读"。
-
-### 线框（移动）
-
-```text
-┌────────────────────────────────────┐
-│ h1  消息                            │
-│ p   你只能和已经建立连接、并且现在仍然  │
-│     允许通信的人发消息。下面列出的就是   │
-│     全部。                          │
-│                                    │
-│ h2  进行中的会话（2）                │
-│ ┌ 会话行 ────────────────────────┐ │
-│ │ 张阿姨                            │ │← permitted public identity
-│ │ [✓] 进行中                        │ │
-│ │ 因为：你们在匹配中互相表示了兴趣，    │ │← CommunicationBasis
-│ │ 并建立了连接                       │ │
-│ │ 最近一次往来：3 天前                │ │← 不显示内容预览
-│ │ [打开与张阿姨的会话]                │ │
-│ └──────────────────────────────────┘ │
-│ ┌ 会话行（基础失效） ──────────────┐ │
-│ │ 李叔叔                            │ │
-│ │ [⊘] 现在不能发消息                 │ │
-│ │ 因为：你们的连接已经断开。           │ │
-│ │ 以前的消息你还能看到。               │ │
-│ │ [查看这个会话的记录]                │ │← 只读
-│ └──────────────────────────────────┘ │
-│                                    │
-│ h2  已经连接、还没开始会话（1）        │
-│ ┌ 连接行 ────────────────────────┐ │
-│ │ 王先生                            │ │
-│ │ [✓] 已连接 · 2026-07-20            │ │
-│ │ 因为：你们在匹配中互相表示了兴趣      │ │
-│ │ [和王先生开始会话]                  │ │
-│ └──────────────────────────────────┘ │
-│                                    │
-│ ・[查看我屏蔽和报告过的人]            │ │→ B17
-│ p[role=status]                     │
-└────────────────────────────────────┘
-```
-
-### 信息层级与区块顺序
-
-1. `h1` + "只能和已连接的人发消息" 的边界说明
-2. **进行中的会话**（按最近往来时间倒序——这是时间序，不是算法排序）
-3. **已连接、还没开始会话**
-4. 通往报告与屏蔽中心的入口
-
-会话行内部顺序：对方的**允许公开身份** → 状态徽章 → **为什么可以（或不能）通信** → 最近往来时间 → 动作。
-"为什么"必须在动作之前（先解释再询问）。
-
-**CommunicationBasis 标签词表（Doc 20 §157，四选一）**：
-`你们在匹配中互相表示了兴趣，并建立了连接` / `这是你已有的联系人，经过核实` / `因为你们正在参加同一项研究活动` / `你们在受管理的社区里互动`。
-
-### 状态矩阵
-
-| 状态 | 呈现 |
-|---|---|
-| 加载 | `正在读取你的会话和连接…`，保留两行占位。**改为进入即加载**，不再需要点"查看我的会话与联系"（见附录 A）。 |
-| 空（两者都空） | `你现在还没有可以发消息的人。这很正常。要认识新的人，可以去「认识新朋友」；那完全是可选的，不参加也不影响研究。` + `去认识新朋友（可选）` |
-| 空（有连接、无会话） | `你和 1 个人建立了连接，还没开始过会话。想说点什么的时候再开始就好，没有时间限制。` |
-| 错误 | 可恢复：`没能读取你的会话列表。没有任何东西被改动，你的消息都还在。` + `再试一次` |
-| 无权限（消息同意缺失） | 整屏替换：`要使用消息功能，需要你先在「我的同意选择」中同意「消息交流」。` + `去我的同意选择` |
-| 无权限（消息功能被暂停） | `消息功能现在被暂停了。原因和恢复方式，研究团队会单独告诉你。你以前的消息还能看到。` |
-| 受保护存在 | 被屏蔽/已撤销的对方**不出现在列表里**，也不留占位；直接访问其会话 URL → 0.6 统一页面。**不得**出现"该用户不可用"这类确认对方存在的措辞。 |
-
-### 关键交互与确认文案
-
-**开始会话**（简单确认——创建空会话不发送任何东西，低风险）
-> 结果播报：`已经和王先生建立会话。现在还没有发出任何消息。`
-
-**打开只读会话**：进入 B4 的只读模式，编辑器区域替换为说明（见 B4 状态矩阵）。
-
-### 无障碍要点
-
-- 两个 `h2` 分组各自是 `<ul>`；每行 `<li>`，行内一个主按钮。
-- 按钮可访问名包含对方称呼：`打开与张阿姨的会话`（不是 `打开`）。
-- 状态徽章按 0.8 构造；`[⊘] 现在不能发消息` 的图标与"进行中"形状明显不同。
-- 焦点顺序：h1 → 进行中会话 → 未开始连接 → 报告与屏蔽入口 → 导航。
-- **不使用** `aria-live` 播报"新消息到达"——没有实时推送，也不做未读提示。
-
----
-
-## B4 消息：会话详情与发送确认
-
-**文档**：Doc 20 §158–163 | **状态**：已实现（`MessagePanel.tsx`）
-
-### 目标与这一屏要回答的问题
-
-1. 我在跟谁说话？现在为什么允许说话？
-2. 我写的东西保存了吗？发出去了吗？**对方收到了吗**（诚实回答，包括"不知道"）？
-3. 我要发之前能不能再看一眼确切内容？
-4. 这条消息看起来不对劲（要钱、要密码、可疑链接），我能怎么办？
-
-### 线框（移动）
-
-```text
-┌────────────────────────────────────┐
-│ [← 返回会话列表]                     │
-│ h1  与张阿姨的会话                   │
-│ [✓] 现在可以发消息                   │
-│ 因为：你们在匹配中互相表示了兴趣，     │
-│ 并建立了连接。 ⓘ                     │
-│                                    │
-│ h2  消息记录                        │
-│ ┌ 对方消息 ──────────────────────┐ │
-│ │ 张阿姨 · 7月28日 10:12            │ │
-│ │ 你今天的番茄怎么样了？             │ │
-│ │ [报告这条消息] [屏蔽张阿姨]         │ │← 常驻可达
-│ └──────────────────────────────────┘ │
-│ ┌ 我的消息 ──────────────────────┐ │
-│ │ 我 · 7月28日 11:03                │ │
-│ │ 熟了三个。                        │ │
-│ │ [◔] 发送服务已接受（对方尚未收到）  │ │
-│ │     ⓘ 投递服务收下了这条消息。      │ │
-│ │        这不等于对方收到了。          │ │
-│ └──────────────────────────────────┘ │
-│ ┌ 我的消息（未知） ────────────────┐ │
-│ │ 我 · 7月29日 09:40                │ │
-│ │ 明天有空吗？                      │ │
-│ │ [?] 送达状态未知 — 正在核实，       │ │
-│ │     不代表成功                     │ │
-│ │     ⓘ 我们暂时不知道结果。          │ │
-│ │ [再发一次] [查看投递记录]           │ │
-│ └──────────────────────────────────┘ │
-│                                    │
-│ h2  写消息                          │
-│ label 消息内容                       │
-│ ┌──────────────────────────────┐   │
-│ │                              │   │
-│ └──────────────────────────────┘   │
-│ [草稿 — 只有你能看到]                │← 草稿态视觉持久
-│ [保存草稿]        [检查并发送]        │
-│                                    │
-│ ・[获取帮助]                         │
-│ p[role=status]                     │
-└────────────────────────────────────┘
-```
-
-**发送确认对话框**
-
-```text
-┌ role=alertdialog ─────────────────┐
-│ h3 确认发送给张阿姨                  │
-│ 收件人：张阿姨（只有这一个人）         │
-│ 版本：第 1 版                        │
-│ 现在允许通信的原因：你们建立了连接      │
-│ 附件：无                            │
-│ ┌ 内容原文 ──────────────────┐    │
-│ │ 明天上午我在社区花园。         │    │
-│ └────────────────────────────┘    │
-│ 发出之后：                          │
-│ ・我们会先把它排队，再交给发送服务。    │
-│ ・确认成功不等于对方收到了。           │
-│ ・已经交给发送服务的消息，可能无法收回。 │
-│ [发送消息]      [返回，不发送]        │
-└────────────────────────────────────┘
-```
-
-### 信息层级与区块顺序
-
-1. 返回 → `h1 与{对方}的会话`
-2. **通信基础状态**（能不能发、为什么）—— 在写作区之前
-3. 消息记录（时间正序，最新在下；每条自带来源与状态）
-4. 写消息（草稿态 → 检查并发送）
-5. 帮助入口
-
-**投递状态呈现规则**：仅**自己发出的**消息显示投递状态（对方消息无状态）。状态用 0.9 词表，构造用 0.8（图标+文字+可展开解释）。
-
-### 状态矩阵
-
-| 状态 | 呈现 |
-|---|---|
-| 加载（记录） | `正在读取消息记录…`；写作区**立即可用**（写草稿不依赖历史）。 |
-| 空（无消息） | `你们还没有互相发过消息。想说什么都可以，慢慢来。` |
-| 错误（保存草稿失败） | 可恢复，且必须点明"你写的字还在"：`草稿没有保存成功。你写的内容还在下面的框里，没有丢。` + `再试一次` |
-| 错误（发送确认失败） | 可恢复：`发送没有成功，这条消息**没有**发出去。你的草稿还在。` + 原因 + `再试一次` |
-| 错误（投递失败/未知） | 见 0.9；`再发一次` 前显示：`再发一次会产生一条新的投递尝试。如果上一次其实已经送到，对方可能会收到两次。` |
-| 无权限（通信基础失效） | 写作区整体替换，**不禁用一个灰按钮了事**：`现在不能给李叔叔发消息，因为你们的连接已经断开。以前的消息你还能看到。要重新联系，需要重新建立连接。` |
-| 无权限（对方被你屏蔽） | `你屏蔽了这个人，所以不能再发消息。你可以在「报告与屏蔽中心」里查看或取消屏蔽。`（**不说明对方是否知情**） |
-| 受保护存在 | 对方账户已不可访问：会话变只读，文案 `这个会话现在只能查看。` —— **不解释为什么**，不区分对方退出、被暂停、屏蔽了你。 |
-
-### 关键交互与确认文案原文
-
-**保存草稿**（简单确认）
-> `草稿已保存。只有你能看到，还没有发送。`
-
-**编辑使确认失效**（保留现有行为，文案沿用）
-> `内容已修改——请先重新保存草稿，再检查并发送。`
-
-**发送确认**（详细确认；对话框原文见上方线框）
-> Primary：`发送消息`　Secondary：`返回，不发送`
-> 成功播报：`已确认发送。消息正在排队，尚未送达。`
-
-**诈骗与链接警告（§163，新增）**：在**保存草稿之后、检查并发送之前**内联出现，不弹对话框（它不是决定，是提示）。
-> 标题：`发出前请再看一眼`
-> 正文：`这条消息里有一个外部链接。骗子有时会用链接骗取密码或钱。如果你不确定，不发也完全可以。`
-> 动作（等重）：`先不发` / `修改内容` / `屏蔽这个人` / `报告这个人` / `获取帮助`
-> 尾注：`这只是一个提醒，不是对任何人的判定。`
-
-**重试（§162，新增）**
-> 标题：`再发一次「明天有空吗？」`
-> 正文：`上一次的送达结果我们不知道。再发一次会产生一条新的投递尝试；如果上次其实已经送到，对方可能会看到两次。`
-> Primary：`再发一次`　Secondary：`返回，先不发`
-
-### 无障碍要点
-
-- 消息记录为 `<ol aria-label="消息记录">`（保留现有可访问名）。
-- 每条消息 `<li>`：发件人 → 时间 → 内容 → 状态。状态文字在 DOM 中紧跟内容，屏幕阅读器顺序自然。
-- 状态变化播报进 `role="status"`；**投递状态本身不放进 live region**（它是持久状态，不是事件）。
-- 发送确认对话框：`aria-describedby` 指向"发出之后"三条后果；内容原文用 `<blockquote>`，可被朗读。
-- 触控：`发送消息` 与 `返回，不发送` 上下排布或左右排布均需 ≥8px 间隔，**不得紧贴**（防误触）。
-- 诈骗警告用 `role="status"`（不是 `alert`）——它不打断，也不指责。
-
----
-
-## B5 认识新朋友（匹配）
-
-**文档**：Doc 20 §143–156 | **状态**：已实现（`MatchingPanel.tsx`）
-
-### 目标与这一屏要回答的问题
-
-1. 这是什么？我要不要参加？（默认关闭，可选）
-2. 平台会拿我的什么信息去推荐？谁能看到？
-3. 这个人为什么被推荐给我？（**只看到解释，看不到对方是谁**）
-4. 我说"感兴趣"之后会发生什么？对方会知道吗？（不会）
-5. "互相表示了兴趣" 之后，我是不是必须建立连接？（不是）
-
-### 线框（移动，四个阶段各自独立成屏或成段）
-
-**阶段 0 — 介绍（§143，首次进入必读）**
-
-```text
-┌────────────────────────────────────┐
-│ h1  认识新朋友（可选）               │
-│ p   这个功能默认是关闭的。参加或不参加，│
-│     都不影响你在研究中的其他部分。      │
-│                                    │
-│ h2  三件不同的事                     │
-│ ┌────────────────────────────────┐ │
-│ │  推荐   ≠   互相表示了兴趣  ≠  连接 │ │
-│ │  ─────      ───────────      ──── │ │
-│ │  系统给你   两个人各自都说    你们   │ │
-│ │  看一个     了「感兴趣」      明确   │ │
-│ │  可能合适   （对方的选择      同意   │ │
-│ │  的人的     对你保密）        开始   │ │
-│ │  解释                        来往   │ │
-│ └────────────────────────────────┘ │
-│ h2  你需要知道的                     │
-│ ・你的选择不会告诉对方。              │
-│ ・对方的选择也不会告诉你。            │
-│ ・推荐会过期，过期不代表任何评价。      │
-│ ・平台不保证你们合得来，也不保证有人回应。│
-│ ・你随时可以暂停或完全退出匹配。        │
-│ ・你随时可以屏蔽或报告。               │
-│ [继续，去设置我愿意分享的信息]         │
-│ [现在不参加]                         │
-└────────────────────────────────────┘
-```
-
-**阶段 1 — 开启前的复核（§145）**
-
-```text
-┌────────────────────────────────────┐
-│ h1  开启匹配前，先确认这些            │
-│ h2  你打算用于推荐的信息              │
-│ label 我愿意用于匹配的兴趣（逗号分隔）  │
-│ [园艺, 下棋                        ] │
-│ ・语言：中文                         │
-│ ・大致位置：城市一级（不含小区、街道）   │
-│ ・联系方式偏好：文字消息               │
-│                                    │
-│ h2  这些信息谁会看到                  │
-│ ・被推荐给你的人：只会看到「你们都选了   │
-│   园艺」这样的说明，看不到你的姓名。     │
-│ ・在你们互相表示兴趣之前，对方看不到你   │
-│   是谁。                            │
-│ h2  会持续多久                       │
-│ ・推荐每条 14 天后过期。              │
-│ ・你随时可以暂停（保留已有推荐）或完全   │
-│   退出（推荐全部作废）。               │
-│ [开启匹配]      [返回，先不开启]       │
-└────────────────────────────────────┘
-```
-
-**阶段 2 — 候选列表与决定（§147–152）**
-
-```text
-┌────────────────────────────────────┐
-│ h1  当前推荐                        │
-│ p   每个选择都同样正当。「暂时不」不会  │
-│     影响以后的推荐。你的选择不会被告知   │
-│     对方。                          │
-│                                    │
-│ ┌ 候选卡 ──────────────────────┐  │
-│ │ 为什么推荐给你：                  │  │
-│ │ 你们都选择了园艺作为兴趣，         │  │
-│ │ 都用中文，都偏好文字消息。          │  │
-│ │ [查看这条推荐的详细说明]           │  │← §149
-│ │ [⏳] 7 天后过期                    │  │
-│ │ ──────────────────────────────  │  │
-│ │ [感兴趣] [暂时不] [不再显示这个人]  │  │← 三者等重
-│ │ ──────────────────────────────  │  │
-│ │ [屏蔽] [报告]                     │  │← 次级，但常驻
-│ └────────────────────────────────┘  │
-│ p[role=status]                     │
-└────────────────────────────────────┘
-```
-
-**阶段 3 — 互相接受与建立连接（§155–156，独立屏）**
-
-```text
-┌────────────────────────────────────┐
-│ h1  你们互相表示了兴趣               │
-│ [✓] 互相接受有效 · 14 天后失效        │
-│ p   你们两个人都各自选择了「感兴趣」。  │
-│     是否建立连接，仍然由你决定。不建立  │
-│     也不会通知对方。                  │
-│ h2  建立连接之后                     │
-│ ・你们可以互发消息。                  │
-│ ・你们会看到对方选择公开的名字。        │
-│ ・这不代表对方可以看到你的生命故事。     │
-│ ・这不代表对方成为你的支持者。          │
-│ ・你随时可以断开连接、屏蔽或报告。       │
-│ [建立连接]      [暂时不建立]          │
-└────────────────────────────────────┘
-```
-
-### 信息层级与区块顺序
-
-介绍（一次性，之后可从帮助回访）→ 开启前复核 → 候选列表 → 互相接受 → 建立连接。
-**每个阶段是一个屏，一屏一个决定**。当前实现把"开启匹配""看推荐""建立连接"叠在同一屏——违反"一次一个有意义的决定"（见附录 A）。
-
-**候选卡内部顺序**：解释（为什么推荐）→ 详细说明入口 → 过期时间 → 三个等重决定 → 屏蔽/报告。
-**绝不出现**：对方姓名、头像、内部标识、分数、"匹配度 87%"、排名。
-
-**MatchExplanation 详情（§149）** 必须包含：哪些是你自己填的属性、这些属性是什么时候填的、**不确定性说明**（`这只是根据你们各自填写的信息做的对照，不是对你们能不能合得来的判断。`）、匹配策略版本号、禁止用途声明（`这些信息不能用于推销、募捐或任何商业用途。看到这类情况请报告。`）。
-
-### 状态矩阵
-
-| 状态 | 呈现 |
-|---|---|
-| 加载 | `正在看看有没有新的推荐…` |
-| 空（无候选，§154） | `现在没有合适的推荐。这不代表任何问题，也不是你的原因。推荐要两边的条件都合适才会出现，有时候就是需要等一等。你可以：调整你愿意分享的兴趣 / 暂停匹配 / 去社区看看（那是另一条路）。` |
-| 空（未开启匹配） | `匹配现在是关闭的。要开启，先看一下会用到你哪些信息。` + `了解并开启匹配` |
-| 错误 | 可恢复：`没能取得推荐。你的匹配设置没有任何改动。` + `再试一次` |
-| 无权限（缺同意） | `要使用匹配，需要你先在「我的同意选择」中同意「开放匹配」。这一项默认是关闭的。` + `去我的同意选择` |
-| 无权限（匹配被暂停） | `匹配功能现在被暂停了。你已经有的连接不受影响。` |
-| **受保护存在** | 候选或互相接受失效时（对方退出、屏蔽、过期、已被用于连接），卡片消失或替换为**不归因**的说明：`这条推荐现在不能再用了。这很常见，可能有很多原因。` **绝不**说明是对方的动作。 |
-| 互相接受五态（§155） | `正在核对（还没有结果）` / `互相接受有效` / `互相接受已过期` / `互相接受已失效` / `已经用来建立过连接`。每一态都用**不归责**措辞：`已失效` 的解释是 `条件发生了变化，这条不能再用了。这不是谁的错。` |
-
-### 关键交互与确认文案原文
-
-**开启匹配**（详细确认）
-> 标题：`开启匹配？`
-> 正文：`开启后，平台会用你上面选择的信息（园艺、下棋、中文、文字消息、城市一级位置）为你寻找可能合适的人。在你们互相表示兴趣之前，没有人能看到你是谁。你随时可以暂停或退出。`
-> Primary：`开启匹配`　Secondary：`返回，先不开启`
-> 成功播报：`匹配已开启。只有你选择分享的兴趣会被用于推荐。`
-
-**「感兴趣」确认（§151，五要点必须齐全）**
-> 标题：`对这条推荐选择「感兴趣」？`
-> 正文原文：
-> ```
-> 选择「感兴趣」之后：
-> ・你们还没有连接。
-> ・对方不会收到通知，也不会知道你选了什么。
-> ・对方的选择同样对你保密。
-> ・只有当对方也各自选择「感兴趣」时，你们才会看到「互相表示了兴趣」。
-> ・这条推荐会在 7 天后过期；过期就不能再选了。
-> ```
-> Primary：`确认「感兴趣」`　Secondary：`返回`
-
-**「暂时不」/「不再显示这个人」确认（§152）**
-> 标题：`对这条推荐选择「暂时不」？`
-> 正文：`「暂时不」只是这一次不考虑，以后条件变化时还可能再遇到。「不再显示这个人」会把这条推荐从当前列表里去掉。两个选择都不会给你或对方留下任何负面标记，也都不等于屏蔽。对方不会收到通知。`
-> Primary：`确认「暂时不」`　Secondary：`返回`
-
-**建立连接（详细确认）**
-> 标题：`建立连接？`
-> 正文：`建立之后你们可以互发消息，并且会看到对方选择公开的名字。这不代表对方能看到你的生命故事，也不代表对方有任何照护或研究方面的权限。你随时可以断开连接、屏蔽或报告。`
-> Primary：`确认建立连接`　Secondary：`返回`
-> 成功播报：`连接已建立。现在可以在「消息」中互发消息了。`
-> 失败（互相接受已过期/失效/已用过）：`没能建立连接，因为这条互相接受已经不能用了。这不是谁的错，也不代表对方拒绝了你。你可以继续看其他推荐。`
-
-**从匹配屏屏蔽（§153）**：不显示对方标识，直接对候选执行；确认文案见 B7/B17，追加一句：`我们不会告诉你对方是否知道这件事。`
-
-### 无障碍要点
-
-- 三个决定按钮：同一 `<p>` 内并排，`min-height: 2.75rem`，相邻间距 ≥8px；**同一 CSS 类**，禁止对 `感兴趣` 施加 primary 样式（可自动检验：三者的 computed style 必须一致）。
-- 屏蔽/报告在视觉上次级但**必须可 Tab 到达**，不藏在展开区里（§354 "hiding Block or Report"）。
-- 候选卡 `<li>`；解释文本是卡内第一个可读元素。
-- 过期倒计时用文字（`7 天后过期`），不用动效或颜色渐变；`reduced-motion` 下无差异。
-- 阶段 3 独立屏，进入时焦点移到 `h1`。
-- `role="status"` 播报决定结果；决定后卡片从列表移除，播报 `已记录你的选择。对方不会收到任何通知。`
-
----
-
-## B6 社区
-
-**文档**：Doc 20 §134–142 | **状态**：已实现（`CommunityPanel.tsx`）
-
-### 目标与这一屏要回答的问题
-
-1. 有哪些社区？各自是干什么的？
-2. 加入之前，规则是什么？（**确切的规则版本**）
-3. 这里的东西按什么顺序排？（时间，仅此而已）
-4. 我写的东西什么时候才会被别人看到？（只有我明确发布之后）
-5. 看到不舒服的内容我能做什么？
-
-### 线框（移动）
-
-```text
-┌────────────────────────────────────┐
-│ h1  社区（可选）                     │
-│ p   参加社区完全是可选的。帖子按时间     │
-│     顺序显示，没有算法排序，没有点赞，   │
-│     也没有浏览量。你屏蔽的人的帖子不会   │
-│     显示，对方也看不到你的帖子。         │
-│                                    │
-│ h2  社区列表                        │
-│ ┌────────────────────────────────┐ │
-│ │ 园艺角                           │ │
-│ │ [✓] 你是成员 · 规则第 3 版         │ │
-│ │ 讲讲阳台和菜园里的事               │ │
-│ │ [进入「园艺角」]                   │ │
-│ │ [查看规则] [停止参与「园艺角」]      │ │
-│ └────────────────────────────────┘ │
-│ ┌────────────────────────────────┐ │
-│ │ 老照片                           │ │
-│ │ [○] 未加入 · 规则第 1 版           │ │
-│ │ [查看规则并加入]                   │ │
-│ └────────────────────────────────┘ │
-│                                    │
-│ h2  我的草稿（1）                    │
-│ ┌ 虚线边框 ──────────────────────┐ │
-│ │ 今天的番茄熟了                    │ │
-│ │ [✎] 草稿 — 只有你能看到            │ │
-│ │ 社区：园艺角                      │ │
-│ │ [发布…] [删除这份草稿]             │ │
-│ └────────────────────────────────┘ │
-│ p[role=status]                     │
-└────────────────────────────────────┘
-```
-
-**社区内页（进入某社区后）**
-
-```text
-┌────────────────────────────────────┐
-│ [← 返回社区列表]                     │
-│ h1  园艺角                          │
-│ [✓] 你是成员 · 你同意的是规则第 3 版   │
-│ [查看这一版规则]                     │
-│ p   帖子按时间从新到旧显示。           │
-│                                    │
-│ h2  写一条帖子                       │
-│ label 想分享的内容（先存为草稿，        │
-│       发布前需要你确认）              │
-│ ┌──────────────────────────────┐   │
-│ └──────────────────────────────┘   │
-│ [保存草稿]                          │
-│ p 保存后只有你能看到。要让成员看到，   │
-│   需要你在「我的草稿」里明确发布。      │
-│                                    │
-│ h2  园艺角的帖子                     │
-│ ┌ 帖子卡 ────────────────────────┐ │
-│ │ 阳台老周 · 7月30日 08:20          │ │← safe public identity
-│ │ 今天的番茄熟了                    │ │
-│ │ [报告这条帖子] [屏蔽阳台老周]       │ │← 常驻可达
-│ └──────────────────────────────────┘ │
-│ ┌ 帖子卡（我的） ──────────────────┐ │
-│ │ 你 · 7月29日 · [✓] 已发布          │ │
-│ │ 昨天下了雨                        │ │
-│ │ [撤回这条帖子]                     │ │
-│ └──────────────────────────────────┘ │
-│ p[role=status]                     │
-└────────────────────────────────────┘
-```
-
-### 信息层级与区块顺序
-
-**列表页**：说明（无算法/无点赞/屏蔽生效）→ 社区列表 → 我的草稿。
-**内页**：返回 → `h1 社区名` → 成员与规则版本 → **写帖子（草稿优先）** → 帖子流。
-
-把"写"放在"读"之前，是为了让首页与社区页都不成为消费流——参与者进来是为了做一件事，不是为了刷。
-
-**帖子卡顺序**：作者的安全公开身份 → 时间 → 内容 → （若来自生命故事）来源标注 → 状态（仅自己的帖子）→ 报告/屏蔽。
-
-**帖子状态词表（§139）**（已实现，沿用）：`草稿 — 只有你能看到` / `已发布` / `已被暂时隐藏（审核中）` / `已被限制可见` / `已被移除（人工审核决定）` / `已删除` / `已归档` / `已恢复` / `已撤回`。
-**硬规则**：被限制可见的帖子**不得**呈现为"已删除"。
-
-### 状态矩阵
-
-| 状态 | 呈现 |
-|---|---|
-| 加载 | `正在读取社区列表…` / `正在打开「园艺角」…` |
-| 空（无社区） | `现在还没有开放的社区。研究团队开放之后，这里会出现。` |
-| 空（社区无帖子） | `这个社区还没有帖子。你可以写第一条，也可以先看看——两样都行。` |
-| 空（无草稿） | 「我的草稿」区块整体不渲染（无内容不占位）。 |
-| 错误（加入失败） | 可恢复：`没能加入「园艺角」，你的成员状态没有改变。` + 原因 + `再试一次` |
-| 错误（发布失败） | 可恢复且必须点明：`没能发布。这条内容**还是草稿**，只有你能看到。` |
-| 无权限（缺同意） | `加入社区需要你先在「我的同意选择」中同意「社区参与」。` + `去我的同意选择`（当前实现已有此映射，保留） |
-| 无权限（被审核暂停发帖） | `你现在不能在这个社区发帖。研究团队会单独告诉你原因和恢复方式。你还可以看帖子。` |
-| 受保护存在 | 已屏蔽/已移除对象的帖子**不出现，也不留占位**；直接访问其 URL → 0.6 统一页面。**不显示** "该内容已被删除" 这类确认存在过的措辞。 |
-
-### 关键交互与确认文案原文
-
-**加入社区（详细确认，绑定确切规则版本）**
-> 标题：`加入「园艺角」前，请先阅读社区规则（第 3 版）`
-> 规则原文以 `<blockquote>` 全文呈现（不折叠、不摘要）
-> 尾句：`加入即表示你同意上面这一版规则。加入需要你已同意「社区参与」；你随时可以停止参与。`
-> Primary：`同意规则并加入`　Secondary：`返回`
-> 成功播报：`已加入「园艺角」。你随时可以停止参与，这不影响其他功能。`
-
-**保存草稿**
-> `草稿已保存。只有你能看到；发布前需要你明确确认。`
-
-**发布（详细确认，点名社区）**
-> 标题：`确认发布到「园艺角」？发布后社区成员都能看到。`
-> 内容原文以 `<blockquote>` 呈现
-> 补充：`发布之后：社区成员可以看到这条帖子；工作人员按社区规则进行人工审核；你可以撤回，但已经看过的人可能已经记住了内容。`
-> Primary：`确认发布`　Secondary：`返回`
-> 成功播报：`已发布。社区成员现在可以看到这条帖子。`
-
-**停止参与社区（§141，新增）**
-> 标题：`停止参与「园艺角」？`
-> 正文：`停止之后：你不会再看到这个社区的帖子，也不能再发帖。你已经发布的帖子会保留在社区里——如果你想撤回，请先逐条撤回再停止参与。匹配是另一件事，不受影响。你在研究中的参与也继续，除非你另外选择退出。`
-> Primary：`确认停止参与「园艺角」`　Secondary：`返回，继续参与`
-
-**报告社区内容（§142，新增；从帖子卡直接发起，不输入任何标识）**
-> 步骤：选择类型 → 补充说明（可选）→ 是否同时屏蔽 → 提交
-> 提交后回执：`已经收到你的报告。工作人员会看。为了保护相关的每一个人，我们不会告诉你后续处理的细节，也不会告诉对方是谁报告的。` **不得**预告处理结果。
-
-### 无障碍要点
-
-- 规则对话框内容可能很长：`role="alertdialog"` + 内部可滚动区 + `tabindex="0"` 使其可键盘滚动；对话框本身不得撑破视口。
-- `进入「园艺角」`、`停止参与「园艺角」`、`屏蔽阳台老周` —— 可访问名带具体对象。
-- 帖子流是 `<ul>`；每张卡内的 `报告`/`屏蔽` 是次级按钮但可 Tab 到达。
-- 草稿卡用虚线边框 **加** `[✎] 草稿 — 只有你能看到` 文字（形状+文字，不靠颜色）。
-- 200% 缩放：帖子卡单列，不横向滚动；长内容按 `overflow-wrap: anywhere` 处理。
-
----
-
-## B7 帮助与安全
-
-**文档**：Doc 20 §142、§166–168 | **状态**：已实现（`SafetyPanel.tsx` 嵌在 App 的 help 屏）
-
-### 目标与这一屏要回答的问题
-
-1. 我现在遇到麻烦了，找谁？（**最上面就是这个**）
-2. 紧急情况怎么办？（明确说：不是找这个平台）
-3. 我想让某个人别来打扰我 → 屏蔽
-4. 我想让工作人员知道发生了什么 → 报告
-5. 我担心自己或别人的安全 → 安全信号
-
-### 线框（移动）
-
-```text
-┌────────────────────────────────────┐
-│ h1  帮助与安全                       │
-│                                    │
-│ ┌ 紧急情况（常驻，最顶部） ────────┐ │
-│ │ [!] 如果你或别人现在有危险          │ │
-│ │ 请直接拨打当地紧急电话。             │ │
-│ │ 本平台不是紧急求助渠道，工作人员     │ │
-│ │ 不会二十四小时看着这里。             │ │
-│ └────────────────────────────────┘ │
-│                                    │
-│ h2  联系研究团队                     │
-│ 你可以随时联系研究团队，问任何问题，    │
-│ 包括"我能不能停下来"。                │
-│ [联系研究团队]                       │
-│                                    │
-│ h2  我想屏蔽某个人                   │
-│ p 屏蔽要从你和这个人有交集的地方开始： │
-│   会话、社区帖子、或者推荐。这样我们   │
-│   不需要你输入任何标识。               │
-│ ・[去我的会话]                       │
-│ ・[去社区]                           │
-│ ・[查看我已经屏蔽的人]                │← B17
-│                                    │
-│ h2  我想报告发生的事                  │
-│ p 报告会由工作人员查看，不会由自动系统 │
-│   单独决定。即使你之后屏蔽了对方，这份 │
-│   报告仍会被处理。                    │
-│ ・[从会话里报告]                      │
-│ ・[从社区帖子报告]                    │
-│ ・[报告和具体内容无关的事]  ← 通用入口 │
-│                                    │
-│ h2  我有安全方面的担忧                │
-│ p 安全团队会看你的反馈。你可以说自己的 │
-│   事，也可以说别人的事。               │
-│ label 你担心的是什么（用你自己的话）    │
-│ ┌──────────────────────────────┐   │
-│ └──────────────────────────────┘   │
-│ [提交安全担忧]                       │
-│ p 提交后会有人看。这不会自动触发任何   │
-│   紧急服务。                          │
-│                                    │
-│ h2  其他                            │
-│ ・[常见问题]                         │
-│ ・[无障碍声明]                        │
-│ ・[暂停或退出研究]                    │
-│ p[role=status]                     │
-└────────────────────────────────────┘
-```
-
-### 信息层级与区块顺序（顺序本身是安全设计）
-
-1. **紧急情况声明**（永远第一，永远可见，不折叠）
-2. 联系研究团队（最低门槛的求助）
-3. 屏蔽（**从上下文发起**，本屏只做路由）
-4. 报告（同上，另加一个不涉及具体对象的通用入口）
-5. 安全担忧（自由文本，唯一在本屏内就能提交的动作）
-6. 其他（FAQ / 无障碍声明 / 暂停与退出）
-
-### 状态矩阵
-
-| 状态 | 呈现 |
-|---|---|
-| 加载 | 本屏**不依赖网络即可渲染**：紧急声明与联系方式是静态内容，必须在离线时也可见。 |
-| 空 | 不适用。 |
-| 错误（提交安全担忧失败） | 安全关键级：`没能提交给安全团队。你写的内容还在下面的框里。如果情况紧急，请不要等这里——直接拨打当地紧急电话，或直接联系研究团队。` + `再试一次` + `联系研究团队`。**不得**只播报一句 toast。 |
-| 错误（离线） | 顶部横幅：`现在连不上网络。紧急电话不需要网络。` |
-| 无权限 | 不适用——帮助与安全对每个参与者永远可用，不受任何同意项、暂停或审核状态影响。**这是硬规则。** |
-| 受保护存在 | 屏蔽/报告入口不列举任何人；通用报告入口不接受标识输入。见附录 B 偏差 #1。 |
-
-### 关键交互与确认文案原文
-
-**屏蔽确认（§166–167，从上下文发起，详细确认）**
-> 标题：`屏蔽张阿姨？`
-> 正文原文：
-> ```
-> 屏蔽之后：
-> ・你们不会再互相出现在推荐里。
-> ・你们不能再互发消息。
-> ・你们看不到彼此的帖子和公开档案。
-> ・已经排队还没发出去的消息，我们会尝试取消——但如果它已经交给发送服务，可能已经发出去了，我们没法收回。
-> ・和这个人相关的内容不会再进入 AI 的上下文。
-> ・我们不会告诉你对方是否知道这件事。
+> **Accessible name: `This page cannot be opened right now`** (`h1`)
 >
-> 屏蔽是你自己的决定，随时可以取消。取消屏蔽不会自动恢复原来的连接、会话或推荐——那些需要重新开始。
+> Body text:
 > ```
-> 次要选项（复选，不预选）：`同时报告这个人`
-> Primary：`确认屏蔽`　Secondary：`返回，不屏蔽`
-> 成功播报：`已屏蔽。已经尝试取消还没发出的消息。`
-
-**报告提交回执（§142，不预告结果）**
-> `已经收到你的报告。工作人员会看。为了保护相关的每一个人，我们不会告诉你后续处理的细节，也不会告诉对方是谁报告的。你可以在「报告与屏蔽中心」看到你提交过的报告。`
-
-**安全担忧提交回执**
-> `已经提交给安全团队。会有人看。这不会自动触发任何紧急服务——如果情况紧急，请拨打当地紧急电话。`
-
-### 无障碍要点
-
-- 紧急声明用 `<section role="note">`（不是 `role="alert"`——它是常驻内容，不是新事件，用 alert 会在每次进入时打断朗读）。
-- 安全担忧的文本域必须有**可见** `<label>`（当前实现用 `aria-label`，见附录 A）：`你担心的是什么（用你自己的话）`。
-- 焦点顺序：h1 → 紧急声明 → 联系团队 → 屏蔽路由 → 报告路由 → 安全担忧 → 其他 → 导航。**紧急信息必须在焦点顺序的最前面**。
-- 提交失败时焦点移到错误提示（`role="alert"` + `tabindex="-1"`）。
-- 本屏在"简化模式"（B13）下不得被简化掉任何一段——安全内容豁免于内容精简。
-
----
-
-## B8 我的研究
-
-**文档**：Doc 20 §108 | **状态**：未实现
-
-### 目标与这一屏要回答的问题
-
-1. 我参加的到底是什么研究？为什么要做？
-2. 我要参加多久？现在到哪一步了？
-3. 我已经做了什么？接下来会有什么？
-4. 我同意了什么？（指向 B2）
-5. 结果什么时候能知道？会怎么告诉我？
-
-**这一屏不做任何决定**——它是"我在哪"的地图。所有动作按钮都是通往别处的路由。
-
-### 线框（移动）
-
-```text
-┌────────────────────────────────────┐
-│ h1  我的研究                        │
-│ [ℹ] 这是一个概念研究原型。现在还没有   │← 阶段声明，必须有
-│     真实的参与者，也没有真实的结论。   │
-│                                    │
-│ h2  这项研究想弄清楚什么              │
-│ p （平实语言的研究目的，2–4 句）       │
-│ [查看更详细的说明]                   │
-│                                    │
-│ h2  你在哪一步                       │
-│ ┌ 时间线（垂直） ─────────────────┐ │
-│ │ [✓] 了解与同意    2026-07-02 完成  │ │
-│ │ [✓] 基线问卷      2026-07-05 完成  │ │
-│ │ [◐] 活动阶段      进行中 · 第 3 周  │ │← 当前
-│ │ [ ] 随访问卷      预计 8 月中       │ │
-│ │ [ ] 结束与结果说明 预计 10 月        │ │
-│ └────────────────────────────────┘ │
-│ p 一共大约 3 个月。时间是估计的，不是  │
-│   考核。晚一点完成没有关系。           │
-│                                    │
-│ h2  接下来的事                       │
-│ ・随访问卷 · 大约 10 分钟 · 本周内     │
-│   [开始随访问卷]                     │
-│                                    │
-│ h2  你做过的事                       │
-│ ・基线问卷 · 2026-07-05 · 已完成      │
-│ ・第 1 次互动记录 · 2026-07-12        │
-│ [查看全部记录]                       │
-│                                    │
-│ h2  这项研究会怎么用你的信息           │
-│ ・研究团队会看到：…                   │
-│ ・其他参与者看不到：…                 │
-│ ・结果会以汇总形式发表，不会写出是谁。  │
-│ [查看或更改我的同意选择]              │
-│                                    │
-│ h2  结果                            │
-│ p 研究结束后，我们会用平实语言把总体   │
-│   结果告诉每一位参与者。我们不会给你   │
-│   个人的诊断或评价——这项研究不做这个。 │
-│                                    │
-│ ・[联系研究团队]                     │
-│ ・[暂停或退出研究]                    │
-│ p[role=status]                     │
-└────────────────────────────────────┘
-```
-
-### 信息层级与区块顺序
-
-1. 阶段声明（合成原型，无真实结论）
-2. 研究目的（平实语言）
-3. **你在哪一步**（时间线，含总时长）
-4. 接下来的事（唯一带动作的区块）
-5. 你做过的事
-6. 信息怎么用（→ B2）
-7. 结果计划（明确"不给个人结论"）
-8. 帮助与退出
-
-### 状态矩阵
-
-| 状态 | 呈现 |
-|---|---|
-| 加载 | `正在读取你的研究进度…`；研究目的与结果计划是静态内容，先渲染。 |
-| 空（刚入组，尚无记录） | 「你做过的事」：`还没有记录。你刚开始，这很正常。` |
-| 错误 | 可恢复，局部：`没能读取你的进度。研究说明还能看，你的记录没有丢。` + `再试一次` |
-| 无权限 | 不适用（自有资源）。 |
-| 受保护存在 | 若入组记录不可访问 → 0.6 统一页面。 |
-| 已暂停 | 顶部横幅：`你的参与现在是暂停状态。暂停期间不会有新的活动安排。你可以随时恢复。` + `查看暂停设置` |
-| 已退出 | `你已经退出了这项研究。这一页保留下来，方便你查看当时的记录和退出回执。` + `查看退出回执` |
-
-### 关键交互与确认文案
-
-无确认动作。**唯一需要注意的文案纪律**：进度时间线不得使用"落后""逾期""未完成"等评价性措辞；用 `还没做` / `预计 8 月中`。
-
-### 无障碍要点
-
-- 时间线是 `<ol>`，每步 `<li>`；状态用图标 + 文字（`[✓] 已完成` / `[◐] 进行中` / `[ ] 还没做`），不靠颜色。
-- 当前步骤加 `aria-current="step"`。
-- `h2 你在哪一步` 下先给一句文字总述（`5 步里，你在第 3 步`），供屏幕阅读器不必逐条听完就知道位置。
-- 阶段声明用 `<section role="note">`，不用 `alert`。
-
----
-
-## B9 生命故事：档案首页
-
-**文档**：Doc 20 §109–110 | **状态**：**部分实施**（后端 M17 已有：archives / items / versions / visibility / contributions / withdraw / export）
-
-**已实施**：可读取自己的生命故事（`life-story.view-own`，`ownerOnly`）、写入新条目、就**确切版本**确认为证言。此前根本没有读取路径——权限目录里连一个读动作都没有：参与者能写、能改、能确认、能撤回，却看不到里面有什么，而支持者已经可以往里提议内容。让人对一份自己读不到的故事作接受/拒绝决定，不是一个可以正当作出的决定。
-
-每条内容都在自己旁边说明来源与确认状态（ADR-024），不放在别处的图例里：谁写的（你 / 支持者 / 起草工具 / 转录 / 翻译）、你是否确认过它是你自己的话。改动文本后，先前版本的确认**不会**顺延到新版本，屏幕会明说这一点，否则记录会变成"你确认了一段你没读过的话"。已撤回的条目对本人仍然可读——撤回是把它从别人那里收回，不是平台判定你不可以再记得自己的过去。
-
-**未实施**：可见性与受众选择（B11）、导出（B12）、修订既有条目、AI 起草（按 D-14 暂不启用）。
-
-### 目标与这一屏要回答的问题
-
-1. 我写过什么？
-2. 哪些还是草稿（只有我能看到）？哪些我已经确认为我的证言？
-3. 哪些被分享出去了，给谁？
-4. 别人给我贡献了什么，等我处理？
-5. 我怎么把它们导出或收回？
-
-**"私密是默认状态"必须在屏幕上看得见，不是靠猜。**
-
-### 线框（移动）
-
-```text
-┌────────────────────────────────────┐
-│ h1  我的生命故事                     │
-│ [🔒] 这些内容默认只有你能看到。        │
-│      只有你明确更改可见性，别人才看得到。│
-│                                    │
-│ ┌ 主要动作 ──────────────────────┐ │
-│ │ [继续写：我父亲的自行车]           │ │← 有草稿时置顶
-│ │ [写一篇新的]                      │ │
-│ └────────────────────────────────┘ │
-│                                    │
-│ h2  等你处理的（1）                  │
-│ ・小芳给「我父亲的自行车」补充了内容    │
-│   [查看并决定怎么处理]               │← §128
-│   p 别人补充的内容，在你确认之前不会   │
-│     成为你的证言。                    │
-│                                    │
-│ h2  草稿（2）                        │
-│ ┌ 虚线卡 ────────────────────────┐ │
-│ │ 我父亲的自行车                    │ │
-│ │ [✎] 草稿 · 第 3 版 · 只有你能看到   │ │
-│ │ 上次修改：昨天                    │ │
-│ │ [继续写] [删掉这份草稿]            │ │
-│ └────────────────────────────────┘ │
-│                                    │
-│ h2  我确认过的（4）                  │
-│ ┌ 实线卡 ────────────────────────┐ │
-│ │ 一九七六年的夏天                  │ │
-│ │ [✓] 你的证言 · 第 2 版             │ │
-│ │     你在 2026-07-20 确认           │ │
-│ │ [🔒] 可见性：只有你                │ │
-│ │ [查看] [更改可见性] [再修改]       │ │
-│ └────────────────────────────────┘ │
-│ ┌ 实线卡（已分享） ────────────────┐ │
-│ │ 老照片里的巷子                    │ │
-│ │ [✓] 你的证言 · 第 1 版             │ │
-│ │ [👥] 可见性：我的连接（3 人）       │ │
-│ │      [看看具体是哪 3 个人]          │ │
-│ │ [查看] [更改可见性] [收回分享]      │ │
-│ └────────────────────────────────┘ │
-│                                    │
-│ h2  管理                            │
-│ ・[导出我的全部生命故事]              │
-│ ・[请别人帮我补充]                    │
-│ ・[关于生命故事的说明]                │
-│ p[role=status]                     │
-└────────────────────────────────────┘
-```
-
-### 信息层级与区块顺序
-
-1. `h1` + **私密默认声明**（在任何内容之前）
-2. 主要动作：继续草稿 > 写新的
-3. 等你处理的（支持者贡献待决）
-4. 草稿（虚线，`只有你能看到`）
-5. 我确认过的（实线，带证言标签 + 可见性徽章）
-6. 管理（导出 / 邀请贡献 / 说明）
-
-**绝不出现**：浏览量、被谁看过、"这篇很受欢迎"、推荐排序。排序按最近修改时间。
-
-### 状态矩阵
-
-| 状态 | 呈现 |
-|---|---|
-| 加载 | `正在读取你的生命故事…` |
-| 空（全新） | `你还没有写过。生命故事就是你自己讲你自己的事——写不写、写什么、写多少，全部由你决定。写下来的东西默认只有你能看到。` + `写一篇新的` + `看看别人一般从哪里开始`（→ 提示卡，B10） |
-| 空（有确认项、无草稿） | 「草稿」区块不渲染。 |
-| 错误 | 可恢复：`没能读取你的生命故事。你的内容都还在，没有丢失，也没有被改动。` + `再试一次` |
-| 无权限（缺生命故事同意） | `生命故事这一部分需要你先在「我的同意选择」中同意。` + `去我的同意选择` |
-| 受保护存在 | 单条 item 不可访问时**不渲染**；直接访问其 URL → 0.6 统一页面。**不得**出现"这篇已被删除"。 |
-
-### 关键交互与确认文案
-
-**删掉草稿**（详细确认——草稿是心血，删除不可逆）
-> 标题：`删掉草稿「我父亲的自行车」？`
-> 正文：`这份草稿会被删掉，找不回来。它还没有被确认为你的证言，也没有分享给任何人。如果你只是暂时不想写，可以直接放着——草稿不会过期，也不会催你。`
-> Primary：`确认删掉这份草稿`　Secondary：`返回，先留着`
-
-**支持者贡献的处理（§128）**：入口在此，详细流程见 B10 的"别人补充的内容"一节。
-
-### 无障碍要点
-
-- 草稿卡（虚线 + `[✎] 草稿`）与证言卡（实线 + `[✓] 你的证言`）：形状、图标、文字三重区分。
-- 可见性徽章按 0.8 构造：`[🔒] 可见性：只有你` / `[👥] 可见性：我的连接（3 人）`；`看看具体是哪 3 个人` 是可 Tab 到达的链接。
-- 卡片内多个按钮：块级或行内均可，但相邻按钮间距 ≥8px 且 ≥44px 高。
-- 区块计数写进 `h2`（`草稿（2）`）。
-- 焦点：进入时焦点在 `h1`；从 B10 返回时焦点回到刚编辑的那张卡。
-
----
-
-## B10 生命故事：创建 / AI 起草 / 确认为证言
-
-**文档**：Doc 20 §111–118、§128–129 | **状态**：未实现（后端 `createItem` / `reviseItem` / `confirmTestimony` / `reviewContribution` 已有）
-
-### 目标与这一屏要回答的问题
-
-1. 我要写什么？（提示卡帮忙起头，但可以跳过、可以自己定题）
-2. AI 能帮我什么？**AI 写的还是我写的？**
-3. AI 从我的话里"看出来"的人名、地点、日期，对不对？（逐条确认）
-4. 什么时候这段文字才算"我的证言"？（**只有我明确确认那一个确切版本之后**）
-5. 我确认之后又想改，怎么办？
-
-**这一屏的核心纪律**：`AI 起草 ≠ 本人证言`。AI 产物在被本人确认之前，永远带 `草稿` 与 `AI 参与` 标签；确认动作绑定**确切版本号**。
-
-### 线框（移动，五步，每步一屏）
-
-**步骤 1 — 选题（§112）**
-
-```text
-┌────────────────────────────────────┐
-│ h1  想从哪里说起？                   │
-│ p 这些只是提示。你可以跳过任何一个，   │
-│   也可以自己定题目。                  │
-│ ┌ 提示卡 ────────────────────────┐ │
-│ │ 一个你常去的地方                  │ │
-│ │ 大概 10 分钟 · 可以写字或说话       │ │
-│ │ [用这个提示]                      │ │
-│ └────────────────────────────────┘ │
-│ ┌ 提示卡（敏感） ──────────────────┐ │
-│ │ 一次失去                          │ │
-│ │ [⚠] 这个话题对有些人不容易          │ │
-│ │ 大概 15 分钟                       │ │
-│ │ [用这个提示] [跳过这个]            │ │
-│ └────────────────────────────────┘ │
-│ [我自己定题目]                       │
-│ [先不写了，回到生命故事]              │
-└────────────────────────────────────┘
-```
-
-**步骤 2 — 起草（§113–114）**
-
-```text
-┌────────────────────────────────────┐
-│ h1  写：我父亲的自行车                │
-│ [✎] 草稿 · 只有你能看到 ·             │← 持久，滚动时吸顶
-│     刚才自动保存了                    │
-│                                    │
-│ label 你想写的内容                    │
-│ ┌──────────────────────────────┐   │
-│ │ 我父亲有一辆二八大杠…            │   │
-│ └──────────────────────────────┘   │
-│                                    │
-│ h2  要不要让 AI 帮忙？（可选）        │
-│ p AI 会出错。它帮你改的每一句，都要   │
-│   你自己看过才算数。                  │
-│ ・[帮我起个头]  ・[把语音转成文字]     │
-│ ・[整理一下段落] ・[起个标题]          │
-│ ・[说得再简单些]                      │
-│                                    │
-│ ─ AI 改写结果（如果用了）──────────  │
-│ [🤖] AI 起草 · 还不是你的证言          │
-│ ┌──────────────────────────────┐   │
-│ │ （AI 输出，可直接编辑）          │   │
-│ └──────────────────────────────┘   │
-│ [用这一版替换我的内容] [不用，丢掉]    │
-│                                    │
-│ [保存草稿] [检查里面的细节 →]         │
-│ [这个话题让我不舒服]  ← §129          │
-└────────────────────────────────────┘
-```
-
-**步骤 3 — 逐条确认细节（§115）**
-
-```text
-┌────────────────────────────────────┐
-│ h1  这些细节对吗？                   │
-│ p 下面是从你写的内容里读出来的。       │
-│   [🤖] 这些是 AI 提出的，不是已经核实   │
-│   的事实。对不对，只有你知道。          │
-│                                    │
-│ ┌ 细节 ──────────────────────────┐ │
-│ │ 人：父亲                          │ │
-│ │ [确认] [改一下] [删掉] [说不准]     │ │← 四者等重
-│ └────────────────────────────────┘ │
-│ ┌ 细节 ──────────────────────────┐ │
-│ │ 年份：一九七几年                   │ │
-│ │ [确认] [改一下] [删掉] [说不准]     │ │
-│ └────────────────────────────────┘ │
-│ [这些先放着不管]  ← 允许全部不处理     │
-│ [下一步：看看完整的这一版 →]          │
-└────────────────────────────────────┘
-```
-
-**步骤 4 — 确认为证言（§116–117）**
-
-```text
-┌────────────────────────────────────┐
-│ h1  确认这是你的故事                 │
-│ h2  你要确认的确切版本                │
-│ [📄] 第 3 版 · 2026-08-03 14:20 保存  │
-│ ┌ 内容原文（完整，不截断） ─────────┐ │
-│ │ 我父亲有一辆二八大杠…             │ │
-│ └────────────────────────────────┘ │
-│ h2  这一版是怎么来的                  │
-│ ・你自己写的：主要部分                │
-│ ・[🤖] AI 参与：整理段落、起标题        │
-│ ・别人补充的：无                      │
-│ h2  你确认过的细节                    │
-│ ・人：父亲（你确认了）                │
-│ ・年份：说不准（保留为不确定）          │
-│ h2  确认之后                          │
-│ ・这一版会标成「你的证言」——意思是    │
-│   这是你本人对自己经历的讲述。         │
-│ ・这**不是**说有人核实过它是不是史实。 │
-│ ・可见性不会因为确认而改变。现在是     │
-│   「只有你」，确认后还是「只有你」。    │
-│ ・你以后还可以修改；修改会产生新的一版， │
-│   旧的一版会留着。                    │
-│                                    │
-│ [确认这是我的故事]                    │← §324 指定措辞
-│ [返回，再改改]                        │
-└────────────────────────────────────┘
-```
-
-### 信息层级与区块顺序
-
-选题 → 起草（AI 可选，且在写作区**之后**）→ 细节确认 → **确认为证言** → 可见性（B11，单独一步，且是**分开的动作**）。
-
-**硬规则**：
-- 确认为证言 **不** 顺带更改可见性。两件事分两屏、分两次确认（Doc 20 §116 明示 "current visibility" 只是**展示**，不是在这一步更改）。
-- 自动保存**只**保存草稿，不确认证言、不分享（§113）。自动保存提示写 `刚才自动保存了（还是草稿）`。
-- AI 输出永远出现在**独立区块**，带 `[🤖] AI 起草 · 还不是你的证言`，需要显式 `用这一版替换我的内容` 才进入参与者的正文。
-
-### 状态矩阵
-
-| 状态 | 呈现 |
-|---|---|
-| 加载（AI 处理中） | `AI 正在整理…（大概几秒）` + `取消` 可用（§224 允许安全取消）。**不做假进度条。** |
-| 空（细节确认无结果） | `没有读出什么需要确认的细节。这很正常，直接往下走就行。` |
-| 错误（自动保存失败） | 持久内联警告（不是 toast）：`自动保存没有成功。你写的内容还在这个页面上，但还没有存到服务器。请点「保存草稿」，或者先把文字复制下来。` |
-| 错误（AI 不可用，§221） | `AI 帮忙的功能现在用不了。你可以照常自己写——这不影响保存和确认。` |
-| 错误（确认证言失败：版本冲突） | 阻断级：`没能确认，因为这份内容在别处又被改过了。为了不让你确认到你没看过的文字，我们停了下来。请看一下最新的一版再确认。` + `看最新版本` |
-| 无权限 | 同 B9。 |
-| 受保护存在 | 同 B9。 |
-| 敏感话题（§129） | 内联出现，不弹窗：`这个话题不好写也很正常。你可以：[先暂停] [存成草稿，只有你能看到] [跳过这个提示] [不要让 AI 用这段内容] [联系研究团队] [报告] [安全帮助]` 。措辞平静，**不使用**"警告""危险"。 |
-
-### 关键交互与确认文案原文
-
-**确认为证言（详细确认，绑定确切版本）**
-> Primary 按钮：`确认这是我的故事`
-> 确认对话框标题：`把第 3 版确认为你的证言？`
-> 正文：`你确认的是上面看到的第 3 版，一字不差。确认之后，这一版会标成「你的证言」——意思是这是你本人的讲述，不是说有人核实过它是史实。可见性不会改变，现在是「只有你」。`
-> Primary：`确认这是我的故事`　Secondary：`返回，再看看`
-> 成功播报：`已确认。第 3 版现在标记为你的证言。可见性没有改变，还是只有你能看到。`
-
-**确认后再修改（§118）**
-> 提示：`你确认过的内容是第 3 版。改动会生成第 4 版；第 3 版会保留下来，标签仍然是你在 2026-08-03 确认的证言。第 4 版在你重新确认之前，是草稿。`
-> Primary：`开始修改（生成新的一版）`　Secondary：`返回`
-
-**别人补充的内容（§128）**
-> 标题：`小芳给「我父亲的自行车」补充了内容`
-> 正文：`这是小芳写的，不是你写的。在你决定之前，它不会出现在你的故事里，也不会成为你的证言——**别人补充的内容，即使你接受了，也仍然标记为「别人补充的」，不会变成你的证言。**`
-> 四个等重动作：`接受，作为别人的补充` / `改一改再接受` / `不接受` / `请对方撤回`
-> 成功播报（接受）：`已接受。这段内容标记为「小芳补充的」，和你自己的证言分开显示。`
-
-**AI 参与标签词表（§53，在内容旁持久显示）**：`AI 起草` / `AI 转写` / `AI 翻译` / `AI 整理` / `AI 建议`。标签在保存后**仍然保留**，不因确认而消失——确认使它成为"参与者确认过的、AI 参与起草的证言"，而不是"参与者原创"。
-
-### 无障碍要点
-
-- 草稿标签吸顶（`position: sticky`），但在 `prefers-reduced-motion` 与 200% 缩放下退化为静态置顶块，不遮挡内容。
-- 细节确认的四个按钮同一类、等重、可 Tab；每条细节是 `<li>`，含 `<h3>` 或强调文本作为可访问名前缀（`人：父亲`）。
-- AI 输出区 `aria-live="polite"`，生成完成时播报 `AI 给了一版整理结果，在下面。还不是你的证言。`
-- 确认对话框 `aria-describedby` 指向"确认之后"四条后果。
-- 语音输入（若启用）：录音状态用文字 + 图标 + 计时，不用闪烁；停止按钮 ≥44px 且远离"删除"。
-- 长文本编辑器在 200% 缩放下不得出现横向滚动；`overflow-wrap: anywhere`。
-
----
-
-## B11 生命故事：可见性与受众选择
-
-**文档**：Doc 20 §119–124、§46–48 | **状态**：**不实现，等有读者**（裁定 D-16）。后端 `changeVisibility` 已有，`Internet Public` 被拒绝（`UNSUPPORTED_CAPABILITY`），但 `visibility` **没有任何读取路径会去看它**——全仓库唯一读取条目的查询 `getMyLifeStory` 是 `ownerOnly`，所以改成 `Community` 的实际受众仍然是零。`Selected People` 更甚：`life_story.access_grants` 没有任何命令能写入。此时上屏会让参与者以为自己分享了而其实没有。**解锁条件**：先有一个尊重 `visibility` 与 `access_grants` 的非本人读取路径，以及一个写入授权的命令
-
-### 目标与这一屏要回答的问题
-
-1. 现在谁能看到这篇？
-2. 如果我改成 X，具体是**哪些人**能看到？（受众必须能被点名或点数）
-3. 他们能做什么？（看 / 评论 / 引用 / 下载 / 转发）
-4. 能不能改回来？改回来之后已经看过的人怎么办？
-
-**先受众后发布**：受众选择与受众预览必须出现在"确认更改"控件**之前**。
-
-### 线框（移动）
-
-```text
-┌────────────────────────────────────┐
-│ [← 返回]                            │
-│ h1  谁能看到「老照片里的巷子」        │
-│ 现在：[🔒] 只有你                    │
-│                                    │
-│ h2  选一个范围                       │
-│ ┌ 选项 ──────────────────────────┐ │
-│ │ (•) 只有你                        │ │
-│ │     除了你，没有人能看到。         │ │
-│ │     研究团队在你另外同意之前也      │ │
-│ │     不会看内容。                   │ │
-│ └────────────────────────────────┘ │
-│ ┌ 选项 ──────────────────────────┐ │
-│ │ ( ) 我指定的人                     │ │
-│ │     你一个一个挑。只能挑已经和你    │ │
-│ │     有关系的人。                   │ │
-│ └────────────────────────────────┘ │
-│ ┌ 选项 ──────────────────────────┐ │
-│ │ ( ) 我的连接                       │ │
-│ │     现在是 3 个人。以后新建立的     │ │
-│ │     连接**不会**自动看到，除非你    │ │
-│ │     再来改一次。                   │ │
-│ └────────────────────────────────┘ │
-│ ┌ 选项 ──────────────────────────┐ │
-│ │ ( ) 某个社区                       │ │
-│ │     社区成员和这个社区的审核人员    │ │
-│ │     能看到。会出现在社区的帖子里。   │ │
-│ └────────────────────────────────┘ │
-│ ┌ 选项 ──────────────────────────┐ │
-│ │ ( ) 平台内公开                     │ │
-│ │     平台上所有登录的合格用户都能    │ │
-│ │     看到，可能被平台内搜索到。      │ │
-│ │     [平台内公开 ≠ 互联网公开]       │ │
-│ └────────────────────────────────┘ │
-│ ┌ 不可选（说明） ──────────────────┐ │
-│ │ [✗] 互联网公开                     │ │
-│ │     这个原型没有开放这一项。要让    │ │
-│ │     内容出现在互联网上，需要另外    │ │
-│ │     一套单独的流程和批准。          │ │
-│ └────────────────────────────────┘ │
-│                                    │
-│ h2  受众预览                        │← 选择后立即出现
-│ 你选的是：我的连接                    │
-│ ・具体是这 3 个人：张阿姨、王先生、    │
-│   李叔叔  [看看名单]                  │
-│ ・要登录才能看到：是                  │
-│ ・被你屏蔽的人：看不到                │
-│ ・会不会被搜索到：不会                │
-│ ・他们能评论吗：不能                  │
-│ ・他们能引用或下载吗：不能             │
-│ ・你能改回来吗：能，随时              │
-│                                    │
-│ [把可见性改成「我的连接」]            │
-│ [返回，不更改]                       │
-└────────────────────────────────────┘
-```
-
-### 信息层级与区块顺序
-
-1. 当前可见性（现状先讲清）
-2. 范围选项（含不可用项及其原因）
-3. **受众预览**（选择后即时出现，在提交按钮之前）
-4. 提交与取消
-
-**受众预览八要素（§47）**：具体是谁 / 要不要登录 / 屏蔽的人是否排除 / 会不会被搜索 / 能不能评论 / 能不能引用下载转发 / 能不能撤回 / 研究使用范围。缺一不可。
-
-### 状态矩阵
-
-| 状态 | 呈现 |
-|---|---|
-| 加载（受众人数） | `正在算这个范围里具体有哪些人…`；**在算出来之前，提交按钮禁用**并说明：`要先知道具体是谁，才能确认。` |
-| 空（选了"我的连接"但一个都没有） | `你现在还没有连接，所以这个范围里现在是 0 个人。选了也不会有人看到。以后建立连接时也不会自动看到——需要你再来改一次。` |
-| 空（"我指定的人"无可选对象，§121） | `现在没有可以指定的人。只有已经和你建立关系的人才能被指定。` |
-| 错误 | 可恢复：`没能更改可见性。现在还是「只有你」，没有任何改动。` + `再试一次` |
-| 无权限（缺分享同意） | `要分享生命故事，需要你先在「我的同意选择」中同意「生命故事分享」。` + `去我的同意选择` |
-| 无权限（互联网公开） | 选项常驻可见但不可选，附原因（见线框）。**不隐藏**——隐藏会让人以为不存在这回事。 |
-| 受保护存在 | 「我指定的人」的候选名单只包含**已授权的**对象；不得通过搜索框查询任意人（那是存在性探测）。见附录 B 偏差 #1。 |
-
-### 关键交互与确认文案原文
-
-**降低可见性（私密化，简单确认）**
-> `已改成「只有你」。别人现在看不到了。已经看过的人可能还记得内容，这个我们没办法收回。`
-
-**提升可见性到「我的连接」（详细确认）**
-> 标题：`把「老照片里的巷子」给你的 3 个连接看？`
-> 正文：`这 3 个人是：张阿姨、王先生、李叔叔。他们能看，不能评论，不能引用或下载。以后你新建立的连接不会自动看到。你随时可以改回「只有你」。`
-> Primary：`确认给这 3 个人看`　Secondary：`返回，不更改`
-
-**提升到「平台内公开」（加强确认 step-up）**
-> 标题：`把「老照片里的巷子」设为平台内公开？`
-> 正文：`平台上所有登录的合格用户都能看到，也可能在平台内被搜到。这**不是**互联网公开——它不会出现在搜索引擎里。你随时可以改回来，但改回来之前看过的人，我们没办法让他们忘记。`
-> 加强步骤：`请输入「平台内公开」四个字来确认`（输入框）
-> Primary：`确认设为平台内公开`　Secondary：`返回，不更改`
-
-**社区受众（§123）追加说明**
-> `发到社区之后，社区成员和这个社区的审核人员能看到，内容会出现在社区的帖子流里，并且要遵守这个社区第 3 版的规则。`
-
-### 无障碍要点
-
-- 范围选项用 `<fieldset>` + `<legend>选一个范围</legend>` + radio 组（这里 radio 是对的：互斥的单一取值，且有明确"当前值"）。
-- 不可用项用 `disabled` + `aria-describedby` 指向原因文本——**不要**只靠灰色。
-- 受众预览区 `aria-live="polite"`，选项变化时播报 `你选的是我的连接，具体是 3 个人。`
-- 名单展开是 `<details>`，`<summary>看看名单</summary>`。
-- 提交按钮的可访问名包含目标范围（`把可见性改成「我的连接」`）——从按钮名就能知道后果。
-
----
-
-## B12 生命故事：撤回与导出
-
-**文档**：Doc 20 §125–126 | **状态**：**部分实施**。**已实施**：向平台索取自己信息的副本（`participant.export`，owner-only + confirmed），以及**看到这个请求后来怎么样了**（新增 `export.view-own`）。请求此前在服务器上一直是被允许的、路由也在，但参与者工作区里没有任何入口，等于这项权利只对知道 API 的人存在；而只加一个按钮同样不够——**看不到结果的请求与从未提出的请求无法区分，被拒绝会看起来和沉默一模一样**。措辞不承诺投递：这是一个请求，由**不是提出人的另一个人**审核（数据库层拒绝由请求人自己批准），副本在那之后才生成，`Approved` 不写成「已生成」，`Generated` 不写成「已交付」。索取**不问理由**——要一份自己信息的副本，不以解释为条件。生命故事条目的撤回（`withdrawItem`）在后端已有，参与者屏尚未提供入口。**未实施**：生命故事单条导出、撤回入口
-
-### 目标与这一屏要回答的问题
-
-1. 我想让某篇不再被看到，怎么办？有几种"收回"？
-2. 收回之后，已经发生的事情怎么算？（诚实回答：看过的人记住了，我们没办法）
-3. 我想把我写的东西拿走一份，怎么拿？什么时候能拿到？
-4. 导出的东西里有没有别人的内容？有没有 AI 参与？
-
-### 线框（移动，撤回）
-
-```text
-┌────────────────────────────────────┐
-│ [← 返回]                            │
-│ h1  收回「老照片里的巷子」            │
-│ p 「收回」有几种，程度不一样。请选一种。│
-│                                    │
-│ ┌ 选项 ──────────────────────────┐ │
-│ │ ( ) 改成只有我能看               │ │
-│ │     内容留着，别人看不到了。       │ │
-│ │     [这是最轻的一种，随时可以改回] │ │
-│ └────────────────────────────────┘ │
-│ ┌ 选项 ──────────────────────────┐ │
-│ │ ( ) 从社区里撤下来                │ │
-│ │     帖子从「园艺角」消失。内容留在 │ │
-│ │     你的档案里。                  │ │
-│ └────────────────────────────────┘ │
-│ ┌ 选项 ──────────────────────────┐ │
-│ │ ( ) 不让研究使用这篇              │ │
-│ │     以后生成的研究数据集不再包含它。│ │
-│ │     [已经锁定的数据集不会改写]     │ │
-│ └────────────────────────────────┘ │
-│ ┌ 选项（破坏性） ──────────────────┐ │
-│ │ ( ) 请求删除这篇                  │ │
-│ │     [⚠] 删除之后找不回来。         │ │
-│ │     出于研究记录完整性，一些治理    │ │
-│ │     记录（谁在什么时候做了什么）    │ │
-│ │     会保留，但不含内容本身。        │ │
-│ └────────────────────────────────┘ │
-│                                    │
-│ h2  这样做之后会怎样                 │
-│ 立刻发生：                          │
-│ ・[✓] 别人立刻看不到了               │
-│ 需要一点时间：                       │
-│ ・[⏳] 已经缓存的地方会陆续更新       │
-│ 我们做不到的：                       │
-│ ・[✗] 已经看过的人记住的内容           │
-│ ・[✗] 别人自己截图保存的内容           │
-│                                    │
-│ [确认：改成只有我能看]                │
-│ [返回，不收回]                       │
-└────────────────────────────────────┘
-```
-
-### 线框（移动，导出）
-
-```text
-┌────────────────────────────────────┐
-│ h1  导出我的生命故事                 │
-│ h2  会包含什么                       │
-│ ・6 篇你确认过的证言（含每一版的历史）  │
-│ ・2 篇草稿                          │
-│ ・1 段别人补充的内容（标着是谁补充的）  │
-│ ・AI 参与情况（哪些地方用了 AI）       │
-│ ・可见性和分享记录                    │
-│ h2  不会包含什么                     │
-│ ・别人写的、你没有权利带走的内容        │
-│ ・其他参与者的任何信息                │
-│ h2  格式                            │
-│ ・一个 ZIP 文件，里面是纯文本和图片     │
-│                                    │
-│ [开始生成导出文件]                    │
-│                                    │
-│ ─ 生成后 ────────────────────────  │
-│ [◐] 正在生成 · 大概几分钟             │
-│ [✓] 已经生成好 · 有效期 7 天           │
-│     [下载]                          │
-│ [✓] 你在 2026-08-03 下载过            │
-└────────────────────────────────────┘
-```
-
-### 信息层级与区块顺序
-
-**撤回**：选项（由轻到重）→ **后果三分类（立刻/需要时间/做不到）** → 确认。
-**导出**：包含什么 → 不包含什么 → 格式 → 生成 → 三态（生成中 / 已生成 / 已下载，§126 明确要求三态分开）。
-
-后果三分类是本屏的设计核心：Doc 20 §125 要求 "shows immediate effects and pending propagation"，本设计再加一类**"我们做不到的"**——这是诚实措辞原则的直接要求。
-
-### 状态矩阵
-
-| 状态 | 呈现 |
-|---|---|
-| 加载（生成导出） | `正在生成 · 大概几分钟`。**这一屏可以离开**：`你可以先去做别的，生成好了会在这里。` 不做假进度条。 |
-| 空（无内容可导出） | `你还没有写过东西，所以现在没有可以导出的内容。` |
-| 错误（撤回失败） | 可恢复：`没能收回。可见性还是原来的「我的连接」，没有任何改动。` + `再试一次` |
-| 错误（导出失败） | 可恢复：`导出文件没有生成成功。你的内容一点没受影响。` + `再试一次` + `联系研究团队` |
-| 无权限（缺导出同意） | `要导出，需要你先在「我的同意选择」中同意「导出」。` |
-| 受保护存在 | 导出内容里**不含**其他参与者的任何标识；别人补充的内容按其授权范围裁剪，并在文件里说明 `这一段是别人写的，按当时的授权范围包含在这里`。 |
-
-### 关键交互与确认文案原文
-
-**改成只有我能看（简单确认）**
-> `已改成「只有你」。别人现在看不到了。已经看过的人记住的内容，我们没办法收回。`
-
-**请求删除（加强确认）**
-> 标题：`删除「老照片里的巷子」？`
-> 正文原文：
+> This link cannot be opened right now. The content may no longer be there,
+> or you may not have permission to see it.
+> We will not tell you which — that protects everyone's privacy, including yours.
+> You can go back to the home page, or contact the research team.
 > ```
-> 删除之后：
-> ・这篇的内容会被删掉，找不回来。
-> ・它的所有历史版本也一起删掉。
-> ・出于研究记录的完整性，一份治理记录会保留：什么时候有一篇内容被删除、由谁删除。这份记录里不含内容本身。
-> ・如果这篇内容已经进入了锁定的研究数据集，那份数据集不会被改写——我们不能事后修改已经锁定的研究记录。以后新生成的数据集不会再包含它。
-> ・已经看过的人记住的内容，我们没办法收回。
-> ```
-> 加强步骤：`请输入这篇的标题来确认：老照片里的巷子`
-> Primary：`确认删除这篇`　Secondary：`返回，不删除`
+> Actions: `Back to home` (Primary), `Contact the research team` (Secondary).
 
-**导出三态播报**
-> 生成中：`正在生成。你可以先去做别的。`
-> 已生成：`导出文件已经生成好了，7 天内可以下载。`
-> 已下载：`已经下载。文件在你的设备上，请自己保管好——它里面有你的个人内容。`
+**A corollary (a hard constraint on B7/B17)**: any form that lets someone type another person's identifier freely and gives success or failure feedback based on it is an existence-probing channel. No such form may exist in the participant workspace — blocking and reporting can only be started from existing context (a conversation, a candidate card, a post, a connection). See Appendix B, deviation #1.
 
-### 无障碍要点
+### 0.7 Live regions and announcements
 
-- 后果三分类用三个带图标的列表（`[✓]` 立刻 / `[⏳]` 需要时间 / `[✗]` 做不到），图标形状可区分。
-- 破坏性选项用 destructive 令牌 **加** `[⚠]` 图标 **加** "找不回来"文字。
-- 加强确认的输入框有可见 `<label>`，且 `aria-describedby` 指向要输入的确切文字。
-- 导出状态区 `aria-live="polite"`；轮询更新时只在**状态变化**时播报，不重复播报"正在生成"。
-- 「下载」按钮在文件未就绪时不渲染（而不是禁用）——避免反复尝试点击一个灰按钮。
+- Exactly one `<p role="status" aria-live="polite">` per screen, announcing **the result of an operation** (success, failure, a state change) and never plain navigation.
+- Serious errors (safety-critical, security-critical, a missing access token) use their own `role="alert"` and do not reuse the status region.
+- **Prohibited**: rendering persistent server state inside a live region as a status display (the current ConsentPanel's `<p aria-live="off">Status: …</p>` conflates "the result of the last operation" with "the current consent state"; see Appendix A).
+- After a list refresh, announce the count and its meaning: `Updated: 3 conversations.` — never an unread count, because there is none.
 
----
+### 0.8 The general construction of a status badge (Doc 20 §56; colour is never sufficient)
 
-## B13 无障碍与偏好设置（能力自适应模式）
-
-**文档**：Doc 20 §103–104、§286–287 | **状态**：**部分实现（2026-08-04）**
-
-**已实施**：字号（标准/大/更大/最大）、内容密度（标准/宽松）、对比度（标准/高）、减少动效。这四项的样式钩子（`data-font-scale` / `data-density` / `data-contrast`）**样式表里一直都有，却从来没有任何代码去设置它们**——四档字号与三档密度定义了却够不到，是「有能力但没人能调用」，与「控件按了不做事」正好是一体两面。按 §B13 的要求**即时生效、不设保存按钮**（有保存按钮就意味着它还没生效），并有实时预览。「标准」**移除属性而非写入 `standard`**：显式写「标准」会悄悄推翻使用者在操作系统层面已经做过的设置（`prefers-contrast` / `prefers-reduced-motion`），屏上还会如实说明「你的设备已经要求…，本平台已经在遵守」。偏好**只存在本机**，屏上直说，免得「你的偏好」被读成会跟着人走。措辞上**没有任何一项被描述为缺陷**。
-
-**刻意不实施**：念出来、一次只显示一步、更简单的说法、更长操作时间。设计里有，实现里一样都没有——摆上去就是记录一个没有任何代码会读的选择，与 D-2 立下的规矩相同。「有人在旁边帮我操作」已由 D-15 的常驻协助横幅实现，本屏只指路，不重复一个控件。
-
-**顺带修掉的量测缺陷**：320px（§G 的 400% 放大目标）下，最宽的导航标签 `Messages`（当前项加粗）需要 71px 而每槽只有 68px，**被裁掉 3px**——D-10 当时的算术略偏乐观。修法是收回导航条自身的左右内距（导航条是贴边框架元件，不需要正文的外边距），而**不是缩小字号**：给年长使用者把字缩小去迁就布局，方向就是反的。另外在 `xl`/`xxl` 两档字号下让导航换行成 **2+2 而不是 3+1**——原先 3+1 会把 `Messages` 裁掉 7px 并让 `Help` 独占一整行；放大字号正是使用者为了看清才选的，在那个时候裁掉标签等于在最需要它的场合把字弄没了。
-
-### 目标与这一屏要回答的问题
-
-1. 字太小 / 对比不够 / 动画晃眼 / 想让它念给我听 —— 在哪调？
-2. 调了会变成什么样？（**当场看到，不用先保存**）
-3. 调错了怎么退回去？
-4. 会不会因为我调了这些，别人就觉得我"不行"？（不会——**没有一个选项被描述为缺陷**）
-
-### 线框（移动）
-
-```text
-┌────────────────────────────────────┐
-│ h1  阅读与操作方式                   │
-│ p 这些都是你的偏好，随时可以改。      │
-│   选什么都不会影响你在研究里的任何    │
-│   事，也不会被当成对你的评价。         │
-│                                    │
-│ ┌ 实时预览（吸顶） ────────────────┐ │
-│ │ 预览                             │ │
-│ │ 这是正文看起来的样子。            │ │
-│ │ [这是一个按钮]                    │ │
-│ │ label 这是一个输入框               │ │
-│ │ [__________]                     │ │
-│ └────────────────────────────────┘ │
-│                                    │
-│ h2  字号                            │
-│ ( ) 标准  ( ) 大  (•) 更大  ( ) 最大  │
-│                                    │
-│ h2  对比度                          │
-│ (•) 标准  ( ) 高对比                 │
-│                                    │
-│ h2  内容密度                        │
-│ (•) 标准                            │
-│ ( ) 宽松（每屏少一点内容，间距更大）   │
-│                                    │
-│ h2  语言与步骤                       │
-│ [ ] 用更简单的说法                    │
-│ [ ] 一次只显示一步                    │
-│ [ ] 减少页面上的内容，只留必要的       │
-│     p 安全和紧急的信息永远保留。       │
-│                                    │
-│ h2  声音与动效                       │
-│ [ ] 把内容念出来                      │
-│ [ ] 减少动效                         │
-│     p 你的系统设置里已经开了「减少动效」，│
-│       我们已经在遵守它。               │
-│                                    │
-│ h2  时间                            │
-│ [ ] 需要更长的操作时间                │
-│     p 我们本来就尽量不设时间限制。开了  │
-│       这个，需要计时的地方会给更多时间。│
-│                                    │
-│ h2  别人帮我用                       │
-│ [ ] 有人在旁边帮我操作                │
-│     p 打开后，界面会把「谁在操作」写清楚。│
-│       帮你的人做的每一步都会记下来是    │
-│       他们做的，不是你做的。            │
-│                                    │
-│ [保存这些设置]  [全部恢复成标准]       │
-│ p[role=status]                     │
-└────────────────────────────────────┘
 ```
-
-### 信息层级与区块顺序
-
-1. `h1` + **不评价声明**（在任何选项之前）
-2. **实时预览**（吸顶，永远可见 —— §104 要求 live preview）
-3. 视觉：字号 → 对比度 → 内容密度
-4. 认知：简单说法 → 一次一步 → 内容精简
-5. 感官：朗读 → 减少动效
-6. 时间
-7. 协助模式
-8. 保存 / 恢复标准
-
-**命名纪律（§104 "No selection is labelled as a deficit"）**：
-- ✗ `老年模式` `简易模式` `无障碍模式` `辅助模式`
-- ✓ `更大` `高对比` `宽松` `用更简单的说法` `一次只显示一步`
-- 屏幕标题用 `阅读与操作方式`，不用 `无障碍设置`（后者暗示"你有障碍"）。导航项同名。
-
-### 状态矩阵
-
-| 状态 | 呈现 |
-|---|---|
-| 加载 | 本屏**先用本地已保存的偏好渲染**，再与服务器同步；不出现"设置加载中"的空白。 |
-| 空（从未设置） | 全部为标准值，顶部提示：`现在是标准设置。下面每一项你都可以试试看，预览会当场变。` |
-| 错误（保存失败） | 可恢复，且必须说明当前生效范围：`设置没有存到服务器。这台设备上已经生效了，换一台设备就得重新设。` + `再试一次` |
-| 无权限 | 不适用——偏好设置对每个人永远可用，不受同意项或暂停状态影响。 |
-| 受保护存在 | 不适用。 |
-| 协助模式已开启 | 全局上下文横幅（每屏可见）：`现在是「有人帮我操作」模式。正在操作的是：李护士。` + `切换回我自己操作` |
-
-### 关键交互与确认文案原文
-
-**当场生效，保存是持久化**：每次更改**立即**在预览区和整个界面生效；`保存这些设置` 只是把它同步到账户。这是 §287 "available during a task, no restart" 的直接要求。
-
-**恢复标准（简单确认）**
-> 标题：`把所有设置恢复成标准？`
-> 正文：`字号、对比度、密度和其他偏好都会回到标准值。你随时可以再调回来。`
-> Primary：`确认恢复成标准`　Secondary：`返回，保留我的设置`
-
-**开启协助模式（详细确认）**
-> 标题：`打开「有人在旁边帮我操作」？`
-> 正文：`打开之后，界面上会一直显示现在是谁在操作。帮你的人做的每一个动作，都会记录成是他们做的，不是你做的。有些事情——比如同意、确认你的证言、退出研究——**只能由你本人来做**，别人替不了。`
-> Primary：`确认打开协助模式`　Secondary：`返回，不打开`
-
-### 无障碍要点
-
-- 预览区吸顶：`position: sticky`；在 200% 缩放下若占屏超过 40%，退化为"预览"按钮打开一个可关闭的预览面板。
-- 每组选项是 `<fieldset>` + `<legend>`；单选用 radio，多选用 checkbox（这里语义正确，因为有明确"当前值"）。
-- 更改选项后 `role="status"` 播报：`字号已经改成「更大」。`
-- **`减少动效` 的默认值来自系统**：若系统已开启 `prefers-reduced-motion`，复选框预勾选并附说明（见线框），且不允许"关掉"系统级设置——只能在系统未开启时额外开启。
-- 键盘：不使用滑块（slider）调字号——离散 radio 更容易用键盘与屏幕阅读器操作。
-- 本屏的设置更改**不得**导致焦点丢失：改字号后焦点仍在刚操作的那个 radio 上。
-
----
-
-## B14 公开档案编辑与预览
-
-**文档**：Doc 20 §131–133、§256 | **状态**：未实现
-
-### 目标与这一屏要回答的问题
-
-1. 别人在匹配和社区里看到的"我"，是什么样子？
-2. 每一项信息，我要不要放上去？（**逐项 opt-in，默认全不放**）
-3. 放上去之后谁能看到？在手机上和电脑上分别长什么样？
-4. 我能不能撤下来？
-
-**硬规则**：公开档案与参与者档案（研究用的那份）是**两份东西**，界面上必须说清楚，不得合并（§354 "combining ParticipantProfile and PublicProfile"）。
-
-### 线框（移动）
-
-```text
-┌────────────────────────────────────┐
-│ h1  我的公开档案                     │
-│ [ℹ] 这和研究团队看到的那份资料不是同   │
-│     一回事。研究资料里的东西不会自动   │
-│     出现在这里，你放进来的东西也不会   │
-│     变成研究资料。                    │
-│ 现在状态：[○] 还没有启用              │
-│                                    │
-│ h2  选择要放上去的信息                │
-│ p 每一项都是单独选的。默认一项都不放。 │
-│ ┌────────────────────────────────┐ │
-│ │ [ ] 想让别人怎么称呼你             │ │
-│ │     [阳台老周__________]          │ │
-│ │     p 不要用真实全名。             │ │
-│ ├────────────────────────────────┤ │
-│ │ [ ] 一段自我介绍                   │ │
-│ ├────────────────────────────────┤ │
-│ │ [ ] 大致的兴趣                     │ │
-│ ├────────────────────────────────┤ │
-│ │ [ ] 使用的语言                     │ │
-│ ├────────────────────────────────┤ │
-│ │ [ ] 大致位置（城市一级）            │ │
-│ │     p 不会显示小区、街道或门牌。    │ │
-│ ├────────────────────────────────┤ │
-│ │ [ ] 喜欢怎么联系                   │ │
-│ ├────────────────────────────────┤ │
-│ │ [ ] 我确认过的某几篇生命故事         │ │
-│ │     [挑选…] p 只能挑你已经确认为    │ │
-│ │     证言、并且可见性允许的那些。     │ │
-│ └────────────────────────────────┘ │
-│ ┌ 不能放的（说明） ────────────────┐ │
-│ │ [✗] 出生日期、联系方式、住址、      │ │
-│ │     健康信息、研究记录              │ │
-│ │     这些永远不会出现在公开档案里。   │ │
-│ └────────────────────────────────┘ │
-│                                    │
-│ h2  预览                            │
-│ [手机] [电脑]  ← 切换                │
-│ ┌ 别人看到的样子 ──────────────────┐ │
-│ │ 阳台老周                          │ │
-│ │ 兴趣：园艺、下棋                   │ │
-│ │ 语言：中文                        │ │
-│ └────────────────────────────────┘ │
-│ p 你屏蔽的人看不到这个档案，也不会在   │
-│   任何地方看到你。                    │
-│                                    │
-│ [启用我的公开档案]                   │
-│ [先存着，不启用]                     │
-└────────────────────────────────────┘
+[icon] label text · time   ⓘ explanation (expandable)
 ```
+All three parts are required: an icon (distinguishable by shape, not dependent on colour) + a text label + a one-sentence expandable explanation. A badge may never be colour alone, nor icon alone.
 
-### 信息层级与区块顺序
+### 0.9 The delivery state vocabulary (honest wording; already implemented in `apps/web/src/api.ts`, and the design adopts it unchanged)
 
-1. `h1` + **与研究档案的区分声明**（第一位）
-2. 当前状态（启用 / 未启用）
-3. 逐项选择（默认全关）
-4. **不能放的字段及原因**（常驻可见，不隐藏）
-5. 预览（手机/电脑切换）
-6. 启用 / 暂存
-
-### 状态矩阵
-
-| 状态 | 呈现 |
-|---|---|
-| 加载 | `正在读取你的公开档案…` |
-| 空（从未创建） | `你还没有公开档案。没有也完全可以——不做公开档案，你一样可以参加研究、写生命故事、和已经连接的人发消息。只有匹配和社区里的陌生人会用到它。` |
-| 空（勾了项但都没填内容） | 预览区：`现在什么都没有，别人看到的会是一个空的档案。至少填一项再启用比较好。` |
-| 错误 | 可恢复：`没能保存。你填的内容还在这一页上。` + `再试一次` |
-| 无权限（缺公开档案同意） | `要建立公开档案，需要你先在「我的同意选择」中同意「公开档案」。` |
-| 受保护存在 | 预览显示的是**你的**档案；不提供"看看别人的档案"入口（那属于匹配与社区上下文，且受屏蔽与授权约束）。 |
-| 已停用 | `你的公开档案现在是停用状态。别人看不到它，你的内容还留着。` + `重新启用` |
-
-### 关键交互与确认文案原文
-
-**启用（详细确认）**
-> 标题：`启用你的公开档案？`
-> 正文：`启用之后，在匹配和社区里遇到你的人会看到上面预览的内容：称呼、兴趣、语言。你没勾的项目不会出现。你屏蔽的人看不到。你随时可以停用或改内容——但已经看过的人记住的东西，我们没办法收回。`
-> Primary：`确认启用公开档案`　Secondary：`返回，先不启用`
-
-**停用（简单确认）**
-> `已停用。别人看不到你的公开档案了。你填的内容还留着，随时可以再启用。`
-
-**加入生命故事引用（详细确认）**
-> 标题：`把「老照片里的巷子」放进公开档案？`
-> 正文：`这篇现在的可见性是「我的连接」。放进公开档案会让它的可见性变成和公开档案一样——也就是所有能看到你档案的人都能看到这一篇。这是一个可见性的提升，需要你单独确认。`
-> Primary：`确认放进去，并提升这一篇的可见性`　Secondary：`返回，不放`
-
-### 无障碍要点
-
-- 每个字段是 `<fieldset>`：checkbox（放不放）+ 输入框（放什么）；未勾选时输入框 `disabled` 并 `aria-describedby` 说明"先勾上才能填"。
-- 不可放字段区用 `role="note"`，不用 `alert`。
-- 预览的手机/电脑切换是 `role="tablist"`（两个 tab），切换不改变焦点位置。
-- 预览区内容标记 `aria-label="别人看到的样子"`，且预览内的按钮全部 `disabled` 或改为纯文本——**预览里不能有可点的东西**，避免误以为是真实档案。
-- 200% 缩放下，"电脑"预览改为可横向滚动的独立容器（`overflow-x: auto`），页面本身不横向滚动。
-
----
-
-## B15 评估（基线 / 随访）
-
-**文档**：Doc 20 §106、§172、§250 | **状态**：**不实现，缺两样东西**（裁定 D-17）。第一，`assessment.record` 是 `{}`——不带任何 owner 权限，只给 ResearchCoordinator，**参与者根本不能填自己的评估**；命令也不校验 `enrolmentId` 归谁。第二，也是更根本的一条：**平台里没有量表题库**。`assessment_records.instrument` 与 `instrument_version` 都是自由文本，没有任何表存放题目、选项、计分或版本。要上屏就得由实现者编出题目内容——而量表题目是经过批准的研究材料，不是可以顺手发明的界面文案。**因此首页「等你决定的事」区块也刻意不列评估**：列一件参与者做不了的事，等于指一扇他打不开的门。**解锁条件**：（1）经批准的量表内容与版本化题库落库；（2）新增 owner 作用域的 `assessment.record-own`，且资源归属由 enrolment 上的参与者推导、不接受调用方给的值（D-13 的教训）
-
-### 目标与这一屏要回答的问题
-
-1. 这是什么问卷？为什么问？大概多久？
-2. 我能不能中途停？停了会不会白填？
-3. 有的题我不想答，可以吗？（可以，且**不算作缺失原因不明**）
-4. 答完之后会怎么样？会不会有人给我打分或下结论？
-
-**硬规则**：不得在分析之前暗示任何收益或结论（§172 "avoids claiming benefit before analysis"）。
-
-### 线框（移动，一次一题）
-
-```text
-┌────────────────────────────────────┐
-│ [← 保存并退出]                       │
-│ h1  随访问卷                        │
-│ p 第 3 题 · 共 12 题                 │← 文字进度，不用进度条动画
-│ ─────────────────────────────────  │
-│                                    │
-│ h2  最近两个星期，你觉得跟别人有联系   │
-│     的时候多吗？                     │
-│ p 请选一个最接近你感觉的。没有对错。   │
-│                                    │
-│ ( ) 几乎没有                        │
-│ ( ) 偶尔                            │
-│ ( ) 一半左右                        │
-│ ( ) 大部分时候                      │
-│ ( ) 几乎一直是                      │
-│ ─────────────────────────────────  │
-│ ( ) 我不想回答这一题                 │← §106 明确要求
-│                                    │
-│ [下一题]                            │
-│ [上一题]                            │
-│                                    │
-│ ・[这一题什么意思？]                 │
-│ ・[我想暂停，之后再答]                │
-│ p 你答过的都会存着，回来接着答就行。   │
-│ p[role=status]                     │
-└────────────────────────────────────┘
-```
-
-**开始前（说明屏）**
-
-```text
-┌────────────────────────────────────┐
-│ h1  随访问卷                        │
-│ h2  这是干什么的                     │
-│ p 这些问题是用来看这段时间里大家整体   │
-│   的情况有没有变化。这不是考试，也不是 │
-│   体检——它不会给你任何个人的诊断或    │
-│   评价。                            │
-│ h2  大概要多久                       │
-│ p 大概 10 分钟。你可以随时停下来，答过 │
-│   的会保留。                        │
-│ h2  谁会看到你的答案                  │
-│ p 研究团队会看到。其他参与者看不到。   │
-│   发表的时候是汇总数字，不会写出是谁。 │
-│ h2  有的题不想答                     │
-│ p 每一题都有「我不想回答这一题」。选它 │
-│   完全可以，不影响任何事。            │
-│ [开始]  [先不做，回首页]              │
-└────────────────────────────────────┘
-```
-
-### 信息层级与区块顺序
-
-说明屏（目的 / 时长 / 谁看得到 / 可跳过）→ 逐题 → 完成回执。
-
-**每题内部**：题干 → 一句作答说明 → 选项（方向一致，从"少"到"多"）→ **`我不想回答这一题`（与选项分隔线隔开，但视觉等重）** → 导航 → 帮助与暂停。
-
-**量表方向纪律（§250）**：同一份问卷内所有题目的量表方向必须一致；不得中途反向。选项文字必须完整（不用"1 2 3 4 5"裸数字）。
-
-### 状态矩阵
-
-| 状态 | 呈现 |
-|---|---|
-| 加载 | `正在打开问卷…`；已答内容从本地草稿先渲染。 |
-| 空 | 不适用（问卷总有题目）。若无到期评估，入口在 B1/B8 就不出现。 |
-| 错误（保存单题失败） | 可恢复但必须显眼：`这一题没有存上。你选的还在屏幕上。要不要再试一次？` + `再试一次` + `保存并退出`（后者会尝试整体提交） |
-| 错误（提交失败） | 阻断级：`问卷没有提交成功。你答的内容都还在，没有丢。你可以再试一次，或者先退出，之后回来接着提交。` |
-| 无权限（缺评估同意） | `这份问卷需要你先在「我的同意选择」中同意「评估」。` |
-| 受保护存在 | 评估记录属于自己；访问他人评估 URL → 0.6 统一页面。 |
-| 已过期 | `这份问卷的时间窗已经过去了。这不是你的问题——研究里的问卷有固定的时间范围。研究团队会知道这一份没有收集到。` **不指责**。 |
-| 中途退出 | 记录为 `Partially Completed` + 缺失原因 `Not Collected`；界面文案：`已经保存。你答到第 3 题，随时可以回来接着答。` |
-
-### 关键交互与确认文案原文
-
-**「我不想回答这一题」**（不需要确认，直接生效）
-> 播报：`已记录：这一题你选择不回答。继续下一题。`
-> 后端映射：该题缺失原因 = `Participant Declined`（**显式**，不是静默空值）。
-
-**暂停（简单确认）**
-> `已经保存。你答到第 3 题，随时可以回来接着答。没有时间限制。`
-
-**提交（详细确认）**
-> 标题：`提交这份随访问卷？`
-> 正文：`你答了 10 题，有 2 题选择了不回答。提交之后就不能再改了。`
-> Primary：`提交这份问卷`　Secondary：`返回，再看看`
-
-**完成回执**
-> `已经收到你的答案。谢谢。这些答案会和其他参与者的答案一起分析，我们不会据此给你任何个人的结论。研究结束时，总体结果会告诉每一位参与者。`
-> **禁止文案**：`太棒了！` / `你的分数是…` / `你比上次好多了` / 任何激励性动画。
-
-### 无障碍要点
-
-- 每题是 `<fieldset>` + `<legend>`（题干）；选项 radio。
-- 进度是文字（`第 3 题 · 共 12 题`），放在 `h1` 之后并 `aria-live="polite"` 在换题时播报。
-- 换题后焦点移到新题的 `<legend>`（`tabindex="-1"`），不是移到第一个选项——先听题再选。
-- `我不想回答这一题` 是同一 radio 组的成员（互斥语义正确），但用分隔线与主量表隔开，且**不得**用更小字号或更浅颜色。
-- 不设倒计时。若研究设计要求时间窗，只在说明屏用文字说明截止日期，不在答题过程中显示倒计时（§296）。
-- `保存并退出` 在左上角，任何时候可达；触控目标 ≥44px 且远离 `下一题`。
-
----
-
-## B16 活动与互动：准备 / 完成 / 反思
-
-**文档**：Doc 20 §169–171 | **状态**：未实现
-
-### 目标与这一屏要回答的问题
-
-1. 我要做的这次互动是什么？我想从里面得到什么？
-2. 我想聊点什么？（可以带上一段自己的生命故事）
-3. 事情发生了吗？（**平台不替我判断**）
-4. 感觉怎么样？我还想不想再来一次？需不需要帮助？
-
-**硬规则（§170）**：平台**不得**从"发出了一条消息"推断"互动完成了"。完成状态只能由参与者本人记录。
-
-### 线框（移动，三个阶段）
-
-**准备（§169）**
-
-```text
-┌────────────────────────────────────┐
-│ h1  准备一次交流                     │
-│ p 这些都是可选的。什么都不准备直接去   │
-│   聊，也完全可以。                    │
-│ h2  你想从这次交流里得到什么           │
-│ ( ) 就是说说话                       │
-│ ( ) 认识一个新的人                   │
-│ ( ) 聊一件我在意的事                 │
-│ ( ) 还没想好                        │
-│ h2  想聊点什么                       │
-│ [兴趣、最近的事、以前的事…]           │
-│ h2  要不要带上一段你的故事             │
-│ ・[挑一篇我确认过的生命故事]           │
-│   p 挑了之后，只有你在这次交流里选择   │
-│     分享，对方才看得到。挑选本身不会   │
-│     分享任何东西。                    │
-│ h2  怎么交流                        │
-│ ( ) 发消息  ( ) 打电话  ( ) 见面      │
-│ h2  你需要什么方便                    │
-│ [ ] 希望对方说慢一点                  │
-│ [ ] 希望用文字，不用语音              │
-│ h2  你的界限                         │
-│ p 你随时可以结束交流、屏蔽或报告。     │
-│   不用给理由。                       │
-│ [保存这次准备]  [直接去交流]          │
-└────────────────────────────────────┘
-```
-
-**完成记录（§170）**
-
-```text
-┌────────────────────────────────────┐
-│ h1  上次的交流怎么样了？              │
-│ p 只有你知道实际发生了什么，所以这个   │
-│   得你自己说。系统不会替你判断。       │
-│ ( ) 聊了                            │
-│ ( ) 试了，但没聊成                   │
-│ ( ) 没发生                          │
-│ ( ) 我决定不聊了                    │
-│ ( ) 聊到一半中断了                   │
-│ ( ) 我需要帮助                      │← 选中即显示帮助入口
-│ [记录下来]  [以后再说]                │
-└────────────────────────────────────┘
-```
-
-**反思（§171）**
-
-```text
-┌────────────────────────────────────┐
-│ h1  想聊聊感受吗？（可选）            │
-│ p 每一题都可以跳过。                  │
-│ ・这次交流实际发生了吗？               │
-│ ・对你来说有意义吗？                   │
-│ ・你觉得对方在听你说话吗？             │
-│ ・这次交流难不难？                    │
-│ ・有没有什么让你不舒服？               │
-│   [有] → 立刻显示：[报告] [安全帮助]   │
-│ ・你还想再来一次吗？                   │
-│ ・你现在需要帮助吗？                   │
-│ h2  还想多说几句（可选）              │
-│ label 你想说的                       │
-│ [                                ]  │
-│ [提交我的反思]  [跳过，不填]           │
-└────────────────────────────────────┘
-```
-
-### 信息层级与区块顺序
-
-准备（全部可选）→ 交流本身（发生在平台外或消息里）→ 完成记录（**本人记录**）→ 反思（全部可跳过）。
-
-### 状态矩阵
-
-| 状态 | 呈现 |
-|---|---|
-| 加载 | `正在读取这次活动的安排…` |
-| 空（无安排的活动） | `现在没有安排的交流活动。你随时可以自己给已经连接的人发消息——那不需要任何安排。` |
-| 错误 | 可恢复：`没能保存。你填的都还在。` + `再试一次` |
-| 无权限 | `这部分需要你先同意「干预实施」。` + `去我的同意选择` |
-| 受保护存在 | 若对方已不可访问，活动卡改为：`这次交流的安排现在不能继续了。这很常见，可能有很多原因。你可以记录实际发生了什么，也可以直接跳过。` **不归因于对方**。 |
-| 未记录完成 | 首页任务卡：`你有一次交流还没有记录结果` —— 措辞中性，**不催、不用红色、不用感叹号**。 |
-
-### 关键交互与确认文案原文
-
-**记录完成状态（简单确认）**
-> `已经记录：聊了。谢谢你告诉我们。`
-> 选择 `我需要帮助` 后：`好的。下面是可以找的人。` + `联系研究团队` + `安全帮助` + `报告问题`（三者立即出现，不需要再点一次）
-
-**反思中选择「有让我不舒服的地方」**
-> 立即内联显示（不弹窗、不打断填写）：`如果你想说得更具体，或者想让工作人员知道，下面这些随时可以用。你也可以什么都不做，那也完全可以。` + `报告` + `安全帮助` + `联系研究团队`
-
-**提交反思**
-> `已经收到。这些会和其他参与者的反馈一起看，用来了解整体情况。`
-
-### 无障碍要点
-
-- 完成状态六选项是单一 radio 组，视觉等重——**`聊了` 不得是 Primary 样式**（那会诱导报告成功）。
-- 反思每题是独立 `fieldset`，每题都有 `跳过这一题` 的等重选项。
-- "不舒服"分支用 `aria-live="polite"` 就地展开，焦点不跳走。
-- 准备屏的生命故事挑选打开一个对话框，返回后焦点回到 `挑一篇我确认过的生命故事` 按钮。
-- 全部按钮 ≥44px；`记录下来` 与 `以后再说` 之间 ≥8px。
-
----
-
-## B17 报告与屏蔽中心
-
-**文档**：Doc 20 §168 | **状态**：未实现（当前散在 B7 的 SafetyPanel）
-
-### 目标与这一屏要回答的问题
-
-1. 我屏蔽了谁？
-2. 我静音了哪些会话？
-3. 我报告过什么？现在怎么样了？
-4. 我想取消屏蔽，会发生什么？
-5. 我还能做什么？
-
-**边界**：审核证据与审核决定细节**不在这里显示**（§168 "Moderator evidence and confidential decisions remain protected"）。参与者只看到自己提交了什么、平台收到了没有。
-
-### 线框（移动）
-
-```text
-┌────────────────────────────────────┐
-│ h1  我屏蔽和报告过的                  │
-│                                    │
-│ h2  我屏蔽的人（2）                   │
-│ ┌────────────────────────────────┐ │
-│ │ 张阿姨                           │ │
-│ │ [🚫] 已屏蔽 · 2026-07-28          │ │
-│ │ 你们不会互相出现在推荐里，不能互发  │ │
-│ │ 消息，也看不到彼此的帖子。          │ │
-│ │ [取消屏蔽张阿姨]                   │ │
-│ └────────────────────────────────┘ │
-│                                    │
-│ h2  我静音的会话（1）                 │
-│ ┌────────────────────────────────┐ │
-│ │ 与王先生的会话                    │ │
-│ │ [🔕] 已静音                        │ │
-│ │ 连接还在，你们还能互发消息，只是    │ │
-│ │ 不会有提醒。对方不知道你静音了。     │ │
-│ │ [取消静音]                        │ │
-│ └────────────────────────────────┘ │
-│                                    │
-│ h2  我提交的报告（3）                 │
-│ ┌────────────────────────────────┐ │
-│ │ 2026-07-28 · 骚扰                 │ │
-│ │ [✓] 已经收到，工作人员会看          │ │
-│ │ 你写的：「他一直问我要电话号码」     │ │
-│ │ ⓘ 为了保护相关的每一个人，我们不会  │ │
-│ │   告诉你处理的细节，也不会告诉对方  │ │
-│ │   是谁报告的。                     │ │
-│ │ [查看这份报告的回执]               │ │
-│ └────────────────────────────────┘ │
-│                                    │
-│ h2  我还能做什么                     │
-│ ・[联系研究团队]                     │
-│ ・[安全帮助]                         │
-│ ・[暂停或退出研究]                    │
-│ p[role=status]                     │
-└────────────────────────────────────┘
-```
-
-### 信息层级与区块顺序
-
-1. 我屏蔽的人
-2. 我静音的会话
-3. 我提交的报告（含**不透露处理细节**的说明）
-4. 还能做什么
-
-**报告状态词表（只有两态，诚实）**：`[✓] 已经收到，工作人员会看` / `[✓] 已经处理完了`。
-**不显示**：`审核中` `已确认违规` `对方已被处罚` —— 这些会泄露审核决定，也可能在结论未定时误导（§193 举报人保护、§168 决定保密）。
-
-### 状态矩阵
-
-| 状态 | 呈现 |
-|---|---|
-| 加载 | `正在读取…` |
-| 空（全空） | `你没有屏蔽过谁，也没有提交过报告。这一页平时是空的，需要的时候它就在这里。` + `安全帮助` |
-| 空（分区空） | 该 `h2` 区块整体不渲染（不留"暂无"占位）。 |
-| 错误 | 可恢复：`没能读取。你的屏蔽和报告都还在，没有受影响。` + `再试一次` |
-| 无权限 | 不适用——与 B7 同样，永远可用。 |
-| 受保护存在 | 显示的**只有你自己做过的事**。屏蔽列表里的人如果已经退出平台，条目仍然保留（那是你的记录），但不显示对方任何新状态。 |
-
-### 关键交互与确认文案原文
-
-**取消屏蔽（详细确认 —— 这是提升可及性的动作）**
-> 标题：`取消对张阿姨的屏蔽？`
-> 正文原文：
-> ```
-> 取消屏蔽之后：
-> ・你们可能会重新在推荐里遇到。
-> ・但是原来的连接、会话不会自动恢复——那些需要重新开始。
-> ・你以前提交的报告不受影响，工作人员照样会处理。
-> ・我们不会告诉对方你取消了屏蔽。
-> ・你随时可以再屏蔽回去。
-> ```
-> Primary：`确认取消屏蔽`　Secondary：`返回，继续屏蔽`
-
-**取消静音（简单确认）**
-> `已经取消静音。以后这个会话有新消息时会有提醒。`
-
-**报告回执（只读屏）**
-> 内容：提交时间、你选的类型、你写的原话、`[✓] 已经收到，工作人员会看`、`我们不会告诉对方是谁报告的`、`联系研究团队`。
-> **没有**"查看处理进度"这类入口。
-
-### 无障碍要点
-
-- 三个分区各是 `<ul>`；每项 `<li>`，一个主按钮。
-- 状态徽章按 0.8 构造（`[🚫] 已屏蔽`、`[🔕] 已静音`、`[✓] 已经收到`）。
-- 分区计数写进 `h2`。
-- 取消屏蔽对话框：`aria-describedby` 指向五条后果。
-- 报告原话用 `<blockquote>`，可被朗读。
-
----
-
-## B18 暂停与退出
-
-**文档**：Doc 20 §173–178 | **状态**：未实现
-
-### 目标与这一屏要回答的问题
-
-1. 我想歇一歇，能不能只停一部分？
-2. 停了之后，什么会停、什么还会继续？
-3. 我已经交出去的数据怎么办？（诚实：锁定的数据集不会改写）
-4. 我怎么知道我真的停了？（回执）
-5. 我以后还能回来吗？
-
-**硬规则**：退出入口在首页、我的研究、我的同意选择、帮助与安全**四处**常驻可见。任何"藏起退出"的设计都是反模式（§354）。
-
-### 线框（移动，四步）
-
-**步骤 1 — 选范围（§175）**
-
-```text
-┌────────────────────────────────────┐
-│ h1  暂停或退出                       │
-│ p 你不需要停掉全部。可以只停一部分，   │
-│   也可以只是暂停一阵子。你不需要给     │
-│   任何理由。                        │
-│                                    │
-│ h2  先选一种                        │
-│ ( ) 暂停一阵子 —— 之后可以自己恢复    │
-│ ( ) 永久停掉某些部分                 │
-│ ( ) 完全退出这项研究                 │
-│                                    │
-│ h2  要停哪些（可多选）                │
-│ [ ] 社区                            │
-│ [ ] 认识新朋友（匹配）               │
-│ [ ] 某一个连接                       │
-│ [ ] 消息                            │
-│ [ ] 生命故事的分享（内容留着）        │
-│ [ ] 支持者参与                       │
-│ [ ] AI 帮忙                         │
-│ [ ] AI 记住的东西                    │
-│ [ ] 以后的问卷                       │
-│ [ ] 以后的联系                       │
-│ [ ] 全部研究活动                     │
-│ [继续，看看会发生什么 →]              │
-└────────────────────────────────────┘
-```
-
-**步骤 2 — 后果摘要（§176）**
-
-```text
-┌────────────────────────────────────┐
-│ h1  这样做之后会发生什么              │
-│ p 你选的是：完全退出这项研究。        │
-│                                    │
-│ h2  [✓] 立刻停止                     │
-│ ・不会再给你安排任何活动               │
-│ ・不会再给你发问卷                    │
-│ ・你的公开档案会停用                  │
-│ ・你的社区帖子会撤下来                │
-│                                    │
-│ h2  [⏳] 需要一点时间                 │
-│ ・已经排队的消息会尝试取消             │
-│ ・已经缓存的内容会陆续更新             │
-│                                    │
-│ h2  [→] 还会继续的                   │
-│ ・你已经建立的连接会断开，但对方不会   │
-│   收到解释                          │
-│ ・你自己的生命故事内容会留在你的档案里，│
-│   除非你另外要求删除                  │
-│                                    │
-│ h2  [!] 我们做不到的                 │
-│ ・已经锁定的研究数据集不会被改写。这是 │
-│   研究记录完整性的要求——已经锁定的   │
-│   数据不能事后修改。以后新生成的数据  │
-│   集不会再包含你的数据。               │
-│ ・已经看过你内容的人记住的东西。        │
-│ ・为了治理和审计保留的记录（谁在什么   │
-│   时候做了什么），不含你的内容本身。    │
-│                                    │
-│ h2  你的数据，你还可以选               │
-│ ( ) 已经收集的数据可以继续用于本研究   │
-│ ( ) 请停止在以后的分析里使用我的数据   │
-│ h2  以后还联系你吗                   │
-│ ( ) 可以联系我告诉研究结果             │
-│ ( ) 不要再联系我                     │
-│ [继续 →]                            │
-└────────────────────────────────────┘
-```
-
-**步骤 3 — 确认**（见下方文案）
-**步骤 4 — 回执（§177）**
-
-```text
-┌────────────────────────────────────┐
-│ h1  你的退出回执                     │
-│ [✓] 已经生效 · 2026-08-03 15:42      │
-│ h2  你停掉了什么                     │
-│ ・完全退出这项研究                    │
-│ h2  已经做完的                       │
-│ ・活动安排已停止                      │
-│ ・公开档案已停用                      │
-│ ・社区帖子已撤下                      │
-│ h2  还在处理的                       │
-│ ・[⏳] 已排队的消息正在尝试取消        │
-│ h2  保留的                          │
-│ ・锁定的研究数据集（不会改写）         │
-│ ・治理记录（不含内容）                 │
-│ h2  以后                             │
-│ ・你选择了：可以联系我告诉研究结果      │
-│ ・你想回来的话，联系研究团队就行。      │
-│ [保存这份回执]  [联系研究团队]         │
-└────────────────────────────────────┘
-```
-
-### 信息层级与区块顺序
-
-选范围 → **后果四分类** → 数据与联系选择 → 确认 → 回执。
-
-后果四分类（立刻 / 需要时间 / 还会继续 / 我们做不到）是本屏的核心结构，比 §176 要求的分类更细一层——因为"我们做不到的"必须与"还会继续的"分开，前者是能力边界，后者是设计选择。
-
-### 状态矩阵
-
-| 状态 | 呈现 |
-|---|---|
-| 加载 | `正在算这样做会影响哪些东西…`；**算完之前不显示确认按钮**。 |
-| 空 | 不适用。 |
-| 错误（提交失败） | 阻断级：`没有提交成功。你还在研究里，什么都没有改变。如果你想马上停下来，可以直接联系研究团队，他们能帮你办。` + `再试一次` + `联系研究团队` |
-| 错误（部分成功） | 诚实分列：`一部分已经生效：社区已经停止。还有一部分没有成功：匹配还没停。你可以再试一次，或者联系研究团队。` **不得**笼统说"部分失败"。 |
-| 无权限 | 不适用——退出永远可用，**不受任何暂停、审核或安全状态限制**。硬规则。 |
-| 受保护存在 | 「某一个连接」的选择列表只列出你自己的连接。 |
-| 已暂停中 | 顶部：`你现在是暂停状态（从 2026-07-20 开始）。` + `恢复参与` + `改成永久退出` |
-
-### 关键交互与确认文案原文
-
-**暂停（详细确认）**
-> 标题：`暂停你在这项研究里的活动？`
-> 正文：`暂停期间不会给你安排新的活动，也不会给你发问卷。你的内容都留着。你随时可以自己恢复——不需要经过谁批准。`
-> Primary：`确认暂停`　Secondary：`返回，先不暂停`
-
-**完全退出（加强确认 step-up）**
-> 标题：`完全退出这项研究？`
-> 正文：`你会退出这项研究的全部活动。上一页列的后果都会发生，包括已经锁定的数据集不会被改写这一条。退出不需要理由，也不会有人问你为什么。如果你以后想回来，联系研究团队就可以。`
-> 加强步骤：`请输入「退出研究」四个字来确认`
-> Primary：`确认退出这项研究`　Secondary：`返回，不退出`
-> 成功播报：`已经退出。下面是你的回执。`
-
-**语言纪律（§174 "Withdrawal language remains neutral"）**：
-- ✗ `真的要走吗？` `你确定要放弃吗？` `我们会想你的` `你的贡献很宝贵，再考虑一下？`
-- ✓ `确认退出这项研究` `退出不需要理由`
-- **不得**在退出流程中插入任何挽留内容、不得把"返回"按钮做成 Primary。
-
-### 无障碍要点
-
-- 步骤 1 的"先选一种"是 radio；"要停哪些"是 checkbox，两者用不同 `fieldset`。
-- 后果四分类用四个 `h2` + 图标列表（`[✓]` `[⏳]` `[→]` `[!]`），图标形状可区分且有文字。
-- 加强确认的输入框有可见 `<label>`；输入不匹配时的提示不指责：`输入的字和上面不一样。请照着输入「退出研究」。`
-- 回执可 `保存这份回执`（下载/打印），且是**独立可回访的屏**（从 B2 的同意回执与 B8 都能到）。
-- 四步之间焦点移到每步的 `h1`。
-- 退出流程**不使用**任何计时、倒数或"最后机会"式压力。
-
----
-
-## B19 AI 伴侣
-
-**文档**：Doc 20 §205–220（另见 §221 降级态、§53、§179） | **状态**：未实现（M11 网关已有；`PROHIBITED_AI_ACTIONS` 18 项 Level-5 动作在后端按名拒绝）
-
-### 目标与这一屏要回答的问题
-
-1. 这是什么？是人还是机器？（**永远先说：是 AI**）
-2. 它现在能帮我做什么？**不能**做什么？
-3. 它说的话是从哪来的？靠不靠谱？
-4. 它记住了我的什么？我能不能让它忘掉？
-5. 它做不了或者不肯做的时候，我找谁？
-
-### 架构原则：没有"全局聊天框"
-
-**Doc 20 §205 明示：`A universal global chat is not the primary interface.`**
-AI 只出现在**定义好的上下文入口**里，每个入口有固定角色、固定可用工具、固定上下文范围：
-
-| 入口 | 角色标签 | 能做 | 绝不能做 |
-|---|---|---|---|
-| B10 生命故事编辑器 | `生命故事助手` | 起头、转写、翻译、整理、起标题、说简单些、提出待确认细节 | 确认证言（`confirm_participant_testimony` 被禁） |
-| B4 写消息 | `消息草稿助手` | 改语气、说得更清楚、翻译 | 选收件人、改通信基础、确认发送（`send_message_unconfirmed` 被禁） |
-| B5 匹配解释 | `推荐说明助手` | 用平实语言解释这条推荐 | 替你做决定、创建互相接受、建立连接（均被禁） |
-| B6 发帖草稿 | `帖子草稿助手` | 改写草稿 | 发布 |
-| B8 / 同意说明 | `研究说明助手` | 解释研究和同意条款 | 代替你同意或撤回（`grant_consent`/`withdraw_consent` 被禁） |
-| B16 准备与反思 | `交流准备助手` | 帮你想话题、整理想法 | 判断互动是否发生 |
-| 全局导航 | `导航帮助` | 告诉你某个功能在哪 | 代你操作 |
-
-导航中**没有** "AI 伴侣" 这个独立目的地。有的是"AI 能帮忙的地方"说明页（列出上表 + 记忆控制 + 对话历史），从 B13/帮助进入。
-
-### 线框（移动，以 B10 内的生命故事助手为例）
-
-```text
-┌ AI 面板（内嵌，不是全屏聊天） ────────┐
-│ ┌ 角色抬头（永远第一行） ───────────┐ │
-│ │ [🤖] 生命故事助手 · 这是 AI，不是人  │ │
-│ │ 它能：帮你起头、转写、整理、起标题   │ │
-│ │ 它不能：替你确认这是你的故事，也     │ │
-│ │ 不能替你分享给任何人。               │ │
-│ │ 会不会记住：这次的内容不会被记住，   │ │
-│ │ 除非你在「AI 记住的东西」里另外允许。 │ │
-│ │ [找人帮忙 →]                       │ │
-│ └────────────────────────────────┘ │
-│                                    │
-│ [帮我起个头]                        │
-│                                    │
-│ ┌ 回应（§208 五段结构） ────────────┐ │
-│ │ ① 回答                            │ │
-│ │ 「你可以从这辆自行车最早是怎么来的  │ │
-│ │  说起。」                          │ │
-│ │                                    │ │
-│ │ ② 这是从哪来的                     │ │
-│ │ [来源] AI 建议（不是根据你已有的     │ │
-│ │        内容，是通用写作建议）        │ │
-│ │                                    │ │
-│ │ ③ 有多确定                        │ │
-│ │ [◐] 需要你确认 —— 这只是一个提议，  │ │
-│ │     不是关于你经历的说法。           │ │
-│ │                                    │ │
-│ │ ④ 接下来可以做                     │ │
-│ │ ・[用这个开头] ・[换一个] ・[不用]   │ │
-│ │                                    │ │
-│ │ ⑤ [找人帮忙]                       │ │
-│ │                                    │ │
-│ │ [看看它是怎么想的]  ← 折叠，默认收起 │ │
-│ └────────────────────────────────┘ │
-│                                    │
-│ p AI 会出错。它给的每一句，都要你自己 │
-│   看过才算数。                       │
-└────────────────────────────────────┘
-```
-
-**AI 提议一个动作时（§212–214）**
-
-```text
-┌ role=alertdialog ─────────────────┐
-│ h3 AI 建议做这件事——要不要做，你定    │
-│ [🤖] 这是 AI 的提议，还没有做。        │
-│ 做什么：把这段文字保存为草稿           │
-│ 对哪个：「我父亲的自行车」             │
-│ 谁会看到：只有你                      │
-│ 为什么建议：你写了一段还没有保存       │
-│ 会怎么样：多一份草稿，只有你能看到     │
-│ 能不能撤销：能，你可以删掉草稿         │
-│ 用到你的什么：这一段文字               │
-│ ─────────────────────────────────  │
-│ [保存为草稿]   [不用了]               │
-│ p 这个确认只对这一条提议有效。你改了   │
-│   内容，就得重新确认。                 │
-└────────────────────────────────────┘
-```
-
-**执行之后（§214）**：显示的是**归属域返回的结果**，不是模型说的话。
-```
-[✓] 已经保存为草稿
-    由「生命故事」保存 · 2026-08-03 14:20
-    [看这份草稿]
-```
-
-### 信息层级与区块顺序（每个 AI 面板固定顺序）
-
-1. **角色抬头**（是 AI / 当前角色 / 能做 / 不能做 / 会不会记住 / 怎么找人）—— §206–207，**永远在最前，不可折叠**
-2. 可用动作（少而具体，不是自由输入框）
-3. 回应（§208 五段：回答 → 来源 → 不确定性 → 下一步 → 找人）
-4. 长推理折叠在 `看看它是怎么想的` 之后
-5. 尾部提醒：`AI 会出错`
-
-**来源标签词表（§209）**：`已批准的研究说明` / `你的偏好设置` / `你确认过的证言` / `你的生命故事草稿` / `这条推荐的信息` / `社区规则` / `检索到的资料` / `工具执行结果` / `AI 建议`。
-
-**不确定性标签词表（§210）**：`有依据` / `部分有依据` / `需要你确认` / `草稿` / `需要人工复核` / `没办法核实`。构造按 0.8（图标+文字+可展开）。
-
-### 状态矩阵
-
-| 状态 | 呈现 |
-|---|---|
-| 加载 | `正在想…（大概几秒）` + `不等了` 按钮。不做假进度、不做打字机动画（`reduced-motion` 下更不可）。 |
-| 空（无历史） | `还没有用过这里的 AI 帮忙。用不用都可以——不用 AI，功能一样能做完。` |
-| 错误（AI 不可用，§221） | `AI 帮忙的功能现在用不了。这不影响你自己写、保存和确认。` + `再试一次` + `找人帮忙` |
-| 错误（供应商降级，§223） | `AI 现在反应比较慢或者不太稳。你写的东西不受影响。` |
-| 错误（知识降级，§222） | `现在拿不到研究资料，所以关于研究的问题它可能答不上来。你可以直接问研究团队。` + `联系研究团队` |
-| 无权限（缺 AI 同意） | AI 面板整体不渲染，位置替换为：`AI 帮忙这一项需要你先在「我的同意选择」中同意。不同意也完全可以——所有功能你都能自己完成。` |
-| 无权限（AI 被暂停） | `AI 帮忙现在被暂停了。你自己写、保存、确认都不受影响。` |
-| 受保护存在 | AI 上下文里**绝不**包含被屏蔽对象、他人的受保护资源、他人的私密内容。若参与者问及他人，回应统一为：`这个我没法回答，也没法确认有没有这个人。`（与 0.6 同口径） |
-| 需要人工复核（§216） | `[⏳] 这件事需要人来看一下。已经转给工作人员了。你现在不用做什么，也可以取消。` + 显示：在复核什么 / 大概走哪条路 / 当前状态 / `取消这次复核` / `如果着急，直接联系研究团队` |
-| 拒绝（§215） | 见下方文案 |
-
-### 关键交互与确认文案原文
-
-**AI 拒绝（§215）**
-> `这件事我做不了。`
-> `为什么：确认一段内容是不是你的证言，只能由你本人来做。这是规则，不是技术问题。`
-> `你可以：自己去确认这一版。` + `[去确认]`
-> `想找人的话：` + `[联系研究团队]`
-> **不得**暴露内部安全细节（不说"策略引擎拒绝了 action=confirm_participant_testimony"）。
-
-**AI 安全升级（§217）**
-> `听起来你现在可能不太好受。`
-> `如果你或者别人现在有危险，请拨打当地紧急电话。这个平台不是紧急求助渠道。`
-> `你要不要我把这件事告诉安全团队？由人来看。` + `[告诉安全团队]` + `[先不用]`
-> 提交后：`已经告诉安全团队了，会有人看。` —— **绝不**说 `已经确认为安全事件`（SafetySignal ≠ SafetyEvent，§354）。
-
-**AI 依赖防护（§218，界面级硬规则）**
-AI 文案**禁止**出现：表达喜欢或爱、暗示排他（"只有我懂你"）、在你离开时表现失落（"你要走了吗，我会想你"）、劝阻你去找人（"跟我说就行"）、催促你多说（"再多讲讲嘛"）、使用愧疚（"你好久没来了"）。
-AI 文案**应当**出现：`这件事跟人说可能更好。要不要我帮你想想怎么开口？` / `聊到这里就可以。你想停就停。`
-
-**AI 记忆控制（§179、§220，独立屏）**
-
-```text
-┌────────────────────────────────────┐
-│ h1  AI 记住的东西                    │
-│ p 这些是 AI 为了帮你而记下的。它们和   │
-│   你的生命故事、你的档案是分开的      │
-│   ——记住的东西不是你的证言。          │
-│ ┌────────────────────────────────┐ │
-│ │ 「喜欢用文字，不喜欢语音」          │ │
-│ │ 从哪来的：你在偏好设置里选的        │ │
-│ │ 用来做什么：让它默认用文字回你      │ │
-│ │ 哪些角色能用：消息草稿助手、        │ │
-│ │              交流准备助手           │ │
-│ │ 什么时候过期：研究结束时            │ │
-│ │ 限制：不用于匹配                    │ │
-│ │ [改一改] [让它忘掉这条]            │ │
-│ └────────────────────────────────┘ │
-│ [让它忘掉全部]                       │
-│ p 这里不会有任何"个性化分数"之类的     │
-│   隐藏东西。你看到的就是全部。         │
-└────────────────────────────────────┘
-```
-
-> **让它忘掉这条（简单确认）**：`已经忘掉了。以后 AI 不会再用这条。`
-> **让它忘掉全部（详细确认）**：标题 `让 AI 忘掉全部记住的东西？` 正文 `AI 以后不会再用这些来帮你，可能会问一些以前问过的问题。你的生命故事、档案和研究数据都不受影响——那些是另外的东西。` Primary `确认全部忘掉`　Secondary `返回，保留`
-
-**Level-5 全禁的界面表现**：后端按名拒绝 18 项动作。界面必须**在提议出现之前**就不提供这些路径：AI 面板里根本没有"替我同意""替我确认证言""替我发送""替我建立连接""替我发布"这类按钮。若模型输出中出现此类意图，界面呈现为拒绝（见上方拒绝文案），**不得**渲染成一个可点的提议。
-
-### 无障碍要点
-
-- 角色抬头是面板内第一个可读元素，`role="note"`，不可折叠、不可关闭。
-- AI 生成区 `aria-live="polite"` + `aria-busy="true"` 期间不播报中间片段——**生成完成后一次性播报**（避免逐字打断屏幕阅读器）。
-- 播报首句固定为：`AI 给了回应。`（让使用者立刻知道这是 AI 产出，不是人）
-- `看看它是怎么想的` 是 `<details>`，默认收起，不影响主流程焦点。
-- AI 提议对话框：`role="alertdialog"`，`aria-describedby` 指向"会怎么样/能不能撤销"两段。
-- AI 草稿文本框可直接编辑；编辑后 `[🤖] AI 起草` 标签**保留**（并追加 `· 你改过`），不因编辑而消失。
-- 拒绝与降级态用 `role="status"`，不用 `alert`（它们不是紧急事件）；安全升级用 `role="alert"`。
-
----
-
-## 附录 A：B1–B7 当前实现 → 目标设计 差异清单
-
-标注含义：**[名]** = 会改变可访问名或可见文本，**直接影响现有 34 个前端测试**，需同步改测试；**[结构]** = 只改 role/层级/顺序，测试不受影响（已核实测试中无 `getByRole('heading')` 查询）；**[新增]** = 新元素，不影响既有断言。
-
-### B1 首页（`App.tsx`）
-
-| # | 当前 | 目标 | 影响 |
-|---|---|---|---|
-| A1.1 | 只有 5 个导航按钮，无"当前研究步骤" | 新增「你在研究的哪一步」区块 | [新增] |
-| A1.2 | ~~无到期评估、无草稿、无待决社交动作~~ | **部分实施**：首页新增「等你决定的事」区块。目前只列一类，因为目前只有这一类既真实存在又参与者真的能处理：支持者提议写入其生命故事的内容——`life-story.review-contribution` 是 `ownerOnly`，只有参与者本人能接受或拒绝，而在此之前没有任何查询把待决内容列出来，等于别人可以往你的故事里写而你无从得知。**接受时会问「放到哪一部分」**：支持者从自己的工作区写东西时看不到参与者的故事，因此无法指定放在哪一段；而**拒绝不需要任何位置**——此前接受与拒绝都要求 itemId，于是这类贡献既不能接受也不能拒绝，会永远停在这个列表里（已修）。参与者一段都还没写时如实说「没有地方可以放」，但仍然可以说不。**评估未纳入**：`assessment.record` 不带 owner 权限，参与者无法完成，列出一件他做不了的事等于指一扇打不开的门。**草稿与待决社交动作未纳入**：前者是本地状态、后者尚无待参与者裁决的社交动作 | 已完成可诚实实施的部分 |
-| A1.3 | ~~无「暂停或退出」入口~~ | **部分实施**：首页常驻「你在研究里的位置」+「离开这项研究」（退出后端一直是 owner-permitted，只是参与者够不到）。**暂停未实现**：`Paused` 是合法状态但没有任何命令能转入，放一个按钮等于放一个不起作用的控件 | 已完成可诚实实施的部分 |
-| A1.4 | 无「我的研究」「我的生命故事」「设置」导航项 | 导航扩为 9 项 | [新增] |
-| A1.5 | ~~`h1 今天想做什么？` 后无期待管理句~~ | **已实施**：`Anything that needs a decision from you is below. When those are done, they are done — nothing here keeps going on its own.` 反信息流的话直接说出来，而不是靠版式暗示 | 已完成 |
-| A1.6 | ~~任务清单是一个扁平 `<ul>` 五按钮~~ | **已实施，分组与原设想不同**：三个 `h2` 分组为「你的信息与谁能看到」/「你随时可以做的事」/「帮助与安全」。「轮到你的」不再需要单独分组——它已经是首页上「等你决定的事」（A1.2）与「你在研究里的位置」（A1.3）两个实名区块。**改为按隐私聚类**：随着每一项够不到的权利被接上入口，清单从 5 条涨到 8 条，八个无标题按钮是一堵墙不是一次选择；而同意（能对我的信息做什么）、谁能访问我（由谁）、索取副本（我能带走什么）三者合起来正好回答「谁能看到我的东西」这一个问题，这是真实的聚类而非整理 | 已完成 |
-| A1.7 | 导航是顶部横排 | 移动端置底、桌面端左栏 | [结构] |
-
-**说明**：现有 5 个按钮的文案（`查看或更改我的同意选择` 等）**保持不变**，移入「你随时可以做的事」分组。
-
-### B2 我的同意选择（`ConsentPanel.tsx`）
-
-| # | 当前 | 目标 | 影响 |
-|---|---|---|---|
-| A2.1 | 屏幕主标题是 `h2 我的同意选择` | 改为 `h1` | [结构] |
-| A2.2 | 只有 4 个同意范围 | 扩到 §97 的 22 个，分「必需」/「可选」两组、五个主题小组 | [新增]（现为 6 个——平台实际门控的全部；其余 16 个在各自有权限门控之前上屏即为假保障，见 D-2）|
-| A2.3 | 每项只有一句 description | 扩为 §98 八要素（为什么问 / 涉及信息 / 谁能看 / 是否必需 / 三种后果 / 怎么改 / 当前状态） | [新增] |
-| A2.4 | ~~**无常驻当前状态**~~ | **已实施**：常驻当前状态从服务器读取（`consent_current`，与权限引擎同一张投影表），含决定时间与所依据的同意文本版本；操作结果只进 `role="status"`，`aria-live="off"` 元素已移除 | **[名]** — 已完成 |
-| A2.5 | 无「有条件地同意」 | 新增 `有条件地同意…` + 限制选择对话框 | [新增] |
-| A2.6 | 无知识检查（§99） | 新增 | [新增] |
-| A2.7 | 无提交前确认摘要（§100） | 新增 `提交我的同意选择` | [新增] |
-| A2.8 | 无同意回执（§101）、无再同意（§102） | 新增独立回执屏 | [新增] |
-| A2.9 | 撤回对话框只有一段后果 | 扩为四条（含"不等于退出研究"） | [名]（`wd-{scope}` 段落文本变化；测试若按文本匹配需更新） |
-
-**必须保留不变的可访问名**（测试直接依赖）：`同意「…」`、`拒绝「…」`、`撤回「参与研究」的同意`、`确认撤回「参与研究」`、`返回，不撤回`。目标设计全部保留这五个模式。
-
-### B3 消息：会话列表（`MessagesScreen.tsx`）
-
-| # | 当前 | 目标 | 影响 |
-|---|---|---|---|
-| A3.1 | ~~需点才加载~~ | **已实施**：进入即加载 + 加载态；按钮改为 `Refresh my conversations and connections` | 已完成 |
-| A3.2 | 会话按钮名 `与 pt_b 的会话（进行中）` —— 直接暴露内部 participantId | 改为允许公开身份（`打开与张阿姨的会话`） | **[名]** — `getByRole('button', {name: /与 pt_b 的会话/})` 失效；见附录 B 偏差 #2 |
-| A3.3 | ~~无 CommunicationBasis 说明~~ | **已实施**：每行显示 `Why you can write to each other: …`，四个 basis 各有措辞（ActiveConnection / AuthorisedRelationship / InterventionSession / ModeratedCommunity）| 已完成 |
-| A3.4 | 连接行文本 `pt_b（已联系）` | 改为公开身份 + 状态徽章 | **[名]** — `getByText('pt_b')` 失效 |
-| A3.5 | ~~无基础失效行的只读呈现~~ | **已实施**：非 Active 的会话在列表行上就说明不能再发，并在会话内以 `role=note` 重述；不再让人打开、写完、才被拒 | 已完成 |
-| A3.6 | 无通往报告与屏蔽中心的入口 | 新增 | [新增] |
-| A3.7 | 空态是 `还没有会话。可以从下面的联系开始一个。` | 扩为 §226 四要素 | [名]（空态文本变化） |
-
-**保留**：`开始会话` 按钮名不变。
-
-### B4 消息：会话详情（`MessagePanel.tsx`）
-
-| # | 当前 | 目标 | 影响 |
-|---|---|---|---|
-| A4.1 | `h2 写消息` 是屏幕主标题；收件人 `displayName` 实为 participantId | `h1 与张阿姨的会话`；`写消息` 降为 `h2` | **[名]** — `getByText('写消息')` 仍可通过（文本仍在），但层级变；收件人显示值变化影响 `message-panel.test.tsx` 中的确认对话框断言 |
-| A4.2 | ~~需点才加载历史~~ | **已实施**：进入即加载；按钮改为 `Refresh message history` | 已完成 |
-| A4.3 | ~~无 CommunicationBasis 显示~~ | **已实施**：会话顶部显示可写原因；不可写时显示原因 | 已完成 |
-| A4.4 | 发送确认只有收件人 + 版本 + 内容 | **部分实施**：已加通信基础与「确认≠送达」（确认只是交给投递服务；未知就停在未知，不会变成已送达）。附件与扫描状态**未加**——本实现没有附件，凭空写一行等于声称一个不存在的检查 | 已完成可诚实实施的部分 |
-| A4.5 | ~~无诈骗与链接警告~~ | **已实施**：草稿含外部链接时内联出现（不是对话框——它是提示不是决定），文案不评判对方，尾注写明「这只是一个提醒」。动作为三个而非五个：`Not now`（**不清空草稿**——安抚性选项不能是破坏性的）、`Change the message`、`Get help, block or report`（真的跳转到 Help and safety，屏蔽与报告在那里）| 已完成 |
-| A4.6 | 无失败/未知重试（§162） | 新增 `再发一次` + 重复投递警示 | [新增] |
-| A4.7 | 无 `报告这条消息` / `屏蔽{对方}` 入口 | 每条对方消息旁常驻 | [新增] |
-| A4.8 | 草稿态只在 `notice` 里出现一次 | 改为持久吸顶标签 `草稿 — 只有你能看到` | [新增] |
-
-**保留**：`消息内容`（label）、`保存草稿`、`检查并发送`、`发送消息`、`内容已修改——请先重新保存草稿，再检查并发送。`、`当前状态：`、`<ol aria-label="消息记录">`、全部 `DELIVERY_STATE_LABELS`。
-
-### B5 认识新朋友（`MatchingPanel.tsx`）
-
-| # | 当前 | 目标 | 影响 |
-|---|---|---|---|
-| A5.1 | 屏幕主标题 `h2 认识新朋友（可选）` | 改 `h1` | [结构] |
-| A5.2 | 开启匹配、看推荐、建立连接**三件事在同一屏** | 拆为四个阶段屏（介绍 / 开启前复核 / 候选 / 互相接受与连接） | [结构] + **[名]**（`matching-panel.test.tsx` 依赖同屏出现 `建立连接`） |
-| A5.3 | 无介绍屏（§143），无 `推荐 ≠ 互相兴趣 ≠ 连接` 图示 | 新增 | [新增] |
-| A5.4 | `开启匹配` 按钮直接生效，无 §145 复核 | 新增复核屏 + 详细确认 | [新增]（`开启匹配` 名保留，位置移到复核屏） |
-| A5.5 | 候选卡只有 explanation + 三决定 | 增加：过期时间、`查看这条推荐的详细说明`（§149）、`屏蔽`、`报告` | [新增] |
-| A5.6 | 无 MatchExplanation 详情（来源/时效/不确定性/策略版本/禁止用途） | 新增 | [新增] |
-| A5.7 | `感兴趣` 确认只说"对方不会收到通知" | 扩为 §151 五要点 | [名]（确认对话框文本变化；`确认` 按钮名建议改为 `确认「感兴趣」`）**[名]** |
-| A5.8 | 互相接受只有"存在/不存在"两态，且只在内存中 | 五态（正在核对 / 有效 / 已过期 / 已失效 / 已用过），从服务器读 | [新增] |
-| A5.9 | 无候选空态区块（只有 announcement） | 新增 §154 空状态 | [名]（`目前没有新的推荐。没有推荐也完全没关系。` 从 status 移到区块） |
-| A5.10 | 三个决定按钮已等重 ✅ | 保持，并加入"三者 computed style 必须一致"的可检验规则 | — |
-
-**保留**：`查看当前推荐`、`感兴趣`、`建立连接`、`确认建立连接`、`你们互相表示了兴趣`、`匹配默认关闭…`、`你们都选择了园艺作为兴趣`。
-**建议改名（需权衡）**：通用的 `确认` → `确认「感兴趣」`（§324 禁止 vague label）。这会破坏 `getByRole('button', {name: '确认'})`。
-
-### B6 社区（`CommunityPanel.tsx`）
-
-| # | 当前 | 目标 | 影响 |
-|---|---|---|---|
-| A6.1 | 屏幕主标题 `h2 社区（可选）` | 改 `h1` | [结构] |
-| A6.2 | 帖子作者显示 `成员 {authorParticipantId}` | 改为安全公开身份（`阳台老周`） | **[名]** — 见附录 B 偏差 #2 |
-| A6.3 | feed 卡无 `报告`/`屏蔽` | 每张卡常驻（§136 硬要求） | [新增] |
-| A6.4 | 无「停止参与社区」（§141） | 新增 | [新增] |
-| A6.5 | 无「报告社区内容」流程（§142） | 新增五步流程，**从帖子卡发起，不输入标识** | [新增] |
-| A6.6 | 「我的草稿」在社区列表页底部，与所属社区分离 | 保留在列表页（跨社区草稿总览），同时在社区内页也显示该社区的草稿 | [新增] |
-| A6.7 | 写帖子区在 feed 之后 | 移到 feed **之前**（读之前先给写的机会，避免消费流） | [结构] |
-| A6.8 | 无「撤回已发布帖子」 | 新增 `撤回这条帖子` | [新增] |
-| A6.9 | 无社区规则版本徽章（只在加入对话框里出现一次） | 社区卡与内页常驻 `规则第 3 版` + `查看这一版规则` | [新增] |
-| A6.10 | 发布确认无"发布之后"后果三条 | 补充 | [名]（对话框文本变化） |
-
-**保留**：`查看规则并加入`、`同意规则并加入`、`进入「园艺角」`、`发布…`、`确认发布`、`草稿 — 只有你能看到`、`想分享的内容…`（label）、`帖子按时间从新到旧显示。`、全部 `POST_STATE_LABELS`。
-
-### B7 帮助与安全（`SafetyPanel.tsx` + App help 屏）
-
-| # | 当前 | 目标 | 影响 |
-|---|---|---|---|
-| A7.1 | **报告要手输 `对方的标识`；屏蔽要手输 `要屏蔽的人的标识`** | 全部改为从上下文发起（会话 / 帖子 / 候选卡），本屏只做路由 | **[名]** — `getByLabelText('对方的标识')`、`getByLabelText('要屏蔽的人的标识')`、`屏蔽此人`、`提交报告` 全部受影响。**这是本清单中最重要的一项**，见附录 B 偏差 #1 |
-| A7.2 | 紧急声明在 App 的 help 屏中段（`<p>` 里） | 提到最顶部，独立 `role="note"` 区块，常驻 | [结构]（文本 `本平台不是紧急求助渠道` 保留） |
-| A7.3 | `SafetyPanel` 主标题是 `h2 屏蔽与报告` | 拆分：帮助与安全（B7）保留路由 + 安全担忧；屏蔽与报告记录移入 B17 | [结构] |
-| A7.4 | 屏蔽确认只有一句 | 扩为 §166–167 七条效果 + `同时报告这个人` 复选 | [名]（`block-confirm-heading` 文本变化；`确认屏蔽`/`返回，不屏蔽` 名保留） |
-| A7.5 | 安全担忧文本域用 `aria-label="安全担忧内容"`，无可见 label | 改为可见 `<label>你担心的是什么（用你自己的话）</label>` | **[名]** — `getByLabelText('安全担忧内容')` 失效 |
-| A7.6 | 无「联系研究团队」入口 | 新增，置于紧急声明之后 | [新增] |
-| A7.7 | 无 FAQ / 无障碍声明 / 暂停退出入口 | 新增 | [新增] |
-| A7.8 | 报告提交回执是 `报告已提交，工作人员会查看。` | 扩为不预告结果 + 举报人保护说明 | [名] |
-| A7.9 | 安全担忧提交失败仅走通用 `未成功：{code}` | 改为安全关键级错误处理（保留内容 + 紧急电话提醒 + 联系团队） | [新增] |
-
-**保留**：`提交安全担忧`、`确认屏蔽`、`返回，不屏蔽`、`报告会由工作人员查看，不会由自动系统单独决定。`、`即使你之后屏蔽了对方，这份报告仍会被处理。`、`本平台不是紧急求助渠道`。
-
-### 会改变可访问名的改动汇总（需同步改测试）
-
-| 改动 | 受影响测试文件 | 建议处理 |
+| Domain state | What the participant sees | Explanation (expandable) |
 |---|---|---|
-| A2.4 同意常驻状态徽章取代 `<p aria-live="off">状态：…</p>` | `consent-panel.test.tsx` | 断言改为查状态徽章文本 |
-| A3.1 移除 `查看我的会话与联系`（改为自动加载） | `messages-screen.test.tsx` | 改为等待列表出现 |
-| A3.2 / A3.4 / A6.2 内部 ID → 公开身份 | `messages-screen.test.tsx`、`community-panel.test.tsx` | mock 数据增加 `displayName`；断言改用显示名 |
-| A4.2 移除 `查看消息记录` | `message-panel.test.tsx` | 改为等待 `消息记录` 列表出现 |
-| A5.2 匹配四阶段拆屏 | `matching-panel.test.tsx` | 测试需分阶段驱动 |
-| A5.7 `确认` → `确认「感兴趣」` | `matching-panel.test.tsx` | 直接改名（**需产品确认**，见附录 C 未决 #6） |
-| A7.1 移除标识输入框，屏蔽/报告改为上下文发起 | `safety-panel.test.tsx` | 测试需从会话/帖子上下文驱动 |
-| A7.5 `安全担忧内容` → `你担心的是什么（用你自己的话）` | `safety-panel.test.tsx` | 改 `getByLabelText` 参数 |
+| Not Submitted | `Draft — not sent yet` | Only you can see this. |
+| Queued | `Confirmed, queued to send` | You confirmed sending it and the system is working on it. |
+| Sent to Provider | `Handed to the sending service` | It has gone to the service responsible for delivery; the result is not known yet. |
+| Provider Accepted | `The sending service accepted it (they have not received it yet)` | The delivery service took this message. **That is not the same as it reaching them.** |
+| Delivered | `Delivered to them` | The delivery service confirmed it arrived. Whether it was read, we do not know. |
+| Delivery Failed | `Sending failed — you can try again` | It did not arrive. Your content is still here and you can try again. |
+| Delivery Unknown | `Delivery state unknown — being checked; this does not mean success` | We do not know the result for now. **Unknown means unknown**, and it will never quietly become "delivered". |
 
-**不改可访问名**的改动（A1.*、A2.1、A5.1、A6.1、A6.7、A7.2 等）可以先行落地，不阻塞测试。建议实施顺序：先做全部 [结构] 与 [新增]，再一次性处理 [名]。
+**Hard rule**: the interface may never rewrite `failed` or `unknown` as `delivered` without a result from the owning domain; it may never show `sent` on a mere "confirmation succeeded"; and it shows no read receipts (not enabled in this phase).
 
----
+### 0.10 Glossary (stable; no synonym substitution)
 
-## 附录 B：现有实现与 Doc 20 的实质性偏差
+consent / withdraw consent / testimony / draft / publish / connection (making contact) / both expressed interest / audience / visibility / moderation / safety signal / block / report / pause / leave.
 
-按严重度排列。#1–#3 我判断为**必须修**；#4–#8 为规范缺口。
+### 0.11 Language (Doc 20 §277–284)
 
-### 偏差 #1（严重，安全性）：屏蔽与报告的自由标识输入是存在性探测通道，违反 ADR-050
-
-`SafetyPanel.tsx` 有两个自由文本输入：`对方的标识`（报告）与 `要屏蔽的人的标识`（屏蔽），提交后根据成功/失败给出不同反馈（`已屏蔽。` vs `未成功：{code}`）。
-
-这构成一个可枚举的探测接口：任何参与者可以反复输入猜测的标识，从反馈差异中推断某个标识**是否存在于平台上**。ADR-050 要求受保护资源一律 `DenyAndHideExistence → 404`；后端做到了，但前端把这个门重新打开了——因为后端无法区分"参与者屏蔽一个不存在的人"（应当 404）与"参与者屏蔽一个存在但无关的人"（可能成功）。
-
-**Doc 20 §27 明确**：`The interface must not explain that one person has blocked another unless policy permits disclosure.` §153 明确：`The interface does not disclose whether the other person was notified.` 当前实现两者都没有直接违反，但输入框本身泄露的是更基础的东西——存在性。
-
-**修复方向**（已写入 B7/B17/B6/B5/B4 设计）：屏蔽与报告**只能从已有上下文发起**（会话、帖子、候选卡、连接），目标由上下文提供，参与者不输入任何标识。B7 只保留路由与"与具体内容无关的报告"（后者不指向任何人，是自由文本 + 可选类别）。
-
-**注**：这不只是 UI 问题——若后端 `POST /blocks` 接受任意 `targetActorId`，即使 UI 改了，API 仍是探测面。建议同时评估后端是否应要求"存在共享上下文"才允许 block/report（这超出设计代理范围，列入附录 C 未决 #1）。
-
-### 偏差 #2（严重，隐私+术语）：界面直接显示内部参与者标识作为人的身份
-
-- `MessagesScreen.tsx:53` — `recipient: { participantId, displayName: active.otherParticipantId }`，把内部 ID 当作显示名
-- `MessagesScreen.tsx:73` — `与 {t.otherParticipantId} 的会话`
-- `MessagesScreen.tsx:87` — `{c.otherParticipantId}（已联系）`
-- `CommunityPanel.tsx:181` — `成员 {p.authorParticipantId}`
-
-Doc 20 §156 要求连接激活显示 `both permitted public identities`；§136 要求 feed 显示 `author or safe public identity`；§131 要求 PublicProfile 与 ParticipantProfile 分离。当前实现绕过了整个 PublicProfile 概念，直接渲染内部主键。
-
-后果：①内部标识在参与者之间传播，成为跨界面关联的把手；②参与者无法控制自己被如何称呼（§132 逐项 opt-in 落空）；③与 B14 的整个设计前提冲突。
-
-**修复方向**：API 返回 `displayName`（来自 PublicProfile），前端只渲染 `displayName`；无 PublicProfile 时显示中性占位（`一位社区成员`），**不回退到 ID**。
-
-### 偏差 #3（中，原则）：匹配三个阶段挤在同一屏，违反"一次一个有意义的决定"
-
-`MatchingPanel.tsx` 在一个 `<section>` 内同时提供：开启匹配（高影响：启动数据用于推荐）、对候选做决定（高影响）、建立连接（高影响）。DESIGN_BRIEF §2 明确"单屏不得并列两个高影响决定"。
-
-此外缺 §143 介绍屏与 §145 开启前复核——参与者在**不知道会用到自己哪些信息、谁能看到、多久过期**的情况下就能点 `开启匹配`，这直接违反"先解释再询问"。
-
-**修复方向**：拆四屏（见 B5）。
-
-### 偏差 #4（中）：同意屏没有"当前状态"
-
-`ConsentPanel.tsx` 从不读取现有同意状态。参与者进入这一屏，看不到自己已经同意了什么——只有在点了按钮之后才出现一行 `状态：已同意`（且那是本次操作结果，不是服务器状态；刷新即消失）。
-
-Doc 20 §98 把 `current state` 列为同意选项组件的必备要素。没有它，参与者无法回答"我到底同意了什么"，而这正是同意屏存在的理由。
-
-**次生问题**：`<p aria-live="off">状态：{msg}</p>` 把操作结果渲染成看起来像持久状态的文本，容易被误读为"当前同意状态"。
-
-### 偏差 #5（中）：同意范围只有 4 项，§97 要求 22 项
-
-当前：参与研究 / 加入社区 / 开放匹配 / 消息交流。
-缺失（部分）：评估、生命故事、媒体、AI 转写与翻译、生命故事分享、支持者贡献、公开档案、平台内公开、匹配属性、连接、AI 互动、AI 记忆、质性研究、导出、以后联系、保留期限、可选的二次使用。
-
-后果：B9–B12（生命故事）、B14（公开档案）、B15（评估）、B19（AI）的"无权限"状态无法落地——它们要引用的同意项不存在。这是 P1 阶段的阻塞项。
-
-### 偏差 #6（中）：屏幕主标题层级不一致
-
-`MessagesScreen` 用 `h1`；`ConsentPanel` / `MatchingPanel` / `CommunityPanel` / `SafetyPanel` 用 `h2` 作为屏幕主标题，且 App 的 home/help 屏用 `h1`。结果是同一应用内标题层级不稳定，屏幕阅读器的"按标题导航"体验不一致（ACCESSIBILITY_TEST_PLAN 关注项）。
-
-### 偏差 #7（轻）：所有列表都需要手动点按钮才加载
-
-`MessagesScreen`（`查看我的会话与联系`）、`MessagePanel`（`查看消息记录`）、`MatchingPanel`（`查看当前推荐`）都要求参与者先点一个按钮才看到内容。`CommunityPanel` 用 `useEffect` 自动加载——同一应用内两种模式并存。
-
-Doc 20 §224–226 假定的是"进入即有内容或有明确的加载/空状态"。手动加载按钮既增加一次无意义的点击，也让"空"与"还没点"无法区分。
-
-### 偏差 #8（轻）：无空状态设计、无错误分级
-
-当前所有错误走同一路径：`未成功：{err.error.code}` 或 `网络错误，未提交`，渲染进 `role="status"`。这违反 §231（错误必须说明"工作有没有保存/什么没有发生/怎么恢复"）与 §232（五级严重度）。技术错误码直接暴露给参与者，也违反"技术码只作为可选细节"。
-
-空状态目前只是 announcement 里的一句话（如 `目前没有新的推荐。没有推荐也完全没关系。`——措辞是好的），不是屏幕上的持久区块，刷新即消失。
-
-**注**：这两项属于 UI_INVENTORY I11/I13，本文件在每屏的状态矩阵中给出了具体文案，但统一组件规范应在设计系统交付物中定义。
-
-### 做得对、应当保留的（避免重构时丢失）
-
-- `DELIVERY_STATE_LABELS` 七个状态的诚实措辞，尤其 `发送服务已接受（对方尚未收到）` 与 `送达状态未知 — 正在核实，不代表成功` —— 这是整个实现里最符合 Doc 20 §50/§161 的部分。
-- 匹配三个决定视觉等重、`感兴趣` 未被做成 Primary。
-- 匹配决定后的播报文案：`对方不会收到通知；只有当对方也表示兴趣时…`。
-- 社区加入绑定确切规则版本并全文展示。
-- 社区草稿标 `草稿 — 只有你能看到`，发布需显式确认且点名社区。
-- `POST_STATE_LABELS` 区分"已被限制可见"与"已被移除"，未混为"已删除"。
-- 消息编辑使确认失效（`edited` 判定）。
-- 报告与屏蔽相互独立的说明：`即使你之后屏蔽了对方，这份报告仍会被处理。`
-- `AccessTokenGate` 把环境问题与身份问题分开说明，这是正确的错误归因。
-- CSS 中关于"44px 按钮落在 29px 行框里互相压叠"的修复注释与 `main li > button { display:block }` 规则。
+Second person, short sentences, plain; never condescending; never age labels ("the elderly", "seniors", "silver"); refusal and failure copy says **what can be done next** first and does not blame; no promise of benefit ("this will make you less lonely" ✗).
 
 ---
 
-## 附录 C：需要产品决策的未决项
+## B1 Home (the task list)
 
-以下问题我不擅自决定。每项给出选项与我的倾向，但需要产品/研究团队拍板。
+**Documents**: Doc 20 §36, §107 | **Status**: implemented (`apps/web/src/App.tsx`)
 
-### C1（阻塞 B7/B17，安全性）：后端是否要求"共享上下文"才允许 block/report？
+### Purpose, and the questions this screen answers
 
-前端改为上下文发起后，`POST /blocks` 与 `POST /reports` 仍可被直接调用并接受任意 `targetActorId`。
-- 选项 A：后端要求 targetActorId 与调用者存在共享上下文（会话/候选/同社区帖子），否则 404。
-- 选项 B：保持现状，仅前端约束（API 仍是探测面）。
-- 选项 C：允许无上下文屏蔽，但对所有结果返回同一响应（成功/不存在无差别）。
-**我的倾向**：A + C 组合。但"参与者在线下认识某人、想预先屏蔽"是真实需求，A 会挡掉它——需要产品判断这个场景的优先级。
+The home page is **the list of things to do today**, not something you can scroll forever. It answers:
 
-### C2（阻塞 B3/B6/B14）：PublicProfile 缺位时显示什么？
+1. Where am I in this research right now?
+2. What is waiting for me today? (and this list is **finite and can be finished**)
+3. Where is the thing I did not finish writing last time?
+4. Is an assessment due?
+5. Who do I go to if something is wrong? What if I want to stop?
 
-参与者在有 PublicProfile 之前就可能建立连接、发帖。
-- 选项 A：强制先建 PublicProfile 才能进入匹配/社区。
-- 选项 B：显示中性占位（`一位社区成员`）。
-- 选项 C：显示系统生成的中性代称（`成员 A`、`园丁 3 号`）。
-**我的倾向**：B（匹配前）+ A（进入匹配前必须有）。C 有把代称当身份用的风险。**绝不选**"回退到 participantId"。
+**It does not answer**: "what is everyone else doing". There is no other person's content on the home page.
 
-### C3（阻塞 B2）：22 个同意范围一次全上，还是分批？
+### Wireframe (mobile)
 
-§97 的完整列表在一屏里是很重的认知负担，即使分组。
-- 选项 A：全部一次呈现（合规完整，负担高）。
-- 选项 B：按研究阶段分批（入组时必需 + 核心；使用到某功能时再问该功能的可选项）。
-- 选项 C：全部呈现，但可选项默认折叠为分组摘要。
-**我的倾向**：C。但 B（"及时同意"）在伦理上是否可接受，需要研究伦理侧判断——特别是"参与者在被功能吸引的时刻做同意决定"是否构成不当影响。
+```text
+┌──────────────────────────────────────┐
+│ h1  What would you like to do today?  │
+│ p   Here is what is waiting for you.  │
+│     When it is done, it is done —     │
+│     new things do not keep appearing. │
+│                                      │
+│ ┌ Where you are in the research ────┐ │
+│ │ [◐] Stage 2 · of 4                │ │
+│ │ Taking part for 3 weeks           │ │
+│ │ [See my research →]               │ │
+│ └───────────────────────────────────┘ │
+│                                      │
+│ h2  Waiting for you (3)               │
+│ ┌ task card ────────────────────────┐ │
+│ │ [!] Follow-up questionnaire       │ │
+│ │ About 10 minutes · any time this  │ │
+│ │ week                              │ │
+│ │ You can stop partway; answers are │ │
+│ │ kept.                             │ │
+│ │ [Start the follow-up]             │ │
+│ └───────────────────────────────────┘ │
+│ ┌ task card ────────────────────────┐ │
+│ │ [✎] You have 1 unfinished life    │ │
+│ │     story draft                   │ │
+│ │ Only you can see it               │ │
+│ │ [Keep writing this draft]         │ │
+│ └───────────────────────────────────┘ │
+│ ┌ task card ────────────────────────┐ │
+│ │ [✉] Mrs Zhang sent you a message  │ │
+│ │ (no count, no content preview)    │ │
+│ │ [Open this conversation]          │ │
+│ └───────────────────────────────────┘ │
+│                                      │
+│ h2  Things you can do any time        │
+│ ・[Write to someone you are connected │
+│    to]                               │
+│ ・[Look at the community (optional)]  │
+│ ・[Meet new people (optional)]        │
+│ ・[See or change my consent choices]  │
+│ ・[Adjust text size, contrast and     │
+│    reading]                          │
+│                                      │
+│ h2  If you need help or want to stop  │
+│ ・[Get help or report a problem]      │
+│ ・[Pause or leave the research]       │
+│                                      │
+│ p[role=status]                       │
+└──────────────────────────────────────┘
+```
 
-### C4（影响 B5）：MutualAcceptance 与候选的过期时长
+Desktop (≥64rem): the same single column, `main` centred at 48rem; task cards do not split into columns — **no two-column grid**, to avoid "two decisions at once".
 
-设计里我写了"候选 14 天过期""互相接受 14 天失效"，这是占位值。真实值应来自 C10（匹配策略配置）。需要研究者定义，且**必须在 §145 复核屏对参与者说明**。
+### Information hierarchy and block order (not interchangeable)
 
-### C5（影响 B4/B19）：AI 消息草稿助手在本阶段是否启用？
+1. `h1` + one sentence managing the expectation that the list finishes
+2. **Where you are in the research** (the current stage, read-only, pointing at B8)
+3. **Waiting for you**: a due assessment > an unfinished draft > a social action awaiting your decision (a mutual acceptance to confirm, a new message). At most one card per kind; more than one collapses into "open the list".
+4. **Things you can do any time** (no time pressure, with optionality stated in the label)
+5. **If you need help or want to stop** (always visible on the home page, never buried in settings; Doc 20 §354 names "hiding withdrawal" as an anti-pattern)
 
-M11 网关存在，但消息草稿助手会引入"参与者发出的话有多少是自己的"这个研究效度问题（Doc 19 关切）。
-- 选项 A：本阶段不启用，AI 只在生命故事与导航帮助里出现。
-- 选项 B：启用，但所有 AI 参与的消息在**接收方**也显示 `[🤖] 对方用 AI 帮忙写了这条` 标签。
-- 选项 C：启用，只在发送方显示标签。
-**我的倾向**：A（本阶段）。若选 B，需要新的产品决策：向接收方披露 AI 参与是否会污染人际互动这一被研究的干预本身。
+### State matrix
 
-### C6（影响测试）：`确认` → `确认「感兴趣」` 的改名要不要做？
+| State | Presentation |
+|---|---|
+| Loading | `Seeing what is waiting for you today…`, holding the height of three cards; blocks 4 and 5 are available immediately (they need no network) and render first. |
+| Empty (no tasks) | Under `h2 Waiting for you`: `There is nothing for you to do right now. That is normal — the research does not have something scheduled every day. If you would like to do something, anything below is available.` **No encouragement copy such as "well done" or "keep it up".** |
+| Error | An inline recoverable error in blocks 2 and 3: `We could not fetch today's list. Nothing of yours was lost and nothing was changed.` + `Try again` + `Contact the research team`. Blocks 4 and 5 remain usable. |
+| Not permitted | The home page is never wholly unavailable; if the target of a single task card requires consent, the card is rewritten as: `This needs you to agree to "Community participation" first.` + `Go to my consent choices`. |
+| Protected existence | When the object a task card points at is no longer visible, the card **disappears silently**, leaving no trace such as "that content was deleted"; after a refresh the status region announces only `The list has been updated.` |
 
-§324 禁止在后果重大时使用 vague label。当前匹配决定确认按钮就叫 `确认`。改名会破坏 `matching-panel.test.tsx` 的一条断言。
-**我的倾向**：改。但由于测试是行为契约，需要确认改测试的成本可接受。
+### Key interactions and confirmation copy
 
-### C7（影响 B13/全局）：协助模式下的"谁在操作"如何取得？
+The home page **carries no action requiring confirmation** — it only navigates. That is deliberate: confirmation happens on the target screen, where the full account of consequences lives ("explain before asking").
 
-B13 的协助模式要求界面显示"现在操作的是李护士"，并把动作记录成协助者做的。当前身份是 dev-header 桩，没有双身份概念（actor + on-behalf-of）。这需要 M01/权限侧支持，不是纯设计问题。
+### Accessibility points
 
-### C8（影响 B12/B18）：参与者请求删除后，"治理记录保留"的具体范围
-
-我在文案里写"保留谁在什么时候做了什么，不含内容本身"。这个边界必须与实际的审计与保留策略一致，否则文案就是不诚实的。需要治理侧给出确切口径，我再据此定稿文案。
-
-### C9（影响 B15）：`我不想回答这一题` 是否对所有量表都可用？
-
-§106 写的是 `Prefer not to answer where permitted`。哪些工具允许、哪些不允许（可能影响量表的计分有效性），需要研究者按工具逐项定义。设计上我默认全部允许，需要确认。
-
-### C10（影响 B1/全局）：首页任务卡的数据来源与刷新时机
-
-"现在轮到你的事"需要聚合评估到期、生命故事草稿、待决互相接受、新消息四个来源。当前没有这样的聚合端点。是新建一个 `GET /participants/:id/home-tasks`，还是前端并发四个请求？后者在慢网下会让首页分块跳动。需要与后端商定。
-
-### C11（Doc 20 §363 中仍未决、我也无法单方面决定的）
-
-- §363-5 `MutualAcceptance 过期与失效如何解释才不带责备` —— 我在 B5 用了 `条件发生了变化，这条不能再用了。这不是谁的错。`，这是设计假设，**未经验证**。
-- §363-6 `Provider Accepted 与 Delivery Unknown 如何呈现` —— 现有实现的措辞我判断为最佳可得，但同样未经参与者验证。
-- §363-2 `哪些受众标签最不含糊` —— B11 的五个范围标签（只有你 / 我指定的人 / 我的连接 / 某个社区 / 平台内公开）是我的提案，需要可用性验证。
-
-以上三项按 Doc 19 认识论纪律，应标注为**设计假设**，不得作为已验证结论写入任何报告。
+- Focus order: skip link → h1 → stage card → task cards (in DOM order) → optional actions → help/leave → navigation.
+- Each task card is an `<li>` with **exactly one** focusable button inside; the card as a whole is not clickable (avoiding an overlapping hit area between "the whole card" and "the button inside it").
+- Buttons are block level at 100% width with `min-height: 2.75rem`, and `<li>`s are ≥0.75rem apart (already implemented in the existing CSS, and kept).
+- The task count goes into the `h2` text (`Waiting for you (3)`) so a screen reader learns the size at once; **this is not an unread count** — it is the number of tasks not yet done, and it drops to zero and disappears when they are.
+- `role="status"` announces the result of a refresh.
 
 ---
 
-## 变更记录
+## B2 My consent choices
 
-| 版本 | 日期 | 内容 |
+**Documents**: Doc 20 §95–102 | **Status**: implemented (`ConsentPanel.tsx`, currently six scopes — every one the platform actually gates on; see D-2)
+
+**A companion new screen, "Who can access me" (`WhoHasAccess.tsx`, UI_INVENTORY B20)**: consent governs "what may be done with my information", an authorised relationship governs "by whom", and **the permission engine requires both** — `participant.view-shared` requires `requiresRelationship` and `supporter-involvement` consent together. Only the first half was on screen before, so the participant's workspace could not state what state their data was actually in. `relationship.approve` and `relationship.revoke` have always been `ownerOnly`, and no query listed relationships: a proposal waited on an approval the participant could not see, and an authorisation already in force could not be ended by the only person entitled to end it. The new screen makes both reachable and says plainly that the two gates do not substitute for one another (ending an authorisation does not change consent, and changing consent does not end an authorisation). **Note**: a relationship's initial state after creation is `PendingVerification`, and nothing on the platform ever "verifies" anything — the participant's decision is the only way out, so the wording is identical to `Proposed` and must not say "we are checking who they are", which would describe a check nobody performs and invite someone to consent on the strength of it.
+
+### Purpose, and the questions this screen answers
+
+1. What exactly have I agreed to, and what is the state now? (**the current state must be permanently visible**)
+2. For each item, what happens if I say yes, what happens if I say no, and can I agree to only part of it?
+3. Which are required and which are optional?
+4. How do I change it, and what happens to things that already happened?
+
+### Wireframe (mobile, the "My consent choices" overview)
+
+```text
+┌──────────────────────────────────────┐
+│ h1  My consent choices                │
+│ p   Each of these is a separate       │
+│     choice. Saying no to any one of   │
+│     them does not affect the others,  │
+│     and does not affect your right to │
+│     leave the research at any time.   │
+│ [Consent form v1.3 · you chose on     │
+│  2026-07-02]  [See my consent receipt]│
+│                                      │
+│ h2  Required (you cannot take part    │
+│     without agreeing)                 │
+│ ┌ consent item ─────────────────────┐ │
+│ │ h3 Taking part in the research    │ │
+│ │ [●] Now: agreed · 2026-07-02      │ │← badge always present
+│ │ Why we ask: the research team     │ │
+│ │   needs to record your taking part│ │
+│ │ What information: your            │ │
+│ │   participation record, your      │ │
+│ │   assessment answers              │ │
+│ │ Who can see it: the research team │ │
+│ │   (not other participants)        │ │
+│ │ If you say yes: …                 │ │
+│ │ If you say no: you will not enter │ │
+│ │   this research                   │ │
+│ │ How to change it: you can         │ │
+│ │   withdraw here at any time       │ │
+│ │ [Agree to "Taking part"]          │ │← equal weight
+│ │ [Decline "Taking part"]           │ │
+│ │ [Withdraw consent to "Taking      │ │
+│ │  part"]                           │ │
+│ └───────────────────────────────────┘ │
+│                                      │
+│ h2  Optional                          │
+│ ┌ consent item (with restrictions) ─┐ │
+│ │ h3 Sharing my life story          │ │
+│ │ [○] Now: not chosen yet           │ │
+│ │ …(the same six paragraphs)…       │ │
+│ │ [Agree to "Sharing my life story"]│ │
+│ │ [Agree with conditions…]          │ │← opens the restriction picker
+│ │ [Decline "Sharing my life story"] │ │
+│ └───────────────────────────────────┘ │
+│  …(the remaining items, grouped per   │
+│    §97)…                             │
+│                                      │
+│ h2  You can always                    │
+│ ・[See my consent receipt]            │
+│ ・[Pause or leave the research]       │
+│ p[role=status]                       │
+└──────────────────────────────────────┘
+```
+
+### Information hierarchy and block order
+
+1. `h1` + the opening that "each is separate and none affects your right to leave" (**it must come before any choice control** — explain before asking)
+2. The consent form version + when you last decided + the way to the receipt
+3. The **required** group
+4. The **optional** group (the 22 scopes of §97 in thematic subgroups: research and assessment / life story / social / AI / data use and contact)
+5. The receipt and the way out of the research
+
+**The order inside a consent item card is fixed (the eight elements of §98)**: title → **current state** → why we ask → what information is involved → who can see it → what saying yes, saying no or adding conditions means → whether it is required → how to change it → the choice controls. The controls always come after the explanation.
+
+### State matrix
+
+| State | Presentation |
+|---|---|
+| Loading | `Reading your current consent choices…`; **no choice button renders until they have been read** (so a participant never acts against an unknown current state). |
+| Empty (nothing chosen yet) | A notice at the top: `You have not made any choices yet. Every item below defaults to "not chosen yet" — not to "agreed".` Every badge reads `Not chosen yet`. |
+| Error (read failed) | Blocking: `We could not read your consent choices, so this page cannot be changed for now — so that you do not decide without being able to see where you stand.` + `Try again` + `Contact the research team`. Every choice control is disabled with the reason stated. |
+| Error (submit failed) | Recoverable: `That did not change. Your consent choices are exactly as they were, with nothing altered.` + the reason (an expandable error code) + `Try again`. |
+| Not permitted | Not applicable — a participant may always see their own consent choices. |
+| Protected existence | Not applicable (this is your own resource). A URL pointing at someone else's consent record → the uniform page of 0.6. |
+
+### Key interactions and the confirmation copy
+
+**Agree** (no dialog; it can be changed directly)
+> Result announcement: `Recorded: you agreed to "Taking part in the research". You can withdraw at any time.`
+
+**Decline**
+> Result announcement: `Recorded: you declined "Joining the community". This does not affect your other choices.`
+
+**Agree with conditions** (opens a dialog that does exactly one thing)
+> Title: `Add conditions to "Sharing my life story"`
+> Body: `You can agree to this and still keep some limits. The limits you choose are written into your consent record.`
+> Options (checkboxes, none pre-selected): `Not for public display` / `May not be quoted` / `May not be downloaded` / `No longer used after the follow-up ends`
+> Primary: `Save the conditions on "Sharing my life story"`  Secondary: `Back, don't change anything`
+
+**Withdraw** (a detailed confirmation; the dialog handles one item at a time)
+> Title: `Withdraw consent to "Taking part in the research"`
+> Body:
+> ```
+> After withdrawing:
+> ・The platform stops using your information for this purpose.
+> ・Research datasets that are already locked will not be rewritten —
+>   research records have to stay intact, and we cannot change them afterwards.
+> ・No new data of yours will enter those datasets.
+> ・This does not automatically take you out of the whole research; if you
+>   want everything to stop, use "Pause or leave the research".
+> ```
+> Primary: `Confirm withdrawing "Taking part in the research"`  Secondary: `Back, don't withdraw`
+> Result announcement: `Consent to "Taking part in the research" has been withdrawn. You can see this change in your consent receipt.`
+
+**The comprehension check (§99, new)**: this is not an exam. Four single-choice questions; a wrong answer **does not block** and only expands an explanation.
+> Example stem: `Does a private life story ever become public on its own?`
+> Copy after a wrong answer: `It does not become public on its own. Visibility only changes when you change it yourself. Would you like to read that part again?` + `Read it again` / `I understand, carry on`
+> **Prohibited**: shaming wording such as "incorrect" or "failed".
+
+**The consent confirmation summary (§100, new, one screen before submitting)**
+> Title: `Confirm your consent choices`
+> Lists: what was agreed / what was declined / what conditions were added / supporter involvement / anything AI-related / anything social / data use
+> Primary: `Submit my consent choices` (never "Submit" or "OK" alone)
+
+**The consent receipt (§101, new, a separate screen you can return to)**: the date, the consent form's version number, each choice, any restrictions, whether anyone assisted you, who recorded it, and the two ways onward, `Change my consent choices` and `Pause or leave the research`. The receipt's main view does not carry long legal text; that lives in a "See the full consent form text (v1.3)" collapsible.
+
+### Accessibility points
+
+- Each consent item is an `<li>` containing an `h3`; the status badge follows the `h3` immediately, constructed per 0.8.
+- The three (or four) choice buttons **may not** be implemented as a radio group — the "selected" appearance of a radio makes "not chosen yet" hard to tell from "declined", and the risk of pre-selection is high. Use equally weighted buttons plus a permanent status badge.
+- The withdrawal dialog: `role="alertdialog"`, `aria-labelledby` on the title and `aria-describedby` on the consequences paragraph; focus enters at the title; closing returns to the "Withdraw…" button.
+- Each comprehension check question is its own `fieldset` + `legend`; the explanation expands in place with `aria-live="polite"` and does not navigate away.
+- At 200% zoom: the six explanatory paragraphs in a card become collapsible (`<details>`) with the first, "why we ask", expanded by default and the rest collapsed — **collapsing must never hide the consequences**, and "what saying no means" must remain visible by default.
+
+---
+
+## B3 Messages: the conversation list
+
+**Documents**: Doc 20 §157–158 | **Status**: implemented (`MessagesScreen.tsx`)
+
+### Purpose, and the questions this screen answers
+
+1. Who can I talk to right now, and **why** am I allowed to talk to this person? (the CommunicationBasis)
+2. Which conversations are already under way?
+3. Which established connections have not started a conversation yet?
+4. What do I do if I want to stop being in touch with someone?
+
+**It does not answer**: "who is online", "who read my message", "how many unread do I have".
+
+### Wireframe (mobile)
+
+```text
+┌──────────────────────────────────────┐
+│ h1  Messages                          │
+│ p   You can only write to people you  │
+│     are connected to and are still    │
+│     allowed to contact. What is below │
+│     is all of it.                     │
+│                                      │
+│ h2  Conversations under way (2)       │
+│ ┌ conversation row ─────────────────┐ │
+│ │ Mrs Zhang                         │ │← permitted public identity
+│ │ [✓] Under way                     │ │
+│ │ Because: you both expressed        │ │← CommunicationBasis
+│ │ interest in matching and made a   │ │
+│ │ connection                        │ │
+│ │ Last exchange: 3 days ago         │ │← no content preview
+│ │ [Open the conversation with Mrs   │ │
+│ │  Zhang]                           │ │
+│ └───────────────────────────────────┘ │
+│ ┌ conversation row (basis lapsed) ──┐ │
+│ │ Mr Li                             │ │
+│ │ [⊘] You cannot write here now     │ │
+│ │ Because: your connection has ended.│ │
+│ │ You can still see earlier messages.│ │
+│ │ [See the record of this           │ │← read-only
+│ │  conversation]                    │ │
+│ └───────────────────────────────────┘ │
+│                                      │
+│ h2  Connected, no conversation yet (1)│
+│ ┌ connection row ───────────────────┐ │
+│ │ Mr Wang                           │ │
+│ │ [✓] Connected · 2026-07-20        │ │
+│ │ Because: you both expressed        │ │
+│ │ interest in matching             │ │
+│ │ [Start a conversation with Mr Wang]│ │
+│ └───────────────────────────────────┘ │
+│                                      │
+│ ・[See who I have blocked or reported] │ │→ B17
+│ p[role=status]                       │
+└──────────────────────────────────────┘
+```
+
+### Information hierarchy and block order
+
+1. `h1` + the boundary statement that you can only write to people you are connected to
+2. **Conversations under way** (in reverse order of last exchange — that is chronological, not algorithmic)
+3. **Connected, no conversation yet**
+4. The way through to the reporting and blocking centre
+
+The order inside a conversation row: the other person's **permitted public identity** → the status badge → **why you can (or cannot) write** → the time of the last exchange → the action.
+The "why" must come before the action (explain before asking).
+
+**The CommunicationBasis label vocabulary (Doc 20 §157, one of four)**:
+`You both expressed interest in matching and made a connection` / `This is an existing contact of yours, verified` / `Because you are both taking part in the same research activity` / `You interact in a moderated community`.
+
+### State matrix
+
+| State | Presentation |
+|---|---|
+| Loading | `Reading your conversations and connections…`, holding two rows of space. **Changed to load on entry**, so "see my conversations and contacts" no longer has to be pressed (see Appendix A). |
+| Empty (both empty) | `There is nobody you can write to yet. That is normal. To meet new people, go to "Meeting new people"; it is entirely optional, and not taking part does not affect the research.` + `Go to meeting new people (optional)` |
+| Empty (connections, no conversations) | `You are connected to 1 person and have not started a conversation. Start whenever you have something to say; there is no time limit.` |
+| Error | Recoverable: `We could not read your conversation list. Nothing was changed, and your messages are all still there.` + `Try again` |
+| Not permitted (messaging consent missing) | The whole screen is replaced: `To use messages you first need to agree to "Messaging" under My consent choices.` + `Go to my consent choices` |
+| Not permitted (messaging suspended) | `Messages are suspended right now. The research team will tell you separately why and how it will resume. You can still see your earlier messages.` |
+| Protected existence | Someone blocked or revoked **does not appear in the list**, and leaves no placeholder; visiting their conversation URL directly → the uniform page of 0.6. Wording such as "that user is unavailable", which confirms the other person exists, is **prohibited**. |
+
+### Key interactions and confirmation copy
+
+**Start a conversation** (a simple confirmation — creating an empty conversation sends nothing and is low risk)
+> Result announcement: `A conversation with Mr Wang has been started. No message has been sent yet.`
+
+**Open a read-only conversation**: enters B4's read-only mode, with the editor area replaced by an explanation (see B4's state matrix).
+
+### Accessibility points
+
+- Each of the two `h2` groups is its own `<ul>`; each row is an `<li>` with one primary button inside.
+- A button's accessible name includes the other person's name: `Open the conversation with Mrs Zhang` (not `Open`).
+- Status badges are constructed per 0.8; the icon on `[⊘] You cannot write here now` is clearly different in shape from "under way".
+- Focus order: h1 → conversations under way → connections not started → the reporting and blocking way through → navigation.
+- `aria-live` is **not used** to announce "a new message arrived" — there is no live push, and there is no unread indicator.
+
+---
+
+## B4 Messages: a conversation and the send confirmation
+
+**Documents**: Doc 20 §158–163 | **Status**: implemented (`MessagePanel.tsx`)
+
+### Purpose, and the questions this screen answers
+
+1. Who am I talking to, and why am I allowed to talk to them right now?
+2. Was what I wrote saved? Was it sent? **Did they receive it** (answered honestly, including "we do not know")?
+3. Can I look at the exact content once more before it goes?
+4. This message looks wrong (asking for money, for a password, a suspicious link) — what can I do?
+
+### Wireframe (mobile)
+
+```text
+┌──────────────────────────────────────┐
+│ [← Back to conversations]             │
+│ h1  Conversation with Mrs Zhang       │
+│ [✓] You can write here now            │
+│ Because: you both expressed interest  │
+│ in matching and made a connection. ⓘ  │
+│                                      │
+│ h2  Messages                          │
+│ ┌ their message ────────────────────┐ │
+│ │ Mrs Zhang · 28 July 10:12         │ │
+│ │ How are your tomatoes doing?      │ │
+│ │ [Report this message]             │ │← always reachable
+│ │ [Block Mrs Zhang]                 │ │
+│ └───────────────────────────────────┘ │
+│ ┌ my message ───────────────────────┐ │
+│ │ You · 28 July 11:03               │ │
+│ │ Three are ripe.                   │ │
+│ │ [◔] The sending service accepted  │ │
+│ │     it (they have not received it)│ │
+│ │     ⓘ The delivery service took   │ │
+│ │        this message. That is not  │ │
+│ │        the same as it reaching    │ │
+│ │        them.                      │ │
+│ └───────────────────────────────────┘ │
+│ ┌ my message (unknown) ─────────────┐ │
+│ │ You · 29 July 09:40               │ │
+│ │ Are you free tomorrow?            │ │
+│ │ [?] Delivery state unknown —      │ │
+│ │     being checked; this does not  │ │
+│ │     mean success                  │ │
+│ │     ⓘ We do not know the result   │ │
+│ │        for now.                   │ │
+│ │ [Send it again] [See the delivery │ │
+│ │  record]                          │ │
+│ └───────────────────────────────────┘ │
+│                                      │
+│ h2  Write a message                   │
+│ label Message                         │
+│ ┌──────────────────────────────────┐ │
+│ │                                  │ │
+│ └──────────────────────────────────┘ │
+│ [Draft — only you can see this]       │← the draft state persists visually
+│ [Save draft]     [Check and send]     │
+│                                      │
+│ ・[Get help]                          │
+│ p[role=status]                       │
+└──────────────────────────────────────┘
+```
+
+**The send confirmation dialog**
+
+```text
+┌ role=alertdialog ────────────────────┐
+│ h3 Confirm sending to Mrs Zhang       │
+│ To: Mrs Zhang (this one person only)  │
+│ Version: version 1                    │
+│ Why you may write now: you made a     │
+│   connection                          │
+│ Attachments: none                     │
+│ ┌ the exact content ───────────────┐  │
+│ │ I'll be at the community garden  │  │
+│ │ tomorrow morning.                │  │
+│ └──────────────────────────────────┘  │
+│ After it goes:                        │
+│ ・We queue it first, then hand it to   │
+│   the sending service.                │
+│ ・A successful confirmation is not the │
+│   same as them receiving it.          │
+│ ・Once it has gone to the sending      │
+│   service it may not be recallable.   │
+│ [Send the message]  [Back, don't send] │
+└──────────────────────────────────────┘
+```
+
+### Information hierarchy and block order
+
+1. Back → `h1 Conversation with {them}`
+2. **The communication basis state** (may you write, and why) — before the writing area
+3. The messages (chronological, newest at the bottom; each carrying its own source and state)
+4. Writing a message (draft → check and send)
+5. The way to help
+
+**The rule for showing delivery state**: only **your own sent** messages show a delivery state (their messages have none). The state uses the vocabulary of 0.9 and the construction of 0.8 (icon + text + an expandable explanation).
+
+### State matrix
+
+| State | Presentation |
+|---|---|
+| Loading (the messages) | `Reading the messages…`; the writing area is **usable immediately** (writing a draft does not depend on the history). |
+| Empty (no messages) | `Neither of you has written yet. Say whatever you like, in your own time.` |
+| Error (saving a draft failed) | Recoverable, and it must say that the words are still there: `The draft was not saved. What you wrote is still in the box below; nothing was lost.` + `Try again` |
+| Error (send confirmation failed) | Recoverable: `Sending did not go through, and this message was **not** sent. Your draft is still here.` + the reason + `Try again` |
+| Error (delivery failed / unknown) | See 0.9; before `Send it again`, show: `Sending it again creates a new delivery attempt. If the previous one did in fact arrive, they may receive it twice.` |
+| Not permitted (the communication basis has lapsed) | The whole writing area is replaced, **not merely reduced to a greyed-out button**: `You cannot write to Mr Li now, because your connection has ended. You can still see the earlier messages. To be in touch again you would need to make a new connection.` |
+| Not permitted (you blocked them) | `You blocked this person, so you cannot write to them. You can review or undo this in the reporting and blocking centre.` (**it does not say whether they know**) |
+| Protected existence | When the other account is no longer reachable, the conversation becomes read-only with the copy `This conversation can only be viewed now.` — **with no explanation of why**, and no distinction between them leaving, being suspended, or having blocked you. |
+
+### Key interactions and the confirmation copy
+
+**Save draft** (a simple confirmation)
+> `Draft saved. Only you can see it, and it has not been sent.`
+
+**Editing invalidates a confirmation** (existing behaviour kept, copy retained)
+> `The content changed — save the draft again, then check and send.`
+
+**The send confirmation** (a detailed confirmation; the copy is in the wireframe above)
+> Primary: `Send the message`  Secondary: `Back, don't send`
+> Success announcement: `Sending confirmed. The message is queued and has not arrived yet.`
+
+**The scam and link warning (§163, new)**: appears inline **after the draft is saved and before check-and-send**, with no dialog (it is not a decision, it is a prompt).
+> Title: `Have another look before it goes`
+> Body: `There is a link to somewhere else in this message. People who want to trick you sometimes use links to get passwords or money. If you are not sure, it is entirely fine not to send it.`
+> Actions (equal weight): `Don't send for now` / `Change what I wrote` / `Block this person` / `Report this person` / `Get help`
+> Footnote: `This is only a reminder, and is not a judgement about anyone.`
+
+**Retrying (§162, new)**
+> Title: `Send "Are you free tomorrow?" again`
+> Body: `We do not know how the last one ended. Sending it again creates a new delivery attempt; if the last one did arrive, they may see it twice.`
+> Primary: `Send it again`  Secondary: `Back, don't send for now`
+
+### Accessibility points
+
+- The messages are an `<ol aria-label="Messages">` (the existing accessible name is kept).
+- Each message is an `<li>`: sender → time → content → state. The state text follows the content in the DOM, so the screen reader's order is natural.
+- State changes announce into `role="status"`; **the delivery state itself does not go into a live region** (it is persistent state, not an event).
+- The send confirmation dialog: `aria-describedby` points at the three "after it goes" consequences; the exact content is a `<blockquote>` and can be read aloud.
+- Touch: `Send the message` and `Back, don't send` need ≥8px between them whether stacked or side by side, and **must not touch** (to prevent mis-taps).
+- The scam warning uses `role="status"` (not `alert`) — it does not interrupt, and it does not accuse.
+
+---
+
+## B5 Meeting new people (matching)
+
+**Documents**: Doc 20 §143–156 | **Status**: implemented (`MatchingPanel.tsx`)
+
+### Purpose, and the questions this screen answers
+
+1. What is this, and do I want to take part? (off by default, optional)
+2. What information of mine does the platform use to suggest people, and who can see it?
+3. Why was this person suggested to me? (**you see the explanation, not who they are**)
+4. What happens after I say "Interested"? Will they know? (no)
+5. After "you both expressed interest", do I have to make a connection? (no)
+
+### Wireframe (mobile; each of the four stages is its own screen or section)
+
+**Stage 0 — the introduction (§143, required reading on first entry)**
+
+```text
+┌──────────────────────────────────────┐
+│ h1  Meeting new people (optional)     │
+│ p   This is off by default. Taking    │
+│     part or not makes no difference   │
+│     to the rest of the research.      │
+│                                      │
+│ h2  Three different things            │
+│ ┌──────────────────────────────────┐ │
+│ │ A suggestion ≠ Both expressed     │ │
+│ │               interest ≠ Connected│ │
+│ │ ───────────   ──────────   ───────│ │
+│ │ the system    both people   you    │ │
+│ │ shows you an  separately    both   │ │
+│ │ explanation   said          agree  │ │
+│ │ of someone    "Interested"  to be  │ │
+│ │ who might     (their        in     │ │
+│ │ suit you      choice is     touch  │ │
+│ │               private to    │      │ │
+│ │               you)                 │ │
+│ └──────────────────────────────────┘ │
+│ h2  What you should know              │
+│ ・Your choice is not told to them.     │
+│ ・Their choice is not told to you.     │
+│ ・Suggestions expire, and expiry means │
+│   nothing about anyone.               │
+│ ・The platform does not promise you    │
+│   will get on, or that anyone will    │
+│   answer.                             │
+│ ・You can pause or leave matching at   │
+│   any time.                           │
+│ ・You can block or report at any time. │
+│ [Carry on and choose what I share]    │
+│ [Not taking part for now]             │
+└──────────────────────────────────────┘
+```
+
+**Stage 1 — the review before turning it on (§145)**
+
+```text
+┌──────────────────────────────────────┐
+│ h1  Before turning matching on        │
+│ h2  The information you plan to use    │
+│ label Interests I am willing to use   │
+│       for matching (comma separated)  │
+│ [gardening, chess                   ] │
+│ ・Language: English                    │
+│ ・Rough location: city level (not your │
+│   street or building)                 │
+│ ・How you prefer to be contacted:      │
+│   text messages                       │
+│                                      │
+│ h2  Who sees this                     │
+│ ・The people you are suggested to see   │
+│   only a statement like "you both     │
+│   chose gardening", not your name.    │
+│ ・Until you have both expressed        │
+│   interest, they cannot see who you   │
+│   are.                                │
+│ h2  How long it lasts                 │
+│ ・Each suggestion expires after 14 days.│
+│ ・You can pause at any time (keeping   │
+│   existing suggestions) or leave       │
+│   entirely (all suggestions lapse).   │
+│ [Turn matching on] [Back, not yet]    │
+└──────────────────────────────────────┘
+```
+
+**Stage 2 — the candidate list and the decision (§147–152)**
+
+```text
+┌──────────────────────────────────────┐
+│ h1  Current suggestions               │
+│ p   Every choice here is equally       │
+│     legitimate. "Not now" does not     │
+│     affect later suggestions. Your     │
+│     choice is not told to them.       │
+│                                      │
+│ ┌ candidate card ───────────────────┐ │
+│ │ Why this was suggested to you:    │ │
+│ │ You both chose gardening as an    │ │
+│ │ interest, both use English, and   │ │
+│ │ both prefer text messages.        │ │
+│ │ [See the full explanation]        │ │← §149
+│ │ [⏳] Expires in 7 days            │ │
+│ │ ────────────────────────────────  │ │
+│ │ [Interested] [Not now]            │ │← all three equal
+│ │ [Don't show me this person again] │ │
+│ │ ────────────────────────────────  │ │
+│ │ [Block] [Report]                  │ │← secondary, always present
+│ └───────────────────────────────────┘ │
+│ p[role=status]                       │
+└──────────────────────────────────────┘
+```
+
+**Stage 3 — mutual acceptance and making a connection (§155–156, its own screen)**
+
+```text
+┌──────────────────────────────────────┐
+│ h1  You both expressed interest       │
+│ [✓] Mutual acceptance valid ·         │
+│     lapses in 14 days                 │
+│ p   The two of you each chose          │
+│     "Interested" separately. Whether   │
+│     to make a connection is still     │
+│     yours to decide. Not making one   │
+│     does not notify them.             │
+│ h2  After a connection is made         │
+│ ・You can write to each other.         │
+│ ・You will see the name they chose to  │
+│   show.                               │
+│ ・It does not mean they can see your   │
+│   life story.                         │
+│ ・It does not make them your supporter.│
+│ ・You can disconnect, block or report  │
+│   at any time.                        │
+│ [Make a connection] [Not for now]     │
+└──────────────────────────────────────┘
+```
+
+### Information hierarchy and block order
+
+Introduction (once; reachable afterwards from help) → the review before turning it on → the candidate list → mutual acceptance → making a connection.
+**Each stage is one screen, and each screen is one decision.** The current implementation stacks "turn matching on", "see suggestions" and "make a connection" on the same screen — a violation of "one meaningful decision at a time" (see Appendix A).
+
+**The order inside a candidate card**: the explanation (why suggested) → the way to the full explanation → the expiry time → the three equally weighted decisions → block/report.
+**Never present**: their name, avatar, internal identifier, a score, "87% match", or a ranking.
+
+**The MatchExplanation detail (§149)** must contain: which attributes you entered yourself, when you entered them, **a statement of uncertainty** (`This is only a comparison of what each of you wrote down. It is not a judgement about whether you will get on.`), the matching policy's version number, and the prohibited-use statement (`This information may not be used for selling, fundraising or any commercial purpose. Please report it if you see that.`).
+
+### State matrix
+
+| State | Presentation |
+|---|---|
+| Loading | `Seeing whether there are new suggestions…` |
+| Empty (no candidates, §154) | `There are no suitable suggestions right now. That does not mean anything is wrong, and it is not because of you. A suggestion only appears when it suits both sides, and sometimes it just takes time. You can: change the interests you are willing to share / pause matching / look at the community (a different route).` |
+| Empty (matching not turned on) | `Matching is off. To turn it on, first look at which of your information it would use.` + `Learn about it and turn matching on` |
+| Error | Recoverable: `We could not fetch suggestions. Nothing in your matching settings was changed.` + `Try again` |
+| Not permitted (consent missing) | `To use matching you first need to agree to "Open matching" under My consent choices. That one is off by default.` + `Go to my consent choices` |
+| Not permitted (matching suspended) | `Matching is suspended right now. The connections you already have are unaffected.` |
+| **Protected existence** | When a candidate or a mutual acceptance lapses (they left, blocked you, it expired, or it was already used for a connection), the card disappears or is replaced with an **unattributed** statement: `This suggestion can no longer be used. That is common and can happen for many reasons.` It **never** says it was the other person's doing. |
+| The five mutual-acceptance states (§155) | `Being checked (no result yet)` / `Mutual acceptance valid` / `Mutual acceptance expired` / `Mutual acceptance lapsed` / `Already used to make a connection`. Every one of them is worded **without blame**: `lapsed` is explained as `Something changed, and this can no longer be used. It is nobody's fault.` |
+
+### Key interactions and the confirmation copy
+
+**Turn matching on** (a detailed confirmation)
+> Title: `Turn matching on?`
+> Body: `Once it is on, the platform uses what you chose above (gardening, chess, English, text messages, city-level location) to look for people who might suit you. Until you have both expressed interest, nobody can see who you are. You can pause or leave at any time.`
+> Primary: `Turn matching on`  Secondary: `Back, not yet`
+> Success announcement: `Matching is on. Only the interests you chose to share are used for suggestions.`
+
+**The "Interested" confirmation (§151; all five points are required)**
+> Title: `Choose "Interested" for this suggestion?`
+> Body:
+> ```
+> After choosing "Interested":
+> ・You are not connected yet.
+> ・They are not notified, and will not know what you chose.
+> ・Their choice is equally private to you.
+> ・Only if they separately choose "Interested" too will you both see
+>   "you both expressed interest".
+> ・This suggestion expires in 7 days; after that it cannot be chosen.
+> ```
+> Primary: `Confirm "Interested"`  Secondary: `Back`
+
+**The "Not now" / "Don't show me this person again" confirmation (§152)**
+> Title: `Choose "Not now" for this suggestion?`
+> Body: `"Not now" means only that you are not considering it this time; you might meet them again if things change. "Don't show me this person again" takes this suggestion out of your current list. Neither choice leaves any negative mark on you or on them, and neither is the same as blocking. They are not notified.`
+> Primary: `Confirm "Not now"`  Secondary: `Back`
+
+**Make a connection (a detailed confirmation)**
+> Title: `Make a connection?`
+> Body: `Once it is made you can write to each other, and you will see the name they chose to show. It does not mean they can see your life story, and it does not give them any care or research authority. You can disconnect, block or report at any time.`
+> Primary: `Confirm making a connection`  Secondary: `Back`
+> Success announcement: `The connection has been made. You can write to each other under "Messages" now.`
+> Failure (the mutual acceptance expired, lapsed or was already used): `The connection could not be made, because this mutual acceptance can no longer be used. It is nobody's fault, and it does not mean they turned you down. You can carry on looking at other suggestions.`
+
+**Blocking from the matching screen (§153)**: no identifier is shown; it acts directly on the candidate. The confirmation copy is in B7/B17, with one sentence added: `We will not tell you whether they know about this.`
+
+### Accessibility points
+
+- The three decision buttons: side by side in one `<p>`, `min-height: 2.75rem`, ≥8px apart; **the same CSS class**, and applying a primary style to `Interested` is prohibited (this can be checked automatically: the computed styles of all three must be identical).
+- Block and report are visually secondary but **must be reachable by Tab**, and are never hidden inside a disclosure (§354, "hiding Block or Report").
+- A candidate card is an `<li>`; the explanation text is the first readable element inside it.
+- The expiry countdown is text (`Expires in 7 days`), never motion or a colour gradient; it is identical under `reduced-motion`.
+- Stage 3 is its own screen, with focus moving to the `h1` on entry.
+- `role="status"` announces the result of a decision; after a decision the card is removed from the list and it announces `Your choice has been recorded. They will not be notified.`
+
+---
+
+## B6 Community
+
+**Documents**: Doc 20 §134–142 | **Status**: implemented (`CommunityPanel.tsx`)
+
+### Purpose, and the questions this screen answers
+
+1. What communities are there, and what is each one for?
+2. What are the rules before I join? (**the exact rule version**)
+3. What order is anything in here? (time, and nothing else)
+4. When does what I write become visible to others? (only after I explicitly publish it)
+5. What can I do about content that upsets me?
+
+### Wireframe (mobile)
+
+```text
+┌──────────────────────────────────────┐
+│ h1  Community (optional)              │
+│ p   Taking part in the community is    │
+│     entirely optional. Posts appear    │
+│     in time order, with no algorithmic │
+│     ordering, no likes and no view     │
+│     counts. Posts from people you have │
+│     blocked do not appear, and they    │
+│     cannot see your posts either.     │
+│                                      │
+│ h2  Communities                       │
+│ ┌──────────────────────────────────┐ │
+│ │ Gardening Corner                  │ │
+│ │ [✓] You are a member · rules v3   │ │
+│ │ For balconies and vegetable plots │ │
+│ │ [Enter "Gardening Corner"]        │ │
+│ │ [See the rules] [Stop taking part │ │
+│ │  in "Gardening Corner"]           │ │
+│ └──────────────────────────────────┘ │
+│ ┌──────────────────────────────────┐ │
+│ │ Old Photographs                   │ │
+│ │ [○] Not joined · rules v1         │ │
+│ │ [Read the rules and join]         │ │
+│ └──────────────────────────────────┘ │
+│                                      │
+│ h2  My drafts (1)                     │
+│ ┌ dashed border ───────────────────┐ │
+│ │ The tomatoes ripened today        │ │
+│ │ [✎] Draft — only you can see this │ │
+│ │ Community: Gardening Corner       │ │
+│ │ [Publish…] [Delete this draft]    │ │
+│ └──────────────────────────────────┘ │
+│ p[role=status]                       │
+└──────────────────────────────────────┘
+```
+
+**Inside a community**
+
+```text
+┌──────────────────────────────────────┐
+│ [← Back to communities]               │
+│ h1  Gardening Corner                  │
+│ [✓] You are a member · you agreed to   │
+│     rules v3                          │
+│ [See this version of the rules]       │
+│ p   Posts appear newest first.        │
+│                                      │
+│ h2  Write a post                      │
+│ label What you would like to share     │
+│       (saved as a draft first; you    │
+│       confirm before publishing)      │
+│ ┌──────────────────────────────────┐ │
+│ └──────────────────────────────────┘ │
+│ [Save draft]                          │
+│ p Once saved, only you can see it. For │
+│   members to see it, you have to      │
+│   publish it explicitly under "My     │
+│   drafts".                            │
+│                                      │
+│ h2  Posts in Gardening Corner          │
+│ ┌ post card ───────────────────────┐ │
+│ │ Zhou of the Balcony ·             │ │← safe public identity
+│ │   30 July 08:20                   │ │
+│ │ The tomatoes ripened today        │ │
+│ │ [Report this post]                │ │← always reachable
+│ │ [Block Zhou of the Balcony]       │ │
+│ └──────────────────────────────────┘ │
+│ ┌ post card (yours) ────────────────┐ │
+│ │ You · 29 July · [✓] Published     │ │
+│ │ It rained yesterday               │ │
+│ │ [Withdraw this post]              │ │
+│ └──────────────────────────────────┘ │
+│ p[role=status]                       │
+└──────────────────────────────────────┘
+```
+
+### Information hierarchy and block order
+
+**The list page**: the explanation (no algorithm, no likes, blocking is in force) → the community list → my drafts.
+**Inside a community**: back → `h1 community name` → membership and rule version → **writing a post (drafts first)** → the post stream.
+
+Putting "writing" before "reading" is what keeps both the home page and the community page from becoming a consumption feed — a participant comes here to do something, not to scroll.
+
+**The order inside a post card**: the author's safe public identity → the time → the content → (if it came from a life story) the source attribution → the state (own posts only) → report/block.
+
+**The post state vocabulary (§139)** (implemented, and kept): `Draft — only you can see this` / `Published` / `Temporarily hidden (under review)` / `Visibility restricted` / `Removed (a human moderation decision)` / `Deleted` / `Archived` / `Restored` / `Withdrawn`.
+**Hard rule**: a post whose visibility is restricted **may not** be presented as "deleted".
+
+### State matrix
+
+| State | Presentation |
+|---|---|
+| Loading | `Reading the communities…` / `Opening "Gardening Corner"…` |
+| Empty (no communities) | `There are no open communities yet. When the research team opens one, it will appear here.` |
+| Empty (a community with no posts) | `There are no posts in this community yet. You can write the first one, or just look around — either is fine.` |
+| Empty (no drafts) | The "My drafts" block does not render at all (no content, no placeholder). |
+| Error (joining failed) | Recoverable: `We could not join you to "Gardening Corner"; your membership has not changed.` + the reason + `Try again` |
+| Error (publishing failed) | Recoverable, and it must say so: `That was not published. This is **still a draft**, and only you can see it.` |
+| Not permitted (consent missing) | `Joining a community needs you to agree to "Community participation" under My consent choices first.` + `Go to my consent choices` (this mapping already exists in the implementation and is kept) |
+| Not permitted (posting suspended by moderation) | `You cannot post in this community right now. The research team will tell you separately why and how it will resume. You can still read posts.` |
+| Protected existence | Posts from anyone blocked or removed **do not appear and leave no placeholder**; visiting their URL directly → the uniform page of 0.6. Wording such as "that content was deleted", which confirms it once existed, is **not shown**. |
+
+### Key interactions and the confirmation copy
+
+**Joining a community (a detailed confirmation, bound to the exact rule version)**
+> Title: `Read the community rules (version 3) before joining "Gardening Corner"`
+> The rules are presented in full in a `<blockquote>` (not collapsed, not summarised)
+> Closing sentence: `Joining means you agree to the version above. Joining requires that you have already agreed to "Community participation"; you can stop taking part at any time.`
+> Primary: `Agree to the rules and join`  Secondary: `Back`
+> Success announcement: `You have joined "Gardening Corner". You can stop taking part at any time, and it will not affect anything else.`
+
+**Save draft**
+> `Draft saved. Only you can see it; you have to confirm explicitly before it is published.`
+
+**Publish (a detailed confirmation, naming the community)**
+> Title: `Confirm publishing to "Gardening Corner"? Every member will be able to see it.`
+> The content is presented verbatim in a `<blockquote>`
+> Added: `After publishing: members of the community can see this post; staff moderate it by hand under the community rules; you can withdraw it, but people who have already read it may remember what it said.`
+> Primary: `Confirm publishing`  Secondary: `Back`
+> Success announcement: `Published. Members of the community can see this post now.`
+
+**Stop taking part in a community (§141, new)**
+> Title: `Stop taking part in "Gardening Corner"?`
+> Body: `After stopping: you will no longer see this community's posts and cannot post. Posts you already published stay in the community — if you want them taken back, withdraw them one by one first and then stop. Matching is a separate thing and is unaffected. Your part in the research also continues, unless you separately choose to leave.`
+> Primary: `Confirm stopping "Gardening Corner"`  Secondary: `Back, keep taking part`
+
+**Reporting content in a community (§142, new; started from the post card, with no identifier typed)**
+> Steps: choose a type → add anything you want to say (optional) → whether to block as well → submit
+> The receipt after submitting: `We have your report. A person will look at it. To protect everyone involved, we will not tell you the details of what happens next, and we will not tell them who reported it.` It **must not** predict the outcome.
+
+### Accessibility points
+
+- The rules dialog may be very long: `role="alertdialog"` + an internally scrollable area + `tabindex="0"` so it can be scrolled from the keyboard; the dialog itself must never burst the viewport.
+- `Enter "Gardening Corner"`, `Stop taking part in "Gardening Corner"`, `Block Zhou of the Balcony` — accessible names carry the specific object.
+- The post stream is a `<ul>`; `Report` and `Block` inside each card are secondary buttons and are Tab-reachable.
+- A draft card uses a dashed border **and** the words `[✎] Draft — only you can see this` (shape + text, never relying on colour).
+- At 200% zoom: post cards are a single column with no horizontal scrolling; long content is handled by `overflow-wrap: anywhere`.
+
+---
+
+## B7 Help and safety
+
+**Documents**: Doc 20 §142, §166–168 | **Status**: implemented (`SafetyPanel.tsx`, embedded in the App's help screen)
+
+### Purpose, and the questions this screen answers
+
+1. I am in trouble right now — who do I go to? (**this is at the very top**)
+2. What about an emergency? (stated plainly: not this platform)
+3. I want someone to leave me alone → block
+4. I want staff to know what happened → report
+5. I am worried about my own safety or someone else's → a safety signal
+
+### Wireframe (mobile)
+
+```text
+┌──────────────────────────────────────┐
+│ h1  Help and safety                   │
+│                                      │
+│ ┌ Emergencies (permanent, at the top)┐│
+│ │ [!] If you or someone else is in   ││
+│ │     danger right now               ││
+│ │ Call your local emergency number   ││
+│ │ directly.                          ││
+│ │ This platform is not an emergency  ││
+│ │ channel, and staff are not watching││
+│ │ it around the clock.               ││
+│ └────────────────────────────────────┘│
+│                                      │
+│ h2  Contact the research team         │
+│ You can contact the research team at   │
+│ any time, about anything, including    │
+│ "can I stop".                         │
+│ [Contact the research team]           │
+│                                      │
+│ h2  I want to block someone            │
+│ p Blocking starts from somewhere you   │
+│   and this person have crossed paths:  │
+│   a conversation, a community post, or │
+│   a suggestion. That way we do not     │
+│   need you to type any identifier.    │
+│ ・[Go to my conversations]             │
+│ ・[Go to the community]                │
+│ ・[See who I have blocked]             │← B17
+│                                      │
+│ h2  I want to report what happened     │
+│ p A report is read by staff, and is    │
+│   never decided by an automated system │
+│   alone. Even if you block them        │
+│   afterwards, the report is still      │
+│   handled.                            │
+│ ・[Report from a conversation]         │
+│ ・[Report from a community post]       │
+│ ・[Report something not about specific │
+│    content]  ← the general way in     │
+│                                      │
+│ h2  I have a safety concern            │
+│ p The safety team reads what you send.  │
+│   It can be about you or about someone │
+│   else.                               │
+│ label What you are worried about (in   │
+│       your own words)                 │
+│ ┌──────────────────────────────────┐ │
+│ └──────────────────────────────────┘ │
+│ [Submit a safety concern]             │
+│ p Someone will read this after you send │
+│   it. It does not automatically alert  │
+│   any emergency service.               │
+│                                      │
+│ h2  Other                             │
+│ ・[Common questions]                   │
+│ ・[Accessibility statement]            │
+│ ・[Pause or leave the research]        │
+│ p[role=status]                       │
+└──────────────────────────────────────┘
+```
+
+### Information hierarchy and block order (the order is itself a safety design)
+
+1. **The emergency statement** (always first, always visible, never collapsed)
+2. Contact the research team (the lowest-threshold way to get help)
+3. Blocking (**started from context**; this screen only routes)
+4. Reporting (the same, plus one general way in that concerns no specific person)
+5. Safety concerns (free text; the only action that can be submitted from this screen)
+6. Other (FAQ / accessibility statement / pause and leave)
+
+### State matrix
+
+| State | Presentation |
+|---|---|
+| Loading | This screen **renders without the network**: the emergency statement and the contact details are static content and must be visible offline. |
+| Empty | Not applicable. |
+| Error (submitting a safety concern failed) | Safety-critical: `That did not reach the safety team. What you wrote is still in the box below. If this is urgent, do not wait here — call your local emergency number, or contact the research team directly.` + `Try again` + `Contact the research team`. A toast alone is **not permitted**. |
+| Error (offline) | A banner at the top: `There is no connection right now. Emergency calls do not need one.` |
+| Not permitted | Not applicable — help and safety are always available to every participant, regardless of any consent item, suspension or moderation state. **This is a hard rule.** |
+| Protected existence | The blocking and reporting routes enumerate nobody; the general reporting route accepts no identifier. See Appendix B, deviation #1. |
+
+### Key interactions and the confirmation copy
+
+**The blocking confirmation (§166–167, started from context, a detailed confirmation)**
+> Title: `Block Mrs Zhang?`
+> Body:
+> ```
+> After blocking:
+> ・You will not appear in each other's suggestions again.
+> ・Neither of you can write to the other.
+> ・Neither of you can see the other's posts or public profile.
+> ・We will try to cancel messages that are queued and not yet sent — but if one
+>   has already gone to the sending service it may already have been sent, and
+>   we cannot take it back.
+> ・Content involving this person will no longer enter the AI's context.
+> ・We will not tell you whether they know about this.
+>
+> Blocking is your own decision and you can undo it at any time. Undoing it does
+> not automatically restore the connection, conversation or suggestions you had —
+> those would have to start again.
+> ```
+> A secondary option (a checkbox, not pre-selected): `Report this person as well`
+> Primary: `Confirm blocking`  Secondary: `Back, don't block`
+> Success announcement: `Blocked. We have tried to cancel messages that had not gone yet.`
+
+**The report receipt (§142; it does not predict the outcome)**
+> `We have your report. A person will look at it. To protect everyone involved, we will not tell you the details of what happens next, and we will not tell them who reported it. You can see the reports you have submitted in the reporting and blocking centre.`
+
+**The safety concern receipt**
+> `This has gone to the safety team. Someone will read it. It does not automatically alert any emergency service — if this is urgent, call your local emergency number.`
+
+### Accessibility points
+
+- The emergency statement uses `<section role="note">` (not `role="alert"` — it is permanent content, not a new event, and an alert would interrupt the reading every time the screen is entered).
+- The safety concern textarea must have a **visible** `<label>` (the current implementation uses `aria-label`; see Appendix A): `What you are worried about (in your own words)`.
+- Focus order: h1 → the emergency statement → contact the team → the blocking routes → the reporting routes → safety concerns → other → navigation. **The emergency information must come first in the focus order.**
+- On a failed submission, focus moves to the error notice (`role="alert"` + `tabindex="-1"`).
+- No part of this screen may be simplified away in "simplified mode" (B13) — safety content is exempt from content reduction.
+
+---
+
+## B8 My research
+
+**Documents**: Doc 20 §108 | **Status**: not implemented
+
+### Purpose, and the questions this screen answers
+
+1. What research am I actually taking part in, and why is it being done?
+2. How long am I taking part for, and where am I now?
+3. What have I done, and what is coming?
+4. What did I agree to? (points at B2)
+5. When will there be results, and how will I be told?
+
+**This screen makes no decisions** — it is the map of "where I am". Every action button routes somewhere else.
+
+### Wireframe (mobile)
+
+```text
+┌──────────────────────────────────────┐
+│ h1  My research                       │
+│ [ℹ] This is a conceptual research      │← the phase statement, required
+│     prototype. There are no real      │
+│     participants yet, and no real     │
+│     conclusions.                      │
+│                                      │
+│ h2  What this research is trying to    │
+│     find out                          │
+│ p (the purpose in plain words, 2–4     │
+│    sentences)                         │
+│ [Read a fuller explanation]           │
+│                                      │
+│ h2  Where you are                     │
+│ ┌ timeline (vertical) ──────────────┐ │
+│ │ [✓] Learning and consent          │ │
+│ │     done 2026-07-02               │ │
+│ │ [✓] Baseline questionnaire        │ │
+│ │     done 2026-07-05               │ │
+│ │ [◐] Activity stage                │ │← current
+│ │     under way · week 3            │ │
+│ │ [ ] Follow-up questionnaire       │ │
+│ │     expected mid-August           │ │
+│ │ [ ] Ending and results            │ │
+│ │     expected October              │ │
+│ └───────────────────────────────────┘ │
+│ p About 3 months in all. The times are │
+│   estimates, not targets. Finishing    │
+│   later is fine.                      │
+│                                      │
+│ h2  What is coming                    │
+│ ・Follow-up questionnaire · about 10   │
+│   minutes · this week                 │
+│   [Start the follow-up]               │
+│                                      │
+│ h2  What you have done                │
+│ ・Baseline questionnaire · 2026-07-05 ·│
+│   completed                           │
+│ ・First interaction record ·           │
+│   2026-07-12                          │
+│ [See the full record]                 │
+│                                      │
+│ h2  How this research uses your        │
+│     information                       │
+│ ・The research team can see: …         │
+│ ・Other participants cannot see: …     │
+│ ・Results are published in aggregate,  │
+│   never naming anyone.                │
+│ [See or change my consent choices]    │
+│                                      │
+│ h2  Results                           │
+│ p When the research ends we will tell   │
+│   every participant the overall        │
+│   results in plain words. We will not  │
+│   give you a personal diagnosis or     │
+│   assessment — this research does not  │
+│   do that.                            │
+│                                      │
+│ ・[Contact the research team]          │
+│ ・[Pause or leave the research]        │
+│ p[role=status]                       │
+└──────────────────────────────────────┘
+```
+
+### Information hierarchy and block order
+
+1. The phase statement (a synthetic prototype, no real conclusions)
+2. The purpose of the research (in plain words)
+3. **Where you are** (the timeline, including the total duration)
+4. What is coming (the only block with an action)
+5. What you have done
+6. How your information is used (→ B2)
+7. The plan for results (stating explicitly that no personal conclusion is given)
+8. Help and leaving
+
+### State matrix
+
+| State | Presentation |
+|---|---|
+| Loading | `Reading where you are in the research…`; the purpose and the results plan are static content and render first. |
+| Empty (just enrolled, no records) | Under "What you have done": `No records yet. You have just started, and that is normal.` |
+| Error | Recoverable and local: `We could not read where you are. The description of the research is still available, and none of your records is lost.` + `Try again` |
+| Not permitted | Not applicable (this is your own resource). |
+| Protected existence | If the enrolment record is not reachable → the uniform page of 0.6. |
+| Paused | A banner at the top: `Your participation is paused. Nothing new will be scheduled while it is. You can resume at any time.` + `See the pause settings` |
+| Left | `You have left this research. This page is kept so you can look at your records from the time and your leaving receipt.` + `See my leaving receipt` |
+
+### Key interactions and confirmation copy
+
+No action requires confirmation. **The one discipline that matters here is the copy**: the timeline may not use evaluative wording such as "behind", "overdue" or "incomplete"; use `Not done yet` / `Expected mid-August`.
+
+### Accessibility points
+
+- The timeline is an `<ol>` with each step an `<li>`; states use an icon plus text (`[✓] Done` / `[◐] Under way` / `[ ] Not done yet`), never colour alone.
+- The current step carries `aria-current="step"`.
+- Under `h2 Where you are`, give a one-sentence summary first (`You are at step 3 of 5`), so a screen reader user knows their position without listening through every item.
+- The phase statement uses `<section role="note">`, not `alert`.
+
+---
+
+## B9 Life Story: the archive home
+
+**Documents**: Doc 20 §109–110 | **Status**: **partly implemented** (the M17 backend has archives / items / versions / visibility / contributions / withdraw / export)
+
+**Implemented**: reading your own life story (`life-story.view-own`, `ownerOnly`), writing a new item, and confirming an **exact version** as testimony. Before this there was no read path at all — the permission catalogue did not contain a single read action: a participant could write, revise, confirm and withdraw, and could not see what was in there, while a supporter could already propose content into it. Asking someone to accept or decline a contribution to a story they cannot read is not a decision that can be made properly.
+
+Each item states its source and confirmation state beside itself (ADR-024) rather than in a legend somewhere else: who wrote it (you / a supporter / a drafting tool / a transcription / a translation), and whether you confirmed that these are your own words. After the text changes, an earlier version's confirmation **does not** carry across to the new version, and the screen says so plainly — otherwise the record would come to mean "you confirmed words you never read". A withdrawn item is still readable by its author — withdrawing takes it back from other people, not the platform ruling that you may no longer remember your own past.
+
+**Not implemented**: visibility and audience (B11), export (B12), revising an existing item, and AI drafting (not enabled per D-14).
+
+### Purpose, and the questions this screen answers
+
+1. What have I written?
+2. Which are still drafts (only I can see them)? Which have I confirmed as my testimony?
+3. Which have been shared, and with whom?
+4. What has someone contributed to me that is waiting for my decision?
+5. How do I export them, or take them back?
+
+**"Private is the default" must be visible on the screen, never guessed at.**
+
+### Wireframe (mobile)
+
+```text
+┌──────────────────────────────────────┐
+│ h1  My life story                     │
+│ [🔒] By default only you can see these.│
+│      Others can only see something if  │
+│      you change its visibility         │
+│      explicitly.                      │
+│                                      │
+│ ┌ main actions ─────────────────────┐ │
+│ │ [Keep writing: My father's bicycle]│ │← first when a draft exists
+│ │ [Write a new one]                 │ │
+│ └───────────────────────────────────┘ │
+│                                      │
+│ h2  Waiting for you (1)                │
+│ ・Xiaofang added something to "My      │
+│   father's bicycle"                   │
+│   [Look at it and decide]             │← §128
+│   p What somebody else adds does not   │
+│     become your testimony until you    │
+│     confirm it.                       │
+│                                      │
+│ h2  Drafts (2)                        │
+│ ┌ dashed card ──────────────────────┐ │
+│ │ My father's bicycle               │ │
+│ │ [✎] Draft · version 3 · only you  │ │
+│ │     can see this                  │ │
+│ │ Last changed: yesterday           │ │
+│ │ [Keep writing] [Delete this draft] │ │
+│ └───────────────────────────────────┘ │
+│                                      │
+│ h2  What I have confirmed (4)          │
+│ ┌ solid card ───────────────────────┐ │
+│ │ The summer of 1976                │ │
+│ │ [✓] Your testimony · version 2    │ │
+│ │     you confirmed on 2026-07-20   │ │
+│ │ [🔒] Visibility: only you         │ │
+│ │ [View] [Change visibility]        │ │
+│ │ [Change it again]                 │ │
+│ └───────────────────────────────────┘ │
+│ ┌ solid card (shared) ──────────────┐ │
+│ │ The lane in the old photograph    │ │
+│ │ [✓] Your testimony · version 1    │ │
+│ │ [👥] Visibility: my connections   │ │
+│ │      (3 people)                   │ │
+│ │      [See which 3 people]         │ │
+│ │ [View] [Change visibility]        │ │
+│ │ [Take the sharing back]           │ │
+│ └───────────────────────────────────┘ │
+│                                      │
+│ h2  Managing                          │
+│ ・[Export my whole life story]         │
+│ ・[Ask someone to add to it]           │
+│ ・[About life stories]                 │
+│ p[role=status]                       │
+└──────────────────────────────────────┘
+```
+
+### Information hierarchy and block order
+
+1. `h1` + **the private-by-default statement** (before any content)
+2. The main actions: keep writing a draft > write a new one
+3. Waiting for you (supporter contributions awaiting a decision)
+4. Drafts (dashed, `only you can see this`)
+5. What I have confirmed (solid, with the testimony label + a visibility badge)
+6. Managing (export / invite a contribution / explanation)
+
+**Never present**: view counts, who has looked, "this one is popular", or recommendation ordering. Ordering is by when it was last changed.
+
+### State matrix
+
+| State | Presentation |
+|---|---|
+| Loading | `Reading your life story…` |
+| Empty (brand new) | `You have not written anything yet. A life story is you telling your own life — whether you write, what you write and how much are all yours to decide. What you write can only be seen by you unless you change that.` + `Write a new one` + `See where people usually start` (→ the prompt cards, B10) |
+| Empty (confirmed items, no drafts) | The "Drafts" block does not render. |
+| Error | Recoverable: `We could not read your life story. Everything of yours is still there — nothing lost and nothing changed.` + `Try again` |
+| Not permitted (life story consent missing) | `This part needs you to agree to it under My consent choices first.` + `Go to my consent choices` |
+| Protected existence | An item that is not reachable **does not render**; visiting its URL directly → the uniform page of 0.6. "This one was deleted" is **not shown**. |
+
+### Key interactions and confirmation copy
+
+**Delete a draft** (a detailed confirmation — a draft took effort and deleting it cannot be undone)
+> Title: `Delete the draft "My father's bicycle"?`
+> Body: `This draft will be deleted and cannot be recovered. It has not been confirmed as your testimony and has not been shared with anyone. If you simply do not want to write for now, you can leave it — drafts do not expire and nothing will chase you.`
+> Primary: `Confirm deleting this draft`  Secondary: `Back, keep it for now`
+
+**Handling a supporter's contribution (§128)**: the way in is here; the full flow is in B10's "what somebody else added" section.
+
+### Accessibility points
+
+- A draft card (dashed + `[✎] Draft`) and a testimony card (solid + `[✓] Your testimony`): distinguished three ways over, by shape, icon and text.
+- Visibility badges are constructed per 0.8: `[🔒] Visibility: only you` / `[👥] Visibility: my connections (3 people)`; `See which 3 people` is a Tab-reachable link.
+- Multiple buttons in a card: block or inline, either is fine, but neighbouring buttons are ≥8px apart and ≥44px tall.
+- Block counts go into the `h2` (`Drafts (2)`).
+- Focus: on entry, focus is on the `h1`; returning from B10, focus returns to the card just edited.
+
+---
+
+## B10 Life Story: create / AI draft / confirm as testimony
+
+**Documents**: Doc 20 §111–118, §128–129 | **Status**: not implemented (the backend has `createItem` / `reviseItem` / `confirmTestimony` / `reviewContribution`)
+
+### Purpose, and the questions this screen answers
+
+1. What am I going to write? (prompt cards help you start, but can be skipped and you can choose your own subject)
+2. What can AI do for me? **Did AI write this or did I?**
+3. Are the names, places and dates the AI "read out" of my words correct? (confirmed one at a time)
+4. When does this text become "my testimony"? (**only after I explicitly confirm that one exact version**)
+5. What if I want to change it after confirming?
+
+**The core discipline of this screen**: `an AI draft ≠ your testimony`. AI output carries the `Draft` and `AI involved` labels permanently until the person confirms it; the confirming action is bound to an **exact version number**.
+
+### Wireframe (mobile; five steps, one screen each)
+
+**Step 1 — choosing a subject (§112)**
+
+```text
+┌──────────────────────────────────────┐
+│ h1  Where would you like to start?    │
+│ p These are only prompts. You can skip │
+│   any of them, or choose your own      │
+│   subject.                            │
+│ ┌ prompt card ──────────────────────┐ │
+│ │ A place you often go               │ │
+│ │ About 10 minutes · you can type or │ │
+│ │ speak                              │ │
+│ │ [Use this prompt]                  │ │
+│ └───────────────────────────────────┘ │
+│ ┌ prompt card (sensitive) ──────────┐ │
+│ │ A loss                             │ │
+│ │ [⚠] This one is not easy for some  │ │
+│ │     people                         │ │
+│ │ About 15 minutes                   │ │
+│ │ [Use this prompt] [Skip this one]  │ │
+│ └───────────────────────────────────┘ │
+│ [I'll choose my own subject]          │
+│ [Not writing for now, back to my life │
+│  story]                               │
+└──────────────────────────────────────┘
+```
+
+**Step 2 — drafting (§113–114)**
+
+```text
+┌──────────────────────────────────────┐
+│ h1  Writing: My father's bicycle      │
+│ [✎] Draft · only you can see this ·    │← persistent, sticks to the top
+│     saved automatically just now       │  while scrolling
+│                                      │
+│ label What you would like to write     │
+│ ┌──────────────────────────────────┐ │
+│ │ My father had an old black        │ │
+│ │ roadster…                         │ │
+│ └──────────────────────────────────┘ │
+│                                      │
+│ h2  Would you like AI to help?         │
+│     (optional)                        │
+│ p AI gets things wrong. Every sentence │
+│   it changes for you only counts once  │
+│   you have read it yourself.           │
+│ ・[Help me start]                      │
+│ ・[Turn my speech into text]           │
+│ ・[Tidy up the paragraphs]             │
+│ ・[Suggest a title]                    │
+│ ・[Say it more simply]                 │
+│                                      │
+│ ─ what the AI wrote (if you used it) ─ │
+│ [🤖] AI draft · not your testimony yet │
+│ ┌──────────────────────────────────┐ │
+│ │ (the AI output, directly editable)│ │
+│ └──────────────────────────────────┘ │
+│ [Replace my text with this]           │
+│ [No thanks, discard it]               │
+│                                      │
+│ [Save draft] [Check the details in it →]│
+│ [This subject is uncomfortable for me] │← §129
+└──────────────────────────────────────┘
+```
+
+**Step 3 — confirming the details one at a time (§115)**
+
+```text
+┌──────────────────────────────────────┐
+│ h1  Are these details right?           │
+│ p These were read out of what you       │
+│   wrote. [🤖] They are AI suggestions,  │
+│   not verified facts. Only you know     │
+│   whether they are right.              │
+│                                      │
+│ ┌ detail ───────────────────────────┐ │
+│ │ Person: father                     │ │
+│ │ [Confirm] [Change it] [Remove it]  │ │← all four equal
+│ │ [Not sure]                         │ │
+│ └───────────────────────────────────┘ │
+│ ┌ detail ───────────────────────────┐ │
+│ │ Year: sometime in the 1970s        │ │
+│ │ [Confirm] [Change it] [Remove it]  │ │
+│ │ [Not sure]                         │ │
+│ └───────────────────────────────────┘ │
+│ [Leave these for now]                 │← leaving them all is allowed
+│ [Next: look at this whole version →]   │
+└──────────────────────────────────────┘
+```
+
+**Step 4 — confirming as testimony (§116–117)**
+
+```text
+┌──────────────────────────────────────┐
+│ h1  Confirm that this is your story    │
+│ h2  The exact version you are          │
+│     confirming                        │
+│ [📄] Version 3 · saved 2026-08-03 14:20│
+│ ┌ the exact text (whole, untruncated)┐ │
+│ │ My father had an old black         │ │
+│ │ roadster…                          │ │
+│ └───────────────────────────────────┘ │
+│ h2  Where this version came from       │
+│ ・Written by you: most of it            │
+│ ・[🤖] AI involved: tidying paragraphs, │
+│   suggesting a title                  │
+│ ・Added by others: none                 │
+│ h2  The details you confirmed           │
+│ ・Person: father (you confirmed)        │
+│ ・Year: not sure (kept as uncertain)    │
+│ h2  After confirming                    │
+│ ・This version is marked "your          │
+│   testimony" — meaning this is your     │
+│   own account of your own experience.  │
+│ ・It does **not** mean anyone has        │
+│   checked whether it is historically   │
+│   accurate.                            │
+│ ・Confirming does not change            │
+│   visibility. It is "only you" now,    │
+│   and will still be "only you".        │
+│ ・You can change it later; a change      │
+│   creates a new version, and the old   │
+│   one is kept.                         │
+│                                      │
+│ [Confirm this is my story]            │← the wording §324 specifies
+│ [Back, let me change it]              │
+└──────────────────────────────────────┘
+```
+
+### Information hierarchy and block order
+
+Choosing a subject → drafting (AI optional, and placed **after** the writing area) → confirming details → **confirming as testimony** → visibility (B11, a separate step and a **separate action**).
+
+**Hard rules**:
+- Confirming as testimony **does not** change visibility along the way. They are two screens with two confirmations (Doc 20 §116 states that "current visibility" is **displayed** at this step, not changed).
+- Autosave saves **only** a draft; it never confirms testimony and never shares (§113). The autosave notice reads `saved automatically just now (still a draft)`.
+- AI output always appears in **its own block** carrying `[🤖] AI draft · not your testimony yet`, and only enters the participant's own text through an explicit `Replace my text with this`.
+
+### State matrix
+
+| State | Presentation |
+|---|---|
+| Loading (AI working) | `The AI is tidying this up… (a few seconds)` with `Cancel` available (§224 permits a safe cancel). **No fake progress bar.** |
+| Empty (no details found) | `Nothing was found that needs confirming. That is normal — carry straight on.` |
+| Error (autosave failed) | A persistent inline warning (not a toast): `Automatic saving did not work. What you wrote is still on this page, but has not reached the server. Please press "Save draft", or copy the text somewhere first.` |
+| Error (AI unavailable, §221) | `The AI help is not available right now. You can write as usual — this does not affect saving or confirming.` |
+| Error (confirming testimony failed: a version conflict) | Blocking: `We could not confirm, because this content was changed elsewhere. We stopped so that you do not confirm words you have not read. Please look at the latest version and confirm that.` + `See the latest version` |
+| Not permitted | As B9. |
+| Protected existence | As B9. |
+| A sensitive subject (§129) | Appears inline, no dialog: `It is quite normal for this subject to be hard to write about. You can: [Pause for now] [Save as a draft only you can see] [Skip this prompt] [Don't let the AI use this text] [Contact the research team] [Report] [Safety help]`. The wording is calm and **does not use** "warning" or "danger". |
+
+### Key interactions and the confirmation copy
+
+**Confirming as testimony (a detailed confirmation bound to the exact version)**
+> Primary button: `Confirm this is my story`
+> Dialog title: `Confirm version 3 as your testimony?`
+> Body: `What you are confirming is version 3 exactly as you see it above, word for word. After confirming, this version is marked "your testimony" — meaning it is your own account, not that anyone has checked it as historical fact. Visibility does not change, and is "only you" now.`
+> Primary: `Confirm this is my story`  Secondary: `Back, let me look again`
+> Success announcement: `Confirmed. Version 3 is now marked as your testimony. Visibility has not changed and only you can see it.`
+
+**Changing it after confirming (§118)**
+> Notice: `What you confirmed is version 3. A change creates version 4; version 3 is kept, still labelled as the testimony you confirmed on 2026-08-03. Version 4 is a draft until you confirm it again.`
+> Primary: `Start changing it (creating a new version)`  Secondary: `Back`
+
+**What somebody else added (§128)**
+> Title: `Xiaofang added something to "My father's bicycle"`
+> Body: `Xiaofang wrote this, not you. Until you decide, it does not appear in your story and does not become your testimony — **and even if you accept it, what somebody else added stays marked "added by someone else" and never becomes your testimony.**`
+> Four equally weighted actions: `Accept it as their addition` / `Change it and then accept` / `Don't accept it` / `Ask them to take it back`
+> Success announcement (accept): `Accepted. This is marked "added by Xiaofang" and shown separately from your own testimony.`
+
+**The AI involvement label vocabulary (§53, shown permanently beside the content)**: `AI draft` / `AI transcription` / `AI translation` / `AI tidying` / `AI suggestion`. The label **remains** after saving and does not disappear on confirmation — confirming makes it "testimony the participant confirmed, drafted with AI involvement", not "written by the participant alone".
+
+### Accessibility points
+
+- The draft label sticks to the top (`position: sticky`), but degrades to a static block at the top under `prefers-reduced-motion` and at 200% zoom, so it never covers content.
+- The four detail-confirmation buttons are the same class, equal in weight and Tab-reachable; each detail is an `<li>` with an `<h3>` or emphasised text as the prefix of its accessible name (`Person: father`).
+- The AI output area is `aria-live="polite"`, announcing on completion: `The AI has produced a tidied version below. It is not your testimony yet.`
+- The confirmation dialog's `aria-describedby` points at the four "after confirming" consequences.
+- Voice input (if enabled): the recording state uses text + icon + a timer, never flashing; the stop button is ≥44px and well away from "delete".
+- The long-text editor must not scroll horizontally at 200% zoom; `overflow-wrap: anywhere`.
+
+---
+
+## B11 Life Story: visibility and audience
+
+**Documents**: Doc 20 §119–124, §46–48 | **Status**: **not built, waiting for a reader** (ruling D-16). The backend has `changeVisibility` and `Internet Public` is refused (`UNSUPPORTED_CAPABILITY`), but **no read path anywhere looks at `visibility`** — the only query in the repository that reads items, `getMyLifeStory`, is `ownerOnly`, so changing something to `Community` still leaves the actual audience at zero. `Selected People` is worse still: no command can write `life_story.access_grants`. Putting this on screen now would leave a participant believing they had shared when they had not. **Unlock condition**: first a non-owner read path that respects `visibility` and `access_grants`, and a command that writes grants
+
+### Purpose, and the questions this screen answers
+
+1. Who can see this one right now?
+2. If I change it to X, **which people** exactly can see it? (the audience must be nameable or countable)
+3. What can they do? (view / comment / quote / download / forward)
+4. Can I change it back, and what about people who already saw it?
+
+**Audience before publication**: the audience picker and the audience preview must appear **before** the "confirm the change" control.
+
+### Wireframe (mobile)
+
+```text
+┌──────────────────────────────────────┐
+│ [← Back]                              │
+│ h1  Who can see "The lane in the old   │
+│     photograph"                       │
+│ Now: [🔒] only you                    │
+│                                      │
+│ h2  Choose a scope                    │
+│ ┌ option ───────────────────────────┐ │
+│ │ (•) Only you                       │ │
+│ │     Nobody but you can see it.     │ │
+│ │     The research team does not     │ │
+│ │     read the content either,       │ │
+│ │     unless you separately agree.   │ │
+│ └───────────────────────────────────┘ │
+│ ┌ option ───────────────────────────┐ │
+│ │ ( ) People I choose                │ │
+│ │     You pick them one by one. Only │ │
+│ │     people who already have a      │ │
+│ │     relationship with you can be   │ │
+│ │     chosen.                        │ │
+│ └───────────────────────────────────┘ │
+│ ┌ option ───────────────────────────┐ │
+│ │ ( ) My connections                 │ │
+│ │     3 people right now. Connections│ │
+│ │     you make later will **not**    │ │
+│ │     see it automatically unless    │ │
+│ │     you come back and change this. │ │
+│ └───────────────────────────────────┘ │
+│ ┌ option ───────────────────────────┐ │
+│ │ ( ) A community                    │ │
+│ │     Members of that community and  │ │
+│ │     its moderators can see it. It  │ │
+│ │     appears among the community's  │ │
+│ │     posts.                         │ │
+│ └───────────────────────────────────┘ │
+│ ┌ option ───────────────────────────┐ │
+│ │ ( ) Public on the platform         │ │
+│ │     Every signed-in eligible user  │ │
+│ │     on the platform can see it,    │ │
+│ │     and it may be found by search  │ │
+│ │     within the platform.           │ │
+│ │     [Public on the platform ≠      │ │
+│ │      public on the internet]       │ │
+│ └───────────────────────────────────┘ │
+│ ┌ unavailable (explained) ──────────┐ │
+│ │ [✗] Public on the internet         │ │
+│ │     This prototype does not offer  │ │
+│ │     this. Putting content on the   │ │
+│ │     internet needs a separate      │ │
+│ │     process and separate approval. │ │
+│ └───────────────────────────────────┘ │
+│                                      │
+│ h2  Audience preview                  │← appears as soon as you choose
+│ You chose: my connections             │
+│ ・These 3 people: Mrs Zhang, Mr Wang,  │
+│   Mr Li  [See the list]               │
+│ ・Do they have to sign in: yes         │
+│ ・People you blocked: cannot see it    │
+│ ・Can it be found by search: no        │
+│ ・Can they comment: no                 │
+│ ・Can they quote or download: no       │
+│ ・Can you change it back: yes, any time│
+│                                      │
+│ [Change visibility to "my connections"]│
+│ [Back, don't change anything]         │
+└──────────────────────────────────────┘
+```
+
+### Information hierarchy and block order
+
+1. The current visibility (state where things stand first)
+2. The scope options (including the unavailable one and why)
+3. **The audience preview** (appearing as soon as a choice is made, before the submit button)
+4. Submit and cancel
+
+**The eight elements of an audience preview (§47)**: exactly who / whether signing in is required / whether blocked people are excluded / whether it can be found by search / whether they can comment / whether they can quote, download or forward / whether it can be taken back / the scope of research use. All eight are required.
+
+### State matrix
+
+| State | Presentation |
+|---|---|
+| Loading (the audience count) | `Working out exactly who is in this scope…`; **until it is known, the submit button is disabled** with the reason: `You have to know exactly who before you can confirm.` |
+| Empty (chose "my connections" and there are none) | `You have no connections yet, so this scope holds 0 people right now. Choosing it means nobody would see it. Connections you make later will not see it automatically either — you would need to come back and change this.` |
+| Empty ("people I choose" with nobody to choose, §121) | `There is nobody you can choose right now. Only people who already have a relationship with you can be chosen.` |
+| Error | Recoverable: `Visibility was not changed. It is still "only you", with nothing altered.` + `Try again` |
+| Not permitted (sharing consent missing) | `To share a life story you first need to agree to "Sharing my life story" under My consent choices.` + `Go to my consent choices` |
+| Not permitted (public on the internet) | The option is permanently visible but not selectable, with the reason attached (see the wireframe). It is **not hidden** — hiding it would suggest no such thing exists. |
+| Protected existence | The candidate list for "people I choose" contains **only already-authorised** people; there is no search box for querying arbitrary people (that would be existence probing). See Appendix B, deviation #1. |
+
+### Key interactions and the confirmation copy
+
+**Lowering visibility (making it private, a simple confirmation)**
+> `Changed to "only you". Others cannot see it now. People who already read it may remember what it said, and we cannot take that back.`
+
+**Raising visibility to "my connections" (a detailed confirmation)**
+> Title: `Show "The lane in the old photograph" to your 3 connections?`
+> Body: `Those 3 people are: Mrs Zhang, Mr Wang and Mr Li. They can read it; they cannot comment, quote or download it. Connections you make later will not see it automatically. You can change it back to "only you" at any time.`
+> Primary: `Confirm showing it to these 3 people`  Secondary: `Back, don't change anything`
+
+**Raising it to "public on the platform" (a reinforced, step-up confirmation)**
+> Title: `Make "The lane in the old photograph" public on the platform?`
+> Body: `Every signed-in eligible user on the platform will be able to see it, and it may be found by search within the platform. This is **not** public on the internet — it will not appear in search engines. You can change it back at any time, but we cannot make anyone who read it beforehand forget it.`
+> The reinforcing step: `Type "public on the platform" to confirm` (a text field)
+> Primary: `Confirm making it public on the platform`  Secondary: `Back, don't change anything`
+
+**The additional statement for a community audience (§123)**
+> `Once it goes to a community, members of that community and its moderators can see it, it appears in the community's posts, and it is subject to version 3 of that community's rules.`
+
+### Accessibility points
+
+- The scope options use `<fieldset>` + `<legend>Choose a scope</legend>` + a radio group (radios are right here: mutually exclusive single values with a clear "current value").
+- An unavailable option uses `disabled` + `aria-describedby` pointing at the reason text — **never** grey alone.
+- The audience preview area is `aria-live="polite"`, announcing on a change of choice: `You chose my connections, which is 3 people.`
+- The list expands in a `<details>` with `<summary>See the list</summary>`.
+- The submit button's accessible name contains the target scope (`Change visibility to "my connections"`) — the consequence is legible from the button's name alone.
+
+---
+
+## B12 Life Story: withdrawal and export
+
+**Documents**: Doc 20 §125–126 | **Status**: **partly implemented**. **Implemented**: asking the platform for a copy of your own information (`participant.export`, owner-only + confirmed), and **seeing what became of that request** (a new `export.view-own`). The request had always been permitted on the server and the route existed, but the participant workspace had no way in — so the right existed only for people who knew the API; and adding a button alone was not enough either, because **a request whose outcome cannot be seen is indistinguishable from a request never made, and a refusal looks exactly like silence**. The wording promises no delivery: this is a request, reviewed by **someone other than the person who made it** (the database layer refuses approval by the requester), and the copy is produced after that; `Approved` is not written as "generated", and `Generated` is not written as "delivered". Asking **requires no reason** — a copy of your own information is not conditional on explaining yourself. Withdrawing a life story item (`withdrawItem`) exists in the backend, and the participant screen offers no way in yet. **Not implemented**: exporting a single life story item, and the withdrawal entry point
+
+### Purpose, and the questions this screen answers
+
+1. I want one of these not to be seen any more — how, and how many kinds of "taking it back" are there?
+2. After taking it back, what about what already happened? (answered honestly: people who read it remember, and we cannot help that)
+3. I want a copy of what I wrote — how do I get it, and when?
+4. Does the export contain anyone else's content? Was AI involved?
+
+### Wireframe (mobile, withdrawal)
+
+```text
+┌──────────────────────────────────────┐
+│ [← Back]                              │
+│ h1  Taking back "The lane in the old   │
+│     photograph"                       │
+│ p There are several kinds of "taking    │
+│   back", of different strength. Choose │
+│   one.                                │
+│                                      │
+│ ┌ option ───────────────────────────┐ │
+│ │ ( ) Make it visible only to me     │ │
+│ │     The content stays; others can  │ │
+│ │     no longer see it.              │ │
+│ │     [The lightest kind; you can    │ │
+│ │      change it back any time]      │ │
+│ └───────────────────────────────────┘ │
+│ ┌ option ───────────────────────────┐ │
+│ │ ( ) Take it down from the community│ │
+│ │     The post disappears from       │ │
+│ │     "Gardening Corner". The content│ │
+│ │     stays in your archive.         │ │
+│ └───────────────────────────────────┘ │
+│ ┌ option ───────────────────────────┐ │
+│ │ ( ) Do not use this one in research│ │
+│ │     Research datasets generated    │ │
+│ │     from now on will not include   │ │
+│ │     it. [Datasets already locked   │ │
+│ │     will not be rewritten]         │ │
+│ └───────────────────────────────────┘ │
+│ ┌ option (destructive) ─────────────┐ │
+│ │ ( ) Ask for this one to be deleted │ │
+│ │     [⚠] Once deleted it cannot be  │ │
+│ │     recovered. For the integrity   │ │
+│ │     of the research record, some   │ │
+│ │     governance records (who did    │ │
+│ │     what and when) are kept, but   │ │
+│ │     they do not hold the content.  │ │
+│ └───────────────────────────────────┘ │
+│                                      │
+│ h2  What happens afterwards            │
+│ Immediately:                          │
+│ ・[✓] others can no longer see it      │
+│ Takes a little time:                  │
+│ ・[⏳] cached copies update gradually  │
+│ What we cannot do:                    │
+│ ・[✗] what people who read it remember │
+│ ・[✗] screenshots anyone saved         │
+│                                      │
+│ [Confirm: make it visible only to me]  │
+│ [Back, don't take it back]            │
+└──────────────────────────────────────┘
+```
+
+### Wireframe (mobile, export)
+
+```text
+┌──────────────────────────────────────┐
+│ h1  Export my life story              │
+│ h2  What it will contain              │
+│ ・6 pieces you confirmed as testimony  │
+│   (with the history of every version) │
+│ ・2 drafts                             │
+│ ・1 passage added by someone else      │
+│   (marked with who added it)          │
+│ ・What AI was involved in (and where)  │
+│ ・The visibility and sharing record     │
+│ h2  What it will not contain           │
+│ ・Content written by others that you    │
+│   have no right to take away          │
+│ ・Any information about another         │
+│   participant                         │
+│ h2  Format                            │
+│ ・One ZIP file containing plain text    │
+│   and images                          │
+│                                      │
+│ [Start making the export file]        │
+│                                      │
+│ ─ afterwards ──────────────────────── │
+│ [◐] Being made · a few minutes        │
+│ [✓] Ready · available for 7 days      │
+│     [Download]                        │
+│ [✓] You downloaded it on 2026-08-03   │
+└──────────────────────────────────────┘
+```
+
+### Information hierarchy and block order
+
+**Withdrawal**: the options (lightest to heaviest) → **the three classes of consequence (immediate / takes time / cannot be done)** → confirmation.
+**Export**: what it contains → what it does not → the format → making it → three states (being made / ready / downloaded, which §126 explicitly requires be kept separate).
+
+The three classes of consequence are the design core of this screen: Doc 20 §125 requires it to "show immediate effects and pending propagation", and this design adds a third class, **"what we cannot do"** — a direct consequence of the honest-wording principle.
+
+### State matrix
+
+| State | Presentation |
+|---|---|
+| Loading (making the export) | `Being made · a few minutes`. **You can leave this screen**: `You can go and do something else; it will be here when it is ready.` No fake progress bar. |
+| Empty (nothing to export) | `You have not written anything yet, so there is nothing to export right now.` |
+| Error (withdrawal failed) | Recoverable: `That was not taken back. Visibility is still "my connections", with nothing altered.` + `Try again` |
+| Error (export failed) | Recoverable: `The export file was not made. None of your content was affected at all.` + `Try again` + `Contact the research team` |
+| Not permitted (export consent missing) | `To export, you first need to agree to "Export" under My consent choices.` |
+| Protected existence | The export contains **no** identifier of any other participant; content added by others is trimmed to the scope it was authorised under, and the file states `this passage was written by somebody else, and is included here under the scope authorised at the time`. |
+
+### Key interactions and the confirmation copy
+
+**Make it visible only to me (a simple confirmation)**
+> `Changed to "only you". Others cannot see it now. What people who already read it remember is not something we can take back.`
+
+**Ask for deletion (a reinforced confirmation)**
+> Title: `Delete "The lane in the old photograph"?`
+> Body:
+> ```
+> After deleting:
+> ・The content of this one is deleted and cannot be recovered.
+> ・Every historical version of it is deleted with it.
+> ・For the integrity of the research record, one governance record is kept:
+>   that a piece of content was deleted, when, and by whom. That record does
+>   not hold the content itself.
+> ・If this content has already gone into a locked research dataset, that
+>   dataset will not be rewritten — we cannot change a locked research record
+>   after the fact. Datasets generated from now on will not include it.
+> ・What people who already read it remember is not something we can take back.
+> ```
+> The reinforcing step: `Type the title of this one to confirm: The lane in the old photograph`
+> Primary: `Confirm deleting this one`  Secondary: `Back, don't delete`
+
+**The three export announcements**
+> Being made: `Being made. You can go and do something else.`
+> Ready: `The export file is ready and can be downloaded for 7 days.`
+> Downloaded: `Downloaded. The file is on your device — please look after it, because it holds your own personal content.`
+
+### Accessibility points
+
+- The three classes of consequence use three icon-bearing lists (`[✓]` immediate / `[⏳]` takes time / `[✗]` cannot be done), with distinguishable icon shapes.
+- The destructive option uses the destructive token **and** a `[⚠]` icon **and** the words "cannot be recovered".
+- The reinforced confirmation's text field has a visible `<label>`, with `aria-describedby` pointing at the exact words to be typed.
+- The export status area is `aria-live="polite"`; when polling, it announces only **on a change of state** and does not repeat "being made".
+- The `Download` button does not render while the file is not ready (rather than rendering disabled) — so nobody keeps pressing a greyed-out button.
+
+---
+
+## B13 Accessibility and preferences (capability-adaptive modes)
+
+**Documents**: Doc 20 §103–104, §286–287 | **Status**: **partly implemented (2026-08-04)**
+
+**Implemented**: text size (standard / large / larger / largest), content density (standard / spacious), contrast (standard / high) and reduced motion. The style hooks for these four (`data-font-scale` / `data-density` / `data-contrast`) **had always been in the stylesheet with no code anywhere setting them** — four text sizes and three densities defined and unreachable, which is "the capability exists and nobody can invoke it", the exact counterpart of "the control does nothing when pressed". Per §B13 they **take effect immediately with no save button** (a save button would mean it had not taken effect yet), with a live preview. "Standard" **removes the attribute rather than writing `standard`**: writing "standard" explicitly would quietly override what the user has already set at the operating system level (`prefers-contrast` / `prefers-reduced-motion`), and the screen says honestly "your device already asks for …, and this platform is already following it". Preferences **are stored on this device only**, which the screen says out loud, so that "your preferences" is not read as something that travels with the person. In the wording, **no option is described as a deficit**.
+
+**Deliberately not implemented**: read aloud, one step at a time, simpler wording, and longer time to act. They are in the design and none of them is in the implementation — putting them on screen would record a choice no code will ever read, the same rule laid down by D-2. "Someone is helping me" is already implemented as D-15's persistent assistance banner, and this screen only points there rather than duplicating a control.
+
+**A measurement defect fixed along the way**: at 320px (§G's 400% zoom target), the widest navigation label `Messages` (bold as the current item) needs 71px while each slot gives only 68px, so it was **clipped by 3px** — D-10's arithmetic was slightly optimistic. The fix was to take back the navigation bar's own side padding (it is edge-anchored chrome and does not need the body text's margin), **not to reduce the type size**: shrinking the text for older users to accommodate a layout points the wrong way. At the `xl` and `xxl` sizes the navigation now wraps to **2+2 rather than 3+1** — 3+1 clipped `Messages` by 7px and gave `Help` a whole row to itself; a larger type size is exactly what a user chose in order to read, and clipping a label at that moment removes the words precisely where they were most needed.
+
+### Purpose, and the questions this screen answers
+
+1. The text is too small / the contrast is not enough / the animation is dizzying / I want it read to me — where do I change that?
+2. What will it look like after I change it? (**seen on the spot, with no need to save first**)
+3. How do I go back if I get it wrong?
+4. Will people think less of me for changing these? (no — **not one option is described as a deficit**)
+
+### Wireframe (mobile)
+
+```text
+┌──────────────────────────────────────┐
+│ h1  Reading and using this            │
+│ p These are your preferences and you   │
+│   can change them at any time. What    │
+│   you choose makes no difference to    │
+│   anything in the research, and is not │
+│   treated as a judgement about you.   │
+│                                      │
+│ ┌ live preview (sticky) ────────────┐ │
+│ │ Preview                            │ │
+│ │ This is what body text looks like. │ │
+│ │ [This is a button]                 │ │
+│ │ label This is a text field         │ │
+│ │ [__________]                       │ │
+│ └───────────────────────────────────┘ │
+│                                      │
+│ h2  Text size                         │
+│ ( ) Standard ( ) Large (•) Larger      │
+│ ( ) Largest                           │
+│                                      │
+│ h2  Contrast                          │
+│ (•) Standard  ( ) High contrast        │
+│                                      │
+│ h2  Content density                    │
+│ (•) Standard                          │
+│ ( ) Spacious (less on each screen,     │
+│     more space between things)        │
+│                                      │
+│ h2  Wording and steps                  │
+│ [ ] Use simpler wording                │
+│ [ ] Show one step at a time            │
+│ [ ] Show less on the page, only what   │
+│     is needed                         │
+│     p Safety and emergency information │
+│       is always kept.                 │
+│                                      │
+│ h2  Sound and motion                   │
+│ [ ] Read the content aloud             │
+│ [ ] Reduce motion                      │
+│     p Your system settings already ask  │
+│       for reduced motion, and we are   │
+│       already following that.          │
+│                                      │
+│ h2  Time                              │
+│ [ ] I need longer to do things         │
+│     p We try not to impose time limits  │
+│       anyway. With this on, anything   │
+│       that is timed gives more time.   │
+│                                      │
+│ h2  Someone helping me                 │
+│ [ ] Someone is helping me use this      │
+│     p Once on, the interface makes clear│
+│       who is using it. Every step the  │
+│       person helping you takes is       │
+│       recorded as theirs, not yours.   │
+│                                      │
+│ [Save these settings]                 │
+│ [Put everything back to standard]     │
+│ p[role=status]                       │
+└──────────────────────────────────────┘
+```
+
+### Information hierarchy and block order
+
+1. `h1` + **the no-judgement statement** (before any option)
+2. **The live preview** (sticky, always visible — §104 requires a live preview)
+3. Visual: text size → contrast → content density
+4. Cognitive: simpler wording → one step at a time → less on the page
+5. Sensory: read aloud → reduce motion
+6. Time
+7. Assisted mode
+8. Save / back to standard
+
+**Naming discipline (§104, "No selection is labelled as a deficit")**:
+- ✗ `senior mode`, `easy mode`, `accessibility mode`, `assisted mode`
+- ✓ `Larger`, `High contrast`, `Spacious`, `Use simpler wording`, `Show one step at a time`
+- The screen's title is `Reading and using this`, not `Accessibility settings` (which implies "you have a disability"). The navigation item carries the same name.
+
+### State matrix
+
+| State | Presentation |
+|---|---|
+| Loading | This screen **renders from the locally saved preferences first** and then syncs with the server; there is no "loading settings" blank. |
+| Empty (never set) | Everything at standard, with a notice at the top: `These are the standard settings. You can try any of them below, and the preview changes as you do.` |
+| Error (save failed) | Recoverable, and it must state what is in force: `The settings did not reach the server. They are in effect on this device, and on another device you would have to set them again.` + `Try again` |
+| Not permitted | Not applicable — preferences are always available to everyone, regardless of consent items or a suspension. |
+| Protected existence | Not applicable. |
+| Assisted mode on | A global context banner (visible on every screen): `"Someone is helping me" is on. The person using this is: Nurse Li.` + `Switch back to using it myself` |
+
+### Key interactions and the confirmation copy
+
+**Effective on the spot; saving is persistence**: every change takes effect **immediately** in the preview and across the whole interface; `Save these settings` only syncs it to the account. This is what §287's "available during a task, no restart" requires directly.
+
+**Back to standard (a simple confirmation)**
+> Title: `Put every setting back to standard?`
+> Body: `Text size, contrast, density and the other preferences all return to standard. You can change them again at any time.`
+> Primary: `Confirm going back to standard`  Secondary: `Back, keep my settings`
+
+**Turning assisted mode on (a detailed confirmation)**
+> Title: `Turn on "Someone is helping me use this"?`
+> Body: `Once on, the interface shows at all times who is using it. Every action the person helping you takes is recorded as theirs, not yours. Some things — agreeing to something, confirming your testimony, leaving the research — **can only be done by you**, and nobody can do them for you.`
+> Primary: `Confirm turning assisted mode on`  Secondary: `Back, don't turn it on`
+
+### Accessibility points
+
+- The preview is sticky (`position: sticky`); at 200% zoom, if it occupies more than 40% of the screen, it degrades to a "Preview" button opening a dismissible preview panel.
+- Each group of options is a `<fieldset>` + `<legend>`; single choices use radios and multiple choices use checkboxes (semantically correct here, because there is a definite "current value").
+- After a change, `role="status"` announces: `Text size changed to "Larger".`
+- **`Reduce motion` takes its default from the system**: if the system already has `prefers-reduced-motion` on, the checkbox is pre-ticked with the explanation attached (see the wireframe), and the system-level setting cannot be turned "off" here — it can only be additionally turned on where the system has not.
+- Keyboard: no slider is used for text size — discrete radios are easier with a keyboard and a screen reader.
+- Changing a setting on this screen **must not** lose focus: after changing the text size, focus stays on the radio just operated.
+
+---
+
+## B14 Public profile editing and preview
+
+**Documents**: Doc 20 §131–133, §256 | **Status**: not implemented
+
+### Purpose, and the questions this screen answers
+
+1. What does "me" look like to people in matching and in the community?
+2. For each piece of information, do I want it up there? (**opt-in per item, nothing by default**)
+3. Who can see it once it is up, and what does it look like on a phone and on a computer?
+4. Can I take it down?
+
+**Hard rule**: the public profile and the participant profile (the research one) are **two different things**, the interface must say so, and they may not be merged (§354, "combining ParticipantProfile and PublicProfile").
+
+### Wireframe (mobile)
+
+```text
+┌──────────────────────────────────────┐
+│ h1  My public profile                 │
+│ [ℹ] This is not the same thing as the  │
+│     record the research team sees.     │
+│     Nothing in the research record     │
+│     appears here automatically, and    │
+│     what you put here does not become  │
+│     part of the research record.      │
+│ Current state: [○] not switched on     │
+│                                      │
+│ h2  Choose what to put up              │
+│ p Each is chosen separately. By default│
+│   none of them is up.                 │
+│ ┌──────────────────────────────────┐ │
+│ │ [ ] What you would like to be      │ │
+│ │     called                         │ │
+│ │     [Zhou of the Balcony_________] │ │
+│ │     p Please do not use your real   │ │
+│ │       full name.                   │ │
+│ ├──────────────────────────────────┤ │
+│ │ [ ] A short introduction           │ │
+│ ├──────────────────────────────────┤ │
+│ │ [ ] Broad interests                │ │
+│ ├──────────────────────────────────┤ │
+│ │ [ ] Languages you use              │ │
+│ ├──────────────────────────────────┤ │
+│ │ [ ] Rough location (city level)    │ │
+│ │     p No street or building is      │ │
+│ │       shown.                       │ │
+│ ├──────────────────────────────────┤ │
+│ │ [ ] How you prefer to be contacted │ │
+│ ├──────────────────────────────────┤ │
+│ │ [ ] Some of the life stories I     │ │
+│ │     confirmed                      │ │
+│ │     [Choose…] p Only ones you have  │ │
+│ │     confirmed as testimony and     │ │
+│ │     whose visibility allows it.    │ │
+│ └──────────────────────────────────┘ │
+│ ┌ what cannot go up (explained) ────┐ │
+│ │ [✗] Date of birth, contact details,│ │
+│ │     address, health information,   │ │
+│ │     research records               │ │
+│ │     These never appear in a public │ │
+│ │     profile.                       │ │
+│ └───────────────────────────────────┘ │
+│                                      │
+│ h2  Preview                           │
+│ [Phone] [Computer]  ← switch          │
+│ ┌ what others see ──────────────────┐ │
+│ │ Zhou of the Balcony               │ │
+│ │ Interests: gardening, chess       │ │
+│ │ Language: English                 │ │
+│ └───────────────────────────────────┘ │
+│ p People you have blocked cannot see    │
+│   this profile, and will not see you    │
+│   anywhere.                           │
+│                                      │
+│ [Switch my public profile on]         │
+│ [Keep it for now, don't switch it on] │
+└──────────────────────────────────────┘
+```
+
+### Information hierarchy and block order
+
+1. `h1` + **the statement distinguishing it from the research record** (first)
+2. The current state (on / off)
+3. The per-item choices (all off by default)
+4. **The fields that cannot go up, and why** (permanently visible, never hidden)
+5. The preview (phone/computer switch)
+6. Switch on / keep for now
+
+### State matrix
+
+| State | Presentation |
+|---|---|
+| Loading | `Reading your public profile…` |
+| Empty (never created) | `You do not have a public profile. That is entirely fine — without one you can still take part in the research, write a life story, and write to people you are connected to. Only strangers in matching and the community use it.` |
+| Empty (items ticked but nothing filled in) | In the preview: `There is nothing here, so others would see an empty profile. It is better to fill in at least one thing before switching it on.` |
+| Error | Recoverable: `That was not saved. What you typed is still on this page.` + `Try again` |
+| Not permitted (public profile consent missing) | `To create a public profile you first need to agree to "Public profile" under My consent choices.` |
+| Protected existence | The preview shows **your** profile; there is no way in to "look at someone else's profile" (that belongs to the matching and community contexts and is bound by blocking and authorisation). |
+| Switched off | `Your public profile is switched off. Others cannot see it, and your content is still here.` + `Switch it back on` |
+
+### Key interactions and the confirmation copy
+
+**Switching on (a detailed confirmation)**
+> Title: `Switch your public profile on?`
+> Body: `Once it is on, people who come across you in matching and in the community see what is in the preview above: how you are called, your interests, your language. Anything you did not tick does not appear. People you have blocked cannot see it. You can switch it off or change it at any time — but what people who already saw it remember is not something we can take back.`
+> Primary: `Confirm switching my public profile on`  Secondary: `Back, not yet`
+
+**Switching off (a simple confirmation)**
+> `Switched off. Others can no longer see your public profile. What you filled in is still here and you can switch it back on at any time.`
+
+**Adding a life story reference (a detailed confirmation)**
+> Title: `Put "The lane in the old photograph" in your public profile?`
+> Body: `This one's visibility is currently "my connections". Putting it in your public profile makes its visibility the same as the profile's — meaning everyone who can see your profile can see this piece. That is a raising of visibility, and it needs its own confirmation.`
+> Primary: `Confirm adding it, and raising this piece's visibility`  Secondary: `Back, don't add it`
+
+### Accessibility points
+
+- Each field is a `<fieldset>`: a checkbox (whether to include it) plus an input (what to include); while unticked the input is `disabled` with `aria-describedby` explaining "tick it first to fill this in".
+- The block of fields that cannot go up uses `role="note"`, not `alert`.
+- The phone/computer preview switch is a `role="tablist"` (two tabs), and switching does not move focus.
+- The preview content is marked `aria-label="what others see"`, and every button inside the preview is `disabled` or rendered as plain text — **nothing inside a preview may be pressable**, so it is never mistaken for the real profile.
+- At 200% zoom, the "computer" preview becomes its own horizontally scrollable container (`overflow-x: auto`), and the page itself does not scroll horizontally.
+
+---
+
+## B15 Assessments (baseline / follow-up)
+
+**Documents**: Doc 20 §106, §172, §250 | **Status**: **not built, two things are missing** (ruling D-17). First, `assessment.record` is `{}` — it carries no owner permission and is granted only to ResearchCoordinator, so **a participant cannot record their own assessment at all**; and the command does not check whose `enrolmentId` it is. Second, and more fundamentally: **there is no instrument bank on the platform**. Both `assessment_records.instrument` and `instrument_version` are free text, and no table holds items, options, scoring or versions. Building the screen would mean the implementer inventing the item content — and instrument items are approved research material, not interface copy that can be made up along the way. **The home page's "waiting for you" block therefore deliberately omits assessments too**: listing something the participant cannot do is pointing at a door they cannot open. **Unlock conditions**: (1) approved instrument content and a versioned item bank in the database; (2) a new owner-scoped `assessment.record-own`, with the resource's ownership derived from the participant on the enrolment and never accepted from the caller (the lesson of D-13)
+
+### Purpose, and the questions this screen answers
+
+1. What questionnaire is this, why is it being asked, and roughly how long is it?
+2. Can I stop partway? Is what I have done wasted if I do?
+3. Can I leave some questions unanswered? (yes, and it **does not count as missingness of unknown cause**)
+4. What happens after I finish? Will somebody score me or draw conclusions?
+
+**Hard rule**: nothing may imply any benefit or conclusion before analysis (§172, "avoids claiming benefit before analysis").
+
+### Wireframe (mobile, one question at a time)
+
+```text
+┌──────────────────────────────────────┐
+│ [← Save and leave]                    │
+│ h1  Follow-up questionnaire           │
+│ p Question 3 · of 12                  │← textual progress, no animated bar
+│ ────────────────────────────────────  │
+│                                      │
+│ h2  In the last two weeks, how often   │
+│     did you feel connected to other    │
+│     people?                           │
+│ p Choose the one closest to how it     │
+│   felt. There is no right or wrong.   │
+│                                      │
+│ ( ) Almost never                      │
+│ ( ) Occasionally                      │
+│ ( ) About half the time               │
+│ ( ) Most of the time                  │
+│ ( ) Almost always                     │
+│ ────────────────────────────────────  │
+│ ( ) I would rather not answer this     │← §106 requires this explicitly
+│                                      │
+│ [Next question]                       │
+│ [Previous question]                   │
+│                                      │
+│ ・[What does this question mean?]      │
+│ ・[I want to pause and finish later]   │
+│ p What you have answered is saved;      │
+│   just come back and carry on.         │
+│ p[role=status]                       │
+└──────────────────────────────────────┘
+```
+
+**Before starting (the explanation screen)**
+
+```text
+┌──────────────────────────────────────┐
+│ h1  Follow-up questionnaire           │
+│ h2  What this is for                  │
+│ p These questions are for seeing        │
+│   whether things have changed overall  │
+│   over this period. It is not a test   │
+│   and not a health check — it gives    │
+│   you no personal diagnosis or         │
+│   assessment.                         │
+│ h2  Roughly how long                   │
+│ p About 10 minutes. You can stop at     │
+│   any time and what you answered is    │
+│   kept.                               │
+│ h2  Who sees your answers               │
+│ p The research team does. Other         │
+│   participants do not. What is         │
+│   published is aggregate numbers, and  │
+│   never names anyone.                 │
+│ h2  If you would rather not answer      │
+│     something                         │
+│ p Every question has "I would rather    │
+│   not answer this". Choosing it is     │
+│   entirely fine and affects nothing.   │
+│ [Start]  [Not now, back to home]      │
+└──────────────────────────────────────┘
+```
+
+### Information hierarchy and block order
+
+The explanation screen (purpose / duration / who sees it / skippable) → one question at a time → the completion receipt.
+
+**Inside each question**: the stem → one sentence on how to answer → the options (in a consistent direction, from "less" to "more") → **`I would rather not answer this` (separated by a rule, but visually equal in weight)** → navigation → help and pause.
+
+**Scale direction discipline (§250)**: every question in one questionnaire must run in the same direction; reversing partway is not permitted. Option text must be complete (never bare numbers "1 2 3 4 5").
+
+### State matrix
+
+| State | Presentation |
+|---|---|
+| Loading | `Opening the questionnaire…`; anything already answered renders from the local draft first. |
+| Empty | Not applicable (a questionnaire always has questions). If no assessment is due, the way in does not appear in B1/B8. |
+| Error (saving one answer failed) | Recoverable but prominent: `That answer was not saved. What you chose is still on the screen. Try again?` + `Try again` + `Save and leave` (which attempts to submit the whole thing) |
+| Error (submission failed) | Blocking: `The questionnaire was not submitted. Everything you answered is still here and nothing was lost. You can try again, or leave now and come back to submit it.` |
+| Not permitted (assessment consent missing) | `This questionnaire needs you to agree to "Assessments" under My consent choices first.` |
+| Protected existence | An assessment record belongs to its own participant; visiting someone else's assessment URL → the uniform page of 0.6. |
+| Expired | `The window for this questionnaire has passed. This is not your fault — questionnaires in research have fixed time ranges. The research team will know this one was not collected.` **No blame.** |
+| Left partway | Recorded as `Partially Completed` with a missingness reason of `Not Collected`; the interface copy: `Saved. You reached question 3, and can come back to it at any time.` |
+
+### Key interactions and the confirmation copy
+
+**"I would rather not answer this"** (no confirmation; it takes effect directly)
+> Announcement: `Recorded: you chose not to answer this one. On to the next.`
+> The backend mapping: this question's missingness reason = `Participant Declined` (**explicit**, never a silent empty value).
+
+**Pause (a simple confirmation)**
+> `Saved. You reached question 3 and can come back at any time. There is no time limit.`
+
+**Submit (a detailed confirmation)**
+> Title: `Submit this follow-up questionnaire?`
+> Body: `You answered 10 questions and chose not to answer 2. After submitting, it cannot be changed.`
+> Primary: `Submit this questionnaire`  Secondary: `Back, let me look again`
+
+**The completion receipt**
+> `We have your answers. Thank you. They are analysed together with other participants' answers, and we will not draw any personal conclusion about you from them. When the research ends, the overall results will be shared with every participant.`
+> **Prohibited copy**: `Well done!` / `Your score is…` / `You are doing better than last time` / any celebratory animation.
+
+### Accessibility points
+
+- Each question is a `<fieldset>` + `<legend>` (the stem); the options are radios.
+- Progress is text (`Question 3 · of 12`), placed after the `h1` and announced by `aria-live="polite"` on a change of question.
+- After changing question, focus moves to the new `<legend>` (`tabindex="-1"`) rather than to the first option — hear the question before choosing.
+- `I would rather not answer this` is a member of the same radio group (semantically correct as a mutually exclusive choice), separated from the main scale by a rule, and **must not** be smaller or fainter.
+- There is no countdown. If the research design requires a time window, state the closing date in words on the explanation screen only, and never show a countdown while answering (§296).
+- `Save and leave` is in the top left and reachable at any time; its touch target is ≥44px and well away from `Next question`.
+
+---
+
+## B16 Activities and interactions: prepare / complete / reflect
+
+**Documents**: Doc 20 §169–171 | **Status**: not implemented
+
+### Purpose, and the questions this screen answers
+
+1. What is this interaction I am about to have, and what do I want out of it?
+2. What would I like to talk about? (possibly bringing a piece of my own life story)
+3. Did it happen? (**the platform does not judge that for me**)
+4. How did it feel? Would I do it again? Do I need help?
+
+**Hard rule (§170)**: the platform **must not** infer "the interaction happened" from "a message was sent". A completion state can only be recorded by the participant themselves.
+
+### Wireframe (mobile, three stages)
+
+**Preparing (§169)**
+
+```text
+┌──────────────────────────────────────┐
+│ h1  Getting ready for a conversation   │
+│ p All of this is optional. Going        │
+│   straight to the conversation with     │
+│   no preparation is entirely fine.     │
+│ h2  What you would like from this       │
+│ ( ) Just to talk                       │
+│ ( ) To get to know someone new         │
+│ ( ) To talk about something on my mind │
+│ ( ) Not sure yet                       │
+│ h2  What you might talk about           │
+│ [interests, recent things, the past…]  │
+│ h2  Whether to bring a piece of your    │
+│     story                             │
+│ ・[Choose a life story I confirmed]     │
+│   p Once chosen, they can only see it   │
+│     if you choose to share it during   │
+│     the conversation. Choosing it      │
+│     shares nothing by itself.          │
+│ h2  How you will talk                   │
+│ ( ) Messages ( ) A phone call           │
+│ ( ) In person                          │
+│ h2  What would make it easier            │
+│ [ ] I would like them to speak slowly   │
+│ [ ] I would prefer text, not voice      │
+│ h2  Your limits                         │
+│ p You can end the conversation, block    │
+│   or report at any time. You do not     │
+│   have to give a reason.               │
+│ [Save this preparation]                │
+│ [Go straight to the conversation]      │
+└──────────────────────────────────────┘
+```
+
+**Recording completion (§170)**
+
+```text
+┌──────────────────────────────────────┐
+│ h1  How did the last conversation go?  │
+│ p Only you know what actually happened, │
+│   so this one is yours to say. The     │
+│   system does not judge it for you.    │
+│ ( ) We talked                          │
+│ ( ) I tried, but it did not happen     │
+│ ( ) It did not happen                  │
+│ ( ) I decided not to                   │
+│ ( ) It was cut short partway           │
+│ ( ) I need help                        │← selecting this reveals the help routes
+│ [Record this]  [Later]                 │
+└──────────────────────────────────────┘
+```
+
+**Reflecting (§171)**
+
+```text
+┌──────────────────────────────────────┐
+│ h1  Would you like to say how it felt?  │
+│     (optional)                        │
+│ p Every question can be skipped.        │
+│ ・Did this conversation actually happen? │
+│ ・Did it mean something to you?          │
+│ ・Did you feel they were listening?      │
+│ ・Was it hard?                           │
+│ ・Was there anything that made you       │
+│   uncomfortable?                       │
+│   [Yes] → shown immediately:            │
+│   [Report] [Safety help]               │
+│ ・Would you do it again?                 │
+│ ・Do you need help right now?            │
+│ h2  Anything else you would like to say  │
+│     (optional)                        │
+│ label What you would like to say        │
+│ [                                   ]  │
+│ [Submit my reflection] [Skip this]     │
+└──────────────────────────────────────┘
+```
+
+### Information hierarchy and block order
+
+Preparing (all optional) → the conversation itself (which happens off the platform or in messages) → recording completion (**recorded by the participant**) → reflecting (all skippable).
+
+### State matrix
+
+| State | Presentation |
+|---|---|
+| Loading | `Reading what is arranged for this activity…` |
+| Empty (nothing arranged) | `There is no conversation arranged right now. You can write to anyone you are connected to at any time — that needs no arrangement.` |
+| Error | Recoverable: `That was not saved. Everything you filled in is still here.` + `Try again` |
+| Not permitted | `This part needs you to agree to "Intervention delivery" first.` + `Go to my consent choices` |
+| Protected existence | If the other person is no longer reachable, the activity card becomes: `The arrangement for this conversation cannot go ahead. That is common and can happen for many reasons. You can record what actually happened, or simply skip it.` **Never attributed to the other person.** |
+| Completion not recorded | The home page's task card: `You have a conversation whose outcome is not recorded yet` — neutral wording, and **no chasing, no red, no exclamation mark**. |
+
+### Key interactions and the confirmation copy
+
+**Recording completion (a simple confirmation)**
+> `Recorded: we talked. Thank you for telling us.`
+> After choosing `I need help`: `All right. Here are people you can go to.` + `Contact the research team` + `Safety help` + `Report a problem` (all three appearing immediately, with no second press needed)
+
+**Choosing "something made me uncomfortable" in the reflection**
+> Shown inline immediately (no dialog, no interruption of the form): `If you would like to say more about it, or would like staff to know, any of these are available. You can also do nothing at all, and that is entirely fine.` + `Report` + `Safety help` + `Contact the research team`
+
+**Submitting a reflection**
+> `We have it. This is read alongside other participants' feedback, to understand the overall picture.`
+
+### Accessibility points
+
+- The six completion options are one radio group, visually equal in weight — **`We talked` must not carry the Primary style** (that would steer towards reporting success).
+- Each reflection question is its own `fieldset`, and every one has an equally weighted `Skip this question` option.
+- The "uncomfortable" branch expands in place with `aria-live="polite"`, and focus does not jump.
+- The life story picker on the preparation screen opens a dialog, and on return focus goes back to the `Choose a life story I confirmed` button.
+- Every button is ≥44px; `Record this` and `Later` are ≥8px apart.
+
+---
+
+## B17 Reporting and blocking centre
+
+**Documents**: Doc 20 §168 | **Status**: not implemented (currently scattered through B7's SafetyPanel)
+
+### Purpose, and the questions this screen answers
+
+1. Who have I blocked?
+2. Which conversations have I muted?
+3. What have I reported, and where does it stand?
+4. What happens if I unblock someone?
+5. What else can I do?
+
+**The boundary**: moderation evidence and the details of moderation decisions **are not shown here** (§168, "Moderator evidence and confidential decisions remain protected"). A participant sees only what they themselves submitted and whether the platform received it.
+
+### Wireframe (mobile)
+
+```text
+┌──────────────────────────────────────┐
+│ h1  What I have blocked and reported   │
+│                                      │
+│ h2  People I have blocked (2)          │
+│ ┌──────────────────────────────────┐ │
+│ │ Mrs Zhang                         │ │
+│ │ [🚫] Blocked · 2026-07-28         │ │
+│ │ You will not appear in each        │ │
+│ │ other's suggestions, cannot write  │ │
+│ │ to each other, and cannot see each │ │
+│ │ other's posts.                     │ │
+│ │ [Unblock Mrs Zhang]               │ │
+│ └──────────────────────────────────┘ │
+│                                      │
+│ h2  Conversations I have muted (1)     │
+│ ┌──────────────────────────────────┐ │
+│ │ Conversation with Mr Wang         │ │
+│ │ [🔕] Muted                        │ │
+│ │ The connection is still there and  │ │
+│ │ you can still write to each other; │ │
+│ │ there are simply no reminders. He  │ │
+│ │ does not know you muted it.        │ │
+│ │ [Unmute]                          │ │
+│ └──────────────────────────────────┘ │
+│                                      │
+│ h2  Reports I have submitted (3)       │
+│ ┌──────────────────────────────────┐ │
+│ │ 2026-07-28 · Harassment           │ │
+│ │ [✓] Received; staff will read it  │ │
+│ │ What you wrote: "He keeps asking  │ │
+│ │ me for my phone number"           │ │
+│ │ ⓘ To protect everyone involved we  │ │
+│ │   will not tell you the details of │ │
+│ │   what happens next, and will not  │ │
+│ │   tell them who reported it.       │ │
+│ │ [See the receipt for this report]  │ │
+│ └──────────────────────────────────┘ │
+│                                      │
+│ h2  What else I can do                 │
+│ ・[Contact the research team]          │
+│ ・[Safety help]                        │
+│ ・[Pause or leave the research]        │
+│ p[role=status]                       │
+└──────────────────────────────────────┘
+```
+
+### Information hierarchy and block order
+
+1. People I have blocked
+2. Conversations I have muted
+3. Reports I have submitted (with the statement that **details of the handling are not disclosed**)
+4. What else I can do
+
+**The report state vocabulary (two states only, honestly)**: `[✓] Received; staff will read it` / `[✓] Finished being handled`.
+**Not shown**: `under review`, `confirmed as a breach`, `they have been penalised` — those would leak moderation decisions and could mislead while the outcome is undecided (§193 reporter protection, §168 decision confidentiality).
+
+### State matrix
+
+| State | Presentation |
+|---|---|
+| Loading | `Reading…` |
+| Empty (all empty) | `You have not blocked anyone and have not submitted a report. This page is usually empty, and it is here when you need it.` + `Safety help` |
+| Empty (one section) | That whole `h2` block does not render (no "nothing here" placeholder). |
+| Error | Recoverable: `That could not be read. Your blocks and reports are all still there and are unaffected.` + `Try again` |
+| Not permitted | Not applicable — like B7, this is always available. |
+| Protected existence | It shows **only things you did yourself**. If someone in your block list has left the platform, the entry stays (it is your record), and no new state about them is shown. |
+
+### Key interactions and the confirmation copy
+
+**Unblocking (a detailed confirmation — this is an action that increases access)**
+> Title: `Unblock Mrs Zhang?`
+> Body:
+> ```
+> After unblocking:
+> ・You may meet each other again in suggestions.
+> ・But the connection and conversation you had do not come back automatically —
+>   those would have to start again.
+> ・A report you submitted earlier is unaffected, and staff will still handle it.
+> ・We will not tell them that you unblocked them.
+> ・You can block them again at any time.
+> ```
+> Primary: `Confirm unblocking`  Secondary: `Back, keep them blocked`
+
+**Unmuting (a simple confirmation)**
+> `Unmuted. You will get reminders when there are new messages in this conversation.`
+
+**The report receipt (a read-only screen)**
+> Contents: the time it was submitted, the type you chose, your own words, `[✓] Received; staff will read it`, `we will not tell them who reported it`, and `Contact the research team`.
+> There is **no** "check the progress" route.
+
+### Accessibility points
+
+- Each of the three sections is a `<ul>`; each entry is an `<li>` with one primary button.
+- Status badges are constructed per 0.8 (`[🚫] Blocked`, `[🔕] Muted`, `[✓] Received`).
+- Section counts go into the `h2`.
+- The unblock dialog: `aria-describedby` points at the five consequences.
+- The report's own words are a `<blockquote>` and can be read aloud.
+
+---
+
+## B18 Pausing and leaving
+
+**Documents**: Doc 20 §173–178 | **Status**: not implemented
+
+### Purpose, and the questions this screen answers
+
+1. I want a break — can I stop only part of it?
+2. After stopping, what stops and what carries on?
+3. What happens to data I already gave? (honestly: locked datasets are not rewritten)
+4. How do I know it really stopped? (the receipt)
+5. Can I come back later?
+
+**Hard rule**: the way out is permanently visible in **four** places — the home page, My research, My consent choices, and Help and safety. Any design that hides the way out is an anti-pattern (§354).
+
+### Wireframe (mobile, four steps)
+
+**Step 1 — choosing the scope (§175)**
+
+```text
+┌──────────────────────────────────────┐
+│ h1  Pausing or leaving                │
+│ p You do not have to stop everything.  │
+│   You can stop just part of it, or     │
+│   simply pause for a while. You do not │
+│   have to give any reason.            │
+│                                      │
+│ h2  Choose one first                   │
+│ ( ) Pause for a while — you can resume │
+│     it yourself later                 │
+│ ( ) Stop certain parts permanently     │
+│ ( ) Leave this research entirely       │
+│                                      │
+│ h2  Which parts (choose as many as     │
+│     you like)                         │
+│ [ ] Community                          │
+│ [ ] Meeting new people (matching)      │
+│ [ ] One particular connection          │
+│ [ ] Messages                           │
+│ [ ] Sharing my life story (the content │
+│     stays)                            │
+│ [ ] Supporter involvement              │
+│ [ ] AI help                            │
+│ [ ] What the AI remembers              │
+│ [ ] Future questionnaires              │
+│ [ ] Future contact                     │
+│ [ ] Every research activity            │
+│ [Carry on and see what would happen →] │
+└──────────────────────────────────────┘
+```
+
+**Step 2 — the summary of consequences (§176)**
+
+```text
+┌──────────────────────────────────────┐
+│ h1  What would happen                 │
+│ p You chose: leave this research        │
+│   entirely.                           │
+│                                      │
+│ h2  [✓] Stops immediately              │
+│ ・No further activity is arranged for   │
+│   you                                 │
+│ ・No further questionnaires are sent    │
+│ ・Your public profile is switched off   │
+│ ・Your community posts are taken down   │
+│                                      │
+│ h2  [⏳] Takes a little time           │
+│ ・Messages already queued will be        │
+│   cancelled if possible               │
+│ ・Cached content updates gradually      │
+│                                      │
+│ h2  [→] What carries on                │
+│ ・Connections you made are disconnected,│
+│   and the other person receives no     │
+│   explanation                         │
+│ ・Your own life story content stays in  │
+│   your archive, unless you separately  │
+│   ask for it to be deleted            │
+│                                      │
+│ h2  [!] What we cannot do              │
+│ ・Research datasets that are already    │
+│   locked will not be rewritten. That   │
+│   is what the integrity of a research  │
+│   record requires — locked data cannot │
+│   be changed afterwards. Datasets       │
+│   generated from now on will not       │
+│   include your data.                  │
+│ ・What people who already saw your       │
+│   content remember.                    │
+│ ・Records kept for governance and        │
+│   audit (who did what and when), which │
+│   do not hold your content itself.     │
+│                                      │
+│ h2  Your data, still your choice       │
+│ ( ) Data already collected may continue │
+│     to be used in this research        │
+│ ( ) Please stop using my data in future │
+│     analyses                          │
+│ h2  Contacting you later                │
+│ ( ) You may contact me with the results │
+│ ( ) Do not contact me again            │
+│ [Carry on →]                          │
+└──────────────────────────────────────┘
+```
+
+**Step 3 — confirmation** (the copy is below)
+**Step 4 — the receipt (§177)**
+
+```text
+┌──────────────────────────────────────┐
+│ h1  Your leaving receipt              │
+│ [✓] In effect · 2026-08-03 15:42      │
+│ h2  What you stopped                   │
+│ ・Left this research entirely           │
+│ h2  What has been done                 │
+│ ・Activity scheduling has stopped       │
+│ ・Your public profile is switched off   │
+│ ・Your community posts are taken down   │
+│ h2  Still in progress                  │
+│ ・[⏳] Queued messages are being         │
+│   cancelled if possible               │
+│ h2  What is kept                       │
+│ ・Locked research datasets (not          │
+│   rewritten)                          │
+│ ・Governance records (without content)  │
+│ h2  Afterwards                         │
+│ ・You chose: you may contact me with     │
+│   the results                         │
+│ ・If you want to come back, just contact │
+│   the research team.                   │
+│ [Save this receipt]                   │
+│ [Contact the research team]           │
+└──────────────────────────────────────┘
+```
+
+### Information hierarchy and block order
+
+Choose the scope → **the four classes of consequence** → the data and contact choices → confirmation → the receipt.
+
+The four classes (immediate / takes time / carries on / cannot be done) are this screen's core structure, one level finer than §176 requires — because "what we cannot do" has to be kept apart from "what carries on": the first is a limit of capability and the second is a design choice.
+
+### State matrix
+
+| State | Presentation |
+|---|---|
+| Loading | `Working out what this would affect…`; **the confirm button is not shown until it is worked out**. |
+| Empty | Not applicable. |
+| Error (submission failed) | Blocking: `That was not submitted. You are still in the research and nothing has changed. If you want to stop right away, you can contact the research team directly and they can do it for you.` + `Try again` + `Contact the research team` |
+| Error (partial success) | Listed honestly: `Part of it is in effect: the community has stopped. Part of it did not go through: matching has not stopped. You can try again, or contact the research team.` A vague "partly failed" is **not permitted**. |
+| Not permitted | Not applicable — leaving is always available and is **not restricted by any suspension, moderation or safety state**. A hard rule. |
+| Protected existence | The picker for "one particular connection" lists only your own connections. |
+| Currently paused | At the top: `You are paused (since 2026-07-20).` + `Resume taking part` + `Change this to leaving permanently` |
+
+### Key interactions and the confirmation copy
+
+**Pausing (a detailed confirmation)**
+> Title: `Pause your activity in this research?`
+> Body: `While paused, no new activity is arranged for you and no questionnaires are sent. All your content is kept. You can resume yourself at any time — nobody's approval is needed.`
+> Primary: `Confirm pausing`  Secondary: `Back, don't pause`
+
+**Leaving entirely (a reinforced, step-up confirmation)**
+> Title: `Leave this research entirely?`
+> Body: `You will leave every activity in this research. Everything listed on the previous page will happen, including that datasets already locked will not be rewritten. Leaving needs no reason, and nobody will ask you why. If you want to come back later, just contact the research team.`
+> The reinforcing step: `Type "leave the research" to confirm`
+> Primary: `Confirm leaving this research`  Secondary: `Back, don't leave`
+> Success announcement: `You have left. Your receipt is below.`
+
+**Language discipline (§174, "Withdrawal language remains neutral")**:
+- ✗ `Are you sure you want to go?` `Are you certain you want to give up?` `We will miss you` `Your contribution is valuable — will you reconsider?`
+- ✓ `Confirm leaving this research` `Leaving needs no reason`
+- **No** retention content may be inserted anywhere in the leaving flow, and the "Back" button must not be made a Primary.
+
+### Accessibility points
+
+- Step 1's "choose one first" is a radio group; "which parts" is checkboxes, in two different `fieldset`s.
+- The four classes of consequence use four `h2`s + icon lists (`[✓]` `[⏳]` `[→]` `[!]`), with distinguishable icon shapes and text.
+- The reinforced confirmation's field has a visible `<label>`; when the typed text does not match, the prompt does not accuse: `What you typed is different from the words above. Please type "leave the research" exactly.`
+- The receipt can be saved (`Save this receipt`, download or print), and is a **screen you can return to on its own** (reachable from B2's consent receipt and from B8).
+- Focus moves to each step's `h1` between the four steps.
+- The leaving flow uses **no** timer, countdown or "last chance" pressure.
+
+---
+
+## B19 AI companion
+
+**Documents**: Doc 20 §205–220 (see also §221 degraded states, §53, §179) | **Status**: not implemented (the M11 gateway exists; the 17 Level-5 actions in `PROHIBITED_AI_ACTIONS` are refused by name in the backend)
+
+### Purpose, and the questions this screen answers
+
+1. What is this — a person or a machine? (**it always says first: this is AI**)
+2. What can it do for me right now? What can it **not** do?
+3. Where does what it says come from? Can it be relied on?
+4. What has it remembered about me? Can I make it forget?
+5. When it cannot or will not do something, who do I go to?
+
+### The architectural principle: there is no global chat box
+
+**Doc 20 §205 states it explicitly: `A universal global chat is not the primary interface.`**
+AI appears only at **defined contextual entry points**, each with a fixed role, a fixed set of available tools and a fixed context scope:
+
+| Entry point | Role label | Can do | Can never do |
+|---|---|---|---|
+| B10 the life story editor | `Life story assistant` | help you start, transcribe, translate, tidy, suggest a title, say it more simply, propose details for you to confirm | confirm testimony (`confirm_participant_testimony` is prohibited) |
+| B4 writing a message | `Message draft assistant` | change the tone, say it more clearly, translate | choose the recipient, change the communication basis, confirm sending (`send_message_unconfirmed` is prohibited) |
+| B5 the match explanation | `Suggestion explainer` | explain this suggestion in plain words | decide for you, create a mutual acceptance, make a connection (all prohibited) |
+| B6 a post draft | `Post draft assistant` | rewrite a draft | publish |
+| B8 / the consent explanation | `Research explainer` | explain the research and the consent terms | consent or withdraw on your behalf (`grant_consent` / `withdraw_consent` prohibited) |
+| B16 preparing and reflecting | `Conversation preparation assistant` | help you think of subjects, organise your thoughts | judge whether the interaction happened |
+| Global navigation | `Navigation help` | tell you where a feature is | act for you |
+
+There is **no** "AI companion" destination in the navigation. What exists is a "where AI can help" explanation page (listing the table above + memory controls + conversation history), reached from B13 or from help.
+
+### Wireframe (mobile; the life story assistant inside B10 as the example)
+
+```text
+┌ AI panel (embedded, not a full-screen ┐
+│  chat)                                │
+│ ┌ role header (always the first line)┐ │
+│ │ [🤖] Life story assistant · this   │ │
+│ │      is AI, not a person           │ │
+│ │ It can: help you start, transcribe,│ │
+│ │ tidy up, suggest a title.          │ │
+│ │ It cannot: confirm for you that    │ │
+│ │ this is your story, and cannot     │ │
+│ │ share it with anyone for you.      │ │
+│ │ Whether it remembers: nothing from │ │
+│ │ this is remembered, unless you     │ │
+│ │ allow it under "What the AI        │ │
+│ │ remembers".                        │ │
+│ │ [Find a person to help →]          │ │
+│ └───────────────────────────────────┘ │
+│                                      │
+│ [Help me start]                       │
+│                                      │
+│ ┌ response (§208's five parts) ─────┐ │
+│ │ ① The answer                       │ │
+│ │ "You could start with how the      │ │
+│ │  bicycle first came to be there."  │ │
+│ │                                    │ │
+│ │ ② Where this came from             │ │
+│ │ [Source] an AI suggestion (not     │ │
+│ │        based on anything you have  │ │
+│ │        written; general writing    │ │
+│ │        advice)                     │ │
+│ │                                    │ │
+│ │ ③ How certain                      │ │
+│ │ [◐] Needs your confirmation — this │ │
+│ │     is only a suggestion, not a    │ │
+│ │     statement about your life.     │ │
+│ │                                    │ │
+│ │ ④ What you can do next             │ │
+│ │ ・[Use this opening] ・[Try another]│ │
+│ │ ・[Don't use it]                    │ │
+│ │                                    │ │
+│ │ ⑤ [Find a person to help]          │ │
+│ │                                    │ │
+│ │ [See how it got there] ← collapsed │ │
+│ │                          by default│ │
+│ └───────────────────────────────────┘ │
+│                                      │
+│ p AI gets things wrong. Everything it   │
+│   gives you only counts once you have  │
+│   read it yourself.                   │
+└──────────────────────────────────────┘
+```
+
+**When the AI proposes an action (§212–214)**
+
+```text
+┌ role=alertdialog ────────────────────┐
+│ h3 The AI suggests doing this — it is  │
+│    your decision                      │
+│ [🤖] This is a suggestion from the AI; │
+│      it has not been done.            │
+│ What: save this text as a draft        │
+│ On what: "My father's bicycle"         │
+│ Who will see it: only you              │
+│ Why it suggests it: you wrote something│
+│   and have not saved it               │
+│ What will happen: one more draft, which│
+│   only you can see                    │
+│ Can it be undone: yes, you can delete  │
+│   the draft                           │
+│ What of yours it uses: this passage    │
+│ ────────────────────────────────────  │
+│ [Save as a draft]   [No thanks]       │
+│ p This confirmation applies to this     │
+│   one suggestion only. If you change    │
+│   the content it has to be confirmed    │
+│   again.                              │
+└──────────────────────────────────────┘
+```
+
+**After it is done (§214)**: what is shown is **the result the owning domain returned**, not what the model said.
+```
+[✓] Saved as a draft
+    Saved by "Life story" · 2026-08-03 14:20
+    [See this draft]
+```
+
+### Information hierarchy and block order (fixed for every AI panel)
+
+1. **The role header** (this is AI / the current role / what it can do / what it cannot / whether it remembers / how to reach a person) — §206–207, **always first and never collapsible**
+2. The available actions (few and specific, not a free text box)
+3. The response (§208's five parts: the answer → the source → the uncertainty → what next → find a person)
+4. Long reasoning collapsed behind `See how it got there`
+5. The closing reminder: `AI gets things wrong`
+
+**The source label vocabulary (§209)**: `approved research material` / `your preference settings` / `testimony you confirmed` / `your life story draft` / `information in this suggestion` / `community rules` / `retrieved material` / `the result of running a tool` / `an AI suggestion`.
+
+**The uncertainty label vocabulary (§210)**: `grounded` / `partly grounded` / `needs your confirmation` / `a draft` / `needs human review` / `cannot be verified`. Constructed per 0.8 (icon + text + expandable).
+
+### State matrix
+
+| State | Presentation |
+|---|---|
+| Loading | `Thinking… (a few seconds)` + a `Stop waiting` button. No fake progress and no typewriter animation (still less under `reduced-motion`). |
+| Empty (no history) | `You have not used the AI help here. Using it or not is up to you — everything works just as well without it.` |
+| Error (AI unavailable, §221) | `The AI help is not available right now. This does not affect writing, saving or confirming things yourself.` + `Try again` + `Find a person to help` |
+| Error (provider degraded, §223) | `The AI is slow or unsteady right now. What you wrote is unaffected.` |
+| Error (knowledge degraded, §222) | `The research material cannot be reached right now, so it may not be able to answer questions about the research. You can ask the research team directly.` + `Contact the research team` |
+| Not permitted (AI consent missing) | The AI panel does not render at all, and its place is taken by: `AI help needs you to agree to it under My consent choices first. Not agreeing is entirely fine — you can do everything yourself.` |
+| Not permitted (AI suspended) | `AI help is suspended right now. Writing, saving and confirming things yourself are unaffected.` |
+| Protected existence | The AI's context **never** contains a blocked person, another person's protected resource, or another person's private content. If the participant asks about someone else, the response is uniformly: `I cannot answer that, and I cannot confirm whether such a person exists.` (the same line as 0.6) |
+| Needs human review (§216) | `[⏳] Somebody needs to look at this. It has gone to staff. There is nothing for you to do now, and you can cancel it.` + showing: what is being reviewed / roughly what path it takes / the current state / `Cancel this review` / `If it is urgent, contact the research team directly` |
+| Refusal (§215) | See the copy below |
+
+### Key interactions and the confirmation copy
+
+**An AI refusal (§215)**
+> `I cannot do that.`
+> `Why: confirming whether a passage is your testimony can only be done by you. That is a rule, not a technical problem.`
+> `You can: go and confirm this version yourself.` + `[Go and confirm]`
+> `If you would rather talk to a person:` + `[Contact the research team]`
+> Internal security detail must **not** be exposed (it does not say "the policy engine refused action=confirm_participant_testimony").
+
+**An AI safety escalation (§217)**
+> `It sounds as though things may be hard right now.`
+> `If you or someone else is in danger, please call your local emergency number. This platform is not an emergency channel.`
+> `Would you like me to tell the safety team about this? A person will look at it.` + `[Tell the safety team]` + `[Not for now]`
+> After submitting: `The safety team has been told, and someone will look at it.` — it **never** says `this has been confirmed as a safety event` (a SafetySignal is not a SafetyEvent, §354).
+
+**AI dependency safeguards (§218, a hard rule at the interface level)**
+AI copy is **forbidden** to: express liking or love, imply exclusivity ("only I understand you"), show disappointment when you leave ("are you going? I will miss you"), discourage you from reaching people ("you can just tell me"), press you to say more ("go on, tell me more"), or use guilt ("you have not been here in a while").
+AI copy **should** say things like: `This might be better said to a person. Would you like help thinking about how to start?` / `This is a fine place to stop. Stop whenever you like.`
+
+**AI memory controls (§179, §220, its own screen)**
+
+```text
+┌──────────────────────────────────────┐
+│ h1  What the AI remembers             │
+│ p These are things the AI noted down to │
+│   help you. They are separate from     │
+│   your life story and your profile —   │
+│   what it remembers is not your        │
+│   testimony.                          │
+│ ┌──────────────────────────────────┐ │
+│ │ "Prefers text, not voice"         │ │
+│ │ Where it came from: what you chose │ │
+│ │   in your preferences             │ │
+│ │ What it is used for: so it answers │ │
+│ │   you in text by default          │ │
+│ │ Which roles can use it: message    │ │
+│ │   draft assistant, conversation    │ │
+│ │   preparation assistant           │ │
+│ │ When it expires: when the research │ │
+│ │   ends                            │ │
+│ │ Limits: not used for matching      │ │
+│ │ [Change it] [Make it forget this]  │ │
+│ └──────────────────────────────────┘ │
+│ [Make it forget everything]           │
+│ p There is nothing hidden here such as  │
+│   a "personalisation score". What you   │
+│   see is all of it.                   │
+└──────────────────────────────────────┘
+```
+
+> **Make it forget this (a simple confirmation)**: `Forgotten. The AI will not use this again.`
+> **Make it forget everything (a detailed confirmation)**: title `Make the AI forget everything it remembers?` body `The AI will no longer use any of this to help you, and may ask some things it has asked before. Your life story, your profile and the research data are unaffected — those are separate things.` Primary `Confirm forgetting everything`  Secondary `Back, keep them`
+
+**How the Level-5 prohibitions appear in the interface**: the backend refuses 17 actions by name. The interface must not offer those paths at all, **before any suggestion appears**: there is simply no "consent for me", "confirm my testimony for me", "send for me", "make a connection for me" or "publish for me" button anywhere in an AI panel. If such an intent appears in a model's output, the interface presents it as a refusal (see the refusal copy above) and **must not** render it as a pressable suggestion.
+
+### Accessibility points
+
+- The role header is the first readable element in the panel, `role="note"`, not collapsible and not dismissible.
+- The AI generation area is `aria-live="polite"` with `aria-busy="true"`, and does not announce intermediate fragments — **it announces once, on completion** (so a screen reader is not interrupted word by word).
+- The first announced sentence is fixed: `The AI has responded.` (so the user knows at once that this is AI output and not a person)
+- `See how it got there` is a `<details>`, collapsed by default, and does not affect the main flow's focus.
+- The AI suggestion dialog: `role="alertdialog"`, with `aria-describedby` pointing at the "what will happen" and "can it be undone" paragraphs.
+- The AI draft text box is directly editable; after editing, the `[🤖] AI draft` label is **kept** (with `· you changed it` appended) and does not disappear because it was edited.
+- Refusals and degraded states use `role="status"` rather than `alert` (they are not emergencies); a safety escalation uses `role="alert"`.
+
+---
+
+## Appendix A: B1–B7, the gap between what is implemented and the target design
+
+What the markings mean: **[name]** = changes an accessible name or visible text and therefore **affects the front-end tests directly**, so the tests change with it; **[structure]** = changes only a role, level or order, leaving the tests unaffected (verified: no `getByRole('heading')` query in the suite); **[new]** = a new element, affecting no existing assertion.
+
+> **Rechecked 2026-08-16.** This appendix was written when the suite held 34 front-end tests; it now holds **375 across 47 files**, and every string it quotes has been English since D-9. The accessible names below are given in their English form, and the authoritative list is the test files themselves — a list restated into a document drifts from the code, which is the lesson D-51 records.
+
+### B1 Home (`App.tsx`)
+
+| # | Currently | Target | Impact |
+|---|---|---|---|
+| A1.1 | only five navigation buttons, with no "current step in the research" | add a "where you are in the research" block | [new] |
+| A1.2 | ~~no due assessments, no drafts, no social action awaiting a decision~~ | **Partly implemented**: a "waiting for you" block was added to the home page. It lists one kind only, because that is the only kind that both genuinely exists and the participant can genuinely act on: content a supporter has proposed for their life story — `life-story.review-contribution` is `ownerOnly`, so only the participant can accept or decline it, and until now no query listed pending contributions at all, meaning somebody could write into your story without your ever knowing. **Accepting asks "which part does it go on"**: a supporter writing from their own workspace cannot see the participant's story and so cannot say where it belongs; **declining needs no location at all** — previously both accepting and declining required an itemId, so a contribution of this kind could be neither accepted nor declined and would sit in the list forever (now fixed). When the participant has not written anything yet it says honestly that there is nowhere to put it, and they can still say no. **Assessments are not included**: `assessment.record` carries no owner permission and a participant cannot complete one, so listing it would point at a door they cannot open. **Drafts and pending social actions are not included**: the former is local state, and there is no social action yet awaiting a participant's decision | done, to the extent it could be done honestly |
+| A1.3 | ~~no way to "pause or leave"~~ | **Partly implemented**: the home page permanently carries "where you are in the research" + "leave this research" (leaving has always been owner-permitted in the backend; participants simply could not reach it). **Pausing is not implemented**: `Paused` is a legal state with no command able to enter it, and a button for it would be a control that does nothing | done, to the extent it could be done honestly |
+| A1.4 | no "My research", "My life story" or "Settings" navigation items | expand the navigation to nine | [new] |
+| A1.5 | ~~no expectation-setting sentence after `h1 What would you like to do today?`~~ | **Implemented**: `Anything that needs a decision from you is below. When those are done, they are done — nothing here keeps going on its own.` The anti-feed statement is said out loud rather than implied by the layout | done |
+| A1.6 | ~~the task list is a flat `<ul>` of five buttons~~ | **Implemented, grouped differently from the original idea**: three `h2` groups — "your information and who can see it" / "things you can do any time" / "help and safety". "Waiting for you" no longer needs a group of its own — it is already two named blocks on the home page, "waiting for you" (A1.2) and "where you are in the research" (A1.3). **Regrouped around privacy**: as each unreachable right gained a way in, the list grew from 5 entries to 8, and eight unlabelled buttons are a wall rather than a choice; whereas consent (what may be done with my information), who can access me (by whom) and asking for a copy (what I can take away) together answer exactly one question — "who can see my things" — which is a real cluster rather than tidying | done |
+| A1.7 | the navigation is a row at the top | bottom on mobile, a left column on desktop | [structure] |
+
+**Note**: the copy of the five existing buttons is **unchanged**, and they move into the "things you can do any time" group.
+
+### B2 My consent choices (`ConsentPanel.tsx`)
+
+| # | Currently | Target | Impact |
+|---|---|---|---|
+| A2.1 | ~~the screen's main heading is an `h2`~~ | **Implemented**: it is now `h1 My consent choices`, with each scope's title an `h2` beneath it | done |
+| A2.2 | only four consent scopes | expand to §97's 22, in "required" and "optional" groups across five thematic subgroups | [new] (six today — every one the platform actually gates on; putting the other 16 on screen before each has a permission gating it would be a false assurance, see D-2) |
+| A2.3 | one sentence of description per item | expand to §98's eight elements (why we ask / what information / who can see it / whether it is required / the three consequences / how to change it / current state) | [new] |
+| A2.4 | ~~**no permanent current state**~~ | **Implemented**: the current state is permanently visible and read from the server (`consent_current`, the same projection table the permission engine uses), with the time of the decision and the consent text version it rests on; operation results go only into `role="status"`, and the `aria-live="off"` element has been removed | **[name]** — done |
+| A2.5 | no "agree with conditions" | add `Agree with conditions…` + the restriction dialog | [new] |
+| A2.6 | no comprehension check (§99) | add | [new] |
+| A2.7 | no pre-submission confirmation summary (§100) | add `Submit my consent choices` | [new] |
+| A2.8 | no consent receipt (§101) and no re-consent (§102) | add the receipt as its own screen | [new] |
+| A2.9 | the withdrawal dialog states one consequence | expand to four (including "this is not the same as leaving the research") | [name] (the `wd-{scope}` paragraph's text changes; a test matching on text needs updating) |
+
+**Accessible names that must not change** (the tests depend on them directly): `Agree to "…"`, `Decline "…"`, `Withdraw consent for "…"`, `Confirm withdrawing "…"`, `Back, don't withdraw`. The target design keeps all five patterns.
+
+### B3 Messages: the conversation list (`MessagesScreen.tsx`)
+
+| # | Currently | Target | Impact |
+|---|---|---|---|
+| A3.1 | ~~loads only on a press~~ | **Implemented**: loads on entry with a loading state; the button became `Refresh my conversations and connections` | done |
+| A3.2 | ~~the conversation button's name exposed the internal participantId~~ | **Implemented**: it now shows the permitted public identity, resolved through `otherDisplayName` (D-12); when a name cannot be resolved it shows the uniform placeholder and never falls back to an ID | done |
+| A3.3 | ~~no CommunicationBasis statement~~ | **Implemented**: each row shows `Why you can write to each other: …`, with wording for each of the four bases (ActiveConnection / AuthorisedRelationship / InterventionSession / ModeratedCommunity) | done |
+| A3.4 | ~~the connection row rendered the internal ID~~ | **Implemented** with A3.2 — the public identity plus a status badge | done |
+| A3.5 | ~~no read-only presentation for a lapsed basis~~ | **Implemented**: a conversation that is not Active says on the list row itself that it can no longer be written to, and repeats it inside the conversation as a `role=note`; nobody now opens it, writes, and only then gets refused | done |
+| A3.6 | no way through to the reporting and blocking centre | add | [new] |
+| A3.7 | the empty state is one sentence | expand to §226's four elements | [name] (the empty-state text changes) |
+
+**Kept**: the `Start a conversation` button's name is unchanged.
+
+### B4 Messages: the conversation (`MessagePanel.tsx`)
+
+| # | Currently | Target | Impact |
+|---|---|---|---|
+| A4.1 | `h2 Write a message` is the screen's main heading; the recipient's `displayName` was really the participantId | `h1 Conversation with {them}`, with `Write a message` demoted to `h2`. The display name half is **done** (D-12) | **[name]** — the heading level change remains |
+| A4.2 | ~~history loads only on a press~~ | **Implemented**: loads on entry; the button became `Refresh message history` | done |
+| A4.3 | ~~no CommunicationBasis shown~~ | **Implemented**: the top of the conversation states why you may write, and states the reason when you may not | done |
+| A4.4 | the send confirmation had only the recipient, version and content | **Partly implemented**: the communication basis and "confirmed is not delivered" have been added (confirming only hands it to the delivery service; unknown stays unknown and never becomes delivered). Attachments and scan state are **not** added — this implementation has no attachments, and writing a line about them would claim a check that does not exist | done, to the extent it could be done honestly |
+| A4.5 | ~~no scam or link warning~~ | **Implemented**: appears inline when a draft contains an external link (not a dialog — it is a prompt, not a decision), the copy passes no judgement on the other person, and the footnote says "this is only a reminder". Three actions rather than five: `Not now` (**which does not clear the draft** — a reassuring option must not be destructive), `Change the message`, and `Get help, block or report` (which really navigates to Help and safety, where blocking and reporting live) | done |
+| A4.6 | no retry for a failure or unknown (§162) | add `Send it again` + the duplicate-delivery warning | [new] |
+| A4.7 | no `Report this message` / `Block {them}` beside a message | permanently present beside each of their messages | [new] |
+| A4.8 | the draft state appears once in a `notice` | make it a persistent sticky label, `Draft — only you can see this` | [new] |
+
+**Kept**: the `Message` label, `Save draft`, `Check and send`, `Send the message`, the edit-invalidates-confirmation copy, `Current state:`, `<ol aria-label="Messages">`, and all of `DELIVERY_STATE_LABELS`.
+
+### B5 Meeting new people (`MatchingPanel.tsx`)
+
+| # | Currently | Target | Impact |
+|---|---|---|---|
+| A5.1 | the screen's main heading is `h2 Meet new people (optional)` | make it `h1` | [structure] — **still open** (verified 2026-08-16) |
+| A5.2 | turning matching on, seeing suggestions and making a connection are **all on one screen** | split into four stage screens (introduction / the review before turning it on / candidates / mutual acceptance and connection) | [structure] + **[name]** (`matching-panel.test.tsx` depends on `Make a connection` appearing on the same screen) |
+| A5.3 | no introduction screen (§143) and no `suggestion ≠ mutual interest ≠ connection` diagram | add | [new] |
+| A5.4 | the `Turn matching on` button takes effect directly, with no §145 review | add the review screen + a detailed confirmation | [new] (the `Turn matching on` name is kept, moving to the review screen) |
+| A5.5 | the candidate card has only the explanation and the three decisions | add the expiry time, `See the full explanation` (§149), `Block` and `Report` | [new] |
+| A5.6 | no MatchExplanation detail (source / timing / uncertainty / policy version / prohibited use) | add | [new] |
+| A5.7 | the "Interested" confirmation says only that the other person is not notified | expand to §151's five points | [name] (the dialog text changes; the `Confirm` button's name should become `Confirm "Interested"`) **[name]** |
+| A5.8 | mutual acceptance has only "exists / does not exist" and lives in memory | five states (being checked / valid / expired / lapsed / already used), read from the server | [new] |
+| A5.9 | there is no empty-state block for candidates (only an announcement) | add §154's empty state | [name] (the sentence moves from the status region into a block) |
+| A5.10 | the three decision buttons are already equal in weight ✅ | keep, and add the checkable rule that all three computed styles must be identical | — |
+
+**Kept**: `See current suggestions`, `Interested`, `Make a connection`, `Confirm making a connection`, `You both expressed interest`, the matching-is-off-by-default sentence, and the gardening explanation string.
+**A rename proposed (a trade-off)**: the generic `Confirm` → `Confirm "Interested"` (§324 forbids a vague label). This breaks `getByRole('button', {name: 'Confirm'})`.
+
+### B6 Community (`CommunityPanel.tsx`)
+
+| # | Currently | Target | Impact |
+|---|---|---|---|
+| A6.1 | the screen's main heading is `h2 Community (optional)` | make it `h1` | [structure] — **still open** (verified 2026-08-16) |
+| A6.2 | ~~a post's author was rendered as the internal participantId~~ | **Implemented**: it now shows `authorDisplayName`, with `You` for your own posts (D-12) | done |
+| A6.3 | feed cards have no `Report` / `Block` | permanently on every card (§136 requires it) | [new] |
+| A6.4 | no "stop taking part in this community" (§141) | add | [new] |
+| A6.5 | no "report community content" flow (§142) | add the five-step flow, **started from the post card with no identifier typed** | [new] — the reporting main path from a post landed with D-24 |
+| A6.6 | "My drafts" is at the bottom of the community list page, separated from the community it belongs to | keep it on the list page (an overview across communities) and also show that community's drafts inside it | [new] |
+| A6.7 | the writing area comes after the feed | move it **before** the feed (offer the chance to write before reading, so it is not a consumption feed) | [structure] |
+| A6.8 | no "withdraw a published post" | add `Withdraw this post` | [new] |
+| A6.9 | no community rule version badge (it appears once, in the join dialog) | permanently on the community card and inside it: `rules v3` + `See this version of the rules` | [new] |
+| A6.10 | the publish confirmation has no "after publishing" consequences | add them | [name] (the dialog text changes) |
+
+**Kept**: `Read the rules and join`, `Agree to the rules and join`, `Enter "…"`, `Publish…`, `Confirm publishing`, `Draft — only you can see this`, the "what you would like to share" label, the "posts appear newest first" sentence, and all of `POST_STATE_LABELS`.
+
+### B7 Help and safety (`SafetyPanel.tsx` + the App's help screen)
+
+| # | Currently | Target | Impact |
+|---|---|---|---|
+| A7.1 | **reporting requires typing `The other person's identifier`; blocking requires typing `Identifier of the person to block`** | move both to starting from context (a conversation / a post / a candidate card), with this screen only routing | **[name]** — `getByLabelText` on both fields, `Block this person` and `Submit report` are all affected. **This is the most important entry in this list**; see Appendix B deviation #1. **Still open** (verified 2026-08-16: both fields are still in `SafetyPanel.tsx`). D-24 added the main path from a post; the free-text fields remain as the fallback |
+| A7.2 | the emergency statement is in the middle of the App's help screen (inside a `<p>`) | move it to the very top as its own permanent `role="note"` block | [structure] (the "this platform is not an emergency channel" text is kept) |
+| A7.3 | `SafetyPanel`'s main heading is `h2 Blocking and reporting` | split it: Help and safety (B7) keeps the routes and safety concerns; the block and report records move into B17 | [structure] — **still open** |
+| A7.4 | the block confirmation is one sentence | expand to §166–167's seven effects + a `Report this person as well` checkbox | [name] (the `block-confirm-heading` text changes; `Confirm block` and `Back, don't block` keep their names) |
+| A7.5 | the safety concern textarea uses `aria-label="Your safety concern"` with no visible label | make it a visible `<label>What you are worried about (in your own words)</label>` | **[name]** — **still open** (verified 2026-08-16) |
+| A7.6 | no "contact the research team" route | add, after the emergency statement | [new] |
+| A7.7 | no FAQ, accessibility statement or pause/leave routes | add | [new] |
+| A7.8 | the report receipt is one sentence | expand to not predicting the outcome + the reporter-protection statement | [name] |
+| A7.9 | a failed safety concern goes through the generic error path | handle it at the safety-critical level (keep the content + the emergency number reminder + contact the team) | [new] |
+
+**Kept**: `Submit safety concern`, `Confirm block`, `Back, don't block`, the "a report is read by staff and never decided by an automated system alone" sentence, the "even if you block them afterwards, the report is still handled" sentence, and "this platform is not an emergency channel".
+
+### The changes that alter accessible names, collected (tests change with them)
+
+| Change | Test files affected | Suggested handling |
 |---|---|---|
-| v1.0 | 2026-08-03 | 首版：B1–B19 全部 19 项；附录 A（B1–B7 差异与可访问名影响）、附录 B（8 项实质性偏差）、附录 C（11 项未决）。 |
+| A2.4 the permanent consent status badge replacing the `aria-live="off"` paragraph | `consent-panel.test.tsx` | assert on the badge text — **done** |
+| A3.1 removing the manual load (loading on entry) | `messages-screen.test.tsx` | wait for the list — **done** |
+| A3.2 / A3.4 / A6.2 internal ID → public identity | `messages-screen.test.tsx`, `community-panel.test.tsx` | the mock data gained `displayName`; assertions use the display name — **done** |
+| A4.2 removing the manual history load | `message-panel.test.tsx` | wait for the `Messages` list — **done** |
+| A5.2 splitting matching into four stages | `matching-panel.test.tsx` | the test drives it stage by stage — open |
+| A5.7 `Confirm` → `Confirm "Interested"` | `matching-panel.test.tsx` | rename directly (**needs a product decision**, see Appendix C open item #6) — open |
+| A7.1 removing the identifier fields, starting blocking and reporting from context | `safety-panel.test.tsx` | the test drives it from a conversation or post context — open |
+| A7.5 the visible label on the safety concern field | `safety-panel.test.tsx` | change the `getByLabelText` argument — open |
 
-</content>
-</invoke>
+Changes that **do not alter an accessible name** (A1.*, A5.1, A6.1, A6.7, A7.2 and the rest) can land first without blocking the tests. Suggested order: do every [structure] and [new] change first, then handle the [name] ones in one pass.
+
+---
+
+## Appendix B: substantive deviations between the implementation and Doc 20
+
+In order of severity. My judgement is that #1–#3 **must be fixed**; #4–#8 are specification gaps.
+
+> **Rechecked 2026-08-16.** Four of the eight have since been closed by later rulings; each says so inline, with the ruling that closed it named. They are kept rather than deleted, because what closed them is part of the record.
+
+### Deviation #1 (serious, security): free identifier fields for blocking and reporting are an existence-probing channel, contrary to ADR-050
+
+**Status: still open** (verified 2026-08-16). `SafetyPanel.tsx` still has two free-text fields: `The other person's identifier` (reporting) and `Identifier of the person to block` (blocking), with different feedback on success and failure.
+
+That constitutes an enumerable probing interface: any participant can type guessed identifiers repeatedly and infer from the difference in feedback **whether an identifier exists on the platform**. ADR-050 requires protected resources to answer `DenyAndHideExistence → 404` uniformly; the backend does that, and the front end reopens the door — because the backend cannot distinguish "a participant blocking someone who does not exist" (which should be a 404) from "a participant blocking someone who exists but is unrelated to them" (which may succeed).
+
+**Doc 20 §27 is explicit**: `The interface must not explain that one person has blocked another unless policy permits disclosure.` §153 is explicit: `The interface does not disclose whether the other person was notified.` The current implementation violates neither directly, but the field itself leaks something more basic — existence.
+
+**The direction of the fix** (written into the B7/B17/B6/B5/B4 designs): blocking and reporting **can only be started from existing context** (a conversation, a post, a candidate card, a connection), with the target supplied by that context and no identifier typed by the participant. B7 keeps only the routes plus "a report not about specific content" (which points at nobody and is free text + an optional category).
+
+**Progress**: D-24 added the main path — a report can now point at a post, with the reported person derived from the post's author and the caller's value ignored. What remains is retiring the two free-text fields.
+
+**Note**: this is not only a UI problem — if the backend's `POST /blocks` accepts an arbitrary `targetActorId`, the API is still a probing surface even after the UI changes. It is worth assessing at the same time whether the backend should require a shared context before permitting a block or report (which is beyond the design agent's scope and is recorded as Appendix C open item #1).
+
+### Deviation #2 (serious, privacy + terminology): the interface rendered internal participant identifiers as people's identities
+
+**Status: RESOLVED (D-12, 2026-08-05).** `MessagesScreen` and `CommunityPanel` used to render `otherParticipantId` and `authorParticipantId` directly as display names. All three M18 queries now resolve `display_name` through a batch port (`findDisplayNames`, so a feed does not make 100 single lookups), and where a name cannot be resolved the uniform placeholder `A community member` is shown and **it never falls back to an ID**. Relationship conversations return `null` from the module and are resolved at the composition root through M01's account names (D-30), because the other side of one of those is an account rather than a participant.
+
+The original reasoning is kept because the cost D-12 records is still live: PublicProfile (B14) is not implemented, so **every outward-facing name today comes from the research-side record**, and a participant cannot choose per §132 how they are addressed. The community page says so out loud.
+
+### Deviation #3 (moderate, principle): matching's three stages are crowded onto one screen, contrary to "one meaningful decision at a time"
+
+**Status: still open.** `MatchingPanel.tsx` offers all of the following inside one `<section>`: turning matching on (high impact — it starts your data being used for suggestions), deciding on a candidate (high impact) and making a connection (high impact). DESIGN_BRIEF §2 states that no screen may place two high-impact decisions side by side.
+
+It also lacks §143's introduction and §145's pre-activation review — a participant can press `Turn matching on` **without knowing which of their information is used, who can see it, or when it expires**, which directly violates "explain before asking".
+
+**The direction of the fix**: four screens (see B5).
+
+### Deviation #4 (moderate): the consent screen has no "current state"
+
+**Status: RESOLVED (A2.4).** `ConsentPanel` now reads the current consent state from the server on entry (`consent_current`, the same projection the permission engine uses) and shows it permanently, with the decision time and the consent text version. The secondary problem is gone too: the `<p aria-live="off">Status: …</p>` element, which rendered an operation result as text that looked like persistent state, has been removed, and results go only into `role="status"`.
+
+### Deviation #5 (moderate): there are only a few consent scopes where §97 asks for 22
+
+**Status: partly addressed, and deliberately so (D-2).** There were four; there are now six — `study-participation`, `community-participation`, `open-matching`, `participant-messaging`, `supporter-involvement`, `supporter-contribution` — and those six are exactly the scopes that appear in `packages/policy/src/catalogue.ts` as the `consentScopes` precondition of some action. The two added were the two that decide what a supporter can see and do.
+
+The remaining 16 stay off deliberately: `consent_current.consent_scope` has no CHECK constraint, so any string can be written, and adding switches that no check will ever read would be a promise of protection the platform does not offer. The consequence is real and should be stated: the "not permitted" states of B9–B12 (life story), B14 (public profile), B15 (assessments) and B19 (AI) cannot cite a consent scope that does not exist yet. **Unlock condition**: each remaining scope first gates some action in the permission catalogue.
+
+### Deviation #6 (moderate): screen heading levels are inconsistent
+
+**Status: partly resolved.** `MessagesScreen` and `ConsentPanel` now use `h1` as the screen's main heading. `MatchingPanel`, `CommunityPanel` and `SafetyPanel` still use `h2` (verified 2026-08-16), while the App's home and help screens use `h1`. The result is that heading levels are still unstable within one application, and "navigate by heading" behaves inconsistently for a screen reader user (a concern ACCESSIBILITY_TEST_PLAN tracks).
+
+### Deviation #7 (minor): lists used to require a button press before loading
+
+**Status: mostly resolved.** `MessagesScreen`, `MessagePanel`, `ConsentPanel`, `CommunityPanel` and `SafetyPanel` all load on entry now, with the buttons becoming explicit refreshes. `MatchingPanel` still requires a press (verified 2026-08-16), so two patterns still coexist in one application.
+
+Doc 20 §224–226 assumes "content on entry, or an explicit loading or empty state". A manual load button adds a meaningless press and makes "empty" indistinguishable from "not pressed yet".
+
+### Deviation #8 (minor): no empty-state design and no error grading
+
+**Status: partly resolved.** D-44 gave 15 error codes their own four-part copy (what happened / what was preserved / what did not happen / what to do next), and D-51 fixed the wording table's own defect (a sentence written for a code the platform does not have, and none for the code that actually occurs). What is still missing is the general component specification: five grades of severity per §232, a technical code shown only as an optional detail per §231, and empty states as persistent blocks on the screen rather than a sentence in an announcement that disappears on refresh.
+
+**Note**: these belong to UI_INVENTORY I11/I13; this file gives the specific copy in each screen's state matrix, and the unified component specification belongs in the design system deliverable.
+
+### What was done right and should not be lost in a refactor
+
+- The honest wording of `DELIVERY_STATE_LABELS`'s seven states, especially `The sending service accepted it (they have not received it yet)` and `Delivery state unknown — being checked; this does not mean success` — the part of the whole implementation that best matches Doc 20 §50/§161.
+- Matching's three decisions are visually equal in weight, and `Interested` was never made a Primary.
+- The announcement after a matching decision: they are not notified, and only if they also express interest…
+- Joining a community is bound to the exact rule version, shown in full.
+- A community draft is marked `Draft — only you can see this`, and publishing requires an explicit confirmation naming the community.
+- `POST_STATE_LABELS` distinguishes "visibility restricted" from "removed" and does not conflate either with "deleted".
+- Editing a message invalidates its confirmation (the `edited` check).
+- The statement that reporting and blocking are independent: even if you block them afterwards, the report is still handled.
+- `AccessTokenGate` states the environment problem and the identity problem separately, which is correct error attribution.
+- The CSS comment recording the "44px buttons dropped into 29px row boxes and pressing into one another" fix, and the `main li > button { display:block }` rule.
+
+---
+
+## Appendix C: open items needing a product decision
+
+I do not decide these unilaterally. Each gives the options and my inclination, and the product or research team decides.
+
+### C1 (blocks B7/B17, security): should the backend require a "shared context" before permitting a block or report?
+
+Even with the front end starting from context, `POST /blocks` and `POST /reports` can still be called directly with an arbitrary `targetActorId`.
+- Option A: the backend requires a shared context between the target and the caller (a conversation, a candidate, a post in a shared community), and 404s otherwise.
+- Option B: leave it as it is and constrain only the front end (the API remains a probing surface).
+- Option C: permit a block with no context, but return an identical response for every outcome (success and non-existence indistinguishable).
+**My inclination**: A combined with C. But "I know this person offline and want to block them in advance" is a real need and A would shut it out — the product has to judge that scenario's priority. *(D-4 ruled the free-initiation path is kept, so the question narrows to whether C alone is sufficient.)*
+
+### C2 (blocks B3/B6/B14): what is shown when a PublicProfile is absent?
+
+A participant may make a connection or post before having a PublicProfile.
+- Option A: require a PublicProfile before entering matching or the community.
+- Option B: show a neutral placeholder (`A community member`).
+- Option C: show a system-generated neutral pseudonym (`Member A`, `Gardener 3`).
+**My inclination**: B (before matching) + A (required before entering matching). C risks the pseudonym being used as an identity. **Never** fall back to a participantId.
+*(D-12 ruled: show `participants.display_name` with `A community member` as the placeholder and never an ID. That is a third answer — it uses the research-side name because PublicProfile does not exist, and it says so on screen. The question stays open for when B14 is built.)*
+
+### C3 (blocks B2): all 22 consent scopes at once, or in batches?
+
+§97's full list on one screen is a heavy cognitive load even when grouped.
+- Option A: present all of them at once (complete, and heavy).
+- Option B: batch by research stage (what is required at enrolment plus the core; ask the optional ones when a feature is first used).
+- Option C: present all of them, with the optional ones collapsed by default into group summaries.
+**My inclination**: C. But whether B ("just-in-time consent") is ethically acceptable is a question for research ethics — particularly whether "deciding about consent at the moment you are attracted by a feature" constitutes undue influence.
+*(D-2 ruled A: all at once, no batching by feature, for exactly that reason. What is on screen today is the six the platform enforces.)*
+
+### C4 (affects B5): the expiry periods for MutualAcceptance and for candidates
+
+The design says "candidates expire after 14 days" and "mutual acceptance lapses after 14 days"; those are placeholders. The real values should come from C10 (the matching policy configuration). A researcher must define them, and they **must be stated to the participant on the §145 review screen**.
+
+### C5 (affects B4/B19): is the AI message draft assistant enabled in this phase?
+
+The M11 gateway exists, but a message draft assistant introduces the research-validity question of how much of what a participant sends is their own (a Doc 19 concern).
+- Option A: not enabled in this phase; AI appears only in the life story and in navigation help.
+- Option B: enabled, but every AI-assisted message also shows the **recipient** a `[🤖] they used AI to help write this` label.
+- Option C: enabled, with the label shown only to the sender.
+**My inclination**: A, for this phase. If B is chosen, a new product decision is needed: whether disclosing AI involvement to the recipient contaminates the very human interaction the intervention is studying.
+*(D-14 ruled A — not for now — and recorded that if it is ever enabled, the disclosure question has to be answered first.)*
+
+### C6 (affects the tests): should `Confirm` be renamed to `Confirm "Interested"`?
+
+§324 forbids a vague label where the consequences are significant. The matching decision's confirmation button is currently called `Confirm`. Renaming breaks one assertion in `matching-panel.test.tsx`.
+**My inclination**: rename. But since the tests are a behavioural contract, the cost of changing them has to be acceptable.
+
+### C7 (affects B13 and the whole app): how is "who is using this" obtained in assisted mode?
+
+B13's assisted mode requires the interface to show "Nurse Li is using this now" and to record actions as the assistant's. Identity is currently the dev-header stub with no notion of two identities (actor + on-behalf-of). This needs M01 and permission-side support and is not purely a design question.
+*(D-15 ruled a different answer: **read-only assistance**. The assistant never acts for the participant, so no second identity is introduced and "who did what" in the record is the participant throughout — which was already true. What is added is honesty about who is present, with the assistant's name held on the device only.)*
+
+### C8 (affects B12/B18): the exact scope of "governance records are kept" after a participant asks for deletion
+
+The copy says "who did what and when is kept, without the content itself". That boundary has to match the actual audit and retention policy, or the copy is dishonest. Governance has to give the exact scope before the copy can be finalised. *(ADR-120 has no settled value.)*
+
+### C9 (affects B15): is `I would rather not answer this` available on every instrument?
+
+§106 says `Prefer not to answer where permitted`. Which instruments allow it and which do not (it may affect the validity of a scale's scoring) has to be defined per instrument by a researcher. The design assumes it is allowed everywhere and that needs confirming.
+
+### C10 (affects B1 and the whole app): where the home page's task cards get their data, and when they refresh
+
+"Waiting for you" needs to aggregate four sources: due assessments, life story drafts, pending mutual acceptances and new messages. There is no such aggregating endpoint. Is it a new `GET /participants/:id/home-tasks`, or four concurrent requests from the front end? The latter makes the home page jump about in blocks on a slow connection. This needs agreeing with the backend.
+
+### C11 (still open in Doc 20 §363, and not mine to decide either)
+
+- §363-5 `how to explain a MutualAcceptance expiring or lapsing without blame` — B5 uses `Something changed, and this can no longer be used. It is nobody's fault.`, which is a design assumption and **unverified**.
+- §363-6 `how to present Provider Accepted and Delivery Unknown` — I judge the existing implementation's wording to be the best available, but it is equally unverified with participants.
+- §363-2 `which audience labels are least ambiguous` — B11's five scope labels (only you / people I choose / my connections / a community / public on the platform) are my proposal and need usability verification.
+
+Under Doc 19's epistemic discipline all three are to be marked **design assumptions**, and must not be written into any report as verified conclusions.
+
+---
+
+## Change log
+
+| Version | Date | Contents |
+|---|---|---|
+| v1.0 | 2026-08-03 | First version: all 19 items B1–B19; Appendix A (the B1–B7 gap and its accessible-name impact), Appendix B (8 substantive deviations), Appendix C (11 open items). |
+| v1.1 | 2026-08-16 | Converted to English. Every status claim rechecked against the code rather than translated on trust: Appendix B deviations #2 and #4 closed (D-12, A2.4), #5 and #7 partly closed, #1 confirmed still open with the two free-text fields still in `SafetyPanel.tsx`; Appendix A's "34 front-end tests" corrected to 375 across 47 files; the accessible-name lists restated in English with the test files named as the authority; B19's Level-5 count corrected from 18 to 17 against `PROHIBITED_AI_ACTIONS`; the Appendix C items later settled by a ruling now name it. Two stray tool-call fragments at the end of the file were removed. |
