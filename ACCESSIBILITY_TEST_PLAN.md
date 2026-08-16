@@ -1,51 +1,53 @@
 # ACCESSIBILITY_TEST_PLAN
 
-> 状态截至 2026-07-31。目标：WCAG 2.2 AA + Handbook 七种使用模式的验收计划。**核心诚实声明：自动化检查与代码审查不能替代真实用户测试；本计划中"已实现"仅指代码层基线到位，"验收"必须由真实用户（含老年参与者）完成，且该验收是就绪门未满足项。**
+> Status as at 2026-07-31. The goal: an acceptance plan for WCAG 2.2 AA + the Handbook's seven modes of use. **The central honesty statement: automated checks and code review are not a substitute for testing with real users. "Implemented" in this plan means only that a code-level baseline is in place; "acceptance" requires real users (including older participants), and that acceptance is an unmet readiness-gate item.**
 
-## 1. 已实现的代码层基线（有据可查）
+## 1. The code-level baseline that is implemented (with evidence)
 
-| 基线 | 实现 | 位置 |
+| Baseline | Implementation | Location |
 |---|---|---|
-| 200% 缩放回流 | rem 尺寸、max-width 布局、无水平滚动依赖 | `apps/web/src/styles.css` |
-| 可见焦点 | `:focus-visible` 高对比描边 | styles.css |
-| 触控目标 ≥44px | 按钮/输入 min-height 2.75rem | styles.css |
-| 跳转链接 | skip-link 至主内容 | App.tsx / StaffApp.tsx |
-| 动效尊重 | `prefers-reduced-motion` 全局禁用动画 | styles.css |
-| 状态播报 | `aria-live="polite"` + `role="status"` 于所有面板 | 各组件 |
-| 确认对话框语义 | `role="alertdialog"` + `aria-labelledby` | 各组件 |
-| 语言标注 | `<html lang="zh-CN">` | index.html |
-| 无预选、等权重选择 | 同意面板无 checkbox 预选，同意/拒绝等权按钮 | ConsentPanel + 组件测试 |
-| 任务式首页（非信息流） | 短行动清单 | App.tsx |
-| 诚实状态措辞 | 投递/贡献/隔离状态均用平白语言且不夸大 | DELIVERY_STATE_LABELS 等 + 测试 |
+| Reflow at 200% zoom | rem dimensions, max-width layout, no dependence on horizontal scrolling | `apps/web/src/styles.css` |
+| Visible focus | a high-contrast `:focus-visible` outline | styles.css |
+| Touch targets ≥44px | buttons/inputs at min-height 2.75rem | styles.css |
+| Skip link | a skip-link to the main content | App.tsx / StaffApp.tsx |
+| Motion respected | `prefers-reduced-motion` disables animation globally | styles.css |
+| State announcements | `aria-live="polite"` + `role="status"` on every panel | the components |
+| Confirmation dialog semantics | `role="alertdialog"` + `aria-labelledby` | the components |
+| Language declaration | ❌ **NOT MET — `<html lang="zh-CN">`** while every interface string is English | index.html |
+| Nothing pre-selected, choices of equal weight | no pre-selected checkbox in the consent panel; agree/decline buttons of equal weight | ConsentPanel + component tests |
+| Task-based home page (not a feed) | a short list of actions | App.tsx |
+| Honest status wording | delivery, contribution and suspension states all in plain words, none overstated | DELIVERY_STATE_LABELS and others + tests |
 
-## 2. 七种使用模式 × 验收方法
+> **The language-declaration row was corrected on 2026-08-16 and moved from met to not met.** It previously recorded `<html lang="zh-CN">` as a satisfied baseline, which was true while the interface was Chinese. Every string has been English since D-9, and `apps/web/index.html` still declares `lang="zh-CN"`, so a screen reader applies Chinese pronunciation rules to English text. This is a **WCAG 3.1.1 (Level A)** failure, tracked as C-10 in MODERATION_SAFETY_SUPPORTER §8. It is listed here as unmet rather than quietly dropped, because this table is the evidence anyone would cite for the claim that the baseline is in place.
 
-| 模式 | 自动化可覆盖 | 必须真实用户验证 |
+## 2. The seven modes of use × how each is accepted
+
+| Mode | What automation can cover | What must be verified with real users |
 |---|---|---|
-| 1 视觉障碍（屏幕阅读器） | ARIA 结构 lint | NVDA/VoiceOver 全流程走查：同意→消息→撤回 |
-| 2 低视力（放大/对比） | 缩放回流检查 | 200%–400% 真实设备操作 |
-| 3 听觉障碍 | 无音频依赖审查 | 媒体内容出现后需字幕验收 |
-| 4 运动/灵巧度受限 | 触控目标尺寸 | 纯键盘 + 开关设备全流程 |
-| 5 认知负荷敏感 | 每屏单概念审查 | 老年参与者出声思考测试（关键：撤回同意与发送确认两个流程） |
-| 6 低数字素养 | 平白语言审查 | 辅助者在场/不在场对照测试 |
-| 7 间歇性使用/疲劳 | 状态可恢复性检查 | 中断-恢复场景测试 |
+| 1 Vision impairment (screen reader) | linting the ARIA structure | a full NVDA/VoiceOver walkthrough: consent → messages → withdrawal |
+| 2 Low vision (magnification/contrast) | reflow checks at zoom | operating a real device at 200%–400% |
+| 3 Hearing impairment | reviewing that nothing depends on audio | caption acceptance once media content exists |
+| 4 Motor/dexterity limitations | touch target sizes | keyboard-only and switch-device journeys end to end |
+| 5 Sensitivity to cognitive load | reviewing one concept per screen | think-aloud testing with older participants (critically: the withdraw-consent and send-confirmation flows) |
+| 6 Low digital literacy | plain-language review | paired testing with and without a helper present |
+| 7 Intermittent use / fatigue | checking that state is recoverable | interruption-and-resume scenarios |
 
-## 3. 测试轮次计划（真实招募前完成）
+## 3. The planned test rounds (to be completed before any real recruitment)
 
-- **R0 自动化门（每推送，已在 CI）**：组件测试断言确认流/无预选/诚实措辞（27 项中的无障碍相关断言）。**待补：axe-core 自动扫描接入 CI。**
-- **R1 专家走查**：无障碍专家按 WCAG 2.2 AA 全量核对表审查全部工作区（参与者/支持者/员工），产出缺陷清单，修复后复检。
-- **R2 辅助技术实验室测试**：屏幕阅读器（NVDA、VoiceOver）、纯键盘、开关设备、放大镜各完成参与者核心旅程：登录→同意（含撤回）→消息（含发送确认）→报告/屏蔽→匹配决定。
-- **R3 真实用户测试（就绪门条目）**：≥8 名老年参与者（含辅助技术使用者），伦理批准的知情同意流程下进行；成功标准见 §4；发现的每个障碍进入缺陷追踪并复测。
-- **R4 持续验收**：每个新工作区/新流程重复 R1–R2；每年重复 R3。
+- **R0 the automated gate (every push, already in CI)**: component tests asserting the confirmation flows, nothing pre-selected, and honest wording (the accessibility-related assertions among the 27). **Still to add: wiring axe-core scanning into CI.**
+- **R1 expert walkthrough**: an accessibility expert reviews every workspace (participant/supporter/staff) against the full WCAG 2.2 AA checklist, produces a defect list, and re-checks after fixes.
+- **R2 assistive-technology lab testing**: screen readers (NVDA, VoiceOver), keyboard only, switch devices and magnifiers each complete the participant's core journeys: sign in → consent (including withdrawal) → messages (including the send confirmation) → report/block → a match decision.
+- **R3 real user testing (a readiness-gate item)**: ≥8 older participants (including assistive-technology users), under an ethics-approved informed consent process; the success criteria are in §4; every barrier found enters defect tracking and is retested.
+- **R4 continuing acceptance**: repeat R1–R2 for each new workspace or flow; repeat R3 annually.
 
-## 4. 成功标准（R3）
+## 4. Success criteria (R3)
 
-1. 每位参与者能独立（或按其常用辅助方式）完成：授予一项同意、撤回一项同意、发送一条消息并理解其投递状态、提交一次报告。
-2. 撤回同意与发送确认两个对话框的**后果理解**达标：参与者能用自己的话复述将发生什么（"锁定的数据不会被改写""对方还没收到"）。
-3. 无 WCAG 2.2 AA 阻断级缺陷未关闭。
-4. 参与者主观负荷可接受（简短量表 + 访谈）。
+1. Each participant can, independently or by whatever means they usually use, complete: granting a consent, withdrawing a consent, sending a message and understanding its delivery state, and submitting a report.
+2. **Understanding of consequences** is met for both the withdraw-consent and send-confirmation dialogs: a participant can restate in their own words what will happen ("data already locked will not be rewritten", "they have not received it yet").
+3. No blocking WCAG 2.2 AA defect remains open.
+4. Participants' subjective load is acceptable (a short scale + interview).
 
-## 5. 责任与状态
+## 5. Responsibility and status
 
-- R0 已运行（axe-core 接入为下一代码增量）；R1–R2 需无障碍专家资源（人员配备——就绪门未满足项）；R3 需伦理批准（ATR-025 Pending）——**在批准前不得以任何形式接触真实参与者**。
-- 本计划完成 R1–R3 并关闭阻断缺陷之前，PILOT_READINESS_REPORT 中"无障碍真实用户测试"保持**未满足**。
+- R0 is running (wiring in axe-core is the next code increment); R1–R2 need accessibility expert resource (staffing — an unmet readiness-gate item); R3 needs ethics approval (ATR-025 Pending) — **and until that approval, no real participant may be approached in any form**.
+- Until this plan has completed R1–R3 and closed the blocking defects, "accessibility testing with real users" in PILOT_READINESS_REPORT remains **unmet**.
