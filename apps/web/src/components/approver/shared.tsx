@@ -248,11 +248,22 @@ export function ConfirmDecision({
       )}
       {pending.consequence !== undefined && <p>{pending.consequence}</p>}
       <p>This decision is recorded in your name in the audit trail.</p>
+      {/*
+        The buttons used to read `Confirm` and `Back`, which name nothing.
+        An approver works a queue of near-identical dialogs — approve a
+        protocol version, refuse a research finding, lock a dataset — and
+        the only thing distinguishing one press from the next was a heading
+        they had already scrolled past. Read aloud out of context, `Confirm`
+        could be confirming anything on any screen.
+        `pending.label` is already the action in words, and it is already in
+        the heading, so naming the button costs nothing and makes the press
+        self-describing wherever it is encountered.
+      */}
       <button onClick={onConfirm} disabled={busy}>
-        Confirm
+        Confirm: {pending.label}
       </button>{' '}
       <button onClick={onCancel} disabled={busy}>
-        Back
+        Back, do not record this
       </button>
     </div>
   );

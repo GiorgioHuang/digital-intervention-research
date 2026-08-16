@@ -47,7 +47,16 @@ describe('staff work queues replace manual identifier entry', () => {
     vi.unstubAllGlobals();
   });
 
-  it('triage queue lists open signals and prefills the form on selection', async () => {
+  /**
+   * The identifier is chosen from the queue, never typed.
+   *
+   * It was a free text field, which is the shape D-13 and D-24 both ruled
+   * against — an identifier named in a request is not an authority — and
+   * it made the queue decorative: a reviewer could type past it, which is
+   * how a disposition gets recorded against a signal whose description was
+   * never read. Reading the signal is the first step of triaging it.
+   */
+  it('triage takes its signal from the queue, and offers no field to type one into', async () => {
     stubFetch({
       '/v1/safety-signals/pending-triage': {
         data: [
@@ -67,8 +76,18 @@ describe('staff work queues replace manual identifier entry', () => {
       fireEvent.click(screen.getByRole('button', { name: 'View signals waiting for triage' }));
     });
     expect(screen.getByText(/Feeling unsafe/)).toBeTruthy();
+    // There is no field to type an identifier into, before or after
+    // choosing — this is the assertion that would fail if one came back.
+    expect(screen.queryByLabelText('Signal identifier')).toBeNull();
+    expect(
+      screen.getAllByRole('note').some((n) => (n.textContent ?? '').includes('Choose a signal from the queue')),
+    ).toBe(true);
     fireEvent.click(screen.getByRole('button', { name: 'Work on this signal' }));
-    expect((screen.getByLabelText('Signal identifier') as HTMLInputElement).value).toBe('ss_9');
+    expect(screen.queryByLabelText('Signal identifier')).toBeNull();
+    expect(screen.getByText('ss_9')).toBeTruthy();
+    // And it can be changed, or a reviewer would be stuck on the first
+    // signal they opened.
+    expect(screen.getByRole('button', { name: 'Choose a different signal' })).toBeTruthy();
   });
 
   /**
@@ -107,8 +126,20 @@ describe('staff work queues replace manual identifier entry', () => {
     expect(dialog.textContent).toContain('in your name');
     expect(calls.some((c) => c.method === 'POST')).toBe(false);
 
+    /**
+     * The confirming button names the decision, and this is the one place
+     * that pins the whole name rather than the `/^Confirm: /` shape the
+     * other queue tests use.
+     *
+     * An approver works a queue of near-identical dialogs — approve a
+     * protocol version, refuse a research finding, lock a dataset — where
+     * the only thing distinguishing one press from the next used to be a
+     * heading they had already scrolled past. `Confirm` read aloud out of
+     * context could be confirming anything on any screen, and this is the
+     * screen where what is being confirmed is the entire point.
+     */
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Confirm: Approve protocol version' }));
     });
     expect(calls.some((c) => c.method === 'POST' && c.path === '/v1/protocol-versions/pv_7/approve')).toBe(true);
   });
@@ -142,7 +173,7 @@ describe('staff work queues replace manual identifier entry', () => {
       },
     });
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
+      fireEvent.click(screen.getByRole('button', { name: /^Confirm: / }));
     });
     expect(after.some((c) => c.method === 'POST')).toBe(false);
     expect(screen.getByRole('status').textContent).toContain('changed while you were reading it');

@@ -241,7 +241,7 @@ describe('approving along the analysis chain', () => {
     const dialog = screen.getByRole('alertdialog').textContent ?? '';
     expect(dialog).toContain('It does not run anything');
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
+      fireEvent.click(screen.getByRole('button', { name: /^Confirm: / }));
     });
     expect(calls.find((c) => c.method === 'POST')?.path).toBe('/v1/analysis-plans/ap_1/approve');
   });

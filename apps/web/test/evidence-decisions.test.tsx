@@ -180,7 +180,7 @@ describe('agreeing an evidence decision', () => {
     expect(dialog).toContain('cannot be changed afterwards');
     expect(dialog).toContain('has to be a new decision');
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
+      fireEvent.click(screen.getByRole('button', { name: /^Confirm: / }));
     });
     expect(calls.find((c) => c.method === 'POST')?.path).toBe('/v1/evidence-decisions/ed_1/approve');
   });

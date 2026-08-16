@@ -103,10 +103,32 @@ export function StaffSafetyTriagePanel({ session }: { session: StaffSession }) {
           ))}
         </ul>
       )}
-      <p>
-        <label htmlFor="triage-signal">Signal identifier</label>{' '}
-        <input id="triage-signal" value={form.signalId} onChange={(e) => setForm({ ...form, signalId: e.target.value })} />
-      </p>
+      {/*
+        Chosen from the queue, not typed.
+        The identifier was a free text field, which is the shape D-13 and
+        D-24 both ruled against — an identifier named in the request is not
+        an authority, and a field that accepts any string invites triaging a
+        signal nobody opened. It also made the queue decorative: a reviewer
+        could type past it entirely, which is how a disposition gets
+        recorded against a signal whose description was never read.
+
+        The identifier is now a fact on the screen rather than an input.
+        Nothing is lost: the queue is the only place a signal for triage
+        comes from, and the server decides the outcome either way.
+      */}
+      {form.signalId === '' ? (
+        <p role="note">
+          Choose a signal from the queue above to work on. Reading it is the first step of triaging it, so it is not
+          something to type past.
+        </p>
+      ) : (
+        <p>
+          Working on signal: <strong>{form.signalId}</strong>{' '}
+          <button onClick={() => setForm({ signalId: '', disposition: null, reason: '' })}>
+            Choose a different signal
+          </button>
+        </p>
+      )}
       <fieldset>
         <legend>Disposition</legend>
         <p>Nothing is chosen until you choose it. These carry equal weight — closing is a decision like any other.</p>

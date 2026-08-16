@@ -96,7 +96,7 @@ describe('saying no', () => {
     // The consequence is stated where the decision is taken.
     expect(screen.getByRole('alertdialog').textContent).toContain('stored with it so whoever submitted it can see why');
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
+      fireEvent.click(screen.getByRole('button', { name: /^Confirm: / }));
     });
     const posted = calls.find((c) => c.method === 'POST' && c.path.endsWith('/reject'));
     expect(posted?.path).toBe('/v1/protocol-versions/pv_7/reject');
@@ -130,7 +130,7 @@ describe('saying no', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Send this review back' }));
     });
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
+      fireEvent.click(screen.getByRole('button', { name: /^Confirm: / }));
     });
     const posted = calls.find((c) => c.method === 'POST');
     expect(posted?.path).toBe('/v1/evidence-reviews/er_1/return');

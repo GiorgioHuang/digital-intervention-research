@@ -102,7 +102,7 @@ describe('emergency access', () => {
     });
     expect(screen.getByText(/grants no access and cancels nothing/)).toBeTruthy();
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
+      fireEvent.click(screen.getByRole('button', { name: /^Confirm: / }));
     });
     const posted = calls.find((c) => c.method === 'POST' && c.path.endsWith('/v1/break-glass'));
     expect(posted?.body).toMatchObject({ reason: 'safety call', scope: 'consent for p_9', confirmed: true });
@@ -132,7 +132,7 @@ describe('emergency access', () => {
     });
     expect(screen.getAllByText(/This does not undo it/).length).toBeGreaterThan(0);
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
+      fireEvent.click(screen.getByRole('button', { name: /^Confirm: / }));
     });
     const posted = calls.find((c) => c.method === 'POST' && c.path.includes('/review'));
     expect(posted?.body).toMatchObject({ outcome: 'Not Justified', confirmed: true });

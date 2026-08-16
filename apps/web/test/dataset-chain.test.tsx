@@ -181,7 +181,7 @@ describe('approving a dataset definition', () => {
     const dialog = screen.getByRole('alertdialog').textContent ?? '';
     expect(dialog).toContain('Anything not named here is not included');
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
+      fireEvent.click(screen.getByRole('button', { name: /^Confirm: / }));
     });
     const post = calls.find((c) => c.method === 'POST');
     expect(post?.path).toBe('/v1/dataset-definitions/dd_1/approve');

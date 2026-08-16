@@ -202,7 +202,7 @@ describe('approving an evidence review', () => {
     const dialog = screen.getByRole('alertdialog').textContent ?? '';
     expect(dialog).toContain('approving does not resolve them');
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
+      fireEvent.click(screen.getByRole('button', { name: /^Confirm: / }));
     });
     expect(calls.find((c) => c.method === 'POST')?.path).toBe('/v1/evidence-reviews/er_1/approve');
   });

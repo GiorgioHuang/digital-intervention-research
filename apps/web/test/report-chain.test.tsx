@@ -155,7 +155,7 @@ describe('approving a report version', () => {
     expect(dialog).toContain('fixes these words as version 2');
     expect(dialog).toContain('a correction is a new version');
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
+      fireEvent.click(screen.getByRole('button', { name: /^Confirm: / }));
     });
     expect(calls.find((c) => c.method === 'POST')?.path).toBe('/v1/report-versions/rv_1/approve');
   });

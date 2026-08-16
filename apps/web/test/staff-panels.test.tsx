@@ -15,7 +15,28 @@ function stubFetch() {
     vi.fn(async (path: string, init: RequestInit) => {
       // The approver screens read their queue on entry, so GETs with no
       // body reach this stub too; only commands carry one.
-      if ((init.method ?? 'GET') === 'GET') return new Response(JSON.stringify({ data: [] }), { status: 200 });
+      if ((init.method ?? 'GET') === 'GET') {
+        // The triage screen takes its signal from the queue, never from a
+        // typed identifier, so its queue has to hold something.
+        const data =
+          path === '/v1/safety-signals/pending-triage'
+            ? [
+                {
+                  type: 'SafetySignal',
+                  id: 'ss_1',
+                  attributes: {
+                    signalId: 'ss_1',
+                    sourceType: 'Participant',
+                    category: 'wellbeing',
+                    severity: 'High',
+                    description: 'Feeling unsafe',
+                    signalState: 'Recorded',
+                  },
+                },
+              ]
+            : [];
+        return new Response(JSON.stringify({ data }), { status: 200 });
+      }
       calls.push({
         path,
         headers: init.headers as Record<string, string>,
@@ -53,7 +74,10 @@ describe('staff panels (server-judged authority, honest MFA labelling)', () => {
     for (const d of ['Escalate for higher-level review', 'Convert to a safety event', 'Close as not a safety event']) {
       expect(screen.getByLabelText(d), d).toHaveProperty('checked', false);
     }
-    fireEvent.change(screen.getByLabelText('Signal identifier'), { target: { value: 'ss_1' } });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'View signals waiting for triage' }));
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Work on this signal' }));
     fireEvent.change(screen.getByLabelText(/Reason/), { target: { value: 'Checked; no risk found' } });
     // Identifier and reason are both present, and still nothing can be
     // submitted, because no disposition has been chosen.
@@ -76,10 +100,13 @@ describe('staff panels (server-judged authority, honest MFA labelling)', () => {
    * Closing must not read as a verdict about the person. This is the most
    * dangerous sentence the platform could omit on this screen.
    */
-  it('safety triage says closing is not a statement that the person is safe', () => {
+  it('safety triage says closing is not a statement that the person is safe', async () => {
     stubFetch();
     render(<StaffSafetyTriagePanel session={mfaSession} />);
-    fireEvent.change(screen.getByLabelText('Signal identifier'), { target: { value: 'ss_1' } });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'View signals waiting for triage' }));
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Work on this signal' }));
     fireEvent.change(screen.getByLabelText(/Reason/), { target: { value: 'No risk found' } });
     fireEvent.click(screen.getByLabelText('Close as not a safety event'));
     fireEvent.click(screen.getByRole('button', { name: 'Submit disposition' }));
