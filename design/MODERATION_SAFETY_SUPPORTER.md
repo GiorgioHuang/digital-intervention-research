@@ -2010,57 +2010,57 @@ Last updated: «date» · Assessed by: code review and
 automated testing (not including real user testing)
 ```
 
-**状态矩阵**
+**State matrix**
 
-| 状态 | 呈现与文案原文 |
+| State | Presentation and copy in full |
 |---|---|
-| LOADING | 静态页 |
-| EMPTY | 不适用 |
-| ERROR | `这个页面暂时无法完整显示。无障碍问题反馈渠道：«静态兜底»` |
-| FORBIDDEN / PROTECTED | 不适用（公开页） |
+| LOADING | A static page |
+| EMPTY | Not applicable |
+| ERROR | `This page cannot be shown in full at the moment. To report an accessibility problem: «the statically embedded channel»` |
+| FORBIDDEN / PROTECTED | Not applicable (a public page) |
 
-**无障碍要点**
+**Accessibility points**
 
-- 「尚未完成」清单不得折叠——这是诚实性的核心内容（ACCESSIBILITY_TEST_PLAN §5 明确它是就绪门未满足项）。
-- 页面本身是无障碍实现的样板：正确的标题层级、`<ul>`、`<address>`、无仅色彩表意。
-- 「打开显示与阅读设置」链接到 B13（参与者偏好设置），在员工工作区同样可达。
+- The "not done" list must not be collapsible — it is the core of the page's honesty (ACCESSIBILITY_TEST_PLAN §5 identifies these as unmet readiness-gate items).
+- The page is itself a model of accessible implementation: correct heading levels, `<ul>`, `<address>`, and nothing carried by colour alone.
+- "Open display and reading settings" links to B13 (the participant preferences), and is equally reachable from the staff workspaces.
 
 ---
 
-## §6 举报人保护：可检验检查表
+## §6 Reporter protection: a checkable checklist
 
-> 适用范围：E1–E6 全部、F2–F5（当信号来自举报时）、D6（支持者提交的报告）。
-> 每一条都是**二值可判定**的，用于设计评审与实现评审。
+> Scope: all of E1–E6, F2–F5 (when a signal originates in a report), and D6 (reports submitted by supporters).
+> Every item is **binary and decidable**, for use in both design review and implementation review.
 
-| # | 检查项 | 判定方法 | 违反后果 |
+| # | Check | How it is decided | Consequence of breach |
 |---|---|---|---|
-| R-1 | 队列与案件详情的**任何字段**都不含举报人标识 | 抓包看原始 JSON（e2e 已断言）+ 前端组件不得有 `reporterId` 的引用 | 设计错误 |
-| R-2 | 队列不显示举报的**精确时间**，只显示区间 | 队列卡片中不存在 `HH:MM` 级的举报时间 | 设计错误 |
-| R-3 | 队列默认排序不含入队顺序 / 举报时间；不提供按举报时间排序 | 排序选项清单中不存在该项 | 设计错误 |
-| R-4 | 举报人自述文本**默认折叠**，展开需显式动作 + 警示 + 审计 | E3 中该区块是 `<details>` 且默认 closed | 设计错误 |
-| R-5 | 同优先级、同时限的个案顺序不是入队序 | 排序键包含个案 ID 的稳定散列 | 设计错误 |
-| R-6 | 报告数量以分档显示（1 / 2–4 / 5+），不显示随时间变化的计数序列 | 卡片中无精确计数曲线或时间序列 | 设计错误 |
-| R-7 | 处置界面不提供「按举报人调整」的任何入口（如「同一举报人的其他报告」） | 界面中不存在该导航 | 设计错误 |
-| R-8 | 面向举报人的状态只用安全措辞：`已收到` / `审阅中` / `已处理` / `需要补充信息` / `已关闭`；不披露处置内容与证据 | D6 与参与者侧报告中心的状态枚举 | 设计错误 |
-| R-9 | 被处置者可见的说明中不出现任何指向举报人的线索（时间、措辞引用、数量） | E4「对方会看到」预览的文案模板审查 | 设计错误 |
-| R-10 | 「转给安全团队」（E6）不携带举报人信息 | E6 确认文案明示携带项与不携带项 | 设计错误 |
+| R-1 | **No field** of the queue or case detail contains a reporter identifier | Inspect the raw JSON on the wire (the e2e test already asserts this) + no frontend component may reference `reporterId` | Design error |
+| R-2 | The queue does not show the **precise time** of a report, only a band | No report time at `HH:MM` resolution exists on a queue card | Design error |
+| R-3 | The queue's default sort does not use arrival order or report time, and sorting by report time is not offered | That option does not exist in the list of sort options | Design error |
+| R-4 | The reporter's own account is **collapsed by default**, and opening it needs an explicit action + a warning + an audit record | In E3 that block is a `<details>` and is closed by default | Design error |
+| R-5 | Cases of equal priority and deadline are not ordered by arrival | The sort key includes a stable hash of the case ID | Design error |
+| R-6 | The report count is shown as a band (1 / 2–4 / 5+), never as a count changing over time | No exact count curve or time series exists on a card | Design error |
+| R-7 | The disposition interface offers no route of any kind to "adjust by reporter" (such as "other reports from the same reporter") | No such navigation exists in the interface | Design error |
+| R-8 | The status shown to a reporter uses only safe wording: `received` / `being reviewed` / `dealt with` / `more information needed` / `closed`; it never discloses the disposition or the evidence | The status enumeration in D6 and in the participant-side reporting centre | Design error |
+| R-9 | The explanation visible to the person subject to a disposition contains no clue pointing at the reporter (timing, quoted wording, counts) | Review of the copy templates behind E4's "what the other person will see" preview | Design error |
+| R-10 | "Hand to the safety team" (E6) carries no reporter information | E6's confirmation copy states explicitly what is and is not carried | Design error |
 
 ---
 
-## §7 证据最小化：可检验规则
+## §7 Evidence minimisation: checkable rules
 
-| # | 规则 | 落地位置 |
+| # | Rule | Where it lands |
 |---|---|---|
-| M-1 | 默认可见证据 = 被报告的那一条内容（含报告时点的版本号） | E3 |
-| M-2 | 既往处置只显示：过去 12 个月 + 已生效 + 同一规则条款 | E3 |
-| M-3 | 未成立的报告、被撤回的报告、不同规则下的历史**一律不显示** | E3 |
-| M-4 | 审核界面不提供通往研究数据、评估结果、消息内容、匹配记录、安全记录的任何入口 | E1–E6 全部 |
-| M-5 | 每一项证据必须带：来源标签、时间戳、版本号 | E3、E5 |
-| M-6 | 超出默认范围的调取 = 显式申请 + 必填理由 + 范围 + 审计 + 第三人复核 | E3 |
-| M-7 | 安全分诊的「最小必要背景」只含：来源陈述、相关内容引用、当前同意与暂停状态、同类安全历史 | F3 |
-| M-8 | 安全界面不显示研究数据与评估结果 | F1–F6 |
-| M-9 | 每次证据展开/调取都记入访问审计，并在界面上事先告知 | E3、F3 |
-| M-10 | 支持者只能看到自己提交的内容，看不到本人已有条目（除非授权明示） | D3、D4 |
+| M-1 | Evidence visible by default = the one item reported (with the version number as at the time of the report) | E3 |
+| M-2 | Previous dispositions show only: the past 12 months + in force + the same rule clause | E3 |
+| M-3 | Reports not upheld, reports withdrawn, and history under a different rule are **never shown** | E3 |
+| M-4 | The moderation interface offers no route of any kind to research data, assessment results, message content, matching records or safety records | All of E1–E6 |
+| M-5 | Every piece of evidence must carry: a source label, a timestamp, and a version number | E3, E5 |
+| M-6 | Retrieval beyond the default scope = an explicit request + a mandatory reason + the scope + an audit record + review by a third person | E3 |
+| M-7 | Safety triage's "minimum necessary background" contains only: the source statement, related content cited, the current consent and suspension state, and safety history of the same kind | F3 |
+| M-8 | The safety interface does not display research data or assessment results | F1–F6 |
+| M-9 | Every opening or retrieval of evidence is written to the access audit, and the interface says so beforehand | E3, F3 |
+| M-10 | A supporter can only see what they submitted themselves, never the person's existing entries (unless a grant says otherwise) | D3, D4 |
 
 ---
 
