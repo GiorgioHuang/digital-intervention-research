@@ -56,22 +56,26 @@ No UI framework, no CSS-in-JS, no icon-library dependency, no web-font download 
 
 ## §A Tokens
 
-**Total: 119 semantic token names.** Of these, 47 colour names × two sets of values (light/dark) = 94 declarations, and the remaining 72 names have 1 declaration each; the capability-adaptive modes (font size / density / contrast / simplified / low-stimulation) add a further 39 override declarations. The §F draft contains 254 `--` declarations in total, which is consistent with this. The distribution is in the table below, and each item is defined in §A.1–§A.9.
+**Total: 133 semantic token names across 363 declarations** (counted from `apps/web/src/styles.css` on 2026-08-16 with comments stripped, not by hand). The distribution is in the table below, and each item is defined in §A.1–§A.9.
+
+> **These are the live stylesheet's numbers, and they are not the §F draft's.** §F self-checks as 119 names / 254 declarations, which was true of the v0.1 draft and has not been true since the system was re-palletised and the staff desktop layout added. The figures here were the draft's too until 2026-08-16; they are now recounted from the stylesheet, which is the source of truth (§A.1.1). If the two disagree in future, this table is the one to trust and §F is a frozen appendix.
 
 | Group | Token names | Section |
 |---|---:|---|
-| Colour (light + dark, two sets of values under one name) | 47 | §A.1 |
-| Typography (family/size/line-height/weight/tracking 19 + measure 3) | 22 | §A.2 |
-| Spacing (10) and the density multiplier (1) | 11 | §A.3 |
+| Colour (light + dark, two sets of values under one name) | 57 | §A.1 |
+| Typography (family/size/line-height/weight/tracking + measure) | 23 | §A.2 |
+| Spacing and the density multipliers | 13 | §A.3 |
 | Shape and stroke | 9 | §A.4 |
 | Focus dimensions (the colours count in the colour group) | 4 | §A.5 |
 | Motion | 7 | §A.6 |
 | elevation | 4 | §A.7 |
 | z-index layers | 6 | §A.7 |
-| Touch targets | 3 | §A.8 |
+| Touch targets (including the checkbox/radio box size) | 4 | §A.8 |
 | Icons | 5 | §A.9 |
 | The font-size multiplier `--scale-font` | 1 | §C.1 |
-| **Total** | **119** | |
+| **Total** | **133** | |
+
+**The capability-adaptive modes are six, and every one of them has a writer** in `apps/web/src/preferences.ts`: `data-font-scale` (4 steps), `data-density` (3), `data-contrast` (2), `data-motion` (2), `data-stimulation` (low), `data-theme` (3, per D-80). A seventh, `data-simplify`, was **removed on 2026-08-13** and is no longer listed here: nothing ever set it, no element carried the `.optional` class it selected, and all it could have done was change a line height the line-spacing preference already changes. Earlier versions of this paragraph listed "simplified" among the modes, which described a capability the product did not have.
 
 ### A.1 Colour tokens (A1; Doc 20 §311–312)
 
@@ -383,8 +387,9 @@ Any body line height below 1.5 is **forbidden** (Doc 20 §314).
 | `--measure-narrow` | `28rem` | Dialog body text, single-column forms |
 | `--measure-default` | `36rem` | Participant body text (648px at an 18px root, i.e. roughly 70 characters per line — inside the 45–75 the reading research supports) |
 | `--measure-wide` | `56rem` | Researcher/staff tables and side-by-side comparison |
+| `--measure-desktop` | `96rem` | The outer bound of a staff workspace shell (added 2026-08-13 with the desktop layout). **Not a limit on line length** — body paragraphs inside it are still capped at `--measure-default` |
 
-The readable width of `<main>` = `min(100%, var(--measure-default))`; staff workspaces are raised to `--measure-wide`. This replaces the existing `body { max-width: 44rem }` (see §F).
+The readable width of `<main>` = `min(100%, var(--measure-default))`. Staff workspaces are raised to **`--measure-desktop`**, not `--measure-wide` — this paragraph said `--measure-wide` until 2026-08-16, from before the desktop layout landed; the live rule is `main[data-workspace='staff'] { max-width: var(--measure-desktop) }`. Widening the shell does not widen the text: paragraphs inside it keep the `--measure-default` cap, because a staff reader is still a reader. This replaces the existing `body { max-width: 44rem }` (see §F).
 
 ---
 
@@ -893,7 +898,7 @@ Once the user sets something explicitly, the user's value takes **permanent** pr
 |---|---|---|
 | Base | A single-row horizontally scrolling top `<nav>` (as it is now) **or** a fixed bottom bar; see §I.2, open | A top `<nav>` that can wrap |
 | `sm+` | A top `<nav>`, `flex-wrap: wrap`, every item ≥44px | As above |
-| `md+` | As above (unchanged, staying single-column) | A persistent left sidebar (`<nav>` + `<ul>`), with the content area at `--measure-wide` |
+| `md+` | As above (unchanged, staying single-column) | A persistent left sidebar (`<nav>` + `<ul>`), with the shell at `--measure-desktop` and body paragraphs still capped at `--measure-default` |
 
 Rules:
 
