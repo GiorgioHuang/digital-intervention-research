@@ -64,7 +64,7 @@
   adr_ids: [ADR-008]
   concepts: [C-01..C-18]
   scenarios: []
-  code: [CONCEPT_CATALOGUE.md]
+  code: [research/CONCEPT_CATALOGUE.md]
   tests: [apps/web/test/consent-panel.test.tsx, apps/api/test/api.e2e.test.ts]
   finding_status: in_analysis
 
@@ -75,6 +75,6 @@
   adr_ids: [ADR-101]
   concepts: [governance]
   scenarios: []
-  code: [CONTRADICTION_REGISTER.md]
+  code: [research/CONTRADICTION_REGISTER.md]
   tests: []
   finding_status: in_analysis
