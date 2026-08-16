@@ -36,31 +36,75 @@ describe('staff panels (server-judged authority, honest MFA labelling)', () => {
     vi.unstubAllGlobals();
   });
 
-  it('safety triage: reason is mandatory, submission is confirmed, auth strength header is forwarded', async () => {
+  /**
+   * The disposition was a `<select>`, so it had a value from the moment it
+   * rendered, and that value was "Close as not a safety event" — a triage
+   * conclusion standing ready on every signal a reviewer opened, on the
+   * screen where a conclusion matters most (C-2). This test used to rely
+   * on that default: it typed a reason and submitted without ever choosing
+   * anything, which is precisely the path a distracted reviewer would take.
+   *
+   * Now it has to choose, and the first assertion is that it cannot submit
+   * before it does.
+   */
+  it('safety triage: nothing is pre-selected, reason is mandatory, submission is confirmed', async () => {
     const calls = stubFetch();
     render(<StaffSafetyTriagePanel session={mfaSession} />);
+    for (const d of ['Escalate for higher-level review', 'Convert to a safety event', 'Close as not a safety event']) {
+      expect(screen.getByLabelText(d), d).toHaveProperty('checked', false);
+    }
     fireEvent.change(screen.getByLabelText('Signal identifier'), { target: { value: 'ss_1' } });
-    // No reason -> cannot submit.
-    expect(screen.getByRole('button', { name: 'Submit disposition' })).toHaveProperty('disabled', true);
     fireEvent.change(screen.getByLabelText(/Reason/), { target: { value: 'Checked; no risk found' } });
+    // Identifier and reason are both present, and still nothing can be
+    // submitted, because no disposition has been chosen.
+    expect(screen.getByRole('button', { name: 'Submit disposition' })).toHaveProperty('disabled', true);
+    fireEvent.click(screen.getByLabelText('Close as not a safety event'));
     fireEvent.click(screen.getByRole('button', { name: 'Submit disposition' }));
     // Confirmation before anything is sent.
     expect(screen.getByRole('alertdialog').textContent).toContain('ss_1');
     expect(calls.length).toBe(0);
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
+      // Named, not a bare "Confirm" (C-3).
+      fireEvent.click(screen.getByRole('button', { name: 'Confirm and record the disposition' }));
     });
     expect(calls[0]?.path).toBe('/v1/safety-signals/ss_1/triage');
     expect(calls[0]?.headers['x-auth-strength']).toBe('mfa');
     expect(calls[0]?.body['confirmed']).toBe(true);
   });
 
+  /**
+   * Closing must not read as a verdict about the person. This is the most
+   * dangerous sentence the platform could omit on this screen.
+   */
+  it('safety triage says closing is not a statement that the person is safe', () => {
+    stubFetch();
+    render(<StaffSafetyTriagePanel session={mfaSession} />);
+    fireEvent.change(screen.getByLabelText('Signal identifier'), { target: { value: 'ss_1' } });
+    fireEvent.change(screen.getByLabelText(/Reason/), { target: { value: 'No risk found' } });
+    fireEvent.click(screen.getByLabelText('Close as not a safety event'));
+    fireEvent.click(screen.getByRole('button', { name: 'Submit disposition' }));
+    expect(screen.getByRole('alertdialog').textContent).toContain('does not mean the person is safe');
+  });
+
+  /**
+   * The fourth disposition Doc 20 describes has no value in
+   * `safety.safety_signals.signal_state`, so it is named as absent rather
+   * than offered as a button that would record nothing.
+   */
+  it('safety triage names the disposition it cannot record instead of offering it', () => {
+    stubFetch();
+    render(<StaffSafetyTriagePanel session={mfaSession} />);
+    expect(screen.queryByLabelText(/keep watching/i)).toBeNull();
+    expect(screen.getByText(/no “keep watching” here/)).toBeTruthy();
+  });
+
   it('safety triage warns up front when conversion is selected without MFA', () => {
     stubFetch();
     render(<StaffSafetyTriagePanel session={pwSession} />);
-    fireEvent.change(screen.getByLabelText('Disposition'), { target: { value: 'Converted to Safety Event' } });
-    expect(screen.getByRole('note').textContent).toContain('strong authentication');
-    expect(screen.getByRole('note').textContent).toContain('the server will refuse this submission');
+    fireEvent.click(screen.getByLabelText('Convert to a safety event'));
+    const mfaNote = screen.getAllByRole('note').map((n) => n.textContent ?? '');
+    expect(mfaNote.some((t) => t.includes('strong authentication'))).toBe(true);
+    expect(mfaNote.some((t) => t.includes('the server will refuse this submission'))).toBe(true);
   });
 
   it('approver panel warns when the session lacks MFA', async () => {

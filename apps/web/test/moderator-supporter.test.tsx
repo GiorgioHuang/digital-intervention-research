@@ -108,8 +108,17 @@ describe('supporter workspace (contribution ≠ testimony)', () => {
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'View my contributions' }));
     });
-    // The accepted state is truthful: a supporter contribution, not testimony.
-    expect(screen.getByText(/not as their own testimony/)).toBeTruthy();
+    /**
+     * The accepted state is truthful: a supporter contribution, never the
+     * participant's own testimony. That fact used to ride inside a
+     * parenthesis on the "Accepted" label, and a parenthesis is a signal
+     * to skip — the wrong signal for the distinction the whole
+     * three-state authorship model rests on. It is a field of its own now
+     * (C-7), so this asserts both halves: the state reads plainly, and
+     * the authorship fact stands on its own line.
+     */
+    expect(screen.getByText('State: Accepted')).toBeTruthy();
+    expect(screen.getByText(/Is this the person’s own testimony: no/)).toBeTruthy();
   });
 
   it('names who they support and what the access allows, without dotted action keys', async () => {
@@ -161,7 +170,25 @@ describe('supporter workspace (contribution ≠ testimony)', () => {
     expect(screen.queryByLabelText('What you would like to add')).toBeNull();
   });
 
-  it('a denied proposal explains the relationship + consent prerequisites instead of a bare error', async () => {
+  /**
+   * A refused proposal must not explain itself.
+   *
+   * This test used to assert the opposite — that the refusal named the two
+   * prerequisites, the approved relationship and the supporter-contribution
+   * consent. That reads as helpful and is a privacy leak (C-1): a 404 here
+   * is the permission engine's DenyAndHideExistence (ADR-050), whose whole
+   * point is that its causes are indistinguishable, and whether a
+   * participant consented to supporter contributions is a decision they
+   * make *about their supporter*.
+   *
+   * It is also legible over time, which is the part that makes it worse
+   * than a single disclosure: a supporter who watches the sentence stop
+   * appearing learns the moment consent was granted, and one who watches
+   * it start learns the moment it was withdrawn. So the assertions below
+   * are negative — they name the phrases that must never come back — plus
+   * one positive one, that the refusal still points somewhere real.
+   */
+  it('a refused proposal says nothing about the participant’s consent or relationship decisions', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn(async (path: string) => {
@@ -187,7 +214,21 @@ describe('supporter workspace (contribution ≠ testimony)', () => {
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Submit contribution' }));
     });
-    expect(screen.getByRole('status').textContent).toContain('approved your relationship');
+    const announced = screen.getByRole('status').textContent ?? '';
+    for (const leak of [
+      'approved your relationship',
+      'consented',
+      'consent',
+      'has not approved',
+      'relationship',
+    ]) {
+      expect(announced.toLowerCase(), `refusal must not mention "${leak}"`).not.toContain(leak.toLowerCase());
+    }
+    // It still has to be a refusal that goes somewhere, or the honest
+    // version is just a dead end: it points at the supporter's own
+    // permissions, which are legitimately theirs to read.
+    expect(announced).toContain('could not be completed');
+    expect(announced).toContain('authorised you to do');
   });
 
   /**

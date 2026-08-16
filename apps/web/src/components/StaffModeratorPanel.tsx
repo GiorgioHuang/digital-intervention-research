@@ -121,7 +121,7 @@ export function StaffModeratorPanel({ session }: { session: StaffSession }) {
           <article key={c.moderationCaseId} aria-label={`Case ${c.moderationCaseId}`}>
             <h3>{c.moderationCaseId}</h3>
             <p>
-              Reported as <strong>{c.reportCategory ?? 'no category given'}</strong>: {c.reportDescription ?? '—'}
+              Reported as <strong>{c.reportCategory ?? 'no category given'}</strong>.
               <br />
               About: {c.subjectActorId}. State: {c.caseState}.
               <br />
@@ -135,6 +135,29 @@ export function StaffModeratorPanel({ session }: { session: StaffSession }) {
                 </>
               )}
             </p>
+            {/*
+              The reporter's own account of what happened used to sit on
+              the queue card, beside the category, on every case at once
+              (C-6). A person describing what was done to them writes in
+              their own words, and those words carry them — a place, a
+              routine, a turn of phrase, sometimes their name. The queue is
+              the highest-risk surface on this screen: it is scanned, it is
+              on screen the longest, and it is what a shoulder or a shared
+              display sees.
+
+              It is not removed, because a moderator needs it to decide.
+              It is one deliberate press away, so reading it is a choice
+              rather than the default, and so a moderator triaging by
+              category never opens it at all.
+            */}
+            <details>
+              <summary>Read what the reporter wrote</summary>
+              <p>{c.reportDescription ?? 'They did not write anything beyond the category.'}</p>
+              <p>
+                This is in the reporter&apos;s own words and may identify them. It is not shown on the card for that
+                reason. Judge the content and the behaviour, not the reporter.
+              </p>
+            </details>
             <p>
               <label htmlFor={`mod-reason-${c.moderationCaseId}`}>Reason (required)</label>
               <textarea
@@ -165,8 +188,30 @@ export function StaffModeratorPanel({ session }: { session: StaffSession }) {
           </p>
           <p>{confirming.choice.effect}</p>
           <p>It is written to the audit trail in your name and cannot be changed.</p>
-          <button onClick={() => void decide(confirming.item, confirming.choice)}>Confirm</button>{' '}
-          <button onClick={() => setConfirming(null)}>Back</button>
+          {/*
+            Immutability was the last thing this dialog said, and stopping
+            there is what §1.3 rule 5 forbids (C-5). "This cannot be
+            changed" with nothing after it reads as "and there is nothing
+            anyone can do", which is false on both counts and lands hardest
+            on the moderator hesitating over a borderline case: told the
+            decision is permanent and offered no way back, the safe-feeling
+            move is to do nothing, and a queue nobody will touch is its own
+            harm. So the two things that are true come next — the record is
+            permanent, and the effect is not.
+          */}
+          <p>
+            What cannot be changed is the record of your decision, not its effect: a decision that hides or removes
+            content can be followed by a decision that restores it, recorded the same way in whoever&apos;s name makes
+            it.
+          </p>
+          <p>
+            The person this is about can appeal it. An appeal is handled by someone other than you — you are not asked
+            to review your own decision, and you do not have to be the one who puts it right.
+          </p>
+          <button onClick={() => void decide(confirming.item, confirming.choice)}>
+            Confirm and record this decision
+          </button>{' '}
+          <button onClick={() => setConfirming(null)}>Back, do not record it</button>
         </div>
       )}
       <p aria-live="polite" role="status">

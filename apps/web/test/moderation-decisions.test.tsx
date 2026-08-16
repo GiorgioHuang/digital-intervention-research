@@ -28,7 +28,11 @@ function stubFetch(contentId: string | null) {
                   subjectActorId: 'actor_subject',
                   caseState: 'Reported',
                   reportCategory: 'harassment',
-                  reportDescription: 'what was said',
+                  // Deliberately the kind of thing a person writes about
+                  // what was done to them: it carries where they go and
+                  // when, which is what makes the queue card the wrong
+                  // place for it.
+                  reportDescription: 'He waits by the allotment gate on Tuesdays when I come to water',
                   reportedContentId: contentId,
                 },
               },
@@ -110,12 +114,24 @@ describe('moderation decisions', () => {
     });
     // The consequence is repeated in the confirmation, where the decision
     // is actually being taken.
-    expect(screen.getByRole('alertdialog').textContent).toContain('out of the community feed');
-    expect(screen.getByRole('alertdialog').textContent).toContain('cannot be changed');
+    const dialog = screen.getByRole('alertdialog').textContent ?? '';
+    expect(dialog).toContain('out of the community feed');
+    expect(dialog).toContain('cannot be changed');
+    /**
+     * Immutability may not be the last thing said (C-5). "This cannot be
+     * changed", full stop, reads as "and nothing can be done", which is
+     * false twice over and lands hardest on the moderator hesitating over
+     * a borderline case — told the decision is permanent and offered no
+     * way back, doing nothing feels safest, and an untouched queue is its
+     * own harm. Both true things have to follow it.
+     */
+    expect(dialog).toContain('not its effect');
+    expect(dialog).toContain('can appeal');
+    expect(dialog).toContain('other than you');
     // Nothing is sent before the confirmation is given.
     expect(calls.some((c) => c.method === 'POST')).toBe(false);
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Confirm and record this decision' }));
     });
     const posted = calls.find((c) => c.method === 'POST');
     expect(posted?.path).toBe('/v1/moderation-cases/mc_1/decision');
@@ -136,5 +152,49 @@ describe('moderation decisions', () => {
     render(<StaffModeratorPanel session={session} />);
     await openQueue();
     expect(screen.getByText(/never shows who reported a case/)).toBeTruthy();
+  });
+
+  /**
+   * Withholding the reporter's identifier is not the same as withholding
+   * the reporter (C-6). Their own account of what happened was printed on
+   * the queue card beside the category, on every open case at once — and a
+   * person describing what was done to them writes in their own words,
+   * which carry them: a place, a routine, a time of day, sometimes a name.
+   *
+   * The queue is the highest-risk surface on this screen. It is scanned
+   * rather than read, it is on screen longer than anything else, and it is
+   * what a shoulder or a shared display sees. The account is not removed —
+   * a moderator needs it to decide — but reading it is now a deliberate
+   * press, so a moderator triaging by category never opens it at all.
+   */
+  it('the reporter’s own words are not on the queue card, and are one press away', async () => {
+    stubFetch('sp_1');
+    const { container } = render(<StaffModeratorPanel session={session} />);
+    await openQueue();
+    const account = 'He waits by the allotment gate on Tuesdays when I come to water';
+
+    const disclosure = container.querySelector('details');
+    expect(disclosure, 'the account belongs behind a disclosure').not.toBeNull();
+    expect(disclosure!.hasAttribute('open'), 'it must be closed by default').toBe(false);
+    expect(disclosure!.textContent).toContain(account);
+
+    /**
+     * The load-bearing assertion, and it has to be phrased as absence from
+     * the card rather than presence in the disclosure.
+     *
+     * The first version of this test asserted only that the account sits
+     * inside the `<details>` — and it passed with the account put straight
+     * back onto the card, because on the card it is interpolated into a
+     * sentence, so `getByText` never matched it there and nothing noticed
+     * the second copy. A guard that cannot see the defect it was written
+     * for is worse than none.
+     *
+     * So: take the case card, remove the disclosure, and read what is left.
+     */
+    const card = screen.getByLabelText('Case mc_1').cloneNode(true) as HTMLElement;
+    card.querySelectorAll('details').forEach((d) => d.remove());
+    expect(card.textContent).toContain('harassment');
+    expect(card.textContent, 'the reporter’s own words must not be on the card').not.toContain(account);
+    expect(card.textContent, 'not even a fragment of them').not.toContain('allotment');
   });
 });

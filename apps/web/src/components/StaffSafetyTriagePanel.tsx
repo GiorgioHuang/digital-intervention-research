@@ -4,10 +4,35 @@ import { staffActionError, staffLoadError } from '../errors.js';
 import { staffApi, type StaffSession, type TriageQueueItem } from '../staff-api.js';
 
 type Disposition = 'Closed as Not a Safety Event' | 'Escalated' | 'Converted to Safety Event';
-const DISPOSITIONS: { value: Disposition; label: string }[] = [
-  { value: 'Closed as Not a Safety Event', label: 'Close as not a safety event' },
-  { value: 'Escalated', label: 'Escalate for higher-level review' },
-  { value: 'Converted to Safety Event', label: 'Convert to a safety event (needs strong authentication)' },
+
+/**
+ * The three dispositions the platform can actually record.
+ *
+ * Order matters and this one is deliberate: closing is no longer first.
+ * These were a `<select>`, and a select has a value from the moment it
+ * renders — so "Close as not a safety event" was the standing answer on
+ * every signal a reviewer opened. That is a triage conclusion nobody
+ * reached, on the screen where the conclusion matters most, and it broke
+ * both "nothing is pre-selected" and "closing and converting carry equal
+ * weight" at once (C-2). They are radios now, with nothing selected until
+ * a person selects it.
+ */
+const DISPOSITIONS: { value: Disposition; label: string; note: string }[] = [
+  {
+    value: 'Escalated',
+    label: 'Escalate for higher-level review',
+    note: 'Someone more senior looks at it. It stays open.',
+  },
+  {
+    value: 'Converted to Safety Event',
+    label: 'Convert to a safety event',
+    note: 'Needs strong authentication. This is the only way a safety event comes into being — no automated system can create one (ADR-039).',
+  },
+  {
+    value: 'Closed as Not a Safety Event',
+    label: 'Close as not a safety event',
+    note: 'Your judgement that this is not one. It does not mean the person is safe.',
+  },
 ];
 
 /**
@@ -16,7 +41,12 @@ const DISPOSITIONS: { value: Disposition; label: string }[] = [
  * (MFA) and the UI says so up front instead of failing late.
  */
 export function StaffSafetyTriagePanel({ session }: { session: StaffSession }) {
-  const [form, setForm] = useState({ signalId: '', disposition: DISPOSITIONS[0]!.value as Disposition, reason: '' });
+  // Null, not a default. Nothing is chosen until a person chooses it.
+  const [form, setForm] = useState<{ signalId: string; disposition: Disposition | null; reason: string }>({
+    signalId: '',
+    disposition: null,
+    reason: '',
+  });
   const [confirming, setConfirming] = useState(false);
   const [queue, setQueue] = useState<TriageQueueItem[] | null>(null);
   const [announcement, setAnnouncement] = useState('');
@@ -39,6 +69,7 @@ export function StaffSafetyTriagePanel({ session }: { session: StaffSession }) {
 
   const submit = async () => {
     setConfirming(false);
+    if (form.disposition === null) return;
     try {
       const res = await staffApi.triageSignal(session, form.signalId, form.disposition, form.reason);
       const eventId = res.data.meta.safetyEventId;
@@ -76,20 +107,41 @@ export function StaffSafetyTriagePanel({ session }: { session: StaffSession }) {
         <label htmlFor="triage-signal">Signal identifier</label>{' '}
         <input id="triage-signal" value={form.signalId} onChange={(e) => setForm({ ...form, signalId: e.target.value })} />
       </p>
-      <p>
-        <label htmlFor="triage-disposition">Disposition</label>{' '}
-        <select
-          id="triage-disposition"
-          value={form.disposition}
-          onChange={(e) => setForm({ ...form, disposition: e.target.value as Disposition })}
-        >
-          {DISPOSITIONS.map((d) => (
-            <option key={d.value} value={d.value}>
-              {d.label}
-            </option>
-          ))}
-        </select>
-      </p>
+      <fieldset>
+        <legend>Disposition</legend>
+        <p>Nothing is chosen until you choose it. These carry equal weight — closing is a decision like any other.</p>
+        {DISPOSITIONS.map((d) => (
+          <p key={d.value}>
+            <input
+              type="radio"
+              id={`triage-${d.value.replace(/\s+/g, '-')}`}
+              name="triage-disposition"
+              value={d.value}
+              checked={form.disposition === d.value}
+              onChange={() => setForm({ ...form, disposition: d.value })}
+            />{' '}
+            <label htmlFor={`triage-${d.value.replace(/\s+/g, '-')}`}>{d.label}</label>
+            <br />
+            <span>{d.note}</span>
+          </p>
+        ))}
+        {/*
+          Doc 20 §196 describes a fourth disposition — keep watching — and
+          it is not here, because `safety.safety_signals.signal_state` has
+          no value for it: the CHECK admits Recorded, Awaiting Triage, In
+          Review, Escalated, Converted and Closed, and nothing else. A
+          "keep watching" button would close the reviewer's screen, report
+          success, and record nothing at all — the empty control this
+          project keeps dismantling. Naming it is the honest half: a
+          reviewer who wants to watch a signal needs to know the platform
+          cannot, rather than assume this screen hid it.
+        */}
+        <p role="note">
+          There is no “keep watching” here. Doc 20 describes one, and the platform has nowhere to record it — a signal can
+          only be escalated, converted or closed. If watching is what this needs, escalate it and say so in the reason;
+          do not close it.
+        </p>
+      </fieldset>
       {conversionWithoutMfa && (
         <p role="note">
           Converting a signal to a safety event needs strong authentication. You are signed in at password level, so the
@@ -106,17 +158,30 @@ export function StaffSafetyTriagePanel({ session }: { session: StaffSession }) {
         onChange={(e) => setForm({ ...form, reason: e.target.value })}
       />
       <p>
-        <button disabled={form.signalId === '' || form.reason === ''} onClick={() => setConfirming(true)}>
+        <button
+          disabled={form.signalId === '' || form.reason === '' || form.disposition === null}
+          onClick={() => setConfirming(true)}
+        >
           Submit disposition
         </button>
       </p>
-      {confirming && (
+      {confirming && form.disposition !== null && (
         <div role="alertdialog" aria-labelledby="triage-confirm">
           <p id="triage-confirm">
             Record the disposition “{DISPOSITIONS.find((d) => d.value === form.disposition)?.label}” for signal{' '}
             {form.signalId}?
           </p>
-          <button onClick={() => void submit()}>Confirm</button> <button onClick={() => setConfirming(false)}>Back</button>
+          {form.disposition === 'Closed as Not a Safety Event' && (
+            <p>Closing records your judgement that this is not a safety event. It does not mean the person is safe.</p>
+          )}
+          {/*
+            The button used to say "Confirm", which names nothing: read
+            aloud out of context it could be confirming anything on any
+            screen, and this is the screen where what is being confirmed
+            matters most (C-3).
+          */}
+          <button onClick={() => void submit()}>Confirm and record the disposition</button>{' '}
+          <button onClick={() => setConfirming(false)}>Back, do not record it</button>
         </div>
       )}
       <p aria-live="polite" role="status">

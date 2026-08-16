@@ -72,11 +72,26 @@ const SUPPORTER_ACTION_LABELS: Record<string, string> = {
 const STATE_LABELS: Record<string, string> = {
   Proposed: 'Submitted, waiting for them to review it',
   'In Review': 'They are reviewing it',
-  Accepted: 'Accepted (recorded as your contribution, not as their own testimony)',
+  Accepted: 'Accepted',
   Rejected: 'Not accepted',
   Withdrawn: 'Withdrawn',
   Superseded: 'Replaced by a newer version',
 };
+
+/**
+ * The one thing a supporter must not misread about their own contribution:
+ * accepting it records it as theirs, and never as the participant's own
+ * testimony (ADR-042). That fact used to ride inside a parenthesis on the
+ * "Accepted" label — and a parenthesis is a typographic signal to skip,
+ * which is the wrong signal for the distinction the whole three-state
+ * authorship model rests on. A screen reader runs straight through it, and
+ * a supporter scanning states sees the word "Accepted" and stops there.
+ *
+ * It is a field of its own now, on every card and in every state, because
+ * it is equally true before a decision as after one — showing it only on
+ * "Accepted" would imply the question was still open beforehand.
+ */
+const TESTIMONY_FIELD = 'Is this the person’s own testimony: no — it stays recorded as your contribution';
 
 /**
  * Supporter workspace (Doc 20): propose life-story contributions and
@@ -139,6 +154,27 @@ export function SupporterApp({ onExit }: { onExit: () => void }) {
     }, '');
   };
 
+  /**
+   * A 404 here is the permission engine's DenyAndHideExistence (ADR-050),
+   * and the whole point of that answer is that its causes are
+   * indistinguishable. This branch used to explain it — "this needs the
+   * participant to have approved your relationship and to have consented
+   * to supporter contributions" — which took a deliberately silent refusal
+   * and named the two things it was silent about.
+   *
+   * The relationship half is arguably the supporter's own business. The
+   * consent half is not: whether someone consented to supporter
+   * contributions, and whether they later withdrew it, is a decision the
+   * participant makes about their supporter, and telling the supporter is
+   * telling them something the participant chose not to. Worse, it is
+   * legible over time — a supporter who saw this sentence stop appearing
+   * learns the moment the consent was granted, and one who saw it start
+   * learns the moment it was withdrawn.
+   *
+   * So the copy names neither, and says the one thing that is genuinely
+   * theirs to look at: their own permissions. Whether the participant
+   * consented stays where it belongs — with the participant.
+   */
   const run = async (fn: () => Promise<unknown>, done: string) => {
     try {
       await fn();
@@ -146,7 +182,7 @@ export function SupporterApp({ onExit }: { onExit: () => void }) {
     } catch (err) {
       setAnnouncement(
         err instanceof PlatformApiError && err.status === 404
-          ? 'Not submitted: this needs the participant to have approved your relationship and to have consented to supporter contributions.'
+          ? 'That could not be completed. We do not say why — the reasons are kept private for everyone involved, including you. If you are not sure what you can add to at the moment, look at what each person has authorised you to do, above.'
           : staffActionError(err, 'That step'),
       );
     }
@@ -421,6 +457,7 @@ export function SupporterApp({ onExit }: { onExit: () => void }) {
               <li key={c.contributionId} className="card">
                 <p>{c.contentText}</p>
                 <p>State: {STATE_LABELS[c.contributionState] ?? c.contributionState}</p>
+                <p>{TESTIMONY_FIELD}</p>
               </li>
             ))}
           </ul>
