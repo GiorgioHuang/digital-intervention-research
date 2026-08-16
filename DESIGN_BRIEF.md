@@ -26,7 +26,11 @@ An older-adults games app, an AI chatbot, a social network, a cognitive testing 
 
 The interface must distinguish and make visible the labels: observation / inference / source-derived / design assumption / contradiction / prototype observation and the rest; **synthetic or simulated results must never be presented as empirical evidence**. Every concluding element in the researcher interface must be able to answer "which kind of knowledge is this?".
 
-> **Status as at 2026-08-16**: this section is a requirement, not a description. Neither the epistemic tags nor a `[synthetic data]` marking has been built in any workspace — see RESEARCHER_WORKSPACE §4. Treat it as work to do.
+> **Status as at 2026-08-16**: half built, and the half that is missing is missing on purpose.
+>
+> The `[synthetic data]` marking exists: the staff workspace opens with a statement that everything on these screens is synthetic, that nothing produced here is empirical evidence, and — because saying only what it is not would be its own falsehood — that what a conceptual prototype *can* show is coherence.
+>
+> The **per-item epistemic tags** are not built and cannot honestly be. No artefact carries a knowledge-type field and nothing writes one, so a tag on an analysis output would be invented at render time, or be a control recording a value no query reads. An invented label is worse than an absent one: absence is legible, whereas a label reads as though somebody classified the item. So the interface states the gap instead — items are not tagged individually, the platform has nowhere to record such a tag, and the one statement therefore covers everything without exception. **Unlock condition**: a written knowledge-type field on the artefacts that carry conclusions, plus the rule that an untagged conclusion cannot be submitted.
 
 ## 4. The accessibility floor (Doc 20 §285–300; WCAG 2.2 AA)
 
@@ -49,7 +53,7 @@ The interface must distinguish and make visible the labels: observation / infere
 - React 18 + Vite, no UI framework dependency; styling is a single CSS file, no CSS-in-JS
 - Tokens are delivered as CSS custom properties (`--color-…` / `--space-…` / `--type-…`), supporting light and dark (`color-scheme: light dark` is enabled at `styles.css:634`)
 - Components are semantic HTML (`<nav> <main> <section> <ul> <button> <dialog role=alertdialog>`); **div soup must not be introduced for visual reasons**, because the existing accessibility assertions query by role and accessible name
-- The 375 existing front-end tests (47 files) query elements by accessible name — for example `getByRole('button', { name: 'Save draft' })`. **Changing the words changes the tests**; if a change is needed, list it explicitly in the deliverable
+- The 386 existing front-end tests (49 files) query elements by accessible name — for example `getByRole('button', { name: 'Save draft' })`. **Changing the words changes the tests**; if a change is needed, list it explicitly in the deliverable
 - Mobile first: real use happens on a phone (verified)
 
 ## 7. What the deliverable must contain

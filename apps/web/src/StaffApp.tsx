@@ -5,6 +5,7 @@ import { staffApi, type OrganisationItem } from './staff-api.js';
 import { GoogleSignIn } from './components/GoogleSignIn.js';
 import { AccessTokenGate } from './components/AccessTokenGate.js';
 import { AuditAccess } from './components/AuditAccess.js';
+import { EpistemicStatus } from './components/EpistemicStatus.js';
 import { StaffAdminPanel } from './components/StaffAdminPanel.js';
 import { StaffApproverPanel } from './components/StaffApproverPanel.js';
 import { StaffCoordinatorPanel } from './components/StaffCoordinatorPanel.js';
@@ -354,6 +355,13 @@ export function StaffApp({ onExit }: { onExit?: (() => void) | undefined }) {
       */}
       <main id="staff-main" data-workspace="staff">
         <AccessTokenGate />
+        {/*
+          What kind of knowledge these screens hold, said once and up
+          front. DESIGN_BRIEF §3 asks every concluding element to answer
+          it; the component says why it is answered here rather than per
+          item, and what the platform cannot record.
+        */}
+        <EpistemicStatus authMode={authMode} />
         <p>
           Signed in as {session.actorId} ({strengthLabel(session.authStrength)}){' '}
           {/*

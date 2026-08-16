@@ -71,6 +71,29 @@ describe('choosing an organisation to work in', () => {
     expect(screen.queryByRole('heading', { name: /choose an organisation/i })).toBeNull();
   });
 
+  /**
+   * The synthetic-data statement is on the workspace, not merely written.
+   *
+   * `EpistemicStatus` has its own tests, and they all passed with the
+   * component deleted from `StaffApp` — a component nobody renders is a
+   * document, and a researcher would have met no such statement anywhere.
+   * This is the assertion that fails when the wiring goes, which is the
+   * failure the component's own tests structurally cannot see.
+   *
+   * It sits here because this is the only test that renders the real
+   * `StaffApp` far enough to reach the workspace itself.
+   */
+  it('states on the workspace itself that everything here is synthetic', async () => {
+    mockServer([{ organisationId: 'org_1', name: 'Test Org', standing: 'role' }]);
+    await act(async () => {
+      render(<StaffApp />);
+    });
+    const main = screen.getByRole('main');
+    expect(main.textContent).toContain('[synthetic data]');
+    expect(main.textContent).toContain('is empirical evidence');
+    expect(main.textContent).toContain('nowhere to record such a tag');
+  });
+
   it('asks when there is more than one, even where they hold roles', async () => {
     mockServer([
       { organisationId: 'org_1', name: 'One', standing: 'role' },
