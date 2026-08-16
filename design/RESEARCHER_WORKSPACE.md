@@ -1471,57 +1471,57 @@ Administration › feature flags
 
 **③ 状态矩阵**
 
-| 态 | 呈现 |
+| State | Presentation |
 |---|---|
-| 加载 | 表格骨架；**旗标状态未知时不显示"关闭"**，显示 `未知` |
-| 空队列 | `还没有定义功能旗标。` |
-| 错误 | 切换失败：`旗标没有改变（<码>）。当前仍然是「关闭」。` |
-| 权限不足 | 只读 + `你的角色不能修改功能旗标（需要 SystemAdministrator）。` |
-| 需要 MFA | 修改旗标属 `system.configure`，**需要 MFA**。屏顶：`本屏的强认证动作：修改功能旗标（需要 MFA）。` |
+| Loading | A table skeleton; **while a flag's state is unknown it does not show "off"**, it shows `unknown` |
+| Empty queue | `No feature flags have been defined yet.` |
+| Error | A failed toggle: `The flag did not change (<code>). It is still "off".` |
+| Insufficient permission | Read-only + `Your role cannot change feature flags (it needs SystemAdministrator).` |
+| MFA required | Changing a flag falls under `system.configure` and **requires MFA**. At the top: `Strong-authentication actions on this screen: change a feature flag (requires MFA).` |
 
-**④ 确认文案**：`确认开启 matching.enabled？开启后，符合条件且已同意「开放匹配」的参与者会在首页看到「认识新朋友」。这不会绕过任何同意检查——没有同意的参与者仍然看不到。这个操作需要强认证（MFA）。`
+**④ Confirmation copy**: `Switch matching.enabled on? Once on, participants who are eligible and have consented to "open matching" will see "Meet new people" on their home page. This bypasses no consent check — a participant who has not consented still will not see it. This action requires strong authentication (MFA).`
 
-**⑤ 无障碍**：状态用文字（`开启`/`关闭`/`未知`/`锁定`）；被锁定的旗标用 `aria-disabled` + 原因文本，不隐藏。
+**⑤ Accessibility**: the state is words (`on`/`off`/`unknown`/`locked`); a locked flag uses `aria-disabled` + the reason in text, and is never hidden.
 
 ---
 
-### G7 审计访问（§21）
+### G7 Audit access (§21)
 
-**① 目标与密度**：**查审计本身也是被审计的动作**。密度：dense 表 + 强筛选。**审计不显示被审计资源的内容**，只显示"谁、对什么、做了什么、什么时候、依据什么权限"。
+**① Purpose and density**: **reading the audit trail is itself an audited action**. Density: a dense table + strong filtering. **The audit trail never displays the content of the resource audited**, only "who, against what, did what, when, and under which permission".
 
-**② 线框**
+**② Wireframe**
 
 ```text
-管理 › 审计访问
+Administration › audit access
 ┌───────────────────────────────────────────────────────────────────────┐
-│ ⓘ 你在这里的每一次查询也会被记录，包括你输入的筛选条件与访问理由。    │
-│ 访问理由* [_______________________]（必填，会随查询一并记录）         │
-│ 时间 [2026-08-01 → 08-03] 行动者 [__] 动作 [__] 对象类型 [__] [查询]  │
-├───────────┬────────────┬──────────────┬──────────┬────────┬──────────┤
-│ 时间      │ 行动者     │ 动作         │ 对象     │ 结果   │ 认证强度 │
-├───────────┼────────────┼──────────────┼──────────┼────────┼──────────┤
-│ 08-03 12:10│ approver_wu│ export.approve│ ex_5    │ 允许   │ mfa      │
-│ 08-03 11:44│ researcher…│ protocol.approve│ pv_7  │ 拒绝   │ mfa      │
-│           │ 拒绝原因：自批准不被允许（职责分离）                     │
-└───────────┴────────────┴──────────────┴──────────┴────────┴──────────┘
-ⓘ 审计只显示动作与判定，不显示被访问资源的内容。
-ⓘ 破窗访问（break-glass）单独列出，并且必须由不同角色事后复核。
+│ ⓘ Every query you run here is recorded too, including the filters you typed and your reason for access. │
+│ Reason for access* [_______________________] (required; recorded with the query) │
+│ Time [2026-08-01 → 08-03] Actor [__] Action [__] Object type [__] [Search] │
+├───────────┬─────────────┬──────────────────┬──────────┬─────────┬──────────────┐
+│ Time      │ Actor       │ Action           │ Object   │ Result  │ Auth strength │
+├───────────┼─────────────┼──────────────────┼──────────┼─────────┼──────────────┤
+│ 08-03 12:10│ approver_wu │ export.approve   │ ex_5     │ Allowed │ mfa          │
+│ 08-03 11:44│ researcher… │ protocol.approve │ pv_7     │ Denied  │ mfa          │
+│           │ Reason for denial: self-approval is not permitted (separation of duties) │
+└───────────┴─────────────┴──────────────────┴──────────┴─────────┴──────────────┘
+ⓘ The audit trail shows the action and the determination, never the content of the resource accessed.
+ⓘ Break-glass access is listed separately and must be reviewed afterwards by a different role.
 ```
 
-**③ 状态矩阵**
+**③ State matrix**
 
-| 态 | 呈现 |
+| State | Presentation |
 |---|---|
-| 加载 | 表格骨架；查询未填理由时按钮禁用 |
-| 空队列 | `这个条件下没有审计记录。`（**不等于"没有发生"**：追加 `请确认时间范围与筛选条件。`） |
-| 错误 | `AUDIT_UNAVAILABLE`：`审计服务暂时不可用。因为审计不可写，某些操作现在会被拒绝而不是被静默执行。` |
-| 权限不足 | 无 `audit.view`：`你的角色不能访问审计（需要 SystemAdministrator、OrganisationAdministrator 或 PrivacyReviewer）。` |
-| 需要 MFA | **查看审计不需要 MFA**（`audit.view` 无 MFA 要求）；**破窗执行需要 MFA 且仅 SystemAdministrator**。屏顶分别标注。 |
+| Loading | A table skeleton; the search button is disabled while the reason is empty |
+| Empty queue | `There are no audit records matching these criteria.` (**this is not the same as "it did not happen"**: it adds `Check the time range and the filters.`) |
+| Error | `AUDIT_UNAVAILABLE`: `The audit service is temporarily unavailable. Because the audit trail cannot be written, some operations are currently refused rather than carried out silently.` |
+| Insufficient permission | Without `audit.view`: `Your role cannot access the audit trail (it needs SystemAdministrator, OrganisationAdministrator or PrivacyReviewer).` |
+| MFA required | **Viewing the audit trail does not require MFA** (`audit.view` carries no MFA requirement); **break-glass execution requires MFA and is SystemAdministrator only**. The bar at the top marks each separately. |
 
-**④ 确认文案**：破窗访问（若在此屏提供入口）：
-`确认执行破窗访问？这会在正常权限之外临时授予访问，范围：<范围>，有效期至 <时间>。每一次破窗访问都会被记录，并且必须由另一位角色（隐私复核人）事后复核。理由是必填的，会公开给复核人。这个操作需要强认证（MFA）。`
+**④ Confirmation copy**: break-glass access (where this screen offers a way into it):
+`Execute break-glass access? This temporarily grants access beyond your normal permissions, scope: <scope>, valid until <time>. Every break-glass access is recorded and must be reviewed afterwards by another role (a privacy reviewer). The reason is mandatory and is disclosed to that reviewer. This action requires strong authentication (MFA).`
 
-**⑤ 无障碍**：访问理由是必填 `<textarea>` 且 `aria-required="true"`；拒绝原因作为行展开文本；表格支持按时间/行动者排序（`aria-sort`）；查询结果数经 `role="status"` 播报。
+**⑤ Accessibility**: the reason for access is a required `<textarea>` with `aria-required="true"`; the reason for a denial is row-expansion text; the table supports sorting by time and by actor (`aria-sort`); the number of results is announced through `role="status"`.
 
 ---
 
