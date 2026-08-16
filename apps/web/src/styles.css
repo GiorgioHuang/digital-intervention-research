@@ -875,11 +875,12 @@ main[data-workspace='staff'] dt {
 }
 main[data-workspace='staff'] dd {
   margin-inline-start: 0;
-  /* 长标识符与哈希在这里必须能断，否则会把值列撑宽、把标签挤没。 */
+  /* Long identifiers and hashes have to be breakable here, or they widen
+     the value column and squeeze the label out. */
   overflow-wrap: anywhere;
 }
 
-/* 桌面外壳：左侧导航竖栏 + 内容区。 */
+/* The desktop shell: a vertical navigation rail on the left + the content area. */
 @media (min-width: 64rem) {
   .workspace {
     display: grid;
@@ -906,17 +907,19 @@ main[data-workspace='staff'] dd {
     justify-content: flex-start;
     border-color: transparent;
   }
-  /* 当前位置：左侧粗条 + 字重 + 底色，与顶部导航同一套三通道。 */
+  /* Current location: a thick bar on the left + weight + background, the
+     same three channels as the top navigation. */
   .workspace__rail [aria-current='page'] {
     border-inline-start: var(--border-emphasis) solid var(--color-action-primary-bg);
   }
-  /* 内容区自己居中，不再被外壳的整宽拖着走。 */
+  /* The content area centres itself, rather than being dragged along by
+     the shell's full width. */
   .workspace > main { margin-inline: auto; }
 }
 
 section { margin-block-end: var(--space-6); }
 
-/* 宽内容的唯一合法出口 (§B.3.2) */
+/* The only legitimate outlet for wide content (§B.3.2) */
 .scroll-x {
   overflow-x: auto;
   border: var(--border-default) solid var(--color-border-default);
@@ -924,15 +927,15 @@ section { margin-block-end: var(--space-6); }
   padding: var(--space-2);
 }
 
-/* ---------- 7. 焦点：双环，在所有 surface 与状态下可见 (§A.5) ---------- */
+/* ---------- 7. Focus: two rings, visible on every surface and in every state (§A.5) ---------- */
 :focus-visible {
   outline: var(--focus-ring-width) solid var(--color-focus-ring);
   outline-offset: var(--focus-ring-offset);
-  /* halo 填满 offset 间隙，使内侧相邻对比 ≥3:1，与元素填充色无关 */
+  /* The halo fills the offset gap, keeping the inner adjacent contrast ≥3:1 regardless of the element's fill colour */
   box-shadow: 0 0 0 var(--focus-halo-width) var(--color-focus-halo);
   border-radius: var(--radius-1);
 }
-/* 对话框打开后的编程式聚焦必须可见（此时不是 :focus-visible） */
+/* Programmatic focus after a dialog opens must be visible (it is not :focus-visible at that point) */
 [role='alertdialog'] :focus,
 [role='alertdialog'][tabindex='-1']:focus,
 h1[tabindex='-1']:focus,
@@ -941,7 +944,7 @@ h2[tabindex='-1']:focus {
   outline-offset: var(--focus-ring-offset);
   box-shadow: 0 0 0 var(--focus-halo-width) var(--color-focus-halo);
 }
-/* 焦点环不得被裁掉 (§A.5) */
+/* The focus ring must not be clipped (§A.5) */
 .scroll-x,
 .card,
 li,
@@ -961,8 +964,8 @@ section {
   color: var(--color-text-inverse);
 }
 
-/* ---------- 8. 触控目标：R1–R5 防复发规则 (§B.4) ---------- */
-/* R1：--target-min 是唯一来源。R2：交互元素绝不是 inline 级。 */
+/* ---------- 8. Touch targets: the R1–R5 anti-recurrence rules (§B.4) ---------- */
+/* R1: --target-min is the only source. R2: an interactive element is never inline-level. */
 button,
 input,
 select,
@@ -978,7 +981,7 @@ a[role='button'] {
 button,
 a[role='button'],
 summary {
-  display: inline-flex;      /* R2：绝不 display:inline */
+  display: inline-flex;      /* R2: never display:inline */
   align-items: center;
   justify-content: flex-start;
   gap: var(--icon-gap);
@@ -986,8 +989,10 @@ summary {
   padding: var(--space-2) var(--space-4);
   border-radius: var(--radius-1);
   border: var(--border-default) solid var(--color-action-secondary-border);
-  /* raised 而不是 page：页面底现在是温和中性色（#F7F8F6），按钮取页面底
-     会在卡片上变成一块比卡片脏的灰。白底按钮在两种底上都读作"控件"。 */
+  /* raised rather than page: the page background is now a gentle neutral
+     (#F7F8F6), and a button taking the page background becomes a patch of
+     grey dirtier than the card it sits on. A white-backed button reads as
+     "a control" on both grounds. */
   background-color: var(--color-surface-raised);
   color: var(--color-action-secondary-fg);
   font-weight: var(--type-weight-semibold);
@@ -998,7 +1003,7 @@ summary {
 button:hover,
 a[role='button']:hover { background-color: var(--color-action-secondary-bg-hover); }
 
-/* 主动作（每屏至多一个，Doc 20 §13.2） */
+/* The primary action (at most one per screen, Doc 20 §13.2) */
 .btn-primary {
   background-color: var(--color-action-primary-bg);
   border-color: var(--color-action-primary-bg);
@@ -1007,13 +1012,13 @@ a[role='button']:hover { background-color: var(--color-action-secondary-bg-hover
 .btn-primary:hover { background-color: var(--color-action-primary-bg-hover); }
 .btn-primary:active { background-color: var(--color-action-primary-bg-active); }
 
-/* 破坏性动作：颜色不是唯一指示，组件必须同时带图标与明确文字 */
+/* Destructive actions: colour is not the only indicator, and the component must carry an icon and explicit words as well */
 .btn-danger {
   border-color: var(--color-danger-border);
   color: var(--color-danger-fg);
 }
 
-/* 禁用：必须配说明文字 (§B.1.4)；优先用 aria-disabled 保留可聚焦性 */
+/* Disabled: must be accompanied by explanatory words (§B.1.4); prefer aria-disabled, which keeps it focusable */
 button:disabled,
 [aria-disabled='true'] {
   background-color: var(--color-disabled-bg);
@@ -1022,8 +1027,8 @@ button:disabled,
   cursor: not-allowed;
 }
 
-/* R3：间距由布局提供，禁止靠空白文本节点。 */
-/* 任何并排的动作组统一用这个容器（替代 JSX 里的 {' '}）。 */
+/* R3: spacing comes from the layout; a whitespace text node must never provide it. */
+/* Every group of side-by-side actions uses this container (replacing the {' '} in the JSX). */
 .actions {
   display: flex;
   flex-wrap: wrap;
@@ -1035,17 +1040,17 @@ button:disabled,
 .actions > form > button,
 .actions > a[role='button'] {
   flex: 1 1 auto;
-  min-width: 12rem;          /* R4：换行后每行仍是完整可点块 */
+  min-width: 12rem;          /* R4: after wrapping, each row is still a complete tappable block */
 }
-/* B.4.4：关键控件与确认按钮的额外净距 */
+/* B.4.4: extra clear distance between critical controls and confirm buttons */
 .actions--critical { gap: var(--space-5); }
-/* 确认对话框：取消恒在前，确认在后；窄屏纵向排列 */
+/* Confirmation dialogs: cancel always first, confirm second; stacked vertically on a narrow screen */
 .actions--confirm { flex-direction: column; gap: var(--space-5); }
 @media (min-width: 40rem) {
   .actions--confirm { flex-direction: row; }
 }
 
-/* R4：内容流中的单一动作 = 整行块级目标（保留并推广现有首页的修补） */
+/* R4: a single action in the content flow = a full-width block-level target (keeping and generalising the existing home-page patch) */
 main li,
 main p { margin-block: var(--space-3); }
 main li > button,
@@ -1057,7 +1062,7 @@ main li > a[role='button'] {
 }
 main li + li { margin-block-start: var(--target-gap); }
 
-/* R5：包含交互元素的容器不得压缩目标 */
+/* R5: a container holding interactive elements must not compress a target */
 main li,
 .card,
 .actions {
@@ -1065,7 +1070,7 @@ main li,
   overflow: visible;
 }
 
-/* 表单 */
+/* Forms */
 label {
   display: block;
   font-weight: var(--type-weight-medium);
@@ -1085,23 +1090,31 @@ select {
 }
 textarea { min-height: calc(var(--target-min) * 3); line-height: var(--type-leading-normal); }
 
-/* 勾选框与单选钮不是文本输入框。
-   上面那条 `input { width: 100% }` 是给文本框写的，但它对 `type=checkbox`
-   一样生效：勾选框被拉成整行宽、套上 2px 边框与 44px 最小高度，于是屏幕上
-   出现一个**空白的大方框**，而它的标签因为 `label { display: block }` 掉到了
-   下一行。截图之前没人发现——**测试全都是按 label 找控件的，而那条路一直
-   是通的**：`getByLabelText('This is a shared device')` 照样点得到，看起来
-   坏掉的东西在测试里完全正常。
-   这不是观感问题。那个勾选框是「这是共用设备」——勾上它，闲置超时从二十
-   分钟缩到五分钟、每一页出现遮屏与登出、关掉浏览器不留任何东西。一个长者
-   在社区中心的平板上认不出那是个勾选框，就不会去勾，于是把自己的健康数据
-   留在了一台别人也用的机器上。 */
+/* Checkboxes and radios are not text inputs.
+   The `input { width: 100% }` above was written for text fields, but it
+   applies to `type=checkbox` just as well: the checkbox was stretched to
+   the full row width and given a 2px border and a 44px minimum height, so
+   what appeared on screen was a **large empty box**, with its label pushed
+   to the next line by `label { display: block }`. Nobody noticed before the
+   screenshot — **every test finds its control by label, and that path was
+   working the whole time**: `getByLabelText('This is a shared device')`
+   still clicked it, so the thing that looked broken was perfectly fine in
+   the tests.
+   This is not a matter of appearance. That checkbox is "this is a shared
+   device" — ticking it cuts the idle timeout from twenty minutes to five,
+   puts the cover-screen and sign-out on every page, and leaves nothing
+   behind when the browser closes. An older adult at a community-centre
+   tablet who does not recognise it as a checkbox will not tick it, and so
+   leaves their health data on a machine other people also use. */
 input[type='checkbox'],
 input[type='radio'] {
-  /* `inline-size` 与 `width` 是同一个属性，后写的赢。第一版在下面又写了
-     一句 `width: auto` 来抵消通用规则的 `width: 100%`，结果连同上面这行
-     一起抵消掉了，方框缩回浏览器默认的十几像素——比正文还小。
-     不需要抵消：`input[type='checkbox']` 的特指度本来就高于 `input`。 */
+  /* `inline-size` and `width` are the same property, and the later
+     declaration wins. The first version added a `width: auto` below to
+     cancel the generic rule's `width: 100%`, and cancelled this line along
+     with it — the box shrank back to the browser default of a dozen-odd
+     pixels, smaller than the body text.
+     No cancelling is needed: `input[type='checkbox']` already has higher
+     specificity than `input`. */
   inline-size: var(--control-tick-size);
   block-size: var(--control-tick-size);
   min-height: 0;
@@ -1109,7 +1122,8 @@ input[type='radio'] {
   flex: none;
   accent-color: var(--color-action-primary-bg);
 }
-/* 方框与标签同一行，整行是触控目标（标签有 htmlFor，点标签即勾选）。 */
+/* The box and the label share a row, and the whole row is the touch target
+   (the label has htmlFor, so tapping the label ticks it). */
 p:has(> input[type='checkbox']),
 p:has(> input[type='radio']),
 label:has(> input[type='checkbox']),
@@ -1118,13 +1132,17 @@ label:has(> input[type='radio']) {
   align-items: center;
   gap: var(--space-3);
   min-height: var(--target-min);
-  /* 必须允许换行。这一行是补的：有些勾选框那一段里除了方框和标签，还跟着
-     一句解释（「提议一位支持者」那屏就是），不换行的话三样东西并排挤在一
-     行里，标签被压成一条窄柱，"participant" 断成「participa / nt」——正是
-     几小时前刚在表格里修掉的那种断法，被我自己在这里又造了一次。 */
+  /* Wrapping has to be allowed. This line was added afterwards: some
+     checkbox paragraphs carry an explanation after the box and the label
+     (the "propose a supporter" screen does), and without wrapping all three
+     are crammed side by side on one row, squeezing the label into a narrow
+     pillar where "participant" breaks as "participa / nt" — exactly the
+     kind of break fixed in the tables a few hours earlier, recreated here
+     by me. */
   flex-wrap: wrap;
 }
-/* 解释文字自己占一行，不与方框和标签争宽度。 */
+/* The explanatory text takes a row of its own rather than competing for
+   width with the box and the label. */
 p:has(> input[type='checkbox']) > small,
 p:has(> input[type='radio']) > small {
   flex-basis: 100%;
@@ -1133,16 +1151,21 @@ p:has(> input[type='checkbox']) > label,
 p:has(> input[type='radio']) > label {
   margin-block-end: 0;
   max-width: none;
-  /* 标签自己折行，而不是整块掉到下一行。没有这两句，窄列里一个长标签会被
-     flex-wrap 整体推到第二行，方框孤零零留在上一行——量出来的样子就是
-     「□」自己占一行，下面才是「Write to the participant…」。
-     `min-inline-size: 0` 是必需的：flex 项默认不小于内容的最小尺寸，不解除
-     的话它宁可换行也不肯收窄。 */
-  /* `1 1 0`，不是 `1 1 auto`。flex 决定「这一项放不放得下」用的是它的
-     **假想尺寸**——basis 为 auto 时就是内容的最大宽度，也就是整句话摊平的
-     宽度。所以 auto 的写法里，长标签在收窄之前就已经被判定放不下、整块掉
-     到下一行了，`min-inline-size: 0` 根本轮不上。basis 设 0 之后它的假想
-     尺寸是 0，永远留在方框那一行，再靠 grow 撑开、在自己内部折行。 */
+  /* The label wraps within itself rather than dropping wholesale to the next
+     line. Without these two declarations, a long label in a narrow column is
+     pushed entire onto the second row by flex-wrap, leaving the box alone on
+     the first — what that measured as was "□" occupying one row with "Write
+     to the participant…" beneath it.
+     `min-inline-size: 0` is required: a flex item defaults to no smaller
+     than its content's minimum size, and without lifting that it would
+     rather wrap than shrink. */
+  /* `1 1 0`, not `1 1 auto`. Flex decides "does this item fit" using its
+     **hypothetical size** — and with basis auto that is the content's
+     max-content width, i.e. the whole sentence laid flat. So with auto, a
+     long label is judged not to fit and dropped wholesale to the next line
+     before any shrinking happens, and `min-inline-size: 0` never gets a
+     turn. With basis 0 its hypothetical size is 0, so it always stays on
+     the box's row and then grows out and wraps inside itself. */
   flex: 1 1 0;
   min-inline-size: 0;
 }
@@ -1154,7 +1177,7 @@ fieldset {
 }
 legend { font-weight: var(--type-weight-semibold); padding-inline: var(--space-2); }
 
-/* ---------- 9. 导航 ---------- */
+/* ---------- 9. Navigation ---------- */
 nav ul {
   list-style: none;
   padding: 0;
@@ -1169,7 +1192,7 @@ nav {
   background-color: var(--color-surface-raised);
 }
 nav li { max-width: none; margin: 0; }
-/* aria-current 三通道：结构（左条）+ 字重 + 颜色，绝不只靠颜色 */
+/* aria-current in three channels: structure (the left bar) + weight + colour, never colour alone */
 nav [aria-current='page'] {
   border-inline-start: var(--border-emphasis) solid var(--color-action-primary-bg);
   font-weight: var(--type-weight-bold);
@@ -1264,7 +1287,7 @@ main ul { padding-inline-start: var(--space-5); }
 main nav ul { padding-inline-start: 0; }
 main ul:not([class]) > li { max-width: var(--measure-default); }
 
-/* ---------- 10. 状态呈现：图标 + 文字 + 颜色 + 结构 (§B.1 / §E) ---------- */
+/* ---------- 10. State presentation: icon + words + colour + structure (§B.1 / §E) ---------- */
 .icon {
   inline-size: var(--icon-size-1);
   block-size: var(--icon-size-1);
@@ -1272,7 +1295,7 @@ main ul:not([class]) > li { max-width: var(--measure-default); }
   stroke-width: var(--icon-stroke);
 }
 
-/* 行内徽章：文字必须是真实文本节点，绝不用 ::before content */
+/* Inline badge: the words must be a real text node, never ::before content */
 .badge {
   display: inline-flex;
   align-items: center;
@@ -1284,7 +1307,7 @@ main ul:not([class]) > li { max-width: var(--measure-default); }
   font-weight: var(--type-weight-medium);
 }
 
-/* 块级状态容器：第四通道 = 左侧 4px 结构条 */
+/* Block-level state container: the fourth channel = the 4px structural bar on the left */
 .state {
   display: flow-root;
   border-inline-start: var(--border-emphasis) solid var(--color-border-strong);
@@ -1339,7 +1362,7 @@ main ul:not([class]) > li { max-width: var(--measure-default); }
    研究工作区信息密度更高）。仍在 §0.2 的 16px 上限之内。 */
 main:not([data-workspace='staff']) .card { border-radius: var(--radius-3); }
 
-/* 骨架：绝不模仿徽章/按钮/对勾的形状 (§E.2) */
+/* Skeleton: never imitate the shape of a badge, a button or a tick (§E.2) */
 .skeleton {
   background-color: var(--color-surface-sunken);
   border-radius: var(--radius-1);
@@ -1347,7 +1370,7 @@ main:not([data-workspace='staff']) .card { border-radius: var(--radius-3); }
   margin-block: var(--space-2);
 }
 
-/* ---------- 11. 卡片、引用、对话框 ---------- */
+/* ---------- 11. Cards, quotations, dialogs ---------- */
 /* 卡片描边从 2px border-default 降为 1px border-subtle：所有者要的"轻量、
    留白、边框优先于阴影"。这**不是**放松无障碍——WCAG 1.4.11 的 3:1 管的是
    可交互组件的边界，卡片边框是装饰性分隔，卡片里每一个控件仍然是 2px 的
@@ -1359,7 +1382,7 @@ main:not([data-workspace='staff']) .card { border-radius: var(--radius-3); }
   padding: var(--space-5);
   margin-block: var(--space-4);
   background-color: var(--color-surface-raised);
-  box-shadow: var(--elevation-0); /* 内容卡片不抬升 */
+  box-shadow: var(--elevation-0); /* a content card is not raised */
 }
 
 /* 草稿卡片：虚线边框（社区里"还没发出去的帖子"）。形状是第二通道——
@@ -1497,7 +1520,7 @@ blockquote {
 }
 .refusal-note blockquote { margin-block: var(--space-2); }
 
-/* 上下文横幅（当前身份，共享设备场景恒显） (§D.6) */
+/* The contextual banner (the current identity, permanently shown on a shared device) (§D.6) */
 .context-banner {
   background-color: var(--color-surface-inverse);
   color: var(--color-text-inverse);
@@ -1534,7 +1557,7 @@ blockquote {
   position: static;
 }
 
-/* 表格：宽表放进 .scroll-x，不让页面横向滚动 (§B.3.2) */
+/* Tables: a wide table goes into .scroll-x, so the page never scrolls horizontally (§B.3.2) */
 table { border-collapse: collapse; width: 100%; }
 th, td {
   text-align: start;
@@ -1590,14 +1613,14 @@ main[data-workspace='staff'] .scroll-x {
   background-color: var(--color-surface-sunken);
 }
 
-/* ---------- 12. 响应式 (§D)：只用 min-width，移动优先 ---------- */
+/* ---------- 12. Responsiveness (§D): min-width only, mobile first ---------- */
 @media (min-width: 40rem) {
   main { padding-inline: var(--space-5); }
 }
 @media (min-width: 56rem) {
   main[data-workspace='staff'] { padding-inline: var(--space-6); }
 }
-/* 矮视口（横屏手机、分屏）取消粘性，避免遮挡关键动作 (§D.5) */
+/* A short viewport (a phone in landscape, a split screen) cancels stickiness, so a critical action is never covered (§D.5) */
 @media (max-height: 30rem) {
   .context-banner { position: static; }
 }
@@ -1630,7 +1653,7 @@ main[data-workspace='staff'] .scroll-x {
   min-inline-size: calc(50% - var(--space-1));
 }
 
-/* ---------- 13. 动效与 reduced-motion (§A.6) ---------- */
+/* ---------- 13. Motion and reduced-motion (§A.6) ---------- */
 /* 用户显式选择「减少动效」——与 OS 信号同效，但不依赖 OS 设置。
    没有 data-motion='system' 的覆盖：标准态就是「听 OS 的」，写一个
    显式的「标准」会悄悄推翻用户在系统里已经做过的设置。 */
@@ -1664,10 +1687,10 @@ main[data-workspace='staff'] .scroll-x {
   }
 }
 
-/* ---------- 14. 打印（研究者导出核对场景） ---------- */
+/* ---------- 14. Print (the researcher checking an export) ---------- */
 @media print {
   nav, .actions, .skip-link { display: none; }
   main { max-width: none; }
   .state, .card { break-inside: avoid; }
-  /* 打印时颜色必然丢失 —— 这正是状态必须带图标与文字的原因 */
+  /* Colour is inevitably lost in print — which is exactly why a state must carry an icon and words */
 }
