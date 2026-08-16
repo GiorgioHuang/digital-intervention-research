@@ -1309,56 +1309,57 @@ Administration › users                Organisation [all ▾] [Choose columns] 
 | Insufficient permission | Without `user.view`: `Your role cannot view the user list.` |
 | MFA required | Viewing and inviting do not require MFA; **role changes are in G3** (confirmation only, not MFA — mislabelling this is forbidden). At the top: `No action on this screen requires strong authentication.` |
 
-**④ 确认文案**：邀请用户：`确认向 <邮箱> 发出邀请？邀请会创建一个待激活账号，不会授予任何角色。角色需要单独指派。`（**默认无角色**——最小权限）
+**④ Confirmation copy**: inviting a user: `Send an invitation to <email>? The invitation creates an account awaiting activation and grants no roles. Roles are assigned separately.` (**no role by default** — least privilege)
 
-**⑤ 无障碍**：账号标识列 `<th scope="row">`；操作按钮名含标识（`查看 researcher_lin`）；参与者行的"内容不可见"说明在表格 `<caption>` 内，不只在页脚。
+**⑤ Accessibility**: the account-id column is a `<th scope="row">`; action button names contain the identifier (`View researcher_lin`); the "content not visible" note for participant rows is inside the table's `<caption>`, not only in the footer.
 
 ---
 
-### G3 角色与服务账号（§21）
+### G3 Roles and service accounts (§21)
 
-**① 目标与密度**：角色指派/撤销与服务账号管理。**这是权限的入口，必须最保守**。密度：标准（这是决定屏）。
+**① Purpose and density**: assigning and revoking roles, and managing service accounts. **This is the entrance to permission and must be the most conservative screen there is.** Density: standard (it is a decision screen).
 
-**② 线框**
+**② Wireframe**
 
 ```text
-管理 › 用户 researcher_lin › 角色
+Administration › user researcher_lin › roles
 ┌───────────────────────────────────────────────────────────────┐
-│ 当前角色  Researcher（自 2026-07-01，指派人 org_admin_chen）   │
-├─ 指派新角色 ──────────────────────────────────────────────────┤
-│ 角色* [ResearchApprover ▾]                                     │
-│ ⓘ 这个角色能做什么（在指派之前就告诉你）：                     │
-│   • 批准协议版本、项目、干预版本（需要强认证 MFA）             │
-│   • 批准分析计划、解释、研究发现（发现批准需要 MFA）           │
-│   • 锁定数据集版本（需要 MFA，不可逆）                         │
-│   • 批准导出（需要 MFA，数据会离开平台边界）                   │
-│ ⚠ 职责分离提醒：researcher_lin 当前是 Researcher，会起草与提交│
-│   协议。同时拥有 ResearchApprover 不会让他能批准自己提交的     │
-│   内容（系统会拒绝），但会让他能批准同事提交的内容。           │
-│ 理由* [_____________________________]                          │
-│                                             [指派这个角色]    │
-├─ 服务账号 ────────────────────────────────────────────────────┤
-│ svc_kg_reader  权限：evidence.search  上次使用 11:02  [查看]   │
-│ ⓘ 服务账号不能拥有批准类权限。                                │
+│ Current roles  Researcher (since 2026-07-01, assigned by org_admin_chen) │
+├─ Assign a new role ───────────────────────────────────────────┤
+│ Role* [ResearchApprover ▾]                                     │
+│ ⓘ What this role can do (told to you before you assign it):    │
+│   • approve protocol versions, projects and intervention versions (requires strong authentication, MFA) │
+│   • approve analysis plans, interpretations and research findings (approving a finding requires MFA) │
+│   • lock dataset versions (requires MFA, irreversible)         │
+│   • approve exports (requires MFA; the data leaves the platform's boundary) │
+│ ⚠ Separation-of-duties note: researcher_lin is currently a Researcher and │
+│   drafts and submits protocols. Holding ResearchApprover as well will not │
+│   let them approve what they submitted themselves (the system refuses), │
+│   but it will let them approve what colleagues submit.          │
+│ Reason* [_____________________________]                        │
+│                                             [Assign this role] │
+├─ Service accounts ────────────────────────────────────────────┤
+│ svc_kg_reader  Permission: evidence.search  Last used 11:02  [View] │
+│ ⓘ A service account cannot hold approval permissions.          │
 └───────────────────────────────────────────────────────────────┘
 ```
 
-**③ 状态矩阵**
+**③ State matrix**
 
-| 态 | 呈现 |
+| State | Presentation |
 |---|---|
-| 加载 | 角色能力清单是静态词表，**先渲染**（保证"先解释再询问"在任何加载态成立） |
-| 空队列 | `这个账号还没有任何角色。没有角色的账号不能执行任何操作。` |
-| 错误 | 撤销最后一个管理员 → `INVALID_STATE_TRANSITION`：`不能撤销最后一个组织管理员的角色。请先指派另一位。` |
-| 权限不足 | 无 `role.assign`：只读 + `你的角色不能指派角色（需要 OrganisationAdministrator 或 SystemAdministrator）。` |
-| 需要 MFA | `role.assign`/`role.revoke` **只需确认，不需要 MFA**；`system.configure`（服务账号密钥轮换等）**需要 MFA**。屏顶按实际动作分别标注，不得笼统写"本屏需要 MFA"。 |
+| Loading | The list of a role's capabilities is a static vocabulary and **renders first** (so "explain before asking" holds in every loading state) |
+| Empty queue | `This account holds no roles. An account with no roles cannot carry out any action.` |
+| Error | Revoking the last administrator → `INVALID_STATE_TRANSITION`: `The last organisation administrator's role cannot be revoked. Assign another first.` |
+| Insufficient permission | Without `role.assign`: read-only + `Your role cannot assign roles (it needs OrganisationAdministrator or SystemAdministrator).` |
+| MFA required | `role.assign`/`role.revoke` **require confirmation only, not MFA**; `system.configure` (rotating a service account's key and so on) **does require MFA**. The bar at the top marks each action according to what it actually requires, and must never say "this screen requires MFA" in general terms. |
 
-**④ 确认文案**
+**④ Confirmation copy**
 
-- 指派：`确认把 ResearchApprover 指派给 researcher_lin？他将能够批准协议、锁定数据集、批准导出（这些都需要强认证）。他仍然不能批准自己提交的内容。这次指派会署名并写入审计。`
-- 撤销：`确认撤销 researcher_lin 的 ResearchApprover 角色？撤销立即生效，他正在处理的审批将无法完成。`
+- Assigning: `Assign ResearchApprover to researcher_lin? They will be able to approve protocols, lock datasets and approve exports (all of which require strong authentication). They still will not be able to approve anything they submitted themselves. This assignment is signed and written to the audit trail.`
+- Revoking: `Revoke researcher_lin's ResearchApprover role? It takes effect immediately, and any approval they are part-way through cannot be completed.`
 
-**⑤ 无障碍**：角色能力清单是 `<ul>`，在角色下拉的 `aria-describedby` 里引用（选择变化时清单同步更新并 `role="status"` 播报 `已显示 ResearchApprover 的权限说明`）；理由必填，按钮禁用时 `aria-describedby` 说明原因。
+**⑤ Accessibility**: the list of role capabilities is a `<ul>` referenced from the role dropdown's `aria-describedby` (when the selection changes the list updates with it and `role="status"` announces `Showing what ResearchApprover can do`); the reason is mandatory, and while the button is disabled `aria-describedby` gives the reason.
 
 ---
 
