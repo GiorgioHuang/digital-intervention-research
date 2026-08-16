@@ -13,12 +13,12 @@
 | Motion respected | `prefers-reduced-motion` disables animation globally | styles.css |
 | State announcements | `aria-live="polite"` + `role="status"` on every panel | the components |
 | Confirmation dialog semantics | `role="alertdialog"` + `aria-labelledby` | the components |
-| Language declaration | ❌ **NOT MET — `<html lang="zh-CN">`** while every interface string is English | index.html |
+| Language declaration | `<html lang="en">`, matching the language every interface string is written in | index.html + document-language.test.ts |
 | Nothing pre-selected, choices of equal weight | no pre-selected checkbox in the consent panel; agree/decline buttons of equal weight | ConsentPanel + component tests |
 | Task-based home page (not a feed) | a short list of actions | App.tsx |
 | Honest status wording | delivery, contribution and suspension states all in plain words, none overstated | DELIVERY_STATE_LABELS and others + tests |
 
-> **The language-declaration row was corrected on 2026-08-16 and moved from met to not met.** It previously recorded `<html lang="zh-CN">` as a satisfied baseline, which was true while the interface was Chinese. Every string has been English since D-9, and `apps/web/index.html` still declares `lang="zh-CN"`, so a screen reader applies Chinese pronunciation rules to English text. This is a **WCAG 3.1.1 (Level A)** failure, tracked as C-10 in MODERATION_SAFETY_SUPPORTER §8. It is listed here as unmet rather than quietly dropped, because this table is the evidence anyone would cite for the claim that the baseline is in place.
+> **The language-declaration row went from met to not met and back, both on 2026-08-16.** It originally recorded `<html lang="zh-CN">` as a satisfied baseline, which was true while the interface was Chinese. Every string has been English since D-9, so the declaration had become a **WCAG 3.1.1 (Level A)** failure — a screen reader takes it at its word and applies Chinese pronunciation rules to English text, which hurts precisely the participants who depend on it most. It was tracked as C-10, and the declaration is now `lang="en"`. What made it survivable is worth keeping in view: nothing looked wrong. Every visual check passed and every query-by-name test passed, because the only reader affected was the one nobody was watching. The guard added with the fix (`apps/web/test/document-language.test.ts`) is therefore mechanical, and it is anchored to the interface's actual language rather than to a hard-coded `en`, so a future change of language fails here and asks for the declaration to change with it.
 
 ## 2. The seven modes of use × how each is accepted
 
