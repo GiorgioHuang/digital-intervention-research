@@ -86,61 +86,61 @@
 
 ## D. Supporter workspace (6)
 
-| # | 界面 | 文档 | 状态 |
+| # | Screen | Doc | Status |
 |---|---|---|---|
-| D1 | 支持者首页 | §38 | ✅ 已实现（含「你支持的人」列表）。**2026-08-06 新增「对话」**：支持者可以读参与者开启的会话并回信（草稿→确认发送，与别处同规矩）。会话只能由参与者开启，支持者不能主动开。列表里对方的名字解析不到时写明「名字缺失」，不再套用「A community member」——支持者与他支持的人并不在同一个社区里（D-30） |
-| D2 | 邀请与权限复核（可见权限） | §180–181 | 部分实现：可看到自己被写进的授权关系、关系状态与该关系允许做什么（不出现点号动作键）；**不报告对方的同意状态**——那是参与者的，把它显示给支持者等于让他推断出参与者没打算告诉他的事。邀请的接受/拒绝仍在参与者一侧（B20）。**2026-08-06：关系终于能在产品里被建立**——此前 `POST /v1/relationships` 全产品没有调用方，整条支持者路径只有能直接调 API 的人才能开启（D-28）。协调员屏可提议关系，明说提议不授予任何东西，且可授权动作只列平台真的由关系门控的那两个。**2026-08-06 补**：关系上的「允许做什么」此前不受任何校验就写进行里，并原样印在本屏的「这会让他们能做什么」下（无对应措辞时回退为原始动作名）——参与者可能在一张平台根本不理解、也永远不会兑现的清单上做出授权决定，措辞还由提议方任写。现已在写入时按权限目录校验（只允许引擎真会为关系查询的那三个动作），两块屏的回退也改为明说该项不被平台识别、不授予任何东西（D-55）。 |
-| D3 | 生命故事贡献提交 | §182、§127 | ✅ 已实现 |
-| D4 | 我的贡献状态列表（接受≠证言） | §128 | ✅ 已实现 |
-| D5 | 共享活动支持 | §183 | 未实现 |
-| D6 | 报告关切 / 访问被撤销状态 | §184–185 | 未实现 |
+| D1 | Supporter home | §38 | ✅ Implemented (including the "people you support" list). **"Conversations" added 2026-08-06**: a supporter can read conversations a participant has opened and write back (draft → confirm send, the same rules as everywhere else). Only a participant can open a conversation; a supporter cannot start one. Where the other person's name cannot be resolved the list says the name is missing rather than falling back to "A community member" — a supporter and the person they support are not in a community together (D-30) |
+| D2 | Invitations and permission review (visible permissions) | §180–181 | Partially implemented: a supporter can see the granted relationships they have been written into, the relationship's state, and what it allows (without exposing dotted action keys); **the other person's consent status is not reported** — that belongs to the participant, and showing it to a supporter would let them infer something the participant had not chosen to tell them. Accepting and declining an invitation remains on the participant's side (B20). **2026-08-06: a relationship can finally be created within the product** — `POST /v1/relationships` previously had no caller anywhere, so the entire supporter path could only be opened by somebody able to call the API directly (D-28). The coordinator screen can propose a relationship, states plainly that a proposal grants nothing, and lists only the two grantable actions the platform genuinely gates on a relationship. **Added 2026-08-06**: the "what this allows" on a relationship was previously written into the row with no validation and printed verbatim under this screen's "what this will let them do" (falling back to the raw action name where no wording existed) — so a participant could make a granting decision against a list the platform does not understand and will never honour, with the wording written by whoever proposed it. It is now validated against the permission catalogue on write (allowing only the three actions the engine genuinely queries for a relationship), and the fallback on both screens now says plainly that the item is not recognised by the platform and grants nothing (D-55). |
+| D3 | Submitting a Life Story contribution | §182, §127 | ✅ Implemented |
+| D4 | My contributions and their status (accepted ≠ testimony) | §128 | ✅ Implemented |
+| D5 | Supporting a shared activity | §183 | Not implemented |
+| D6 | Reporting a concern / the access-revoked state | §184–185 | Not implemented |
 
-## E. 审核工作区（6）
+## E. Moderator workspace (6)
 
-| # | 界面 | 文档 | 状态 |
+| # | Screen | Doc | Status |
 |---|---|---|---|
-| E1 | 审核仪表盘 | §39 | 未实现 |
-| E2 | 报告队列（举报人身份不出现） | §186、§193 | ✅ 已实现 |
-| E3 | 案件详情与证据最小化呈现 | §187–188 | 部分（2026-08-05）：队列行现在带上举报类别、举报描述、被举报对象与**是否指向一条内容**——最后一项决定哪些决定能作用，不带上它审核员只能靠被拒绝来发现。仍未做：内容本身的最小化呈现（只显示被举报的那一条及其必要上下文） |
-| E4 | 审核决定与确认（不可变） | §189–190 | ✅ 局部（2026-08-05 重做）：此前十个结果全放在一个下拉里，旁边是「输入案件标识」的文本框，而**没有一个结果真的做任何事**——`moderation_decisions` 没人读，`post_state` 的 `Hidden`/`Removed`/`Restored` 写在 CHECK 里却从没被写入过，于是「移除内容」关掉案件、报告成功、帖子仍在社区里。现在改为**按案件驱动**：`Hide`/`Remove`/`Restore` 在同一事务里改帖子状态（社区流本来只显示 `Published`，所以这三个是真的），`Dismiss` 关案件；「警告」改写为「记录你在别处做过的事」并明说平台不发送任何东西；**限制/暂停/断开/封禁/升级五个不上屏**，并用一节点名它们为什么不在（D-23）。案件若不指向内容，作用于内容的决定不出现，屏上直说原因而不是让人被拒绝后才知道。**升级不再关案**：它曾把案件关成 `Actioned`，即「转给别人」和「已处理完」是同一个按钮 |
-| E5 | 申诉与恢复 | §191–192 | 未实现 |
-| E6 | 审核→安全联动 | §194 | 未实现 |
+| E1 | Moderation dashboard | §39 | Not implemented |
+| E2 | The report queue (the reporter's identity never appears) | §186, §193 | ✅ Implemented |
+| E3 | Case detail and minimised presentation of evidence | §187–188 | Partial (2026-08-05): a queue row now carries the report category, the report description, the object reported and **whether it points at a piece of content** — the last of which determines which decisions can act, and without it a moderator could only discover that by being refused. Still not done: minimised presentation of the content itself (showing only the item reported and the context necessary to judge it) |
+| E4 | Moderation decisions and confirmation (immutable) | §189–190 | ✅ Partial (rebuilt 2026-08-05): all ten outcomes previously sat in one dropdown beside a "type a case identifier" text field, and **not one of the outcomes actually did anything** — nobody read `moderation_decisions`, and `post_state`'s `Hidden`/`Removed`/`Restored` were in the CHECK and had never been written, so "remove the content" closed the case, reported success, and left the post in the community. It is now **case-driven**: `Hide`/`Remove`/`Restore` change the post's state in the same transaction (the community feed only ever showed `Published`, so these three are real), and `Dismiss` closes the case; "warn" was reworded to "record something you did elsewhere", stating plainly that the platform sends nothing. **Restrict / suspend / disconnect / ban / escalate are the five not put on screen**, with a section naming why each is absent (D-23). Where a case does not point at content, the decisions that act on content do not appear, and the screen says why rather than letting somebody find out by being refused. **Escalation no longer closes a case**: it used to close it as `Actioned`, which made "hand this to someone else" and "this is dealt with" the same button |
+| E5 | Appeals and restoration | §191–192 | Not implemented |
+| E6 | The moderation → safety handover | §194 | Not implemented |
 
-## F. 安全工作区（6）
+## F. Safety workspace (6)
 
-| # | 界面 | 文档 | 状态 |
+| # | Screen | Doc | Status |
 |---|---|---|---|
-| F1 | 安全仪表盘 | §40 | 未实现 |
-| F2 | SafetySignal 队列 | §195 | ✅ 已实现 |
-| F3 | 人工分诊视图 | §196–197 | ✅ 局部（2026-08-06：演示种子现在留一条待分诊信号——此前安全工作区里一条信号都没有过） |
-| F4 | 关闭为非安全事件 / 转为安全事件 | §198–199 | ✅ 局部 |
-| F5 | SafetyEvent 视图与安全动作 | §200–201 | ✅ 局部（2026-08-06）：此前安全事件**建了就到此为止**——`event_state` 默认 `Open` 且没有任何代码改得动它，没有查询列出它，没有屏幕显示它，而分诊屏说的「已转为安全事件」读起来像升级给了某个会处理它的东西。现在：事件可见（含来源信号的类别与严重度，**都是文字不是色阶**，§200）、可记录动作、可按状态机推进；**只可追加的时间线**把动作与状态推进放在一起，数据库触发器强制不可改不可删。措辞三条：平台自己不做任何事、「已解决」不代表人安全了、写做了什么不写说了什么。空状态说「空白不等于已判断」并提供「决定不需要采取动作」。**未做**：设计要求的「与干预的关联性」平台没有地方记录，屏上明说而非默默省略；动作负责人、监测排期、暂停/恢复（F6）仍未实现。**2026-08-06 再补**：这块屏上的两个写入都检查 `safety-event.act`（属「需确认」层），却都是一点即成，`confirmed: true` 由 api 客户端写死——屏上那句「记录在你名下，不可更改」是在写完之后才说的。现已加确认框：处置回显你写的内容，移动状态回显理由；移到「已处理／已关闭」时，「这不代表这个人是安全的」那句会在提交前最后一刻再说一遍，而不只是在选择器旁边（D-53）。 |
-| F6 | 暂停/恢复与紧急限制说明 | §202–204 | 未实现 |
+| F1 | Safety dashboard | §40 | Not implemented |
+| F2 | The SafetySignal queue | §195 | ✅ Implemented |
+| F3 | The human triage view | §196–197 | ✅ Partial (2026-08-06: the demo seed now leaves one signal awaiting triage — the safety workspace had never had a single signal in it before) |
+| F4 | Closing as not a safety event / converting to a safety event | §198–199 | ✅ Partial |
+| F5 | The SafetyEvent view and safety actions | §200–201 | ✅ Partial (2026-08-06): a safety event previously **ended at its creation** — `event_state` defaulted to `Open` and no code could move it, no query listed it, no screen showed it, while the triage screen's "converted to a safety event" read as though it had been escalated to something that would deal with it. Now: the event is visible (including the originating signal's category and severity, **both as words rather than a colour scale**, §200), actions can be recorded, and it can be advanced through the state machine; an **append-only timeline** puts actions and state changes together, with database triggers enforcing that nothing can be altered or deleted. Three rules of wording: the platform does nothing itself, "resolved" does not mean the person is safe, and record what was done rather than what was said. The empty state says "blank is not the same as judged" and offers "decide that no action is needed". **Not done**: the design's "relationship to the intervention" has nowhere to be recorded on the platform, and the screen says so rather than omitting it silently; the owner of an action, the monitoring schedule, and pause/resume (F6) remain unimplemented. **Added again 2026-08-06**: both writes on this screen check `safety-event.act` (which sits in the "needs confirmation" tier) and both happened on a single tap, with `confirmed: true` hardcoded by the api client — so the screen's "recorded in your name, and it cannot be changed" was said only after the write. There is now a confirmation: recording an action echoes back what you wrote, and moving the state echoes back the reason; when moving to "resolved / closed", the sentence "this does not mean this person is safe" is said once more at the last moment before submitting, rather than only beside the selector (D-53). |
+| F6 | Pause/resume and the explanation of emergency restrictions | §202–204 | Not implemented |
 
-## G. 管理工作区（7 + 1 项实施中新增）
+## G. Administration workspace (7 + 1 added during implementation)
 
-| # | 界面 | 文档 | 状态 |
+| # | Screen | Doc | Status |
 |---|---|---|---|
-| G1 | 管理仪表盘与系统状态 | §41 | 未实现 |
-| G2 | 用户与组织 | §21 | 未实现 |
-| G3 | 角色与服务账号 | §21 | ✅ 局部（2026-08-06）：**权限此前只能给出去、收不回来**——`revokeRole` 自 M01 写下之日起权限校验／版本守卫／领域事件／审计条目全都齐备，却**没有路由也没有屏幕**；`user.view` 授给两个角色而没有任何代码检查过；没有任何查询列出过账号或角色。离开的协调员、参与结束的研究者、该关掉的账号，在产品里都动不了。现在可列出本组织内持有角色的账号（组织取自请求上下文，**不接受参数**——接受组织标识的列表是一种探针）并按行收回，需确认且绑定版本。**两处照实说**：收回角色**不等于关闭账号**（`account_state` 五个取值无人写过，`Active` 只是列默认值；屏上明说这里关不掉账号、删光角色是唯一能停下一个人的办法、且平台拦不住登录本身），收回的是「之后能做什么」而**不是「已经做过什么」**（记录与审计都留着）。D-38。**未实现**：创建账号、授予角色、服务账号管理仍不在产品里（G2 亦然） |
-| G4 | 集成与 AI 供应商配置 | §21 | 未实现 |
-| G5 | 作业与死信队列 | §21 | 未实现 |
-| G6 | 功能旗标 | §21 | 未实现 |
-| G7 | 审计访问 | §21 | ✅ 已实现（2026-08-06）：**平台有 61 处写审计，之前没有任何一处读**——`audit.view` 自权限目录写下之日起就授给了三个角色，而没有一行代码检查过它；那份记录只追加（触发器强制）、任何人都看不到。这是本轮清查里最大的一处：记录本身完整、正确、fail-closed，而没有一个人能看见。**屏上先说这份记录里没有什么**：（1）**不记录任何人的查看**——看参与者档案、开会话、跑报表，一律不写，所以这块屏答不了「谁看过我的记录」；（2）**不记录拒绝**——`result` 的 CHECK 里有 `Allowed`／`Denied`，全代码库从没写过这两个值，权限引擎拒绝一次什么都不留下，来查未遂滥用的人会一无所获（D-32）。空结果处再说一次「这不等于没有发生」。**读审计本身也被记录**（Doc 15 §21）：理由必填、连同筛选条件一起，在返回任何一行之前写入同一张表，写不进去就读不到；理由由不必填改回必填，因为 D-6 给自己写的解除条件（后端真的记录）已经补齐（D-31）。只显示「谁、对什么、做了什么、何时、凭什么权限」，不显示被操作资源的内容。**2026-08-06 补**：此前屏上写「只有改变了什么的动作才写在这里」，读起来像「凡改变了什么的都在这里」——而 39 条应用层命令改了数据却一条审计都没记，包括唯二把数据挂到参与者入组上的交付与评估。现已补上这两条，其余 37 条用相等断言的绊线钉住，屏上明说这不是全部改动、其中的空白不是「什么都没发生」的证据（D-57）。 |
-| G8 | 紧急访问记录与事后复核（break-glass）+ 治理保留 | Doc 16 §38.5 | ✅ 局部（2026-08-05 新增行）：两条命令与待复核队列在服务端**一直都在，而没有任何调用方**——`break-glass/pending-review` 是一个既看不到、也无法通过产品填满的队列，而它恰好长在平台的问责路径上。现在可以记录一次紧急访问（MFA + 确认，理由／范围／预计结束时间都必填）、由**记录人以外的人**复核（正当／不正当／需要跟进），演示种子留一条待复核。**措辞按事实**：权限引擎从不读 `break_glass_records`，所以记录**不给任何访问权**、`expiresAt` 也不关掉任何东西，屏上第一段与到期时间旁边都明说（D-22）。**治理保留刻意不上屏**：没有任何一处读 `governance_holds`，放上保留冻不住任何东西，而放保留的人会因此停止去找别的办法拦（D-21）；屏上用一节说明它为什么不在这里 |
+| G1 | Administration dashboard and system status | §41 | Not implemented |
+| G2 | Users and organisations | §21 | Not implemented |
+| G3 | Roles and service accounts | §21 | ✅ Partial (2026-08-06): **access could previously only be given, never taken back** — `revokeRole` had had its permission check, version guard, domain event and audit entry in place since the day M01 was written, and had **no route and no screen**; `user.view` was granted to two roles and no code ever checked it; and no query had ever listed accounts or roles. A coordinator who had left, a researcher whose involvement had ended, an account that should have been closed — none of them could be touched within the product. Accounts holding a role within the organisation can now be listed (the organisation comes from the request context and is **not accepted as a parameter** — a list that accepts an organisation identifier is a probe) and revoked row by row, requiring confirmation and bound to a version. **Two things stated honestly**: revoking a role **is not closing an account** (`account_state`'s five values have never been written and `Active` is merely the column default; the screen says plainly that an account cannot be closed here, that removing every role is the only way to stop a person, and that the platform cannot prevent sign-in itself), and what is revoked is "what they can do next" and **not "what they have already done"** (the records and the audit trail remain). D-38. **Not implemented**: creating accounts, granting roles, and service-account management are still absent from the product (as is G2) |
+| G4 | Integrations and AI provider configuration | §21 | Not implemented |
+| G5 | Jobs and the dead-letter queue | §21 | Not implemented |
+| G6 | Feature flags | §21 | Not implemented |
+| G7 | Audit access | §21 | ✅ Implemented (2026-08-06): **the platform writes audit records in 61 places and previously read them in none** — `audit.view` had been granted to three roles since the day the permission catalogue was written, and not one line of code had ever checked it; the record was append-only (enforced by a trigger) and visible to nobody. This was the largest instance in this whole sweep: the record itself complete, correct and fail-closed, and no person able to see it. **The screen first says what is not in this record**: (1) **no one's viewing is recorded** — looking at a participant's file, opening a conversation, running a report, none of it is written, so this screen cannot answer "who has looked at my records"; (2) **refusals are not recorded** — `result`'s CHECK contains `Allowed`/`Denied`, the codebase has never written either value, a refusal by the permission engine leaves nothing behind, and somebody investigating attempted misuse would find nothing (D-32). Where the result is empty it says once more that "this does not mean it did not happen". **Reading the audit trail is itself audited** (Doc 15 §21): a reason is mandatory and is written, along with the filters used, into the same table before a single row is returned, so if it cannot be written it cannot be read; the reason went from optional back to mandatory because the release condition D-6 set for itself (that the backend genuinely records it) had been met (D-31). It shows only "who, against what, did what, when, and under which permission", never the content of the resource acted on. **Added 2026-08-06**: the screen previously said "only actions that changed something are written here", which reads as "everything that changed something is here" — whereas 39 application-layer commands changed data and recorded no audit entry at all, including the only two that attach data to a participant's enrolment, delivery and assessment. Those two have been added, the remaining 37 are pinned by an equality-assertion tripwire, and the screen says plainly that this is not every change and that a gap in it is not evidence that nothing happened (D-57). |
+| G8 | Emergency access records and after-the-fact review (break-glass) + governance holds | Doc 16 §38.5 | ✅ Partial (row added 2026-08-05): the two commands and the pending-review queue **had been there on the server all along, with no caller** — `break-glass/pending-review` was a queue that could neither be seen nor filled through the product, and it happens to sit on the platform's accountability path. An emergency access can now be recorded (MFA + confirmation, with reason, scope and expected end time all mandatory) and reviewed by **somebody other than the person who recorded it** (justified / not justified / needs follow-up), with the demo seed leaving one awaiting review. **The wording follows the facts**: the permission engine never reads `break_glass_records`, so a record **grants no access** and `expiresAt` closes nothing off, which the screen states in its first paragraph and again beside the expiry time (D-22). **Governance holds are deliberately not put on screen**: nowhere reads `governance_holds`, so placing a hold freezes nothing, and the person who placed it would stop looking for another way to intervene (D-21); a section on the screen explains why it is not here |
 
-## H. 公共与邀请 surface（5）
+## H. Public and invitation surfaces (5)
 
-| # | 界面 | 文档 | 状态 |
+| # | Screen | Doc | Status |
 |---|---|---|---|
-| H1 | 登录/身份入口（当前为 dev-header 桩 + 访问口令横幅） | §22、ADR-104 | ✅ 已实现（桩） |
-| H2 | 安全邀请落地页 | §22、§92 | 未实现 |
-| H3 | 账户激活 | §22、§93 | 未实现 |
-| H4 | 公开研究信息与支持联系 | §22 | 未实现 |
-| H5 | 无障碍声明 | §22、§285 | 未实现 |
+| H1 | Sign-in / identity entry (currently the dev-header stub + the access-password banner) | §22, ADR-104 | ✅ Implemented (as a stub) |
+| H2 | The secure invitation landing page | §22, §92 | Not implemented |
+| H3 | Account activation | §22, §93 | Not implemented |
+| H4 | Public study information and support contacts | §22 | Not implemented |
+| H5 | The accessibility statement | §22, §285 | Not implemented |
 
-## I. 跨界面状态与共用组件（18）
+## I. Cross-screen states and shared components (18)
 
 | # | 单元 | 文档 | 状态 |
 |---|---|---|---|
