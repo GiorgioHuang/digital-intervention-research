@@ -1,62 +1,64 @@
 # DESIGN_BRIEF
 
-> 交付给设计代理的简报。规范来源：Doc 20 v1.3（UX 流程与设计系统，330 节）、Doc 19 v1.3（概念研究，认识论纪律）、ACCESSIBILITY_TEST_PLAN、THREAT_MODEL。待设计单元清单见 UI_INVENTORY.md（93 项）。
+> The brief handed to the design agent. Specification sources: Doc 20 v1.3 (UX flows and design system, 330 sections), Doc 19 v1.3 (conceptual research, epistemic discipline), ACCESSIBILITY_TEST_PLAN, THREAT_MODEL. The list of units still to be designed is in UI_INVENTORY.md (93 of them).
 
-## 1. 这个产品不是什么
+## 1. What this product is not
 
-老年人游戏 App、AI 聊天机器人、社交网络、认知测试系统、照护管理系统——**都不是**。它是以人为本、循证的数字干预研究平台。视觉与交互不得借用社交产品的注意力机制。
+An older-adults games app, an AI chatbot, a social network, a cognitive testing system, a care-management system — **none of these**. It is a human-centred, evidence-based digital intervention research platform. The visuals and interactions must not borrow the attention mechanics of social products.
 
-## 2. 不可协商的原则（Doc 20 §13，20 条核心原则的设计含义）
+## 2. The non-negotiable principles (Doc 20 §13, the design consequences of the 20 core principles)
 
-| 原则 | 设计含义（可检验） |
+| Principle | Design consequence (testable) |
 |---|---|
-| 一次一个有意义的决定 | 单屏不得并列两个高影响决定；确认对话框一次只确认一件事 |
-| 先解释再询问 | 任何请求性动作，其后果与受众在同屏可见，不靠 tooltip/二级页 |
-| 确认后果 | 高影响动作的确认文案点名对象与后果（「发布到『园艺角』？成员都能看到」） |
-| 无暗黑模式 | 不得用视觉权重诱导某个选项；「暂时不」与「感兴趣」等重 |
-| 默认私密 | 默认最小可见性；提升可见性必须是显式动作 |
-| 先受众后发布 | 受众在发布控件之前呈现 |
-| 先草稿后发送/发布 | 草稿态与已发送态视觉可区分，且草稿标注「只有你能看到」 |
-| 先来源后断言 | 任何证据性内容旁必须能看到出处与证据强度 |
-| 精确版本后批准 | 审批屏必须显示被批准对象的确切版本号/哈希 |
-| 人的权威先于高影响动作 | 自动化产物不得呈现为已决定；AI 产物必须标注且需人工确认 |
-| 颜色不得是唯一状态指示 | 每个状态=图标+文字+（可选）颜色 |
+| One meaningful decision at a time | no screen may place two high-impact decisions side by side; a confirmation dialog confirms one thing only |
+| Explain before asking | for any action that asks something of the participant, its consequence and its audience are visible on the same screen — not behind a tooltip or a second page |
+| Confirm consequences | the confirmation text for a high-impact action names the object and the consequence ("Publish to 'Gardening Corner'? Every member will be able to see it") |
+| No dark patterns | visual weight must not steer the participant toward one option; "Not now" and "Interested" carry equal weight |
+| Private by default | the lowest visibility is the default; raising visibility must be an explicit action |
+| Audience before publication | the audience is presented above the publish control |
+| Draft before send/publish | draft and sent states are visually distinguishable, and a draft is marked "only you can see this" |
+| Provenance before assertion | any evidential content must show its source and evidence strength alongside it |
+| Exact version before approval | an approval screen must show the exact version number or hash of the object being approved |
+| Human authority before high-impact actions | an automated output must never be presented as decided; AI output must be labelled and require human confirmation |
+| Colour is never the only state indicator | every state = icon + words + (optionally) colour |
 
-## 3. 认识论纪律（Doc 19 §10 / Doc 20 §52）
+## 3. Epistemic discipline (Doc 19 §10 / Doc 20 §52)
 
-界面必须能区分并可视化：观察 / 推断 / 来源推导 / 设计假设 / 矛盾 / 原型观察等标签；**合成或模拟结果绝不得呈现为经验证据**。研究者界面的每个结论性元素都要能回答"这是哪一类知识"。
+The interface must distinguish and make visible the labels: observation / inference / source-derived / design assumption / contradiction / prototype observation and the rest; **synthetic or simulated results must never be presented as empirical evidence**. Every concluding element in the researcher interface must be able to answer "which kind of knowledge is this?".
 
-## 4. 无障碍下限（Doc 20 §285–300；WCAG 2.2 AA）
+> **Status as at 2026-08-16**: this section is a requirement, not a description. Neither the epistemic tags nor a `[synthetic data]` marking has been built in any workspace — see RESEARCHER_WORKSPACE §4. Treat it as work to do.
 
-- 200% 缩放与高文本缩放下不丢失内容或功能，不出现横向滚动
-- 触控目标 ≥44px 且**不得与相邻目标重叠**（已发生过真实缺陷：44px 按钮落在 29px 行框里互相压叠）
-- 焦点在所有 surface 与状态下可见；焦点顺序与阅读顺序一致
-- 屏幕阅读器：状态变化用 live region 播报；对话框用 alertdialog 且标题关联
-- 尊重 reduced-motion；动效不得承载唯一信息
-- 能力自适应模式（§286–287）：字号/密度/对比/简化模式可由用户切换，**不按年龄自动判定**
+## 4. The accessibility floor (Doc 20 §285–300; WCAG 2.2 AA)
 
-## 5. 语言（Doc 20 §277–284）
+- No loss of content or function at 200% zoom or under large text scaling, and no horizontal scrolling
+- Touch targets ≥44px and **not overlapping their neighbours** (a real defect has already occurred here: 44px buttons dropped into 29px row boxes and pressed into one another)
+- Focus visible on every surface and in every state; focus order matches reading order
+- Screen readers: state changes announced through a live region; dialogs use `alertdialog` with the title associated
+- Respect reduced-motion; motion must never carry the only copy of a piece of information
+- Capability-adaptive modes (§286–287): text size, density, contrast and a simplified mode are switchable by the user, and **never selected automatically on the basis of age**
 
-- 参与者语言：平实、第二人称、不居高临下、不用"老年人"作为标签
-- 诚实措辞优先于安慰性措辞：投递状态不得把"供应商已接受"说成"对方已收到"；未知就是未知
-- 拒绝/失败文案说明**下一步能做什么**，不指责用户
-- 中文为主语言，术语表保持稳定（同意 / 证言 / 草稿 / 连接 / 互相接受 / 审核 / 安全信号）
+## 5. Language (Doc 20 §277–284)
 
-## 6. 技术约束（设计必须落得进现有实现）
+- Participant language: plain, second person, never condescending, and never using "the elderly" as a label
+- Honest wording beats reassuring wording: a delivery state must not report "the provider accepted it" as "they have received it"; unknown means unknown
+- Refusal and failure text says **what can be done next**, and does not blame the user
+- The interface language is English (D-9). The glossary stays stable: consent / testimony / draft / connection / mutual acceptance / moderation / safety signal — one term per concept, used identically in the interface, the tests and these documents
 
-- React 18 + Vite，无 UI 框架依赖；样式为单文件 CSS，无 CSS-in-JS
-- 令牌以 CSS 自定义属性交付（`--color-…`/`--space-…`/`--type-…`），支持 light/dark（`color-scheme: light dark` 已启用）
-- 组件是语义 HTML（`<nav> <main> <section> <ul> <button> <dialog role=alertdialog>`）；**不得为了视觉引入 div 汤**，现有 a11y 测试断言依赖角色与可访问名
-- 现有 34 个前端测试按可访问名查询元素（如 `getByRole('button', { name: '保存草稿' })`）——**改文案即改测试**，如需改动请在交付物中明确列出
-- 移动优先：真实使用发生在手机上（已验证）
+## 6. Technical constraints (a design has to land in the implementation that exists)
 
-## 7. 交付物要求
+- React 18 + Vite, no UI framework dependency; styling is a single CSS file, no CSS-in-JS
+- Tokens are delivered as CSS custom properties (`--color-…` / `--space-…` / `--type-…`), supporting light and dark (`color-scheme: light dark` is enabled at `styles.css:634`)
+- Components are semantic HTML (`<nav> <main> <section> <ul> <button> <dialog role=alertdialog>`); **div soup must not be introduced for visual reasons**, because the existing accessibility assertions query by role and accessible name
+- The 375 existing front-end tests (47 files) query elements by accessible name — for example `getByRole('button', { name: 'Save draft' })`. **Changing the words changes the tests**; if a change is needed, list it explicitly in the deliverable
+- Mobile first: real use happens on a phone (verified)
 
-1. **设计系统规范**：令牌清单（含具体值与对比度验证）、组件规则、状态表；以可直接落地的 CSS 自定义属性表达
-2. **每屏设计规范**：目标、信息层级、区块顺序、状态矩阵（加载/空/错误/无权限/受保护存在）、关键交互与确认文案、无障碍要点
-3. **不做视觉稿图片**：以结构化规范 + ASCII/Markdown 线框描述交付，便于直接实现与评审
-4. **明确标注取舍与未决**：凡与 Doc 20 冲突或需要产品决策处，单列一节，不擅自决定
+## 7. What the deliverable must contain
 
-## 8. 范围提醒
+1. **A design system specification**: the token list (with concrete values and contrast verification), component rules, state tables; expressed as CSS custom properties that can be dropped in as they stand
+2. **A per-screen specification**: purpose, information hierarchy, block order, the state matrix (loading / empty / error / not permitted / protected existence), the key interactions and confirmation wording, and the accessibility points
+3. **No visual mock-up images**: deliver a structured specification plus ASCII/Markdown wireframe descriptions, so it can be implemented and reviewed directly
+4. **Trade-offs and open questions marked explicitly**: wherever something conflicts with Doc 20 or needs a product decision, give it its own section rather than deciding unilaterally
 
-当前为概念研究原型（ADR-061/062）：全部合成数据、模拟供应商、dev-header 身份桩。同意与审批屏是**被建模的未来系统**的 UX 模型；设计上照实呈现，但不得暗示已获伦理批准或正在招募真实参与者。
+## 8. A reminder about scope
+
+This is currently a conceptual research prototype (ADR-061/062): entirely synthetic data, simulated providers, a dev-header identity stub. The consent and approval screens are a UX model **of the future system being modelled**; present them faithfully in the design, but they must not imply that ethics approval has been obtained or that real participants are being recruited.

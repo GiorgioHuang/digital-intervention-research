@@ -1,69 +1,74 @@
 # IMPLEMENTATION_BASELINE
 
-> 初始仓库审计（Master Prompt「Required Initial Repository Audit」要求）。随实现推进持续更新；状态词汇表：`Not Started / Scaffolded / Implemented / Verified / Blocked / Deferred / Pending External Approval`。
+> The initial repository audit (required by the Master Prompt's "Required Initial Repository Audit"). Kept up to date as the implementation advances; the status vocabulary is `Not Started / Scaffolded / Implemented / Verified / Blocked / Deferred / Pending External Approval`.
+>
+> §1 and §2 record the greenfield audit as it stood at the time; every later re-check carries its own date inline. The test counts in §3 were recounted on 2026-08-16 — see the note under that table.
 
-## 1. 仓库现状
+## 1. The state of the repository
 
-- 审计时点仓库内容：`docs/`（Architecture Handbook v2.7 全文：文档 0–20 + 附录 A–F）与根级实现治理文件。**无遗留代码、无 CI、无迁移、无环境文件。**绿地实现，无需迁移/淘汰遗留代码。
-- 权威版本：以 `docs/appendices/Appendix-D-Handbook-Version-and-Status-Matrix-v2.7.md` 为准，文档 0–20 全部 Reviewed（文档 19 为 Reviewed–Draft，伦理批准 Pending）。Appendix F v1.5 冲突登记簿无未决冲突。
+- Repository contents at the time of the audit: `docs/` (the full Architecture Handbook v2.7: Documents 0–20 plus Appendices A–F) and the root-level implementation governance files. **No legacy code, no CI, no migrations, no environment files.** A greenfield implementation, with no legacy to migrate or retire.
+- Authoritative versions: per `docs/appendices/Appendix-D-Handbook-Version-and-Status-Matrix-v2.7.md`, Documents 0–20 were all Reviewed (Document 19 Reviewed–Draft, ethics approval Pending). The Appendix F v1.5 conflict register held no open conflicts.
 
-## 2. 选定语言/框架/包管理（详见 IMPLEMENTATION_DECISIONS.md）
+## 2. The language, framework and package manager chosen (details in IMPLEMENTATION_DECISIONS.md)
 
-- TypeScript（strict）/ Node.js 22 / pnpm workspaces monorepo。
-- 后端 NestJS（API 进程），Worker/Scheduler 为同代码库独立入口；前端 React + Vite PWA（后续阶段引入）。
-- PostgreSQL 16 单库多 schema；纯 SQL 迁移（node-pg-migrate）+ Kysely 类型化查询；pg-boss 持久队列。
-- 本地依赖：docker-compose（PostgreSQL、MinIO、Keycloak-dev）（**2026-08-07 核查**：MinIO 容器目前没有任何代码连接它——`BlobStore` 只认 R2 的四个设置，未配置时用 Postgres 模拟器，R2 适配器的端点由账户 ID 拼出、不能指向 MinIO。它是一个没有使用方的本地依赖）。
+- TypeScript (strict) / Node.js 22 / a pnpm workspaces monorepo.
+- NestJS on the back end (the API process), with Worker and Scheduler as separate entry points in the same codebase; React + Vite PWA on the front end (introduced in a later phase).
+- PostgreSQL 16, one database with several schemas; pure-SQL migrations (node-pg-migrate) + Kysely typed queries; pg-boss for the durable queue.
+- Local dependencies: docker-compose (PostgreSQL, MinIO, Keycloak-dev). (**Checked 2026-08-07**: nothing in the code connects to the MinIO container — `BlobStore` reads only R2's four settings, falls back to the Postgres simulator when they are unset, and the R2 adapter builds its endpoint from the account ID, so it cannot be pointed at MinIO. It is a local dependency with no consumer.)
 
-## 3. 应用/服务/库现状
+## 3. The state of the applications, services and libraries
 
-| 组件 | 状态 |
+| Component | Status |
 |---|---|
-| `packages/kernel`（RequestContext、结构化错误、时钟、ID、日志脱敏） | Implemented（50 单测通过） |
-| `packages/database`（连接、迁移、outbox/inbox/audit/idempotency 基表） | Implemented（集成测试含迁移 up→down→up 演练） |
-| `apps/api`（Doc 15 错误信封/上下文头/dev-header 认证桩 + 参与者侧命令端点（含 M03 relationship 管理与 M17 Life Story 全链）+ 员工侧命令端点（M04 协议链/M05 入组链/M06 干预组合/M09 安全 triage/M12 数据集血缘/M13 分析链/M14 报告·受控导出/M15 审批·治理保留·break-glass）+ M18 属主只读查询 + OpenAPI） | Implemented（27 e2e） |
-| `apps/worker` / `apps/scheduler`（outbox 发布循环 + 过期清扫（候选/互相接受/关系）+ 投递未知对账 + outbox 卡死恢复 + 对象扫描 + 幂等清理；cron 与阈值配置驱动） | Implemented（6 项 sweep 集成测试） |
-| `packages/policy` 权限引擎 + `m01-identity-org` + `m03-consent-permission` | Implemented（27 引擎单测 + 13 集成测试） |
-| `m02-participant` + `m04-research-design` + `m05-enrolment` | Implemented（P3 链路 12 集成测试） |
-| `m06-intervention-portfolio` + `m10-evidence`（KP 模拟器默认 + 真实 Healthy Aging Knowledge Graph MCP 客户端，实弹测试见 KNOWLEDGE_GRAPH_INTEGRATION.md） | Implemented（9 集成测试 + 6 真实调用/失败关闭测试） |
-| `m17-life-story` | Implemented（11 集成测试：作者权三态/版本不可变/可见性/贡献流/撤回） |
-| `m18-community-social`（社区/匹配/连接/消息全链） + `m16-integration`（供应商模拟器+回调认证+对象存储隔离/扫描管线） | Implemented（24 集成测试） |
-| `m09-safety` + `m11-ai`（信号/人工事件；Model+Tool Gateway，Level-5 全禁） | Implemented（8 集成测试） |
-| `m12-dataset` + `m13-analysis`（DatasetLock/分析链/Finding 血缘） | Implemented（5 集成测试） |
-| `m07-delivery` + `m08-assessment`（暴露状态/类型化缺失） | Implemented（合成试点覆盖） |
-| `m15-governance`（ApprovalRecord 精确工件版本+职责分离 CHECK、append-only 状态历史、GovernanceHold、break-glass 强制追溯审查） | Implemented（5 集成测试） |
-| `packages/synthetic-pilot`（端到端合成试点） | Implemented（5 场景组） |
-| `m14-reporting`（报告不可变批准版本/受控导出全链/参与者可携带性导出；外部提交显式延后） | Implemented（4 集成测试） |
-| `apps/web`（参与者工作区：任务式首页/细粒度同意/消息确认/屏蔽与报告/安全担忧/可选匹配，会话/联系/推荐均来自 API 查询；员工工作区：入组协调/研究者/批准/安全 triage/内容审核（举报人匿名队列）；支持者工作区：贡献提案与诚实状态跟踪，待办队列驱动、MFA 分级如实标注、决定署名确认；HTTP-only 边界） | Implemented（27 组件测试） |
-| OpenAPI / 事件 schema 目录 | Scaffolded（openapi/openapi.yaml 覆盖现有端点） |
+| `packages/kernel` (RequestContext, structured errors, clock, IDs, log redaction) | Implemented (50 unit tests passing) |
+| `packages/database` (connection, migrations, the outbox/inbox/audit/idempotency base tables) | Implemented (the integration tests include an up→down→up migration rehearsal) |
+| `apps/api` (the Doc 15 error envelope / context headers / dev-header auth stub + the participant-side command endpoints (including M03 relationship management and the full M17 Life Story chain) + the staff-side command endpoints (M04 protocol chain / M05 enrolment chain / M06 intervention portfolio / M09 safety triage / M12 dataset lineage / M13 analysis chain / M14 reporting and controlled export / M15 approvals, governance holds and break-glass) + the M18 owner read-only queries + OpenAPI) | Implemented (127 tests across 7 files, of which 32 are the e2e suite) |
+| `apps/worker` / `apps/scheduler` (the outbox publishing loop + expiry sweeps (candidates / mutual acceptance / relationships) + delivery-unknown reconciliation + stuck-outbox recovery + object scanning + idempotency cleanup; driven by cron and threshold configuration) | Implemented (the sweep integration tests) |
+| `packages/policy` permission engine + `m01-identity-org` + `m03-consent-permission` | Implemented (30 engine unit tests + 27 integration tests) |
+| `m02-participant` + `m04-research-design` + `m05-enrolment` | Implemented (17 integration tests over the P3 chain) |
+| `m06-intervention-portfolio` + `m10-evidence` (the KP simulator by default + a real Healthy Aging Knowledge Graph MCP client; the live-call tests are described in KNOWLEDGE_GRAPH_INTEGRATION.md) | Implemented (22 integration tests, including the real-call and fail-closed tests) |
+| `m17-life-story` | Implemented (18 integration tests: the three authorship states / version immutability / visibility / the contribution flow / withdrawal) |
+| `m18-community-social` (the full community / matching / connection / messaging chain) + `m16-integration` (provider simulators + callback authentication + object storage isolation and the scanning pipeline) | Implemented (45 + 23 integration tests) |
+| `m09-safety` + `m11-ai` (signals and human events; the Model and Tool Gateway, Level-5 wholly prohibited) | Implemented (14 integration tests) |
+| `m12-dataset` + `m13-analysis` (DatasetLock / the analysis chain / Finding lineage) | Implemented (11 integration tests) |
+| `m07-delivery` + `m08-assessment` (exposure states, typed absence) | Implemented (covered by the synthetic pilot) |
+| `m15-governance` (ApprovalRecord with the exact artefact version + a separation-of-duties CHECK, append-only status history, GovernanceHold, mandatory retrospective review of break-glass) | Implemented (7 integration tests) |
+| `packages/synthetic-pilot` (the end-to-end synthetic pilot) | Implemented (6 scenario groups) |
+| `m14-reporting` (immutable approved report versions / the full controlled-export chain / participant portability export; external submission explicitly deferred) | Implemented (9 integration tests) |
+| `apps/web` (participant workspace: task-based home page / fine-grained consent / message confirmation / block and report / safety concerns / optional matching, with sessions, contacts and recommendations all coming from API queries; staff workspace: enrolment coordination / researcher / approver / safety triage / content moderation (a reporter-anonymous queue); supporter workspace: contribution proposals and honest status tracking, driven by a to-do queue, with the MFA tier stated faithfully and decisions confirmed under the decider's name; an HTTP-only boundary) | Implemented (**375 tests across 47 files**) |
+| OpenAPI / the event schema catalogue | Scaffolded (openapi/openapi.yaml covers the endpoints that exist) |
 
-## 4. 数据库与迁移
+> **Test counts recounted 2026-08-16.** This table previously reported 27 component tests for `apps/web`, 27 e2e for `apps/api` and 27 unit tests for the policy engine — figures that stopped being true a long time ago and, read together, gave a misleading picture of how much of the suite each area carries. The `apps/web`, `packages/kernel` and `packages/policy` figures above were produced by running those suites here (375 / 50 / 30, all green). The remaining per-module figures need a live PostgreSQL and could not be run in this environment; they are static counts of `it(`/`test(` declarations in each package's `test/` directory, so they are lower bounds — a `it.each` table expands to more at run time.
 
-- 单一 PostgreSQL，逻辑 schema 按 Doc 16 §9 规划（`identity_org` … `community_social` + `storage_ops/search_projection/analytics_stage/migration_admin`）。
-- 首批迁移只建横切基表：`platform_kernel` schema 下 outbox_messages、inbox_messages、idempotency_records；`governance_audit.audit_events`（append-only）。模块 schema 随各模块阶段建立。
+## 4. Database and migrations
 
-## 5. API / 事件 / 认证授权 / 测试 / CI / 基础设施现状
+- A single PostgreSQL instance, with logical schemas laid out per Doc 16 §9 (`identity_org` … `community_social` + `storage_ops` / `search_projection` / `analytics_stage` / `migration_admin`).
+- The first migrations created only the cross-cutting base tables: outbox_messages, inbox_messages and idempotency_records under the `platform_kernel` schema, and `governance_audit.audit_events` (append-only). Module schemas were created as each module's phase arrived. There are now 29 migrations, all reversible and rehearsed on every push.
 
-- API：`/health`、`/ready` + v1 命令端点（consent 记录/撤回、thread/message/confirm-send），Doc 15 错误信封与稳定错误码，OpenAPI 于 `openapi/openapi.yaml`；认证有两种模式（ADR-104）：`google` 为生产认证（Google OIDC，会话为服务端可撤销的 HttpOnly cookie），`dev-header` 为显式开发/合成试点桩。其余模块命令按同一模式增量暴露。
-- 认证：Implemented（ADR-104 已裁定为 Sign in with Google，取代此前设想的 Keycloak）。身份匹配 `(issuer, sub)`，邮箱仅用于一次性认领邀请；无自助注册；`mfa` 层由重新认证（step-up）满足。M01 保持 UserAccount 权威。授权：Effective Permission 引擎 Implemented（packages/policy，M03 PermissionService 落 PolicyDecision）。
-- 测试：vitest 单元 + 集成（testcontainers 式，用本地 docker PG）；CI：GitHub Actions（build/typecheck/lint/depcruise/迁移演练/测试/备份恢复演练）。
-- 部署假设：容器化、单区域、托管平台待批（ADR-103/119/121 Pending External Approval）。
+## 5. The state of the API, events, authn/authz, tests, CI and infrastructure
 
-## 6. M01–M18 能力状态
+- API: `/health` and `/ready` plus the v1 command endpoints (recording and withdrawing consent, threads, messages, confirm-send), the Doc 15 error envelope with stable error codes, and OpenAPI at `openapi/openapi.yaml`. There are two authentication modes (ADR-104): `google` is the production authentication (Google OIDC, with the session as a server-side revocable HttpOnly cookie), and `dev-header` is an explicit development and synthetic-pilot stub. The remaining module commands are exposed incrementally on the same pattern.
+- Authentication: Implemented (ADR-104 settled on Sign in with Google, replacing the Keycloak that had been envisaged). Identity is matched on `(issuer, sub)`, and the email address is used only to claim an invitation once. **Self-registration exists and is on by default** (`ALLOW_SELF_SIGNUP`, owner's ruling 2026-08-08): a self-registered account holds no roles and no relationships, so it reaches nothing but its own resources — the permission engine, not the flag, is what makes that true; a deployment with a fixed cohort turns it off. The `mfa` tier is satisfied by re-authentication (step-up). M01 remains authoritative for UserAccount. Authorization: the Effective Permission engine is Implemented (packages/policy, with M03's PermissionService writing the PolicyDecision).
+  - *(Corrected 2026-08-16: this section previously said there was no self-registration, which was true when it was written and stopped being true with migration `1753800000028_self-signup-and-invitation-grants.sql`. See DEPLOYMENT.md, "Self-registration and invitations".)*
+- Tests: vitest for unit and integration (testcontainers-style, against a local docker PostgreSQL); CI: GitHub Actions (build / typecheck / lint / depcruise / migration rehearsal / tests / backup-restore rehearsal).
+- Deployment assumptions: containerised, single region, hosting platform pending approval (ADR-103/119/121 Pending External Approval).
 
-M01/M02/M03/M04/M05 Implemented（身份、参与者档案、同意/权限、协议版本、入组全链）；M15 Implemented（审批记录+职责分离 CHECK/治理保留/break-glass 追溯审查 + append-only 审计）。M06/M10/M17 Implemented（干预版本 + 证据链 + Life Story）。M18 社区+匹配 Implemented（Block/Report/ModerationCase/社区/MatchDecision/MutualAcceptance/Connection；ConnectionRequest 功能禁用）。M18/M16 消息管线 Implemented（CommunicationBasis/双状态机/SendConfirmation/回调认证/重放防护）。M09/M11 Implemented（安全人工权威 + AI 治理网关）。M12/M13 Implemented（人工 DatasetLock + Output≠Interpretation≠Finding 全链血缘）。M07/M08 + 合成试点 Implemented。剩余缺口见 PILOT_READINESS_REPORT.md（后台作业/员工侧 Web/正式批准）。
+## 6. M01–M18 capability status
 
-## 7. 与 Handbook 的冲突
+M01/M02/M03/M04/M05 Implemented (identity, participant profile, consent and permission, protocol versions, the full enrolment chain); M15 Implemented (approval records with a separation-of-duties CHECK, governance holds, retrospective review of break-glass, and append-only audit). M06/M10/M17 Implemented (intervention versions, the evidence chain, Life Story). M18 community and matching Implemented (Block / Report / ModerationCase / community / MatchDecision / MutualAcceptance / Connection; ConnectionRequest is feature-disabled). The M18/M16 messaging pipeline is Implemented (CommunicationBasis / the twin state machines / SendConfirmation / callback authentication / replay protection). M09/M11 Implemented (human authority over safety + the AI governance gateway). M12/M13 Implemented (a human DatasetLock + full Output ≠ Interpretation ≠ Finding lineage). M07/M08 and the synthetic pilot Implemented. The remaining gaps are in PILOT_READINESS_REPORT.md (background jobs, the staff-side web workspace, formal approvals).
 
-- 无已知冲突。注意项：Doc 5 §102 的 MVP 干预组合与 Doc 3 v2.3 不一致，按 Appendix E 权威序采用 Doc 3（INT-009+004+001+002 核心，INT-003 受控 AI 层）；已记录，不改文档。
+## 7. Conflicts with the Handbook
 
-## 8. 安全/隐私/无障碍/研究风险（初始清单）
+- No known conflicts. One thing to watch: the MVP intervention portfolio of Doc 5 §102 disagrees with Doc 3 v2.3; under the Appendix E authority order Doc 3 is adopted (INT-009 + 004 + 001 + 002 as the core, INT-003 as the controlled AI layer). Recorded, with no change to the documents.
 
-1. 供应商未选定（AI/通信/IdP/托管/恶意软件扫描器 ADR-126）→ 全部走确定性模拟器 + ACL 接口，fail closed（Pending External Approval）。**对象存储已选定 Cloudflare R2（ADR-106，2026-08-07）**，端口与适配器已落，但凭据未配置、尚未接通。
-2. 保留期/驻留/备份策略未批（ADR-119/120/121）→ 配置驱动，不硬编码。
-3. 伦理批准 Pending（ATR-025）→ 任何阶段不得声称可真实招募。
-4. 无障碍验收（WCAG AA + 七模式）需真实用户测试，自动化不充分——排入 P4+ 每个参与者纵切。
-5. Message 正文加密策略未批（ADR-117）→ 默认排除于日志/事件/索引，应用层信封加密先行。
+## 8. Security / privacy / accessibility / research risks (the initial list)
 
-## 9. 建议实现顺序
+1. Providers not selected (AI, communications, IdP, hosting, and the malware scanner of ADR-126) → all of them run through deterministic simulators behind ACL interfaces, failing closed (Pending External Approval). **Object storage has been selected and connected — Cloudflare R2 (ADR-106, chosen 2026-08-07, connected 2026-08-08)**; the running revision reports `fileStorage: object-store` at `/ready`, but the first real round-trip has never been walked end to end, so it is configured rather than exercised.
+2. Retention, residency and backup policies unapproved (ADR-119/120/121) → configuration-driven, never hard-coded.
+3. Ethics approval Pending (ATR-025) → at no stage may this claim that real recruitment is possible.
+4. Accessibility acceptance (WCAG AA + the seven modes) needs testing with real users; automation is not sufficient — scheduled into every participant-facing slice from P4 onward.
+5. The encryption policy for message bodies is unapproved (ADR-117) → excluded from logs, events and indexes by default, with application-layer envelope encryption first.
 
-见 `IMPLEMENTATION_PLAN.md` §8（P0–P10，映射 MS-00…MS-14，遵守 Doc 18 §174 硬性前置约束）。
+## 9. The implementation order proposed
+
+See `IMPLEMENTATION_PLAN.md` §8 (P0–P10, mapped onto MS-00…MS-14, honouring the hard prerequisite constraints of Doc 18 §174).
