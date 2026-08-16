@@ -1049,57 +1049,57 @@ Buttons: `Lock this dataset version` / `Go back and review`
 
 ### C15 分析计划 / 运行 / 解释记录（§84–87）
 
-**实施状态（2026-08-04）：部分实现。** 写计划 → 他人批准 → 记录运行 → 写解释 → 他人批准这条链已可达；此前**每一步都有命令、没有一步有界面**，各环节又只以标识互相引用，因此这条链连「看」都看不了，更谈不上走。两条措辞：（1）**「记录运行」不是「执行分析」**——平台没有计算引擎，存下来的是人对「针对这一版数据跑了分析、产出是什么」的记录；把按钮写成「运行分析」等于声称平台做了这件事。（2）**只能针对已锁定的数据集版本**（服务器返回 `DATASET_LOCK_NOT_READY`），因此选择器只列已锁定的并说明原因，而不是让人选完再被拒绝；每次运行显示所针对版本的 manifest 哈希——这正是先锁定再分析的意义：解释只针对一次运行，运行只针对那一份数据。
+**Implementation status (2026-08-04): partially implemented.** The chain of write a plan → have somebody else approve it → record a run → write an interpretation → have somebody else approve it is now reachable; previously **every step had a command and not one had an interface**, and each stage referred to the others by identifier alone, so the chain could not even be *looked at*, let alone walked. Two points of wording: (1) **"record a run" is not "execute an analysis"** — the platform has no compute engine, and what is stored is a person's record that an analysis was run against this version of the data and what it produced; labelling the button "run analysis" would claim the platform did the thing. (2) **It can only run against a locked dataset version** (the server returns `DATASET_LOCK_NOT_READY`), so the selector lists only locked ones and explains why, rather than letting somebody choose and then refusing them; each run displays the manifest hash of the version it ran against — which is the whole point of locking before analysing: an interpretation is about one run, and a run is about that one body of data.
 
-**① 目标与密度**：把"计划 → 运行 → 输出 → 解释"分成四个不可混淆的层。密度：dense（运行列表）+ 标准（解释编辑）。**这里是认识论阶梯的执行处（见 1.3）**。
+**① Purpose and density**: separate "plan → run → output → interpretation" into four layers that cannot be confused with one another. Density: dense (the run list) + standard (interpretation editing). **This is where the epistemic ladder is enforced (see 1.3).**
 
 **② 线框**
 
 ```text
-分析 › 运行 ar_12
+Analysis › run ar_12
 ┌───────────────────────────────────────────────────────────────────────┐
-│ 分析计划 AP-002（已批准 v1）  锁定数据集 dv_9 sha256:aa71…            │
-│ 代码版本 git:9f2c1ab  环境 env:py3.11-2026-07  参数 seed=42, alpha=.05│
-│ 状态 已完成（有警告）  开始 11:02  结束 11:04                         │
-│ 警告 2：① 子组 n=3 过小 ② 缺失率 12% 超过计划阈值 10%                │
-├─ 分析输出（机器计算结果，未经解释）───────────────────────────────────┤
+│ Analysis plan AP-002 (approved v1)  Locked dataset dv_9 sha256:aa71…  │
+│ Code version git:9f2c1ab  Environment env:py3.11-2026-07  Parameters seed=42, alpha=.05│
+│ Status completed (with warnings)  Started 11:02  Finished 11:04       │
+│ 2 warnings: ① subgroup n=3 is too small ② 12% missingness exceeds the planned threshold of 10% │
+├─ Analysis output (a machine-computed result, uninterpreted) ──────────┤
 │ ```                                                                   │
 │ ucla_total  baseline mean 44.2 (sd 8.1)  n=22                         │
 │ ucla_total  wk4      mean 41.8 (sd 8.6)  n=20                         │
 │ diff -2.4  95% CI [-6.1, 1.3]                                         │
 │ ```                                                                   │
-│ ◌ 模拟观察 · [合成数据] 来自合成数据的计算结果，不是经验证据。        │
-├─ 解释记录（人写的，不是数据本身）─────────────────────────────────────┤
-│ ▌ researcher_lin 的解释（草稿）                                       │
-│ ▌ 关联研究问题 RQ-001 · 选用输出：上方两行                            │
-│ ▌ 解释* [_____________________________________________]               │
-│ ▌ 替代解释*（至少一条）[__________________________]                   │
-│ ▌ 缺失情况* [12% 缺失，原因未知的 3 例未填补]                          │
-│ ▌ 路径差异 / 无障碍 / 公平性 / 审核 / 安全 / AI：[逐项 __________]     │
-│ ▌ 局限* [__________]  不确定性* [__________]                          │
-│ ▌ 认识论标签* [◌ 模拟观察 ▾]                                          │
-│ ▌ ⓘ 合成数据的结果永远不能写成「干预有效」。                          │
-│                              [保存草稿] [提交人工复核]                │
+│ ◌ Simulated observation · [synthetic data] a computation over synthetic data, not empirical evidence. │
+├─ Interpretation record (written by a person; not the data itself) ────┤
+│ ▌ researcher_lin's interpretation (draft)                             │
+│ ▌ Related research question RQ-001 · outputs used: the two rows above │
+│ ▌ Interpretation* [_____________________________________________]     │
+│ ▌ Alternative interpretation* (at least one) [____________________]   │
+│ ▌ Missingness* [12% missing; 3 cases of unknown cause not imputed]    │
+│ ▌ Pathway differences / accessibility / fairness / moderation / safety / AI: [each _______] │
+│ ▌ Limitations* [__________]  Uncertainty* [__________]                │
+│ ▌ Epistemic tag* [◌ simulated observation ▾]                          │
+│ ▌ ⓘ A result from synthetic data can never be written as "the intervention works". │
+│                              [Save draft] [Submit for human review]   │
 └───────────────────────────────────────────────────────────────────────┘
 ```
 
-**③ 状态矩阵**
+**③ State matrix**
 
-| 态 | 呈现 |
+| State | Presentation |
 |---|---|
-| 加载 | 运行状态轮询：`排队中 → 运行中 → …`，`role="status"` 每次状态变化播报一次；输出区骨架 |
-| 空队列 | 无已批准计划：`还没有已批准的分析计划。分析只能针对已批准的计划和已锁定的数据集运行。`；无运行：`还没有分析运行。` |
-| 错误 | `失败`：显示失败诊断与日志入口，`这次运行失败了，没有产生输出。失败本身会被记录，不会被隐藏。`；`已取消`/`已被取代`各有独立文案（不合并成"失败"） |
-| 权限不足 | 无 `analysis.run`：只读；无 `interpretation.approve`：解释可写不可批准，按钮注明 `批准解释需要 ResearchApprover。` |
-| 需要 MFA | 分析运行、解释批准**都不需要** MFA（`interpretation.approve` 仅需确认）。屏顶：`本屏没有需要强认证的动作。`（**不得**错标） |
+| Loading | Polling the run's status: `queued → running → …`, announced once per change through `role="status"`; a skeleton for the output area |
+| Empty queue | No approved plans: `There are no approved analysis plans yet. An analysis can only run against an approved plan and a locked dataset.`; no runs: `There are no analysis runs yet.` |
+| Error | `failed`: shows the failure diagnostics and a way into the logs, `This run failed and produced no output. The failure itself is recorded and is not hidden.`; `cancelled` and `superseded` each have their own copy (never merged into "failed") |
+| Insufficient permission | Without `analysis.run`: read-only; without `interpretation.approve`: an interpretation can be written but not approved, and the button notes `Approving an interpretation needs ResearchApprover.` |
+| MFA required | Neither running an analysis nor approving an interpretation requires MFA (`interpretation.approve` needs confirmation only). At the top: `No action on this screen requires strong authentication.` (Mislabelling this is **forbidden**) |
 
-**④ 确认文案**
+**④ Confirmation copy**
 
-- 运行：`确认运行分析计划 AP-002？将针对锁定数据集 dv_9（sha256:aa71…）运行，代码版本 git:9f2c1ab，参数 seed=42。运行记录不可删除。`
-- 提交解释复核：`确认提交这份解释记录？它会被标注为「模拟观察」并且始终带 [合成数据] 标记。提交后记录你是撰写人。`
-- 批准解释：`确认批准这份解释记录？批准的是解释本身，不是它所依据的数据结论。`
+- Running: `Run analysis plan AP-002? It will run against locked dataset dv_9 (sha256:aa71…), code version git:9f2c1ab, parameters seed=42. The run record cannot be deleted.`
+- Submitting an interpretation for review: `Submit this interpretation record? It will be marked "simulated observation" and will always carry the [synthetic data] marking. Submitting records you as its author.`
+- Approving an interpretation: `Approve this interpretation record? What is being approved is the interpretation itself, not the conclusion about the data it rests on.`
 
-**⑤ 无障碍**：输出区用 `<pre><code>` 且容器 `tabindex="0" role="region" aria-label="分析输出"`（可键盘滚动）；解释区用 `<blockquote>` + `<cite>`；三层（输出/解释/发现）各有独立 `<h3>`，标题文本本身说明层级差别（`分析输出（机器计算结果）`）。
+**⑤ Accessibility**: the output area uses `<pre><code>` with the container as `tabindex="0" role="region" aria-label="Analysis output"` (so it can be scrolled by keyboard); the interpretation area uses `<blockquote>` + `<cite>`; the three layers (output/interpretation/finding) each have their own `<h3>`, and the heading text itself states the difference in layer (`Analysis output (a machine-computed result)`).
 
 ---
 
