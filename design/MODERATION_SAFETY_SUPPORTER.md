@@ -1700,90 +1700,92 @@ The password is stored only in this device's browser.
 [Public study information]  [Accessibility statement]  [Contact support]
 ```
 
-**为未来 OIDC 留出的结构（不改信息架构即可替换）**
+**The structure left open for OIDC (replaceable without changing the information architecture)**
 
-| 现在（桩） | 未来（OIDC） | 结构上的保证 |
+| Now (the stub) | Later (OIDC) | The structural guarantee |
 |---|---|---|
-| 顶部「开发环境身份桩」告警块 | 移除 | 它是一个独立 `<section role="alert">`，删除不影响其余布局 |
-| 「选择工作区」单选 | 保留，但改为**由服务端返回的角色**驱动（§28 角色感知导航） | 选择器组件接口不变，数据源从本地状态换成服务端 |
-| 「填写开发环境标识」 | 替换为 `[使用机构账号登录]` 单按钮 | 该区块是一个独立 `<section>`，整块替换 |
-| 「声明的认证强度」下拉 | 替换为服务端返回的 `authStrength`，只读展示 | 认证强度在 UI 中始终是**展示值**，不是可编辑输入以外的任何东西 |
-| 「环境访问口令」 | 视部署决定保留或移除 | 已是独立组件 `AccessTokenGate` |
-| 上下文横幅「不是真实认证」 | 改为「已通过机构账号认证 · {方式}」 | 横幅槽位保留，只换内容 |
+| The "development identity stub" alert block at the top | Removed | It is a self-contained `<section role="alert">`, and deleting it does not affect the rest of the layout |
+| The "choose a workspace" radio group | Kept, but driven by **the roles the server returns** (§28, role-aware navigation) | The selector component's interface is unchanged; only its data source moves from local state to the server |
+| "Enter the development-environment identifiers" | Replaced by a single `[Sign in with your organisation account]` button | That block is a self-contained `<section>`, replaced whole |
+| The "claimed authentication strength" dropdown | Replaced by the `authStrength` the server returns, displayed read-only | Authentication strength is always a **displayed value** in the UI, and never anything other than an editable input in the interim |
+| "The environment's access password" | Kept or removed depending on the deployment | It is already a self-contained `AccessTokenGate` component |
+| The context banner's "not real authentication" | Becomes "authenticated with an organisation account · {method}" | The banner slot is kept; only its content changes |
 
-**状态矩阵**
+**State matrix**
 
-| 状态 | 呈现与文案原文 |
+| State | Presentation and copy in full |
 |---|---|
-| LOADING | 本屏无远程依赖，无 LOADING 态。**不得**为了「像登录」而加假的载入动画 |
-| EMPTY | 不适用（无列表）。字段未填时 `[以这个身份进入]` 为 `disabled` 并说明 `填写标识后才能进入。` |
-| ERROR | 进入后首个请求失败：`没能连上服务。你填写的标识还在。这可能是服务未启动，或访问口令不正确。[重试] [检查访问口令]` |
-| FORBIDDEN | 口令正确但身份无任何工作区权限：`这个标识在当前环境里没有任何工作区权限。检查标识是否正确，或使用合成环境分配的标识。`（合成环境，无枚举风险；真实部署时此文案必须改为通用式——见 §10 U-3） |
-| PROTECTED | 不适用于本屏；但**进入后**的任何 404 一律走通用 PROTECTED |
+| LOADING | This screen has no remote dependency and has no LOADING state. A fake loading animation **must not** be added to make it "feel like signing in" |
+| EMPTY | Not applicable (no list). With the fields empty, `[Enter as this identity]` is `disabled` and says `Fill in the identifiers to continue.` |
+| ERROR | The first request after entering fails: `Could not reach the service. The identifiers you typed are still here. The service may not be running, or the access password may be wrong. [Try again] [Check the access password]` |
+| FORBIDDEN | The password is right but the identity holds no workspace permission: `This identifier holds no workspace permissions in this environment. Check that it is correct, or use an identifier issued for the synthetic environment.` (This is a synthetic environment with no enumeration risk; on a real deployment this copy must become the generic form — see §10 U-3) |
+| PROTECTED | Not applicable to this screen; but any 404 **after entering** always takes the generic PROTECTED copy |
 
-**访问口令横幅（触发式，沿用现有 `AccessTokenGate`）**
+**The access-password banner (triggered; reuses the existing `AccessTokenGate`)**
 
-保留现有文案（已经是诚实的），补一句边界说明：
+Keep the existing copy (it is already honest) and add one sentence about the boundary:
 
 ```
-需要此环境的访问口令
-服务器拒绝了刚才的请求，因为浏览器没有携带这个
-环境的访问口令。这与你的账号和权限无关——它是
-这个研究原型环境的访问门。
-它是共享口令，不区分个人，也不能替代认证。
-访问口令 [••••••]  [保存口令]
-口令只保存在这台设备的浏览器里，不会随页面地址传播。
+This environment needs an access password
+The server refused that request because the browser did not carry
+this environment's access password. This has nothing to do with your
+account or your permissions — it is the door to this research
+prototype environment.
+It is a shared password, does not distinguish between people, and is
+not a substitute for authentication.
+Access password [••••••]  [Save the password]
+The password is stored only in this device's browser and does not travel in the page address.
 ```
 
-**无障碍要点**
+**Accessibility points**
 
-- 开发桩告警是 `<section role="alert" aria-labelledby>`，页面载入时**主动播报一次**——这是屏幕阅读器用户唯一能听到「这不是认证」的机会。
-- 「声明的认证强度」的说明通过 `aria-describedby` 绑定到 `<select>`，不是旁边的小字。
-- 口令输入 `type="password" autocomplete="off"`，有可见 `<label>`。
-- 工作区单选组改变时，下方字段的出现/消失通过 `aria-live="polite"` 播报：`已切换到员工工作区，需要填写账户标识与认证强度。`
+- The development-stub alert is a `<section role="alert" aria-labelledby>` and is **announced once on page load** — this is the only chance a screen-reader user has to hear "this is not authentication".
+- The explanation of "claimed authentication strength" is bound to the `<select>` through `aria-describedby`, not set beside it as small text.
+- The password input is `type="password" autocomplete="off"` with a visible `<label>`.
+- When the workspace radio group changes, the appearance and disappearance of the fields below is announced through `aria-live="polite"`: `Switched to the staff workspace; an account identifier and an authentication strength are needed.`
 
 ---
 
-### H2 安全邀请落地页
+### H2 The secure invitation landing page
 
-**目标 / 要回答的问题**
+**Purpose / the questions it answers**
 
-- 谁邀请我、这是什么研究？
-- 为什么是我？
-- 我可以不参加吗？（答案必须是：可以，且没有后果）
-- 这个链接安全吗、有效期多久？
+- Who invited me, and what study is this?
+- Why me?
+- May I decline? (the answer must be: yes, with no consequences)
+- Is this link safe, and how long is it valid?
 
-**线框**
+**Wireframe**
 
 ```
-（未登录 surface · 不显示任何个人信息）
+(an unauthenticated surface · shows no personal information at all)
 
-<h1>你收到一份研究邀请</h1>
+<h1>You have been invited to take part in a study</h1>
 
-邀请方：«研究机构名称»
-研究：«研究名称»
-邀请编号：INV-…（只显示编号，不显示姓名）
+Invited by: «the name of the research organisation»
+Study: «the study's name»
+Invitation number: INV-… (the number only; never a name)
 
-── 为什么邀请你 ───────────────
-«一段说明：从哪里、按什么标准邀请»
+── Why you were invited ───────
+«a paragraph: where from, and on what criteria»
 
-── 参加是完全自愿的 ────────────
-· 你可以不参加，不需要说明理由
-· 不参加不会影响你现在或将来获得的
-  任何服务或照护
-· 你可以先看完全部信息再决定
-· 你随时可以改变主意
+── Taking part is entirely voluntary ──
+· You may decline, and you do not have to give a reason
+· Declining will not affect any service or care you receive
+  now or in future
+· You can read all the information before deciding
+· You can change your mind at any time
 
-── 这份邀请 ───────────────────
-有效期至：2026-09-30
-链接只能由你使用；请不要转发
+── This invitation ────────────
+Valid until: 2026-09-30
+The link is for you alone; please do not forward it
 
-[继续了解]        [我不参加]
-两个选择同等有效。
+[Read more]        [I do not want to take part]
+Both choices are equally valid.
 
 ────────────────────────────
-[公开研究信息]  [联系支持]  [无障碍声明]
-⚠ 本平台不是紧急求助渠道（说明）
+[Public study information]  [Contact support]  [Accessibility statement]
+⚠ This platform is not an emergency service (explanation)
 ```
 
 **不得出现的元素（§92 avoids urgency pressure）**
