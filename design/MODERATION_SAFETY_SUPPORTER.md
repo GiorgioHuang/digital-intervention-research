@@ -954,125 +954,125 @@ that does not require MFA.
 
 ---
 
-### E5 申诉与恢复
+### E5 Appeals and restoration
 
-**目标 / 要回答的问题**
+**Purpose / the questions it answers**
 
-- 原决定是什么、依据什么？
-- 申诉人说了什么？
-- 我能不能复核这一件？（利益冲突检查）
-- 恢复什么、不恢复什么？
+- What was the original decision, and on what basis?
+- What has the appellant said?
+- Am I allowed to review this one? (the conflict-of-interest check)
+- What is restored, and what is not?
 
-**线框**
+**Wireframe**
 
 ```
-<h1>申诉复核 · AP-233</h1>
+<h1>Appeal review · AP-233</h1>
 
-── 利益冲突检查 ───────────────
-原决定人：M-004
-你：M-011
-✓ 你未参与原决定，可以复核。
-（若相同则显示：✗ 你作出了原决定，不能复核
-  这件申诉。[转给其他复核人]）
+── Conflict-of-interest check ──
+Original decision by: M-004
+You: M-011
+✓ You took no part in the original decision, so you may review it.
+(If they match it shows: ✗ You made the original decision and
+  cannot review this appeal. [Hand to another reviewer])
 
-── 原决定（不可修改）───────────
-个案 MC-1043 · 隐藏内容
-规则：社区规则 v3 第 4 条
-时间：2026-07-30 · 决定人：M-004
-理由：«原文»
-🔒 无论本次复核结果如何，这条记录都会保留。
+── The original decision (cannot be changed) ──
+Case MC-1043 · content hidden
+Rule: community rules v3, clause 4
+When: 2026-07-30 · decided by: M-004
+Reason: «as written»
+🔒 This record is kept whatever this review concludes.
 
-── 申诉人的陈述 ───────────────
-«原文»
-提交时间：2026-08-01
+── The appellant's statement ──
+«as written»
+Submitted: 2026-08-01
 
-── 申诉人补充的材料 ────────────
-[✓] 1 张截图（已通过扫描）
-不显示与本次申诉无关的其他内容。
+── Material the appellant added ──
+[✓] 1 screenshot (passed scanning)
+Nothing unrelated to this appeal is shown.
 
-── 复核结论 ───────────────────
-( ) 维持原决定
-( ) 改变处置：[下拉]
-( ) 撤销处置并恢复内容
-理由（必填）：
+── Review conclusion ──────────
+( ) Uphold the original decision
+( ) Change the disposition: [dropdown]
+( ) Overturn the disposition and restore the content
+Reason (mandatory):
 ┌────────────────────────────┐
 └────────────────────────────┘
 
-        [记录复核结论]
+        [Record the review conclusion]
 ```
 
-**恢复子屏（§192）**
+**Restoration sub-screen (§192)**
 
 ```
-<h1>恢复 · MC-1043</h1>
+<h1>Restore · MC-1043</h1>
 
-将要恢复：社区帖子 SP-7781（版本 2）
-恢复后：该帖子对原受众重新可见
-仍然保留的限制：无
-生效时间：立即
-会通知：作者本人
-不会通知：举报人是否收到通知由通知策略决定，
-          本屏不显示举报人相关信息
-原决定记录：保留，不删除  🔒
+To be restored: community post SP-7781 (version 2)
+After restoring: the post is visible again to its original audience
+Restrictions still in force: none
+Takes effect: immediately
+Will be notified: the author
+Will not be notified: whether the reporter is notified is governed by the
+          notification policy; this screen shows nothing about the reporter
+The original decision record: kept, not deleted  🔒
 ```
 
-**确认文案原文**
+**Confirmation copy in full**
 
 ```
-确认记录复核结论「撤销处置并恢复内容」？
+Record the review conclusion "overturn the disposition and restore the content"?
 
-对象：个案 MC-1043 的处置「隐藏内容」
-效果：帖子 SP-7781 恢复为原受众可见
-仍保留：原决定记录与本次复核记录都会保留，
-      不会被删除或改写
-对方会看到：「你的申诉已复核，原处置已撤销，
-      内容已恢复。」
-可逆性：本条复核记录不可修改
-审计：以你的身份署名写入审计  🔒
+Object: the disposition "hide the content" on case MC-1043
+Effect: post SP-7781 becomes visible again to its original audience
+Still kept: both the original decision record and this review record are
+      kept, and neither is deleted or rewritten
+They will see: "Your appeal has been reviewed, the original disposition has
+      been overturned, and the content has been restored."
+Reversibility: this review record cannot be changed
+Audit: written to the audit trail in your name  🔒
 
-[确认记录复核结论]        [返回修改]
+[Confirm and record the review conclusion]        [Go back and change it]
 ```
 
-**状态矩阵**
+**State matrix**
 
-| 状态 | 呈现与文案原文 |
+| State | Presentation and copy in full |
 |---|---|
-| LOADING | `正在载入申诉…` |
-| EMPTY | `现在没有待复核的申诉。这是正常状态。` |
-| ERROR | 通用 ERROR + `原决定与申诉都没有被改动。` |
-| FORBIDDEN | 利益冲突拒绝：`你作出了这件个案的原决定，不能复核自己的决定。这不是出错，是职责分离。[转给其他复核人]` |
-| PROTECTED | 通用 PROTECTED |
+| LOADING | `Loading the appeal…` |
+| EMPTY | `There are no appeals waiting for review. This is a normal state.` |
+| ERROR | The generic ERROR copy + `Neither the original decision nor the appeal has been changed.` |
+| FORBIDDEN | Refused for conflict of interest: `You made the original decision on this case and cannot review your own decision. Nothing has gone wrong — this is separation of duties. [Hand to another reviewer]` |
+| PROTECTED | The generic PROTECTED copy |
 
-**无障碍要点**
+**Accessibility points**
 
-- 利益冲突检查结果是**页面的第一条内容**，用 `role="status"` 在载入完成时播报一次。
-- ✓/✗ 必须配文字（`可以复核` / `不能复核`），不得只有符号。
-- 「原决定」区块用 `<blockquote>` + 明确标题，与「复核结论」表单在语义上分离，避免屏幕阅读器把两段理由混淆。
+- The result of the conflict-of-interest check is **the first thing on the page**, announced once via `role="status"` when loading completes.
+- ✓/✗ must carry words (`you may review this` / `you cannot review this`) and never stand as symbols alone.
+- The "original decision" block uses a `<blockquote>` with an explicit heading, semantically separated from the "review conclusion" form, so a screen reader does not run the two reasons together.
 
 ---
 
-### E6 审核 → 安全联动
+### E6 The moderation → safety handover
 
-**目标 / 要回答的问题**
+**Purpose / the questions it answers**
 
-- 我看到的这件事，可能是安全问题吗？
-- 我提交后会发生什么？（答案：安全团队人工评估；**没有任何安全事件被确认**）
-- 我的审核处置还要不要继续做？（答案：要，两条线各自独立）
+- Could what I am looking at be a safety concern?
+- What happens after I submit? (the answer: a person on the safety team assesses it; **no safety event is confirmed by this**)
+- Do I still carry on with my moderation disposition? (the answer: yes — the two lines run independently)
 
-**线框**
+**Wireframe**
 
 ```
-<h1>转给安全团队 · 个案 MC-1043</h1>
+<h1>Hand to the safety team · case MC-1043</h1>
 
-这会创建一个**安全信号**。
+This creates a **safety signal**.
 
-安全信号 = 一条待评估的线索
-安全事件 = 经安全审阅人确认的事件
+A safety signal = a lead awaiting assessment
+A safety event = something a safety reviewer has confirmed
 
-提交后：
-· 安全审阅人会人工评估
-· **现在没有、也不会自动产生安全事件**
-· 你的审核处置不会因此暂停，
+After submitting:
+· a safety reviewer assesses it, in person
+· **no safety event exists now, and none is created automatically**
+· your moderation disposition is not paused by this;
   两条线各自独立进行
 
 ── 你观察到什么（最小必要）─────
