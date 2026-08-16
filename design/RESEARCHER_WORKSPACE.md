@@ -1105,69 +1105,71 @@ Analysis › run ar_12
 
 ### C16 研究发现与干预决定（§88–90）
 
-**实施状态（2026-08-04）：部分实现。** 研究发现可从**已批准的解释**中写出并由他人批准；批准屏把发现所依托的解释与运行标识列在控件旁，起草人不能批准自己写的发现（命令 + 数据库 CHECK），行内在按钮之前说明。**强认证提示只出现在发现一节**：三个批准里只有 `finding.approve` 是 MFA 级，在计划与解释上重复这条提示会夸大那两者的代价，并教人略过唯一真实的那条。**运行不进审批队列**：没有人「批准」一次运行，它要么发生过要么没有，把它放进决策队列会暗示一种没人在要求的判断。**未实现**：干预决定（§90 的 InterventionDecision）。
+**Implementation status (2026-08-04): partially implemented.** A research finding can be written from an **approved interpretation** and approved by somebody else; the approval screen lists the interpretation and run identifier the finding rests on beside the control, the drafter cannot approve their own finding (command + database CHECK), and the row says so before the button. **The strong-authentication notice appears only in the findings section**: of the three approvals, only `finding.approve` is at the MFA tier, and repeating the notice on plans and interpretations would overstate their cost and teach people to skip past the one that is real. **Runs do not enter an approval queue**: nobody "approves" a run — it either happened or it did not, and putting it in a decision queue would imply a judgement nobody is asking for. **Not implemented**: intervention decisions (§90's InterventionDecision).
 
-**① 目标与密度**：产出 `ResearchFinding`（带**理论发现类型** + **审批状态**两个独立维度）与 `InterventionDecision`（八选一）。密度：标准。**AI 草稿永远是草稿**。
+**① Purpose and density**: produce a `ResearchFinding` (carrying two independent dimensions: the **theoretical finding type** and the **approval state**) and an `InterventionDecision` (one of eight). Density: standard. **An AI draft is always a draft.**
 
 **② 线框**
 
 ```text
-发现 › RF-006
+Findings › RF-006
 ┌───────────────────────────────────────────────────────────────────────┐
-│ 研究问题 RQ-001（确切版本 v2）                                         │
-├─ 精确版本链（缺一不可提交）───────────────────────────────────────────┤
-│ 协议版本 PR-002 v3 sha256:9b1c… │ 干预版本 IV-004 v3 sha256:31d0…     │
-│ AI 配置 aicfg_v0 sha256:c440…   │ 数据集锁定 dv_9 sha256:aa71…        │
-│ 分析运行 ar_12 git:9f2c1ab      │ 解释记录 IR-008（已批准）            │
-├─ 发现 ────────────────────────────────────────────────────────────────┤
-│ 发现类型*（理论）  [欠决定 underdetermined ▾]                          │
-│ 审批状态（独立维度） 评审中                                            │
-│ ⓘ 这两个是不同的东西：一个说「这个结论在理论上处于什么状态」，        │
-│   另一个说「谁批准了记录这个结论」。                                   │
-│ 断言* [在合成情景下，数字化怀旧干预与孤独感量表变化的关系不能被确定。] │
-│ 不确定性* [样本为合成；区间跨越无效应值。]                             │
-│ 局限* [语料规模有限；子组 n=3；缺失率 12%。]                           │
-│ 认识论标签* [◌ 模拟观察]  [合成数据]                                   │
-│ ┌ 🤖 AI 草稿（未采纳，永远是草稿）──────────────────────────────┐     │
-│ │ 「结果提示干预可能有益…」  ⚠ 这句写法违反纪律：合成数据不能   │     │
-│ │   写成有益。 [修改后采纳] [丢弃]                               │     │
+│ Research question RQ-001 (exact version v2)                           │
+├─ The exact version chain (all of it, or it cannot be submitted) ──────┤
+│ Protocol version PR-002 v3 sha256:9b1c… │ Intervention version IV-004 v3 sha256:31d0… │
+│ AI configuration aicfg_v0 sha256:c440…  │ Dataset lock dv_9 sha256:aa71… │
+│ Analysis run ar_12 git:9f2c1ab          │ Interpretation record IR-008 (approved) │
+├─ The finding ─────────────────────────────────────────────────────────┤
+│ Finding type* (theoretical)  [underdetermined ▾]                       │
+│ Approval state (an independent dimension)  in review                   │
+│ ⓘ These are different things: one says what state this conclusion is in │
+│   theoretically, the other says who approved recording it.             │
+│ Assertion* [Under synthetic scenarios, the relationship between a digital │
+│   reminiscence intervention and change on the loneliness scale cannot be determined.] │
+│ Uncertainty* [The sample is synthetic; the interval spans the null value.] │
+│ Limitations* [The corpus is limited in size; subgroup n=3; 12% missingness.] │
+│ Epistemic tag* [◌ simulated observation]  [synthetic data]             │
+│ ┌ 🤖 AI draft (not adopted; always a draft) ────────────────────┐     │
+│ │ "The results suggest the intervention may be beneficial…"      │     │
+│ │ ⚠ This wording breaks the discipline: a synthetic result cannot │     │
+│ │   be written as beneficial. [Edit then adopt] [Discard]        │     │
 │ └────────────────────────────────────────────────────────────────┘     │
-│                                    [保存草稿] [提交批准（需要 MFA）]  │
+│                            [Save draft] [Submit for approval (requires MFA)] │
 └───────────────────────────────────────────────────────────────────────┘
 
-干预决定 › 基于 RF-006
- ( ) 保留 Retain   ( ) 修订 Revise   ( ) 限制 Restrict   ( ) 复制 Replicate
- ( ) 扩大 Expand   ( ) 暂停 Suspend  ( ) 退役 Retire     (•) 继续探索性研究
- 依据（自动带入并显示精确版本）：证据 ES-011 / 协议 PR-002 v3 /
- 干预 IV-004 v3 / 数据集 dv_9 / 分析 ar_12 / 发现 RF-006
- ⓘ 当前阶段所有数据为合成，因此「扩大」「保留」这类决定需要额外说明理由。
+Intervention decision › based on RF-006
+ ( ) Retain   ( ) Revise   ( ) Restrict   ( ) Replicate
+ ( ) Expand   ( ) Suspend  ( ) Retire     (•) Continue exploratory research
+ Basis (carried in automatically, showing exact versions): evidence ES-011 / protocol PR-002 v3 /
+ intervention IV-004 v3 / dataset dv_9 / analysis ar_12 / finding RF-006
+ ⓘ All data in the current phase is synthetic, so decisions such as "expand" or "retain" require an additional stated reason.
 ```
 
 **③ 状态矩阵**
 
-| 态 | 呈现 |
+| State | Presentation |
 |---|---|
-| 加载 | 版本链区块骨架；版本链未到齐前提交按钮禁用（`版本链还没加载完，暂时不能提交。`） |
-| 空队列 | 无已批准解释：`还没有已批准的解释记录。发现必须基于已批准的解释。` |
-| 错误 | 版本链缺项 → `LINEAGE_INCOMPLETE`：逐项列出缺什么；`AUTHORISATION_DENIED`（自批准）由队列层前置拦截 |
-| 权限不足 | `finding.draft` = Researcher；`finding.approve` = ResearchApprover。研究者看到批准按钮为禁用 + `批准由 ResearchApprover 以强认证（MFA）完成；你不能批准自己起草的发现。` |
-| 需要 MFA | 起草不需要；**批准需要 MFA**。屏顶：`本屏的强认证动作：批准研究发现（需要 MFA）。` |
+| Loading | A skeleton for the version-chain block; until the chain has arrived the submit button is disabled (`The version chain has not finished loading, so this cannot be submitted yet.`) |
+| Empty queue | No approved interpretations: `There are no approved interpretation records yet. A finding must rest on an approved interpretation.` |
+| Error | A missing element of the version chain → `LINEAGE_INCOMPLETE`: lists exactly what is missing; `AUTHORISATION_DENIED` (self-approval) is intercepted earlier, at the queue |
+| Insufficient permission | `finding.draft` = Researcher; `finding.approve` = ResearchApprover. A researcher sees the approve button disabled + `Approval is carried out by a ResearchApprover with strong authentication (MFA); you cannot approve a finding you drafted.` |
+| MFA required | Drafting does not; **approval does**. At the top: `Strong-authentication actions on this screen: approve a research finding (requires MFA).` |
 
-**④ 确认文案（批准，原文）**
+**④ Confirmation copy (approval, in full)**
 
 ```
-确认批准研究发现 RF-006？
-发现类型（理论）：欠决定（underdetermined）
-断言：在合成情景下，数字化怀旧干预与孤独感量表变化的关系不能被确定。
-依据的精确版本：协议 PR-002 v3（sha256:9b1c…）、干预 IV-004 v3、AI 配置 aicfg_v0、
-数据集锁定 dv_9（sha256:aa71…）、分析运行 ar_12（git:9f2c1ab）、解释 IR-008。
-这份发现来自合成数据，会始终带 [合成数据] 标记，不能作为经验证据引用。
-这次批准会以 approver_wu 的身份署名并写入审计。
-这个操作需要强认证（MFA）。
+Approve research finding RF-006?
+Finding type (theoretical): underdetermined
+Assertion: Under synthetic scenarios, the relationship between a digital reminiscence intervention and change on the loneliness scale cannot be determined.
+The exact versions it rests on: protocol PR-002 v3 (sha256:9b1c…), intervention IV-004 v3, AI configuration aicfg_v0,
+dataset lock dv_9 (sha256:aa71…), analysis run ar_12 (git:9f2c1ab), interpretation IR-008.
+This finding comes from synthetic data, will always carry the [synthetic data] marking, and cannot be cited as empirical evidence.
+This approval is signed in the name of approver_wu and written to the audit trail.
+This action requires strong authentication (MFA).
 ```
-按钮：`确认批准这份发现` / `返回复核`
+Buttons: `Confirm and approve this finding` / `Go back and review`
 
-**⑤ 无障碍**：发现类型与审批状态是两个独立 `<dl>` 项，标签文字明确区分；AI 草稿区 `role="region" aria-label="AI 草稿，未采纳"`，纪律违规提示用 `role="alert"`（因为它是即时校验结果）；八项干预决定是无预选 radio 组，中英文同 label。
+**⑤ Accessibility**: the finding type and the approval state are two separate `<dl>` items whose label text distinguishes them explicitly; the AI draft area is `role="region" aria-label="AI draft, not adopted"`, and a discipline breach is flagged with `role="alert"` (it is the result of live validation); the eight intervention decisions are a radio group with nothing pre-selected.
 
 ---
 
