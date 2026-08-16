@@ -1488,72 +1488,72 @@ Record the action "notify the approved contacts" as done?
 
 - Severity and relationship are both words (`medium`, `possibly related`) and must never be a colour scale alone (§200: an alert colour must not carry it by itself).
 - Each action card is an `<li>` + `<dl>`, with the status inside the accessible name: `Record this action (notify the approved contacts, not started, 1 day overdue)`.
-- 时间线是 `<ol>`，时间用 `<time datetime>`。
+- The timeline is an `<ol>`, with times in `<time datetime>`.
 
 ---
 
-### F6 暂停 / 恢复与紧急限制说明
+### F6 Suspension / restoration and the emergency-limitation notice
 
-**目标 / 要回答的问题**
+**Purpose / the questions it answers**
 
-- 我要暂停的**最小范围**是什么？暂停后本人还剩什么？
-- 谁负责、什么时候复核？
-- 恢复需要满足什么？
-- 本人那边看到的是什么？
-- 紧急情况下现实可行的下一步是什么？
+- What is the **smallest scope** I need to suspend? What does the person still have afterwards?
+- Who owns it, and when is it reviewed?
+- What has to be satisfied before restoring?
+- What does the person themselves see?
+- In an emergency, what is the realistic next step?
 
-**F6-a 暂停 · 线框**
-
-```
-<h1>暂停 · 参与者 P-118</h1>
-
-优先选择能达到目的的最小范围。
-暂停全部功能通常不是必要的。
-
-── 范围（可多选，从小到大）─────
-[ ] 暂停匹配
-[ ] 暂停与特定连接的消息
-[ ] 暂停全部消息
-[ ] 暂停 AI 功能（本原型中已全局禁用）
-[ ] 暂停某个干预组件
-[ ] 暂停参与者的全部平台活动 ⚑
-
-── 你选择后会看到 ─────────────
-立即生效的效果：«随勾选实时更新»
-本人仍然可以：查看和撤回同意、
-  查看自己的内容、导出、联系研究支持、
-  使用「帮助与安全」
-理由类别：[下拉，必填]
-复核时间：[日期，必填]
-负责人：你（S-003）
-恢复方式：见「恢复」流程，需要复核与批准
-
-        [记录暂停]
-```
-
-**F6-b 恢复 · 线框**
+**F6-a suspension · wireframe**
 
 ```
-<h1>恢复 · 参与者 P-118</h1>
+<h1>Suspend · participant P-118</h1>
 
-恢复需要逐项确认，不能一键恢复。
+Prefer the smallest scope that achieves the purpose.
+Suspending everything is usually not necessary.
 
-[ ] 已完成复核（复核记录：____）
-[ ] 已完成需要的纠正措施
-[ ] 已确认本人当前同意仍然有效
-[ ] 已确认本人仍符合参与条件
-[ ] 已确认相关功能处于可用状态
-[ ] 已与本人沟通并告知恢复
-[ ] 已获得批准（批准人：____）⚑
+── Scope (multiple choice, smallest first) ──
+[ ] Suspend matching
+[ ] Suspend messages with a particular connection
+[ ] Suspend all messages
+[ ] Suspend AI features (globally disabled in this prototype)
+[ ] Suspend a particular intervention component
+[ ] Suspend all of the participant's platform activity ⚑
 
-原暂停记录：保留，不会被删除  🔒
+── What you will see once you choose ──
+Effects taking hold immediately: «updates live as you tick»
+The person can still: view and withdraw consent,
+  view their own content, export, contact research support,
+  and use "Help and safety"
+Reason category: [dropdown, mandatory]
+Review date: [date, mandatory]
+Owner: you (S-003)
+How it is lifted: see the "restoration" process; it needs review and approval
 
-        [记录恢复]
+        [Record the suspension]
 ```
 
-**F6-c 紧急限制说明（本平台不是紧急求助渠道）**
+**F6-b restoration · wireframe**
 
-这段说明是**共用组件**，出现在：F1 页脚、F3 顶部、F6 两屏、参与者「帮助与安全」屏、D6 报告屏、H4 公共信息页。内容一致，不得因场景删改：
+```
+<h1>Restore · participant P-118</h1>
+
+Restoration is confirmed item by item. There is no one-click restore.
+
+[ ] The review is complete (review record: ____)
+[ ] Any corrective measures needed are complete
+[ ] Confirmed that the person's current consent is still valid
+[ ] Confirmed that the person still meets the participation criteria
+[ ] Confirmed that the relevant features are in a usable state
+[ ] The person has been spoken to and told about the restoration
+[ ] Approval has been obtained (approver: ____) ⚑
+
+The original suspension record: kept, never deleted  🔒
+
+        [Record the restoration]
+```
+
+**F6-c the emergency-limitation notice (this platform is not an emergency service)**
+
+This notice is a **shared component**, appearing in: the F1 footer, the top of F3, both F6 screens, the participant's "Help and safety" screen, the D6 reporting screen, and the H4 public information page. The content is identical everywhere and must not be shortened or edited for a particular context:
 
 ```
 ┌────────────────────────────┐
