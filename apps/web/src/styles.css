@@ -676,18 +676,21 @@ code, kbd, samp {
   padding-inline: var(--space-1);
   border-radius: var(--radius-1);
 }
-/* 下划线是必需的，不是风格选择。实测：链接色 #267571 与正文色 #243331 的
-   对比只有 2.43:1，低于 WCAG 1.4.1 要求的 3:1——也就是说**在一段正文里，
-   只靠颜色分不出哪几个字是链接**。旧的蓝色链接也从未去掉下划线，靠的是
-   浏览器默认值；写成显式声明，是为了下一个想"让它干净一点"的人先看到
-   这句话。要去掉下划线，得先把链接色改到与正文差 3:1 以上。 */
+/* The underline is required, not a stylistic choice. Measured: the link
+   colour #267571 against the body colour #243331 is only 2.43:1, below the
+   3:1 WCAG 1.4.1 requires — meaning that **inside a paragraph, colour alone
+   does not tell you which words are a link**. The old blue links never had
+   their underline removed either; they relied on the browser default.
+   Writing it as an explicit declaration is so that the next person who
+   wants to "tidy it up" reads this sentence first. To remove the underline,
+   the link colour must first be moved to 3:1 or more from the body text. */
 a {
   color: var(--color-text-link);
   text-decoration: underline;
   text-underline-offset: 0.15em;
 }
 
-/* ---------- 6. 应用外壳与布局 ---------- */
+/* ---------- 6. The application shell and layout ---------- */
 .app-shell {
   display: flex;
   flex-direction: column;
@@ -702,55 +705,71 @@ main {
   padding: var(--space-5) var(--space-4) var(--space-8);
   box-sizing: border-box;
 }
-/* 员工工作区：桌面版（所有者裁定，2026-08-13：尽量利用屏幕宽度）。
+/* Staff workspaces: the desktop layout (owner's ruling, 2026-08-13: use as
+   much of the screen width as possible).
 
-   「用满宽度」不等于「把每一行拉到 1600px」。**一行文字超过大约 75 个字符
-   就开始难读**——读到行尾要找回下一行的行首，这不是偏好问题。所以宽度花在
-   三个地方，而不是花在正文行长上：
+   "Use the full width" does not mean "stretch every line to 1600px". **A
+   line of text past roughly 75 characters starts to become hard to read** —
+   at the end of a line you have to find the start of the next one, and that
+   is not a matter of preference. So the width is spent in three places
+   rather than on the length of a line of body text:
 
-     1. 导航从顶部的两排按钮改成左侧竖栏（≥64rem）；
-     2. 面板里的各个小节在宽屏下并成两列、三列，而不是排成一条长带；
-     3. 表格与队列横跨整宽。
+     1. Navigation moves from two rows of buttons at the top to a vertical
+        rail on the left (≥64rem);
+     2. The subsections inside a panel form two or three columns on a wide
+        screen instead of one long ribbon;
+     3. Tables and queues span the full width.
 
-   正文段落仍然保留 --measure-default 的行长上限。研究人员也是人。 */
+   Body paragraphs keep the --measure-default line-length cap. Researchers
+   are people too. */
 main[data-workspace='staff'] {
   max-width: var(--measure-desktop);
   --density-surface: 0.9;
   --density: calc(var(--density-user) * var(--density-surface));
 }
 
-/* 面板内部：小节自动分列。auto-fit + minmax 让列数随宽度自己长出来，不写
-   断点——断点会假设一个屏幕宽度，而员工的屏幕从 13 吋笔记本到 32 吋外接
-   都有。 */
+/* Inside a panel: subsections column themselves automatically. auto-fit +
+   minmax lets the column count grow out of the available width without
+   writing a breakpoint — a breakpoint assumes one screen width, and staff
+   screens run from a 13-inch laptop to a 32-inch external display. */
 main[data-workspace='staff'] > section {
   display: grid;
-  /* 28rem 起步在 1280px 的笔记本上只长得出一列（量出来：可用 938px，两列
-     需要 2×504 + 间距 = 1044）。而 1280 正是员工最常用的那块屏。降到 24rem
-     之后 1280 就有两列，1920 有两列更宽，超宽屏三列。 */
+  /* Starting at 28rem yields only one column on a 1280px laptop (measured:
+     938px available, and two columns need 2×504 + the gap = 1044). And 1280
+     is the screen staff most often have. Dropping to 24rem gives 1280 two
+     columns, 1920 two wider ones, and an ultrawide three. */
   grid-template-columns: repeat(auto-fit, minmax(24rem, 1fr));
   gap: var(--space-5) var(--space-6);
   align-items: start;
 }
-/* 标题、介绍段、动作行横跨整行：它们说的是整块面板的事，不属于某一列。 */
+/* Headings, the introductory paragraph and the action row span the full
+   width: they speak for the whole panel and do not belong to one column. */
 main[data-workspace='staff'] > section > :not(section) {
   grid-column: 1 / -1;
 }
-/* 含表格的小节也横跨整行——把一张表塞进一列，等于把刚修好的挤压又做一遍。 */
+/* A subsection containing a table spans the full width too — squeezing a
+   table into one column just recreates the squeeze that was fixed. */
 main[data-workspace='staff'] > section > section:has(.scroll-x) {
   grid-column: 1 / -1;
 }
-/* 队列同理，而且这一条是我第一版漏掉的：审批队列的小节本身是外层三列里的
-   **一列**，宽 502px，于是四条协议版本仍旧叠成一条窄柱，右边空着一千像素
-   ——外层分了列，里层却没拿到宽度。含队列项的小节必须先横跨整行，里面的
-   卡片才谈得上分列。 */
+/* The same goes for queues, and this is the one I missed in the first
+   version: the approval-queue subsection was itself **one** of the outer
+   three columns, 502px wide, so four protocol versions still stacked into a
+   narrow pillar with a thousand pixels empty to the right — the outer level
+   had columned, and the inner level never received the width. A subsection
+   containing queue items has to span the full width first, before the cards
+   inside it can column at all. */
 main[data-workspace='staff'] > section > section:has(article) {
   grid-column: 1 / -1;
 }
 
-/* 队列项。审批屏、安全事件屏、入组屏的每一条都是一个 <article>，此前它们
-   既没有边界也没有底色：四条协议版本在屏幕上首尾相接，读到「Refuse this
-   version」下一行就是下一条的「Type」，**看不出一条到哪里结束**。审阅者要
-   在这里逐条做决定，而决定的第一步是知道自己正在看哪一条。 */
+/* Queue items. Every entry on the approval, safety-event and enrolment
+   screens is an <article>, and until now they had neither a boundary nor a
+   background: four protocol versions ran head to tail down the screen, so
+   the line after "Refuse this version" was the next item's "Type" and
+   **you could not see where one entry ended**. A reviewer makes a decision
+   here one item at a time, and the first step of a decision is knowing
+   which item you are looking at. */
 main[data-workspace='staff'] article {
   border: var(--border-hairline) solid var(--color-border-subtle);
   border-radius: var(--radius-2);
@@ -759,8 +778,10 @@ main[data-workspace='staff'] article {
   background-color: var(--color-surface-raised);
 }
 
-/* 「谁持有什么」要能一眼扫过。角色排成一行徽章，而不是一份带日期与授予人的
-   清单——那些细节属于展开之后。徽章之间要能换行：一个人可能有三四个角色。 */
+/* "Who holds what" has to be scannable at a glance. The roles are a row of
+   badges rather than a list carrying dates and who granted them — those
+   details belong behind the disclosure. The badges must be able to wrap: a
+   person may hold three or four roles. */
 .account-roles {
   display: flex;
   flex-wrap: wrap;
@@ -769,18 +790,22 @@ main[data-workspace='staff'] article {
   margin-block: var(--space-3);
 }
 
-/* 每个人一个折叠区，装着改变他权限的全部控件。
-   **折叠不是隐藏能力**：按钮全都还在 DOM 里，读屏与测试照样找得到，只是不再
-   把六份「授予角色」表单同时铺在一屏上，把这块屏真正要回答的问题——谁持有
-   什么——埋在中间。 */
+/* One disclosure per person, holding every control that changes their
+   access.
+   **Folding is not hiding capability**: every button is still in the DOM and
+   still findable by a screen reader and by the tests. It simply stops six
+   copies of a "grant role" form being spread across one screen, burying the
+   question this screen exists to answer — who holds what — in the middle of
+   them. */
 .account-controls {
   margin-block-start: var(--space-4);
   border-block-start: var(--border-hairline) solid var(--color-border-subtle);
   padding-block-start: var(--space-3);
 }
 .account-controls > summary {
-  /* summary 在全局规则里已经是 44px 的按钮外观；这里只把它拉成整行左对齐，
-     并去掉边框，让它读作「展开」而不是又一个动作按钮。 */
+  /* The global rules already give summary the 44px button treatment; this
+     only stretches it to the full row, left-aligned, and removes the border
+     so it reads as "expand" rather than as yet another action button. */
   inline-size: 100%;
   border-color: transparent;
   padding-inline: 0;
@@ -791,9 +816,10 @@ main[data-workspace='staff'] article {
   color: var(--color-action-secondary-fg);
 }
 
-/* 队列本身也分列。1920px 下四条协议版本原本挤在一条 440px 的柱子里，右边
-   空着一千一百像素——「桌面版」如果只是把导航搬到左边，队列还是一条长带，
-   那等于没做。 */
+/* The queue itself columns as well. At 1920px, four protocol versions were
+   crammed into a 440px pillar with eleven hundred pixels empty to the right
+   — if "the desktop layout" only moves the navigation to the left and the
+   queue is still one long ribbon, nothing has been done. */
 main[data-workspace='staff'] section:has(> article) {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(24rem, 1fr));
@@ -804,32 +830,43 @@ main[data-workspace='staff'] section:has(> article) > :not(article) {
   grid-column: 1 / -1;
 }
 
-/* 事实清单读成「标签｜值」两栏，而不是标签一行、值缩进一行。审阅屏上这些
-   dl 是「这条记录到底是什么」的全部内容，纵向堆叠会让六个事实占掉十二行，
-   而且值和标签的对应关系全靠缩进。 */
+/* A list of facts reads as two columns, label | value, rather than a label
+   on one line and an indented value on the next. On a review screen these
+   dl elements are the whole of "what this record actually is", and stacking
+   them vertically makes six facts occupy twelve lines with the
+   label-to-value correspondence carried entirely by indentation. */
 main[data-workspace='staff'] dl {
   display: grid;
-  /* 标签列取内容宽度但有上限，值列可以收到 0。 */
+  /* The label column takes its content width but is capped; the value
+     column may shrink to 0. */
   grid-template-columns: minmax(6rem, max-content) minmax(0, 1fr);
   gap: var(--space-2) var(--space-4);
   margin-block: var(--space-4);
 }
-/* **这三条是这条规则能成立的全部原因。** `<dl>` 里并不是清一色的 dt/dd 交替：
-   审批屏的事实清单里，前几对是裸的 dt/dd，后面若干对各自包在一个 `<div>` 里。
-   于是那个 div 作为**一个**网格项落进第一列，它的最大内容宽度（标签 + 一串
-   长标识符）把标签列撑到 377px，值列被压成 0px——量出来就是这个数。
-   `display: contents` 让包装 div 自己不生成盒子，里面的 dt/dd 直接参与外层
-   网格；再给 dt/dd 写死列号，无论有没有包装都落在对的列。 */
+/* **These three lines are the entire reason the rule above works.** A `<dl>`
+   here is not a uniform alternation of dt/dd: in the approval screen's list
+   of facts the first few pairs are bare dt/dd, and several later pairs are
+   each wrapped in a `<div>`. That div then lands in the first column as
+   **one** grid item, and its max-content width (a label plus a long
+   identifier) pushed the label column to 377px and squeezed the value
+   column to 0px — those are the measured numbers.
+   `display: contents` stops the wrapper div generating a box of its own, so
+   the dt/dd inside it participate in the outer grid directly; pinning the
+   column number on dt/dd then puts them in the right column whether they
+   are wrapped or not. */
 main[data-workspace='staff'] dl > div { display: contents; }
 main[data-workspace='staff'] dt { grid-column: 1; }
 main[data-workspace='staff'] dd { grid-column: 2; }
 main[data-workspace='staff'] dt,
 main[data-workspace='staff'] dd {
-  /* 网格项默认 `min-width: auto`，也就是**不肯收窄到内容的最小尺寸以下**。
-     不解除这一条，值列里那种「一段哈希 + 一个按钮」的内容就会把整个 dl 撑
-     出容器——量出来 1920 下溢出 16px、1280 下 57px。
-     这是同一个坑今天第三次：flex 项的 basis、flex 项的 min-inline-size、
-     现在是网格项的 min-width。**默认值都是「宁可溢出也不收窄」**。 */
+  /* A grid item defaults to `min-width: auto`, i.e. it **refuses to shrink
+     below its content's minimum size**. Without lifting that, content in
+     the value column of the "a hash plus a button" kind pushes the whole dl
+     out of its container — measured at 16px of overflow at 1920 and 57px at
+     1280.
+     This is the third time today for the same trap: a flex item's basis, a
+     flex item's min-inline-size, and now a grid item's min-width. **The
+     default in every case is "overflow rather than shrink".** */
   min-inline-size: 0;
 }
 main[data-workspace='staff'] dt {
