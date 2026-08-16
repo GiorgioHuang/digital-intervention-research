@@ -74,85 +74,88 @@ Rules:
 
 ### 1.3 三级认识论阶梯：分析输出 ≠ 解释 ≠ 发现
 
-C15/C16 的核心纪律。三者视觉与措辞必须一眼可分：
+This is the core discipline of C15/C16. All three must be distinguishable at a glance, visually and in wording:
 
-| 层 | 对象 | 版式 | 措辞模板 | 禁止 |
+| Layer | Object | Typography | Wording template | Forbidden |
 |---|---|---|---|---|
-| 输出 | `AnalysisOutput` | 等宽字体、无叙述、灰底代码块、表头标 `机器计算结果` | 「运行 `ar_12` 在锁定数据集 `dv_9` 上的输出」 | 出现"表明""说明""提示"等解释性动词 |
-| 解释 | `InterpretationRecord` | 引用块（左粗边）+ 署名人 + 时间 + 认识论标签 | 「<人名> 的解释：…」「替代解释：…」「局限：…」 | 出现"结论""证明"；不得省略"替代解释"栏 |
-| 发现 | `ResearchFinding` | 卡片 + 审批状态章 + **精确版本链**（问题/协议/干预/AI 配置/DatasetLock/AnalysisRun/Interpretation） | 「发现（<发现类型>）：…」+「不确定性：…」+「局限：…」 | AI 草稿呈现为发现；缺任一版本链元素即不可提交 |
+| Output | `AnalysisOutput` | Monospace, no narration, a grey code block, the header marked `machine-computed result` | "The output of run `ar_12` against locked dataset `dv_9`" | Interpretive verbs such as "shows", "indicates", "suggests" |
+| Interpretation | `InterpretationRecord` | A quotation block (heavy left border) + the person's name + the time + an epistemic tag | "<name>'s interpretation: …", "Alternative interpretation: …", "Limitations: …" | "Conclusion" or "proves"; the "alternative interpretation" field must never be omitted |
+| Finding | `ResearchFinding` | A card + the approval-status stamp + **the exact version chain** (question / protocol / intervention / AI configuration / DatasetLock / AnalysisRun / Interpretation) | "Finding (<finding type>): …" + "Uncertainty: …" + "Limitations: …" | An AI draft presented as a finding; if any element of the version chain is missing it cannot be submitted |
 
-**发现类型（Doc 19 §38）**必须从固定八项中选：自洽 / 条件自洽 / 欠决定 / 被反驳 / 不完整 / 实现相关 / 来源相关 / 留待经验检验。这是**理论发现类型**，与审批状态（§89：In Review / Approved / Approved with Limitations / Rejected / Superseded / Withdrawn / Archived）是**两个独立维度**，必须并排显示，不得合并成一个"状态"。
+**The finding type (Doc 19 §38)** must be chosen from a fixed set of eight: internally coherent / conditionally coherent / underdetermined / refuted / incomplete / implementation-dependent / source-dependent / left for empirical testing. This is the **theoretical finding type**, and it is a **separate dimension** from the approval state (§89: In Review / Approved / Approved with Limitations / Rejected / Superseded / Withdrawn / Archived). The two must be displayed side by side and must never be merged into a single "status".
 
-### 1.4 精确版本后批准（硬约束）
+### 1.4 Approval against an exact version (a hard constraint)
 
-**任何审批屏必须在"批准"控件的同一视口内显示：被批准对象的类型、标识、确切版本号、内容哈希。** 不得放进折叠区、tooltip、二级页。
+**Every approval screen must show, within the same viewport as the "approve" control: the type, identifier, exact version number and content hash of the object being approved.** None of it may go into a collapsed area, a tooltip, or a secondary page.
 
-标准区块（组件名 `ExactVersionBlock`，所有审批屏复用）：
+The standard block (component name `ExactVersionBlock`, reused by every approval screen):
 
 ```text
-┌─ 你正在批准的对象 ────────────────────────────────────────────┐
-│ 类型      ProtocolVersion（协议版本）                          │
-│ 标识      pv_7f3a91c2                          [复制]          │
-│ 版本号    v2                                                   │
-│ 内容哈希  sha256:9b1c4e0a7d55f2318a6e0c4477bd91ea…  [复制][全文]│
-│ 起草人    researcher_lin        提交时间 2026-08-01 09:14 CST   │
-│ 与上一版本的差异   12 处（3 处涉及同意、1 处涉及数据集边界）    │
-│                                              [查看逐节差异]    │
+┌─ What you are approving ──────────────────────────────────────┐
+│ Type       ProtocolVersion                                     │
+│ Identifier pv_7f3a91c2                          [copy]         │
+│ Version    v2                                                  │
+│ Content hash  sha256:9b1c4e0a7d55f2318a6e0c4477bd91ea… [copy][full]│
+│ Drafted by  researcher_lin     Submitted 2026-08-01 09:14 CST  │
+│ Differences from the previous version  12 (3 touching consent, │
+│                                         1 touching dataset boundaries) │
+│                                              [View the differences by section] │
 └───────────────────────────────────────────────────────────────┘
 ```
 
-规则：
+Rules:
 
-- 哈希默认显示前 16 hex + `…`，`[全文]` 就地展开为完整值（不跳页），完整值可选中复制。**审批确认对话框里显示完整哈希**。
-- 若对象在你阅读期间被改写（`VERSION_CONFLICT` / 记录版本变化），审批控件立即禁用并显示：`这个对象在你查看期间已经被改动。请重新打开最新版本再决定。`
-- 证据快照（C4）、数据集锁定（C14）另有 `manifestHash`；同一区块并列显示，不合并。
+- The hash shows the first 16 hex characters + `…` by default; `[full]` expands it in place to the complete value (never navigating away), and the complete value can be selected and copied. **The approval confirmation dialog shows the hash in full.**
+- If the object is rewritten while you are reading it (`VERSION_CONFLICT` / a change in the record's version), the approval control is disabled immediately and shows: `This object was changed while you were looking at it. Open the latest version again before deciding.`
+- Evidence snapshots (C4) and dataset locks (C14) additionally carry a `manifestHash`; it is displayed alongside in the same block and never merged with the content hash.
 
-### 1.5 职责分离（前置说明，不在提交后才报错）
+### 1.5 Separation of duties (stated up front, never as an error after submitting)
 
-后端行为（已实现）：`m04` 协议批准与 `m15` 审批决定在提交人 = 决定人时抛 `AUTHORISATION_DENIED`（"Self-approval is not permitted"）；`m12` 数据集定义批准抛 `INVALID_STATE_TRANSITION`（"Definition not approvable, or self-approval attempted"）；`m14` 导出决定的"决定人 ≠ 申请人"由代码与数据库 CHECK 双重强制。**导出的拒绝与批准走同一权限键 `export.approve`，因此拒绝同样需要 MFA、同样受职责分离约束**——界面不得把"拒绝"呈现为低权限动作。
+Backend behaviour (already implemented): `m04` protocol approval and `m15` approval decisions throw `AUTHORISATION_DENIED` ("Self-approval is not permitted") when the submitter is the decision-maker; `m12` dataset-definition approval throws `INVALID_STATE_TRANSITION` ("Definition not approvable, or self-approval attempted"); and for `m14` export decisions, "the decision-maker is not the requester" is enforced both in code and by a database CHECK. **Rejecting an export goes through the same `export.approve` permission key as approving one, so rejection equally requires MFA and is equally bound by separation of duties** — the interface must never present "reject" as the lower-privilege action.
 
-**导出队列里有两类不是同一件事的决定，不得混作一屏语气（2026-08-04 补）**：`ResearchExport` 是把**别人的数据**交给第三方；`ParticipantPortability` 是**本人索取自己的信息**。后者的「去标识化：无」不是一个发现，而是这件事的要点——它就是本人的信息。用研究导出的口吻呈现它，批准人可能因此拒绝一项合法的数据主体请求；反过来，看惯了这句话也可能对真正的研究导出松懈（数据库 CHECK 本就拒绝可识别的研究导出，屏上直接说明这一点，而不是让批准人自己去担心）。因此：类型译成人话、批准与拒绝的后果分别措辞、并显示**该请求已经被施加的限制**（可携带性请求自带「排除第三方内容」——不显示它等于让批准人假设最坏情况）。拒绝一项本人索取自己信息的请求，确认文案如实说出它拒绝的是什么，同时保持「拒绝与批准同权限、同强认证」。
+**The export queue contains two kinds of decision that are not the same thing, and one screen's tone must not cover both (added 2026-08-04)**: a `ResearchExport` hands **somebody else's data** to a third party; a `ParticipantPortability` request is **a person asking for their own information**. For the latter, "de-identification: none" is not a finding but the point of the thing — it *is* their own information. Presented in the register of a research export, an approver might refuse a legitimate data-subject request; and conversely, someone used to reading that line might grow lax about a genuine research export (the database CHECK already refuses identifiable research exports, and the screen says so directly rather than leaving the approver to worry about it). Hence: the type is rendered in plain words, the consequences of approving and of rejecting are worded separately, and **the restrictions already placed on the request are shown** (a portability request carries "third-party content excluded" by default — not showing it leaves the approver to assume the worst case). When rejecting a person's request for their own information, the confirmation copy says honestly what is being refused, while keeping "rejection has the same permission and the same strong authentication as approval".
 
-设计要求：**用户在看到按钮之前就知道自己不能批准。**
+The design requirement: **a user knows they cannot approve something before they ever see the button.**
 
-三层前置：
+Three layers of forewarning:
 
-1. **队列层**：待办列表每行显示提交人/申请人；当提交人 = 当前身份，该行的决定按钮 `disabled` 并在行内出现说明（不是 tooltip）：
-   `这是你提交的，按职责分离规则你不能批准它。可以请另一位批准人处理。`
-2. **详情层**：`ExactVersionBlock` 下方固定一行"你与这个对象的关系"：`你是这个版本的提交人。`／`你与这个版本没有起草或提交关系，可以决定。`
-3. **起草侧**（C5/C14/C17 提交动作）：提交确认文案提前告知后果——
-   `提交后会记录你是提交人。此后你不能批准这个版本（职责分离）。确认提交吗？`
+1. **The queue**: every row in the pending list shows the submitter/requester; where the submitter is the current identity, that row's decision button is `disabled` and an explanation appears in the row itself (never as a tooltip):
+   `You submitted this, so under separation of duties you cannot approve it. Another approver can handle it.`
+2. **The detail**: a permanent line below the `ExactVersionBlock` giving "your relationship to this object": `You are the submitter of this version.` / `You neither drafted nor submitted this version, so you can decide it.`
+3. **The drafting side** (the submit actions in C5/C14/C17): the submit confirmation states the consequence in advance —
+   `Submitting records you as the submitter. You will not be able to approve this version afterwards (separation of duties). Submit it?`
 
-禁止：把职责分离信息只放在提交后的错误提示里；禁止按钮可点但点后 403。
+Forbidden: putting separation-of-duties information only in the error after submission; and a button that can be pressed and then returns 403.
 
-### 1.6 强认证（MFA）预告契约
+### 1.6 The strong-authentication (MFA) forewarning contract
 
-后端 `packages/policy/src/catalogue.ts` 实际要求 `minimumAuthStrength: 'mfa'` 的动作（本文件覆盖范围内）：
+The actions the backend's `packages/policy/src/catalogue.ts` genuinely requires `minimumAuthStrength: 'mfa'` for (within this file's scope):
 
-| 动作 | 权限键 | 出现在 |
+> *(Verified against the catalogue on 2026-08-16: it declares exactly ten actions at the mfa tier, and they are exactly the ten below. None of the actions listed as confirmation-only carries `mfa`. Both halves of this section are therefore accurate — which matters, because an over-warning is as much a design error as an under-warning.)*
+
+| Action | Permission key | Appears in |
 |---|---|---|
-| 协议版本批准 | `protocol.approve` | C6 |
-| 研究项目批准 | `project.approve` | C2 |
-| 干预版本批准 | `intervention.approve` | C7 |
-| 数据集锁定 | `dataset.lock` | C14 |
-| 研究发现批准 | `finding.approve` | C16 |
-| 导出批准 | `export.approve` | C17 |
-| M15 审批决定 | `approval.decide` | C6/C14/C17/G-跨 |
-| 系统配置 | `system.configure` | G3/G4/G6 |
-| 破窗访问执行 | `break-glass.execute` | G7（仅 SystemAdministrator） |
-| 转为安全事件 | `safety-event.create` | 安全工作区（本文件仅在 C13 引用） |
+| Approve a protocol version | `protocol.approve` | C6 |
+| Approve a research project | `project.approve` | C2 |
+| Approve an intervention version | `intervention.approve` | C7 |
+| Lock a dataset | `dataset.lock` | C14 |
+| Approve a research finding | `finding.approve` | C16 |
+| Approve an export | `export.approve` | C17 |
+| An M15 approval decision | `approval.decide` | C6/C14/C17/across G |
+| System configuration | `system.configure` | G3/G4/G6 |
+| Execute break-glass access | `break-glass.execute` | G7 (SystemAdministrator only) |
+| Convert to a safety event | `safety-event.create` | The safety workspace (referenced here only in C13) |
 
-仅需确认、**不需要** MFA（不得错标为 MFA，误标是"过度警告"，同样是设计错误）：证据评审批准、证据决定批准、分析计划批准、解释批准、数据集定义批准、协议/项目/干预**激活**、资格决定、报告批准、治理保留、破窗复核。
+Requiring confirmation but **not** MFA (mislabelling these as MFA is "over-warning", and is equally a design error): approving an evidence review, approving an evidence decision, approving an analysis plan, approving an interpretation, approving a dataset definition, **activating** a protocol/project/intervention, an eligibility decision, approving a report, placing a governance hold, and break-glass review.
 
-**预告契约（三个时点，缺一即错误）**：
+**The forewarning contract (three moments; missing any one is an error)**:
 
-1. **进入屏幕时**：屏顶"本屏的强认证动作"条，列出本屏哪些按钮需要 MFA。
-2. **控件上**：按钮文字自带 `（需要强认证）`，不是图标暗示。
-3. **确认对话框首行**：`这个操作需要强认证（MFA）。` 当前会话认证强度不足时，**按钮从一开始就是禁用态**，并给出可执行的下一步：
-   `你当前是密码级认证，无法执行这个操作。请以强认证（MFA）重新登录后再来。`（当前 dev 桩：`请退出并在开发登录桩中选择「MFA」。`）
+1. **On entering the screen**: a "strong-authentication actions on this screen" bar at the top, listing which of this screen's buttons require MFA.
+2. **On the control**: the button text itself carries `(requires strong authentication)`, rather than an icon hinting at it.
+3. **The first line of the confirmation dialog**: `This action requires strong authentication (MFA).` Where the current session's authentication strength is insufficient, **the button is disabled from the outset** and an actionable next step is given:
+   `You are authenticated at the password tier and cannot carry out this action. Sign in again with strong authentication (MFA) and come back.` (On the current dev stub: `Sign out and choose "MFA" in the development sign-in stub.`)
 
-禁止：点击后才弹出强认证要求；禁止把 `STEP_UP_AUTHENTICATION_REQUIRED` 当作正常路径——它出现即视为设计漏报，界面要显示 `这本该提前告诉你。请把这个情况报告给平台维护者。`
+Forbidden: raising the strong-authentication requirement only after a click; and treating `STEP_UP_AUTHENTICATION_REQUIRED` as a normal path — its appearance is by definition a failure of forewarning, and the interface should say `You should have been told this in advance. Please report this to the platform maintainers.`
 
 ### 1.7 来源先于断言：证据卡规范（C3/C4 核心，全局复用）
 
