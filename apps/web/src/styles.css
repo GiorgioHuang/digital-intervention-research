@@ -1199,9 +1199,11 @@ nav [aria-current='page'] {
   background-color: var(--color-action-secondary-bg-hover);
 }
 
-/* ---------- 9b. 参与者主导航：手机端底部固定栏（决策 D-3） ---------- */
-/* Doc 20 §33：主目的地少而稳定；同意与帮助常驻。底部栏必须给系统手势区
-   留白，且绝不遮挡内容或确认区——因此 main 补等高的下内距。 */
+/* ---------- 9b. Participant primary navigation: a fixed bottom bar on phones (decision D-3) ---------- */
+/* Doc 20 §33: few, stable primary destinations, with consent and help
+   permanently present. The bottom bar must leave room for the system
+   gesture area and must never cover content or a confirmation area — hence
+   the matching bottom padding added to main. */
 .nav-primary {
   position: fixed;
   inset-inline: 0;
@@ -1212,18 +1214,22 @@ nav [aria-current='page'] {
   border-block-start: var(--border-default) solid var(--color-border-default);
   border-block-end: none;
 }
-/* 一行放不下时换行成两行，绝不横滚（I.2 已否决横滚导航），也绝不裁切
-   标签。3.6rem 的基准让默认字号下 320px 仍是单行，而 200%/400% 放大时
-   自然退化为多行。 */
+/* When one row will not hold them it wraps to two, never scrolls
+   horizontally (I.2 ruled out a horizontally scrolling navigation) and never
+   truncates a label. The 3.6rem basis keeps 320px on a single row at the
+   default font size, and degrades naturally to several rows at 200%/400%
+   zoom. */
 .nav-primary ul {
   flex-wrap: wrap;
   justify-content: space-between;
   gap: var(--space-1);
 }
 .nav-primary li { flex: 1 1 3.6rem; min-inline-size: 3.6rem; }
-/* 标签必须整词单行：折行后的 "Com/muni/ty" 既难读，也让五个槽位高度不齐。
-   因此压到 --type-size-0 并去掉左右内距换取宽度；--target-min 决定的触控
-   高度不受影响（min-height 仍在），所以缩字号不会缩小可点区域。 */
+/* A label must stay one whole word on one line: wrapped as "Com/muni/ty" it
+   is both hard to read and leaves the five slots at unequal heights. So it
+   drops to --type-size-0 and gives up its inline padding to buy width; the
+   touch height set by --target-min is unaffected (min-height is still
+   there), so reducing the font size does not reduce the tappable area. */
 .nav-primary button {
   width: 100%;
   justify-content: center;
@@ -1234,23 +1240,26 @@ nav [aria-current='page'] {
   white-space: nowrap;
   text-align: center;
 }
-/* 当前位置：结构（顶部粗条）+ 字重 + 颜色，三通道 */
+/* Current location: structure (a thick bar on top) + weight + colour, three channels */
 .nav-primary [aria-current='page'] {
   border-inline-start: none;
   border-block-start: var(--border-emphasis) solid var(--color-action-primary-bg);
   font-weight: var(--type-weight-bold);
 }
-/* 底部栏是 fixed 的，所以 main 必须自己留出等高的下内距，否则最后一个
-   确认按钮会被永久遮住。--nav-primary-height 由 App 在运行时按实际测量
-   写入（换行成两行、系统安全区变化时都会跟着变）；缺省值覆盖 JS 尚未
-   执行的第一帧。 */
+/* The bottom bar is fixed, so main has to reserve matching bottom padding
+   itself or the last confirm button is permanently covered.
+   --nav-primary-height is written at runtime by App from an actual
+   measurement (so it follows a wrap to two rows and any change to the system
+   safe area); the default value covers the first frame, before the JS has
+   run. */
 body:has(.nav-primary) main {
   padding-block-end: calc(
     var(--nav-primary-height, var(--target-min)) + var(--space-6) + env(safe-area-inset-bottom, 0px)
   );
 }
 
-/* 平板与桌面：回到静态顶部导航，标签有空间时不需要压缩 */
+/* Tablet and desktop: back to a static top navigation; with room for the
+   labels there is nothing to compress */
 @media (min-width: 40rem) {
   .nav-primary {
     position: static;
@@ -1273,12 +1282,16 @@ body:has(.nav-primary) main {
   body:has(.nav-primary) main { padding-block-end: var(--space-6); }
 }
 
-/* 纯动作行不需要列表符号：符号与整行按钮并存只是噪音 */
+/* A row that is purely an action needs no list marker: a marker beside a
+   full-width button is only noise */
 main li:has(> button):not(:has(> :not(button))) { list-style: none; }
-/* 负外边距是为了把「整行按钮」的任务清单拉回正文左缘，抵消 ul 的缩进。
-   它只对纵向清单成立：导航的 ul 是横向 flex，同一条规则会把每一项往左
-   拽 --space-5，于是相邻项互相重叠——员工审批屏的四个决策标签就这样叠
-   在了一起。因此排除 nav 内的列表（导航从不需要这种对齐）。 */
+/* The negative margin pulls a task list of full-width buttons back to the
+   body text's left edge, cancelling the ul's indent.
+   It only holds for vertical lists: a navigation ul is a horizontal flex,
+   where the same rule drags every item --space-5 to the left so that
+   adjacent items overlap — which is how the four decision labels on the
+   staff approval screen ended up on top of one another. Lists inside nav
+   are therefore excluded (navigation never needs this alignment). */
 main ul:not([class]):not(nav ul) > li:has(> button) {
   margin-inline-start: calc(var(--space-5) * -1);
 }
@@ -1328,11 +1341,14 @@ main ul:not([class]) > li { max-width: var(--measure-default); }
 .state__detail { margin-block-start: var(--space-3); font-size: var(--type-size-1); }
 
 .state--neutral { background-color: var(--color-surface-raised); color: var(--color-text-secondary); border-inline-start-color: var(--color-border-default); }
-/* 区域色（所有者按功能区划分）。它们与语义色**不是一回事**：语义色说的是
-   "这件事处在什么状态"，区域色说的是"这块内容属于哪个部分"。所以区域色
-   只用在没有状态要报的地方——一条 Life Story 的引用、一个社区空间的介绍、
-   一张匹配建议卡。任何时候某样东西同时有状态和区域，状态赢：一个人正在
-   等安全审核，屏幕该告诉他的是这件事，不是他在哪个板块。 */
+/* Zone colours (the owner's division by area). They are **not the same kind
+   of thing** as the semantic colours: a semantic colour says "what state is
+   this in", a zone colour says "which part of the product does this belong
+   to". So a zone colour is only used where there is no state to report — a
+   quotation in a Life Story, the introduction to a community space, a match
+   suggestion card. Whenever something has both a state and a zone, state
+   wins: someone waiting on a safety review should be told that by the
+   screen, not told which section they are in. */
 .state--info,       .badge--info       { background-color: var(--color-info-bg);       color: var(--color-info-fg);       border-inline-start-color: var(--color-info-border); }
 .state--success,    .badge--success    { background-color: var(--color-success-bg);    color: var(--color-success-fg);    border-inline-start-color: var(--color-success-border); }
 .state--warning,    .badge--warning    { background-color: var(--color-warning-bg);    color: var(--color-warning-fg);    border-inline-start-color: var(--color-warning-border); }
@@ -1344,13 +1360,17 @@ main ul:not([class]) > li { max-width: var(--measure-default); }
 .state--story,      .badge--story      { background-color: var(--color-story-bg);      color: var(--color-story-fg);      border-inline-start-color: var(--color-story-border); }
 .state--community,  .badge--community  { background-color: var(--color-community-bg);  color: var(--color-community-fg);  border-inline-start-color: var(--color-community-border); }
 .state--matching,   .badge--matching   { background-color: var(--color-matching-bg);   color: var(--color-matching-fg);   border-inline-start-color: var(--color-matching-border); }
-/* Connection 回到主 teal：匹配是"在挑"，连接是"已经建立"。用同一支主色
-   表示"这段关系已经稳定"，与导航当前项、主按钮同色，是有意的——它们说的
-   是同一件事：这里是确定的。 */
+/* Connection returns to the primary teal: matching is "still choosing",
+   connection is "established". Using the same primary colour to say "this
+   relationship has settled" — the same colour as the current navigation
+   item and the primary button — is deliberate: they are all saying the same
+   thing, that this one is certain. */
 .state--connection, .badge--connection { background-color: var(--color-action-secondary-bg-hover); color: var(--color-action-secondary-fg); border-inline-start-color: var(--color-action-primary-bg); }
 
-/* Life Story 区域底：比页面更暖的奶白，用于承载回忆、引用与照片。
-   只做背景，不做前景——sand 是全系统最暖也最浅的颜色，最容易被拿去写字。 */
+/* The Life Story area background: a cream warmer than the page, carrying
+   memories, quotations and photographs.
+   Background only, never foreground — sand is the warmest and lightest
+   colour in the system, and so the most tempting one to set text in. */
 .zone-story {
   background-color: var(--color-story-surface);
   border: var(--border-hairline) solid var(--color-story-border);
@@ -1358,8 +1378,9 @@ main ul:not([class]) > li { max-width: var(--measure-default); }
   padding: var(--space-5);
   margin-block: var(--space-5);
 }
-/* 参与者卡片：更大的圆角与更多留白（所有者：参与者与 Life Story 更温暖，
-   研究工作区信息密度更高）。仍在 §0.2 的 16px 上限之内。 */
+/* Participant cards: larger radii and more whitespace (owner: participants
+   and Life Story warmer, the research workspace denser). Still inside the
+   16px ceiling of §0.2. */
 main:not([data-workspace='staff']) .card { border-radius: var(--radius-3); }
 
 /* Skeleton: never imitate the shape of a badge, a button or a tick (§E.2) */
@@ -1371,11 +1392,14 @@ main:not([data-workspace='staff']) .card { border-radius: var(--radius-3); }
 }
 
 /* ---------- 11. Cards, quotations, dialogs ---------- */
-/* 卡片描边从 2px border-default 降为 1px border-subtle：所有者要的"轻量、
-   留白、边框优先于阴影"。这**不是**放松无障碍——WCAG 1.4.11 的 3:1 管的是
-   可交互组件的边界，卡片边框是装饰性分隔，卡片里每一个控件仍然是 2px 的
-   border-default。把两者分开之后，控件比容器重，视觉层级才和操作层级一致；
-   之前所有东西都是 2px，屏幕上没有一处比另一处更要紧。 */
+/* Card strokes drop from 2px border-default to 1px border-subtle: the
+   owner's "light, spacious, borders in preference to shadows". This is
+   **not** a relaxation of accessibility — the 3:1 in WCAG 1.4.11 governs the
+   boundary of an interactive component, a card border is a decorative
+   divider, and every control inside a card is still a 2px border-default.
+   Separating the two makes the control heavier than its container, so the
+   visual hierarchy matches the operational one; when everything was 2px,
+   nothing on the screen was more important than anything else. */
 .card {
   border: var(--border-hairline) solid var(--color-border-subtle);
   border-radius: var(--radius-2);
@@ -1385,32 +1409,42 @@ main:not([data-workspace='staff']) .card { border-radius: var(--radius-3); }
   box-shadow: var(--elevation-0); /* a content card is not raised */
 }
 
-/* 草稿卡片：虚线边框（社区里"还没发出去的帖子"）。形状是第二通道——
-   卡片上同时有文字说明它是草稿，虚线只是让它在一列卡片里先被看见。 */
-/* 卡片的区域标记：左侧一条 4px 的色条，不是整块底色。
-   理由是所有者那句"重要状态主要依靠文字、图标和结构，不只依赖颜色"——
-   一条结构线在灰度下、在低刺激模式下、在色觉差异下都还在，一片底色不是。
-   同一张卡片上如果还有状态要报，状态用 .state 块自己说，区域条不参与。
+/* Draft cards: a dashed border (a community post "not sent yet"). Shape is
+   the second channel — the card also says in words that it is a draft, and
+   the dashes only make it noticed first in a column of cards. */
+/* A card's zone marker: a 4px bar of colour on the left, not a block of
+   background.
+   The reason is the owner's line that important states rely on words, icons
+   and structure, not on colour alone — a structural line survives
+   greyscale, low-stimulation mode and colour-vision differences; a field of
+   background does not. If the same card also has a state to report, the
+   state says so itself in a .state block and the zone bar takes no part.
 
-   **必须写在 `.card` 后面。** 第一版写在了 §10（状态呈现）里，也就是
-   `.card` 的**上面**，于是 `.card` 的 `border:` 简写把这三条左边框整个盖掉，
-   截图上三种卡片一模一样——测试全绿，因为测试断言的是 class 名在不在，
-   而 class 一直都在。**同一个属性，后写的赢**，这是这一轮第二次被它咬。 */
+   **This must be written after `.card`.** The first version put it in §10
+   (state presentation), i.e. **above** `.card`, so `.card`'s `border:`
+   shorthand overwrote all three left borders and the three kinds of card
+   looked identical in the screenshot — with the tests green throughout,
+   because they assert that the class name is present and it always was.
+   **Same property, later declaration wins**: the second time that bit in
+   this round. */
 .card--story { border-inline-start: var(--border-emphasis) solid var(--color-story-border); }
 .card--community { border-inline-start: var(--border-emphasis) solid var(--color-community-border); }
 .card--matching { border-inline-start: var(--border-emphasis) solid var(--color-matching-border); }
 .card--draft { border-style: dashed; border-color: var(--color-border-default); }
 
-/* 选项前的图标。放大一档是必需的，不是修饰：☀ 与 ☾ 这类字形在多数字体里
-   只占字面的一半左右，按正文字号画出来就是一个看不清的小点，那样等于只剩
-   文字，图标白加。line-height 压到 1，避免放大后把整行撑高、破坏与相邻选项
-   的等距。 */
+/* The icon before an option. Bumping it up one step is necessary, not
+   decorative: glyphs like ☀ and ☾ occupy only about half the em in most
+   fonts, so drawn at the body size they are an indistinct dot — which
+   leaves the words doing all the work and the icon adding nothing.
+   line-height is pinned to 1 so that enlarging it does not stretch the row
+   and break the even spacing with the adjacent options. */
 label > span[aria-hidden='true'] {
   font-size: var(--type-size-3);
   line-height: 1;
 }
 
-/* 无符号列表。取代散落在各组件里的 style={{ listStyle:'none', padding:0 }}。 */
+/* Unmarkered lists. Replaces the style={{ listStyle:'none', padding:0 }}
+   scattered through the components. */
 .list-plain { list-style: none; padding-inline-start: 0; }
 
 blockquote {
@@ -1425,16 +1459,20 @@ blockquote {
   border-radius: var(--radius-2);
   padding: var(--space-5);
   margin-block: var(--space-4);
-  /* raised：对话框浮在页面之上，取 page 会与背景同色，只剩边框区分。 */
+  /* raised: a dialog floats above the page, and taking page would make it
+     the same colour as the background with only the border to tell them
+     apart. */
   background-color: var(--color-surface-raised);
   box-shadow: var(--elevation-2);
   z-index: var(--layer-dialog);
   max-width: var(--measure-narrow);
 }
 
-/* 只读给辅助技术的文本（倒计时的整半分钟播报，§E.11）。
-   不用 display:none / visibility:hidden——那两者会把内容从无障碍树里一起
-   拿掉，屏幕阅读器也就读不到了。 */
+/* Text for assistive technology only (the countdown's half-minute
+   announcement, §E.11).
+   Not display:none or visibility:hidden — both of those take the content
+   out of the accessibility tree as well, so a screen reader would not read
+   it either. */
 .visually-hidden {
   position: absolute;
   inline-size: 1px;
@@ -1447,9 +1485,11 @@ blockquote {
   border: 0;
 }
 
-/* 隐私屏（§D.6「遮住屏幕」）。
-   必须是不透明色块：`filter: blur()` 可被对屏幕拍照后增强还原，且低视力
-   使用者会把模糊当成渲染故障而不是自己按下的动作。 */
+/* The privacy screen (§D.6, "cover the screen").
+   It must be an opaque block of colour: `filter: blur()` can be recovered by
+   photographing the screen and enhancing it, and a user with low vision
+   reads blur as a rendering fault rather than as the result of something
+   they pressed. */
 .privacy-cover {
   position: fixed;
   inset: 0;
@@ -1468,51 +1508,65 @@ blockquote {
   border: var(--border-emphasis) solid currentColor;
 }
 
-/* 会话超时警告（I14 / §E.11）。最高层：它宣告的是页面即将消失，
-   任何东西都不该盖在它上面。
+/* The session-timeout warning (I14 / §E.11). The topmost layer: what it
+   announces is that the page is about to disappear, so nothing should ever
+   cover it.
 
-   §D.5 把「会话超时警告」列进粘性元素，同时规定粘性元素总高 ≤ 视口 25%。
-   量出来这两条互相矛盾：320×844 下这段话（标题 + 为什么 + 会丢什么 +
-   倒计时 + 两个按钮）占 665px，即 79%；xxl 下 1529px。要压进 211px 只能
-   删掉「你打了还没送出的内容会丢失」——而那正是这个对话框存在的理由，
-   为了迁就一个尺寸上限把唯一要紧的一句话删掉，方向就是反的。
+   §D.5 lists the session-timeout warning as a sticky element and at the same
+   time requires sticky elements to be ≤25% of the viewport in total height.
+   Measured, the two rules contradict each other: at 320×844 this passage
+   (title + why + what will be lost + the countdown + two buttons) occupies
+   665px, i.e. 79%, and 1529px at xxl. The only way to fit it into 211px is
+   to delete "anything you have typed and not sent will be lost" — which is
+   the reason this dialog exists. Deleting the one sentence that matters in
+   order to satisfy a size ceiling is the wrong direction.
 
-   所以它不做粘性，做对话框：25% 上限管的是与内容并存、常驻抢占空间的
-   框架元件；打断式警告在那一刻本身就是内容。定位在视口上沿并自带内部
-   滚动，字号放大到内容比视口还高时按钮仍然够得到——居中会把按钮同时
-   挤出上下两端。 */
+   So it is not sticky, it is a dialog: the 25% ceiling governs chrome that
+   coexists with content and permanently takes space, whereas an interrupting
+   warning is itself the content at that moment. It is positioned at the top
+   edge of the viewport and scrolls internally, so that when an enlarged font
+   makes the content taller than the viewport the buttons are still
+   reachable — centring would push the buttons out of both ends at once. */
 .session-warning {
   position: fixed;
   inset-block-start: var(--space-4);
   inset-inline: var(--space-4);
-  /* margin-block: 0 是必需的，不是整理：固定定位的元素仍然吃外边距，
-     继承来的 18px 会把它整体下推，底边刚好掉出视口。 */
+  /* margin-block: 0 is required, not tidying: a fixed-position element still
+     takes margins, and the inherited 18px pushes the whole thing down far
+     enough for its bottom edge to fall out of the viewport. */
   margin-block: 0;
   margin-inline: auto;
   max-inline-size: var(--measure-narrow);
-  /* 上下各留一个 --space-4 的边距，所以扣的是它的两倍。
-     用 --space-8 扣会少扣 8px（放大字号下间距令牌也跟着放大，两者不再
-     等价），对话框底边就会掉出视口 8px。 */
+  /* A --space-4 margin at the top and bottom, so twice that is subtracted.
+     Subtracting --space-8 instead would take off 8px too little (the
+     spacing tokens scale with an enlarged font, so the two stop being
+     equivalent), and the dialog's bottom edge would fall 8px out of the
+     viewport. */
   max-block-size: calc(100svh - var(--space-4) * 2);
-  /* 没有它，上限只管内容盒：内距与边框再加 62px，量出来的外框是 852px，
-     仍然比 844px 的视口高。 */
+  /* Without this the cap governs the content box only: padding and borders
+     add a further 62px, and the measured outer box is 852px — still taller
+     than the 844px viewport. */
   box-sizing: border-box;
   overflow-y: auto;
   z-index: var(--layer-live);
   border: var(--border-emphasis) solid var(--color-border-strong);
   border-radius: var(--radius-2);
   padding: var(--space-4);
-  /* 与对话框同理：浮层取 raised，否则与页面同色，只剩边框区分。 */
+  /* Same reasoning as the dialog: an overlay takes raised, or it is the
+     same colour as the page with only the border to tell them apart. */
   background-color: var(--color-surface-raised);
   box-shadow: var(--elevation-2);
 }
-/* 不加遮罩、也不声明 aria-modal：在它后面点一下就是「人还在」，
-   计时器因此重置、警告随即消失——这正是它要问的问题的答案。
-   遮罩会把这一下吞掉，反而逼人去读完一段其实不必读的话。 */
+/* No scrim, and no aria-modal: a click behind it *is* "the person is still
+   here", so the timer resets and the warning goes away — which is the answer
+   to the question it is asking. A scrim would swallow that click and force
+   someone to read through a passage they did not need to read. */
 
-/* 被拒绝的说明（§E.10：严重度靠位置＋文字＋语义色，不靠阴影）。
-   它不是错误——是另一个人做出的决定，而且这份工作还在。所以用警告族的
-   描边而不是危险族，也不加抬升。 */
+/* The explanation of a refusal (§E.10: severity comes from position + words
+   + semantic colour, not from a shadow).
+   It is not an error — it is a decision another person made, and the work is
+   still there. So it takes the warning family's stroke rather than the
+   danger family's, and gets no elevation. */
 .refusal-note {
   border-inline-start: var(--border-emphasis) solid var(--color-warning-border);
   padding-inline-start: var(--space-4);
@@ -1530,28 +1584,36 @@ blockquote {
   z-index: var(--layer-header);
 }
 .context-banner p { margin-block: var(--space-1); }
-/* 标识可能很长且不含空格；让它在任意位置断行，而不是把横幅撑宽或撑高。
-   §D.5 的粘性高度上限是视口 25%，第一版横幅在 320px 下量到 304px（844
-   视口的 36%）——一条常驻的条子吃掉三分之一屏幕就不再是辅助而是障碍。 */
+/* An identifier can be long and contain no spaces; let it break anywhere
+   rather than widening or heightening the banner.
+   §D.5's sticky height ceiling is 25% of the viewport, and the first version
+   of this banner measured 304px at 320px wide (36% of an 844 viewport) — a
+   permanent bar eating a third of the screen stops being a help and becomes
+   an obstacle. */
 .context-banner-identity { overflow-wrap: anywhere; }
-/* 两个按钮并排而不是各占一行：全局规则让按钮是块级的（§B.4 R2），在这里
-   用 flex 让它们并排，同时保留 44px 目标与目标间距。 */
+/* The two buttons sit side by side rather than taking a row each: the global
+   rules make buttons block-level (§B.4 R2), and flex puts them side by side
+   here while keeping the 44px targets and the gap between them. */
 .context-banner-actions {
   display: flex;
   flex-wrap: wrap;
   gap: var(--target-gap);
 }
-/* 半宽基准而不是 auto：两个标签的自然宽度加起来超过 320px 的可用宽度，
-   basis:auto 会让它们各占一行（量到 111px）。半宽让它们并排，标签在按钮
-   内折行——折行的标签仍是完整的词，堆叠的按钮却要多花 39px。 */
+/* A half-width basis rather than auto: the two labels' natural widths add
+   up to more than the 320px available, so basis:auto puts them on a row
+   each (measured at 111px). A half-width basis keeps them side by side with
+   the label wrapping inside the button — a wrapped label is still whole
+   words, whereas stacked buttons cost a further 39px. */
 .context-banner-actions button {
   flex: 1 1 calc(50% - var(--target-gap));
   min-inline-size: 0;
 }
-/* 放大字号后取消粘性（§D.5 的 25% 上限）。
-   量出来的事实（320×844，xxl）：粘性横幅占 382px，即视口的 45%。
-   选择放大字号的人正是屏幕空间最紧的人，把接近一半的视口钉死给一条常驻
-   横幅，方向就是反的。横幅仍在每一屏的最上方，只是会随页面滚走。 */
+/* Stickiness is cancelled at enlarged font sizes (§D.5's 25% ceiling).
+   The measured fact (320×844, xxl): the sticky banner occupies 382px, i.e.
+   45% of the viewport. Someone who has chosen a larger font is exactly the
+   person with the least screen space, and nailing nearly half their viewport
+   to a permanent banner is the wrong direction. The banner is still at the
+   top of every screen; it simply scrolls away with the page. */
 :root[data-font-scale='xl'] .context-banner,
 :root[data-font-scale='xxl'] .context-banner {
   position: static;
@@ -1567,19 +1629,27 @@ th, td {
 }
 th { font-weight: var(--type-weight-semibold); background-color: var(--color-surface-sunken); }
 
-/* 表格放进横向滚动容器之后，必须解除两件事，否则容器等于没加。
+/* Once a table is inside a horizontally scrolling container, two things
+   have to be lifted, or the container may as well not be there.
 
-   **`width: 100%` 要撤掉。** 它逼表格压进容器宽度，于是列宽由容器决定而不是
-   由内容决定——正是这条让审计表在 430px 下把每一格都挤断。改成
-   `min-inline-size: 100%`：内容窄时铺满，内容宽时该多宽就多宽，由容器滚动。
+   **`width: 100%` has to go.** It forces the table into the container's
+   width, so column widths are decided by the container rather than by the
+   content — which is exactly what crushed every cell of the audit table at
+   430px. It becomes `min-inline-size: 100%`: fill the container when the
+   content is narrow, be as wide as it needs when the content is wide, and
+   let the container scroll.
 
-   **`overflow-wrap: anywhere` 要撤掉。** 它写在 body 上，是防止长标识符撑破
-   版面的最后一道防线，在正文里是对的。但在表格里它变成了**破坏内容的那一
-   方**：量出来的结果是 "Outcome" 断成「Out / co / me」，"participant.view"
-   断成「parti / cipa / nt.vi / ew」，"Permitted" 断成「Per / mit / ted」。
-   表格宽度 394px，一个像素都没溢出——**它完美地装下了，也几乎不可读**。
-   一张挤到看不懂的表和一张被裁掉的表，对读它的人是同一件事。
-   有了横向滚动这条正当出口，长标识符就该老老实实地宽，让人横着看。 */
+   **`overflow-wrap: anywhere` has to go.** It is set on body as the last
+   line of defence against a long identifier bursting the layout, and in body
+   text it is right. Inside a table it becomes **the thing destroying the
+   content**: measured, "Outcome" broke as "Out / co / me",
+   "participant.view" as "parti / cipa / nt.vi / ew", and "Permitted" as
+   "Per / mit / ted". The table was 394px wide and did not overflow by a
+   single pixel — **it fitted perfectly, and was nearly unreadable**. A table
+   crushed past comprehension and a table cut off are the same thing to the
+   person reading it.
+   With horizontal scrolling as a legitimate outlet, a long identifier should
+   simply be wide and be read across. */
 .scroll-x > table {
   inline-size: auto;
   min-inline-size: 100%;
@@ -1589,27 +1659,33 @@ th { font-weight: var(--type-weight-semibold); background-color: var(--color-sur
   overflow-wrap: normal;
   word-break: normal;
 }
-/* 表头永远不折行：断成两三行的表头会让整行高度参差，而表头是唯一一处
-   读者需要反复回看的文字。 */
+/* A header cell never wraps: a header broken over two or three lines leaves
+   the row heights ragged, and the header is the one piece of text a reader
+   has to keep coming back to. */
 .scroll-x th { white-space: nowrap; }
 
-/* 粘性表头（所有者：研究工作区要「更明确的表格」）。
-   只在员工工作区，且只在容器真的会纵向滚动时才有意义——所以同时给容器一个
-   高度上限。没有上限，容器永远不滚，粘性就永远不触发，等于写了个不生效的
-   样式，那正是这几轮一直在清的那类东西。 */
+/* Sticky table headers (owner: the research workspace wants "more explicit
+   tables").
+   Only in staff workspaces, and only meaningful where the container actually
+   scrolls vertically — hence the height cap on the container as well.
+   Without a cap the container never scrolls, so stickiness never triggers,
+   which would be a style that does nothing: exactly the class of thing these
+   rounds have been clearing out. */
 main[data-workspace='staff'] .scroll-x {
   max-block-size: 70svh;
 }
-/* 容器自己的上内距必须取消，否则粘住的表头下面会留出一条缝，数据行从缝里
-   滚上去，**表头上方出现半行别的数据**——量出来就是这样，一眼能看见。
-   粘性表头贴的是内距盒的上沿，不是边框盒。 */
+/* The container's own top padding has to be removed, or a gap is left below
+   the stuck header and data rows scroll up through it, putting **half a row
+   of other data above the header** — that is what it measured as, and it is
+   visible at a glance. A sticky header sticks to the top of the padding box,
+   not the border box. */
 .scroll-x:has(> table) { padding-block-start: 0; }
 .scroll-x thead th {
   position: sticky;
   inset-block-start: 0;
   z-index: var(--layer-sticky);
-  /* 必须是不透明色：粘性表头下面滚过去的是数据行，透明表头会让两层字叠在
-     一起。 */
+  /* It has to be opaque: what scrolls beneath a sticky header is the data
+     rows, and a transparent header would overlay two layers of text. */
   background-color: var(--color-surface-sunken);
 }
 
@@ -1625,28 +1701,35 @@ main[data-workspace='staff'] .scroll-x {
   .context-banner { position: static; }
 }
 
-/* 最窄宽度：把导航条自身的左右内距让给标签。
-   量出来的事实（Chromium，root 18px，320px = §G 的 400% 放大目标）：
-   最宽的标签 "Messages"（当前项加粗）需要 71px，而每个槽位只拿到 68px
-   ——正好裁掉 3px。D-10 当时的算术略偏乐观。
+/* The narrowest width: the navigation bar gives up its own inline padding
+   to the labels.
+   The measured facts (Chromium, root 18px, 320px = §G's 400% zoom target):
+   the widest label, "Messages" (bold as the current item), needs 71px while
+   each slot gets only 68px — clipped by exactly 3px. The arithmetic in D-10
+   was slightly optimistic.
 
-   三条路里选这一条：把 flex 基准抬到 4.1rem 会让 "Help" 掉到第二行独占
-   一整行；缩小字号是给年长使用者把字变小去迁就布局，方向就是反的；只有
-   收回导航条自己的左右内距不动字号、也不动触控间距——导航条是贴边的框架
-   元件，本来就不需要正文那样的外边距。收回 2×8px 后每槽得 72px。 */
+   This was chosen from three options: raising the flex basis to 4.1rem drops
+   "Help" onto a second row of its own; reducing the font size means making
+   text smaller for older users to accommodate the layout, which is the wrong
+   direction; only reclaiming the bar's own inline padding leaves both the
+   font size and the touch spacing alone — the bar is edge-to-edge chrome and
+   never needed body-text margins. Reclaiming 2×8px gives each slot 72px. */
 @media (max-width: 20rem) {
   .nav-primary {
     padding-inline: 0;
   }
 }
 
-/* 放大字号后换行成 2+2，而不是 3+1。
-   量出来的事实（320px，root 18px × 1.5）：3.6rem 的基准在 xxl 下等于
-   97px，一行塞得下三个，于是最宽的 "Messages" 被裁掉 7px，而 "Help"
-   独占第二行 316px。把基准改成半宽，两行各两个，最宽标签有 158px 可用
-   ——够 104px 的实际需求，且仍是整词、仍不横滚。
-   放大字号是使用者为了看清才选的，在这种时候裁掉标签，等于在最需要它
-   的场合把字弄没了。 */
+/* At enlarged font sizes it wraps 2+2, not 3+1.
+   The measured facts (320px, root 18px × 1.5): a 3.6rem basis is 97px at
+   xxl, three fit on a row, so the widest label "Messages" is clipped by 7px
+   while "Help" takes a second row 316px wide to itself. Changing the basis
+   to half-width gives two rows of two, with 158px available to the widest
+   label — comfortably over the 104px actually needed, still whole words, and
+   still no horizontal scrolling.
+   A larger font is something the user chose in order to see; clipping labels
+   at that moment removes the words in exactly the situation where they are
+   needed most. */
 :root[data-font-scale='xl'] .nav-primary li,
 :root[data-font-scale='xxl'] .nav-primary li {
   flex: 1 1 calc(50% - var(--space-1));
@@ -1654,9 +1737,11 @@ main[data-workspace='staff'] .scroll-x {
 }
 
 /* ---------- 13. Motion and reduced-motion (§A.6) ---------- */
-/* 用户显式选择「减少动效」——与 OS 信号同效，但不依赖 OS 设置。
-   没有 data-motion='system' 的覆盖：标准态就是「听 OS 的」，写一个
-   显式的「标准」会悄悄推翻用户在系统里已经做过的设置。 */
+/* The user has explicitly chosen "reduce motion" — the same effect as the
+   OS signal, but not dependent on the OS setting.
+   There is no data-motion='system' override: the standard state *is*
+   "follow the OS", and writing an explicit "standard" would quietly
+   overrule a setting the user has already made in their system. */
 :root[data-motion='reduced'] {
   --motion-duration-fast: 0ms;
   --motion-duration-normal: 0ms;
