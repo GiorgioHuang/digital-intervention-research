@@ -1140,64 +1140,65 @@ Create a safety signal?
 **Wireframe**
 
 ```
-<h1>安全仪表盘</h1>
+<h1>Safety dashboard</h1>
 
-信号是待评估的线索；事件是经人工确认的。
-两者分开统计，不能相加。
+A signal is a lead awaiting assessment; an event is something a person has confirmed.
+They are counted separately and must never be added together.
 
-── 安全信号（未确认）───────────
-未分诊              5
-超过响应时限        1
-[打开信号队列]
+── Safety signals (unconfirmed) ──
+Not yet triaged        5
+Past the response deadline   1
+[Open the signal queue]
 
-── 安全事件（已确认）───────────
-进行中              2
-逾期未完成的动作    1
-[查看安全事件]
+── Safety events (confirmed) ──
+In progress            2
+Actions overdue        1
+[View safety events]
 
-── 暂停中 ─────────────────────
-参与者暂停          1
-功能暂停            2（匹配、消息）
-[查看暂停与恢复]
+── Currently suspended ────────
+Participants suspended   1
+Features suspended       2 (matching, messages)
+[View suspensions and restoration]
 
-── 升级 ───────────────────────
-升级联系失败        0
-[升级联系人清单]
+── Escalation ─────────────────
+Failed escalation contacts   0
+[The escalation contact list]
 
 ────────────────────────────
-⚠ 本平台不是紧急求助渠道。
-需要立即介入时，按「升级联系人清单」
-中的现实渠道联系；平台内的处理不是即时的。
+⚠ This platform is not an emergency service.
+When something needs immediate intervention, use the real-world
+channels in the "escalation contact list"; nothing inside the
+platform happens immediately.
 ```
 
-**状态矩阵**
+**State matrix**
 
-| 状态 | 呈现与文案原文 |
+| State | Presentation and copy in full |
 |---|---|
-| LOADING | 计数位 `…`，**绝不显示 0**。文案：`正在读取…（读到之前不显示数字，避免把未知当成零）` |
-| EMPTY | `现在没有未分诊的信号，也没有进行中的安全事件。这是正常状态。`（禁止祝贺式措辞） |
-| ERROR | `没能读取安全计数。这不代表没有待处理的信号或事件。请重试；若持续失败，按值班流程口头确认。[重试]` |
-| FORBIDDEN | `你的角色不能查看安全仪表盘。这不是出错。安全队列与审核队列按角色隔离。` |
-| PROTECTED | 仪表盘仅聚合，不涉及单个对象 |
+| LOADING | Counts show `…` and **never 0**. Copy: `Reading…  (no number is shown until it has been read, so that unknown is never mistaken for zero)` |
+| EMPTY | `There are no untriaged signals and no safety events in progress. This is a normal state.` (congratulatory wording is forbidden) |
+| ERROR | `The safety counts could not be read. This does not mean there are no signals or events waiting. Please try again; if it keeps failing, confirm verbally through the duty process. [Try again]` |
+| FORBIDDEN | `Your role cannot view the safety dashboard. Nothing has gone wrong. The safety and moderation queues are separated by role.` |
+| PROTECTED | The dashboard is aggregate only and involves no individual object |
 
-**无障碍要点**
+**Accessibility points**
 
-- 「信号」与「事件」是两个 `<section>`，各有 `<h2>`，屏幕阅读器无法把两组数字读成一组。
-- 计数与其含义在同一个可访问名内：`打开信号队列（5 个未分诊信号）`。
-- 紧急限制说明常驻页脚位置，`role="note"`。
+- "Signals" and "events" are two `<section>` elements each with its own `<h2>`, so a screen reader cannot run the two sets of numbers together.
+- A count and its meaning share one accessible name: `Open the signal queue (5 untriaged signals)`.
+- The note about what this is not for is permanently in the footer position, as `role="note"`.
 
 ---
 
-### F2 SafetySignal 队列
+### F2 The SafetySignal queue
 
-**目标 / 要回答的问题**
+**Purpose / the questions it answers**
 
-- 哪条最急、还剩多少响应时间？
-- 来源是人还是自动系统？
-- 归谁负责？
-- **不该回答的问题：这条信号意味着什么诊断结论。**
+- Which one is most urgent, and how much response time is left?
+- Did it come from a person or from an automated system?
+- Whose responsibility is it?
+- **The question it must not answer: what diagnostic conclusion this signal implies.**
 
-**线框**
+**Wireframe**
 
 ```
 <h1>待分诊的安全信号</h1>
