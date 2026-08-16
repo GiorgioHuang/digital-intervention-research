@@ -845,84 +845,85 @@ Matching policy › PR-002
 
 ### C11 合成人物画像与情景设置（§72）
 
-**① 目标与密度**：创建合成人物与情景，并**在每一步都提醒这不是真人**。密度：dense 表格（画像列表）+ 标准表单（情景）。
+**① Purpose and density**: create synthetic personas and scenarios, and **remind the reader at every step that these are not real people**. Density: a dense table (the persona list) + a standard form (scenarios).
 
-**② 线框**
+**② Wireframe**
 
 ```text
-合成人物画像
+Synthetic personas
 ┌───────────────────────────────────────────────────────────────────────┐
-│ ⓘ 这里的每一个「参与者」都是合成人物。他们不是真人，不能被联系，      │
-│   他们产生的任何数据都不是经验证据。                                  │
+│ ⓘ Every "participant" here is a synthetic persona. They are not real  │
+│   people, they cannot be contacted, and no data they produce is        │
+│   empirical evidence.                                                 │
 ├───────────────────────────────────────────────────────────────────────┤
-│ 研究代码 │ 情景族      │ 能力设定      │ 生成种子 │ 状态   │ 操作     │
-│ SP-001   │ 孤独感-高   │ 屏幕阅读器    │ seed:42  │ 已激活 │ [查看]   │
-│ SP-002   │ 生命故事-低 │ 大字号+简化   │ seed:43  │ 草稿   │ [查看]   │
-│ ⓘ 生成种子与情景定义是可复现性的一部分（Doc 19 §39），不可事后修改。 │
+│ Study code │ Scenario family │ Capability profile │ Seed │ State │ Action │
+│ SP-001     │ loneliness-high │ screen reader      │ seed:42 │ active │ [View] │
+│ SP-002     │ life-story-low  │ large text + simplified │ seed:43 │ draft │ [View] │
+│ ⓘ The generation seed and the scenario definition are part of reproducibility (Doc 19 §39) and cannot be changed afterwards. │
 ├───────────────────────────────────────────────────────────────────────┤
-│ 情景族  孤独感-高                                                     │
-│  描述* [__________]  邀请→筛查→资格→同意→入组→路径→激活（模拟）      │
-│  ⓘ 资格决定必须由人做出。AI 可以整理材料，不能做资格决定。           │
-│                                            [创建画像] [批量生成…]     │
+│ Scenario family  loneliness-high                                      │
+│  Description* [__________]  invite→screen→eligibility→consent→enrol→pathway→activate (simulated) │
+│  ⓘ An eligibility decision must be made by a person. AI may assemble the material; it cannot make the eligibility decision. │
+│                                            [Create a persona] [Generate in bulk…] │
 └───────────────────────────────────────────────────────────────────────┘
 ```
 
-**③ 状态矩阵**
+**③ State matrix**
 
-| 态 | 呈现 |
+| State | Presentation |
 |---|---|
-| 加载 | 表格骨架 |
-| 空队列 | `还没有合成人物画像。合成画像用于原型验证，不能替代真实参与者研究。[创建第一个画像]` |
-| 错误 | 批量生成部分失败 → `PARTIAL_RESULT`：`生成了 8 个，3 个失败。失败的原因逐条列在下面——没有被静默跳过。` |
-| 权限不足 | `你的角色不能创建合成画像（需要 Researcher）。` |
-| 需要 MFA | 无 MFA 动作 |
+| Loading | A table skeleton |
+| Empty queue | `There are no synthetic personas yet. Synthetic personas are for validating the prototype and are not a substitute for research with real participants. [Create the first persona]` |
+| Error | A partial failure in bulk generation → `PARTIAL_RESULT`: `8 were generated and 3 failed. The reason for each failure is listed below — none was skipped silently.` |
+| Insufficient permission | `Your role cannot create synthetic personas (it needs Researcher).` |
+| MFA required | No MFA actions |
 
-**④ 确认文案**：`确认批量生成 20 个合成画像（情景族「孤独感-高」，种子 42–61）？这些是合成人物，不是真人。生成后种子与情景定义不可更改。`
+**④ Confirmation copy**: `Generate 20 synthetic personas in bulk (scenario family "loneliness-high", seeds 42–61)? These are synthetic personas, not real people. Once generated, the seeds and the scenario definition cannot be changed.`
 
-**⑤ 无障碍**：表格按 1.9；"合成"提示位于 `<main>` 起始处并被 `<h1>` 之后的第一个 `role="note"` 承载，屏幕阅读器最先读到。
+**⑤ Accessibility**: the table follows 1.9; the "synthetic" notice sits at the start of `<main>` and is carried by the first `role="note"` after the `<h1>`, so a screen reader reaches it first.
 
 ---
 
 ### C12 参与者列表与详情（研究者视角，§73–74）— 已有局部实现（入组队列）
 
-**① 目标与密度**：以**假名研究代码**为主键的高密度列表 + 权限分区详情。**排除私人社交内容与举报人身份**（§73 硬要求）。密度：dense 表格。
+**① Purpose and density**: a high-density list keyed on the **pseudonymous study code** + detail partitioned by permission. **Private social content and reporter identities are excluded** (a hard requirement of §73). Density: a dense table.
 
-**② 线框**
+**② Wireframe**
 
 ```text
-参与者（研究者视角）              项目 [RP-001 ▾]  [列选择] [保存视图]
-┌────────┬────────┬────────┬──────┬──────┬────────┬──────┬──────────┐
-│研究代码│入组状态│同意状态│路径  │暴露  │到期评估│安全  │最近活动  │
-├────────┼────────┼────────┼──────┼──────┼────────┼──────┼──────────┤
-│SP-001  │已激活  │有效    │标准  │已完成│1 项到期│—     │2 天前    │
-│SP-002  │待激活  │部分撤回│标准  │已提供│逾期 1  │⚠开放 │6 小时前  │
-│SP-003  │已退出  │已撤回  │—    │—    │—      │—     │11 天前   │
-└────────┴────────┴────────┴──────┴──────┴────────┴──────┴──────────┘
-ⓘ 这里不显示私人消息、生命故事内容与举报人身份。
+Participants (researcher's view)        Project [RP-001 ▾]  [Choose columns] [Save view]
+┌────────┬──────────┬──────────┬────────┬──────────┬────────────┬────────┬────────────┐
+│Study code│Enrolment│Consent   │Pathway │Exposure  │Assessments due│Safety│Last activity│
+├────────┼──────────┼──────────┼────────┼──────────┼────────────┼────────┼────────────┤
+│SP-001  │Active    │Valid     │Standard│Completed │1 due       │—       │2 days ago  │
+│SP-002  │Awaiting activation│Partly withdrawn│Standard│Provided│1 overdue│⚠ open│6 hours ago│
+│SP-003  │Withdrawn │Withdrawn │—       │—         │—           │—       │11 days ago │
+└────────┴──────────┴──────────┴────────┴──────────┴────────────┴────────┴────────────┘
+ⓘ Private messages, life-story content and reporter identities are not shown here.
 
-参与者 SP-002（假名）
-┌ 概览 │ 同意 │ 入组 │ 干预 │ 评估 │ 观察 │ 安全 │ 数据质量 │ 审计 ┐
-│ 生命故事 · 消息 · 匹配详情 · 审核证据：未授权（不显示）           │
+Participant SP-002 (pseudonymous)
+┌ Overview │ Consent │ Enrolment │ Intervention │ Assessments │ Observations │ Safety │ Data quality │ Audit ┐
+│ Life story · messages · match detail · moderation evidence: not authorised (not shown) │
 ├───────────────────────────────────────────────────────────────────┤
-│ 同意（模型）                                                      │
-│  study-participation  有效   2026-07-02 授予                      │
-│  community-participation  已撤回  2026-07-30 撤回                 │
-│  ⓘ 撤回会影响可用于分析的数据范围；已锁定数据集不会被改写。      │
-│ 你的访问目的* [research-operations ▾]  ⓘ 目的会被记录进审计。    │
+│ Consent (model)                                                   │
+│  study-participation  valid   granted 2026-07-02                  │
+│  community-participation  withdrawn  withdrawn 2026-07-30         │
+│  ⓘ A withdrawal affects what data may be used in analysis; datasets already locked are not rewritten. │
+│ Your purpose of access* [research-operations ▾]  ⓘ The purpose is written to the audit trail. │
 └───────────────────────────────────────────────────────────────────┘
 ```
 
-**③ 状态矩阵**
+**③ State matrix**
 
-| 态 | 呈现 |
+| State | Presentation |
 |---|---|
-| 加载 | 表格骨架保留列宽 |
-| 空队列 | 无筛选结果：`当前筛选下没有参与者。[清除筛选]`；项目确无参与者：`这个项目还没有参与者。参与者从入组流程进入。[去入组协调]` |
-| 错误 | `PURPOSE_NOT_PERMITTED`：`你选择的访问目的不允许查看这项数据。请选择正确的目的，或说明为什么需要。` |
-| 权限不足 | 未授权的 Tab **仍然可见但禁用**并注明 `未授权（不显示内容）`——存在性本身不敏感；**受保护存在的对象**（如已屏蔽关系）走 `RESOURCE_NOT_FOUND` 统一文案，不透露存在 |
-| 需要 MFA | 无 MFA 动作（查看不需要 MFA；导出走 C17） |
+| Loading | A table skeleton preserving the column widths |
+| Empty queue | No results under the filter: `There are no participants under the current filter. [Clear the filter]`; a project with genuinely none: `This project has no participants yet. Participants arrive through the enrolment process. [Go to enrolment coordination]` |
+| Error | `PURPOSE_NOT_PERMITTED`: `The purpose of access you selected does not permit viewing this data. Select the correct purpose, or state why it is needed.` |
+| Insufficient permission | An unauthorised tab **remains visible but disabled**, marked `not authorised (content not shown)` — the existence of the tab is not itself sensitive; **objects under protected existence** (such as a blocked relationship) take the shared `RESOURCE_NOT_FOUND` copy and never disclose that they exist |
+| MFA required | No MFA actions (viewing does not require MFA; exports go through C17) |
 
-**④ 确认文案**：切换访问目的：`把访问目的改为「安全审阅」？这次访问会以这个目的写入审计。只有确实用于安全审阅时才选它。`
+**④ Confirmation copy**: changing the purpose of access: `Change the purpose of access to "safety review"? This visit is written to the audit trail under that purpose. Choose it only when it genuinely is a safety review.`
 
 **⑤ 无障碍**：研究代码列是 `<th scope="row">`；安全列的 `⚠开放` 写作 `有开放的安全信号`；Tab 组用 `role="tablist"` + `aria-selected` + `aria-controls`，禁用 Tab 用 `aria-disabled="true"` 并保留在 Tab 序中（这样屏幕阅读器用户知道有这些分区且知道自己没权限）。
 
