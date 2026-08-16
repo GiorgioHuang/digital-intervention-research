@@ -1073,71 +1073,71 @@ After submitting:
 · a safety reviewer assesses it, in person
 · **no safety event exists now, and none is created automatically**
 · your moderation disposition is not paused by this;
-  两条线各自独立进行
+  the two lines run independently
 
-── 你观察到什么（最小必要）─────
-类别：( ) 自伤风险  ( ) 受到威胁
-      ( ) 疑似诈骗或经济侵害
-      ( ) 健康状况恶化  ( ) 其他
-你的描述（必填，只写你实际看到的，
-不要写推测或诊断）：
+── What you observed (the minimum necessary) ──
+Category: ( ) risk of self-harm  ( ) being threatened
+      ( ) possible fraud or financial abuse
+      ( ) deteriorating health  ( ) something else
+Your description (mandatory; write only what you
+actually saw, not what you infer or diagnose):
 ┌────────────────────────────┐
 └────────────────────────────┘
 
-关联：本个案 MC-1043（自动附带）
-不会附带：该账号的研究数据、评估结果、
-          消息内容
+Linked to: this case, MC-1043 (attached automatically)
+Not attached: that account's research data, assessment
+          results, or message content
 
-        [创建安全信号]
+        [Create a safety signal]
 ```
 
-**确认文案原文**
+**Confirmation copy in full**
 
 ```
-确认创建一个安全信号？
-· 这是一条待评估的线索，不是已确认的安全事件
-· 安全审阅人会人工评估；系统不会自动确认事件
-· 会附带：你的描述与个案 MC-1043 的关联
-· 不会附带：该账号的研究数据、评估结果、消息内容
-· 你的审核处置不受影响，仍需你继续处理
-· 这条信号写入后不可修改  🔒
-[确认创建安全信号]        [返回]
+Create a safety signal?
+· This is a lead awaiting assessment, not a confirmed safety event
+· A safety reviewer assesses it in person; the system never confirms an event automatically
+· What is attached: your description and the link to case MC-1043
+· What is not attached: that account's research data, assessment results, or message content
+· Your moderation disposition is unaffected and still needs you to carry on with it
+· Once written, this signal cannot be changed  🔒
+[Confirm and create the safety signal]        [Go back]
 ```
 
-**状态矩阵**
+**State matrix**
 
-| 状态 | 呈现与文案原文 |
+| State | Presentation and copy in full |
 |---|---|
-| LOADING | `正在提交…` |
-| EMPTY | 已关联信号列表为空：`这个个案还没有关联任何安全信号。` |
-| ERROR | `没能创建安全信号。你写的描述还在。**没有信号被创建。** 如果这件事需要立即处理，请按「安全值班联系方式」直接联系安全值班人。[重试]` |
-| FORBIDDEN | `你的角色不能创建安全信号。这不是出错。请通过「安全值班联系方式」转达。` |
-| PROTECTED | 通用 PROTECTED |
+| LOADING | `Submitting…` |
+| EMPTY | With no linked signals: `This case has no safety signals linked to it.` |
+| ERROR | `The safety signal could not be created. What you wrote is still here. **No signal was created.** If this needs dealing with immediately, contact the safety duty contact directly using "safety duty contact details". [Try again]` |
+| FORBIDDEN | `Your role cannot create safety signals. Nothing has gone wrong. Please pass it on through "safety duty contact details".` |
+| PROTECTED | The generic PROTECTED copy |
 
-**无障碍要点**
+**Accessibility points**
 
-- 「信号 ≠ 事件」的定义在表单**之前**，是常驻段落而非折叠。
-- 错误态必须给出**平台之外的替代路径**（值班联系方式），因为这是安全关键错误（§236：不得给出虚假安慰）。
+- The definition "a signal is not an event" sits **before** the form, as a permanent paragraph rather than a collapsed one.
+- The error state must offer a route **outside the platform** (the duty contact details), because this is a safety-critical error (§236: never offer false reassurance).
 
 ---
 
-## §4 F. 安全工作区（F1–F6）
+## §4 F. Safety workspace (F1–F6)
 
-> 贯穿全组的硬约束：
-> **(1) 安全信号 ≠ 安全事件。** 计数分开、分区分开、徽章形状不同；从信号到事件的转换是**人工 + MFA** 动作。
-> **(2) 「关闭为非安全事件」与「转为安全事件」必须同等可达、措辞中立。** 两者都是正当结论；界面不得让任一方向显得更「安全」或更「负责」。
-> **(3) 平台不是紧急求助渠道。** 每一个安全屏都要能在 1 次交互内到达「现在能做的现实的下一步」。
+> The hard constraints running through this group:
+> **(1) A safety signal is not a safety event.** They are counted separately, sit in separate sections, and carry different badge shapes; converting a signal into an event is a **human + MFA** action.
+> **(2) "Close as not a safety event" and "convert to a safety event" must be equally reachable and neutrally worded.** Both are legitimate conclusions, and the interface must not make either direction look like the "safer" or "more responsible" one.
+> **(3) The platform is not an emergency service.** Every safety screen must reach "the realistic next step available right now" within one interaction.
 
-### F1 安全仪表盘
+### F1 Safety dashboard
 
-**目标 / 要回答的问题**
+**Purpose / the questions it answers**
 
-- 有多少**未确认的信号**、多少**已确认的事件**？（分开计数）
-- 有没有超过响应时限的？
-- 有谁/什么功能正处于暂停？
-- 升级联系有没有失败？
+- How many **unconfirmed signals** are there, and how many **confirmed events**? (counted separately)
+- Is anything past its response deadline?
+- Is anyone, or any feature, currently suspended?
+- Has any escalation contact failed?
 
-**线框**
+**Wireframe**
 
 ```
 <h1>安全仪表盘</h1>
