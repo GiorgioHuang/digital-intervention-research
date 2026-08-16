@@ -1201,73 +1201,74 @@ platform happens immediately.
 **Wireframe**
 
 ```
-<h1>待分诊的安全信号</h1>
+<h1>Safety signals awaiting triage</h1>
 
-这些都是**未确认的信号**。
-自动系统只能产生信号，永远不能创建安全事件。
+These are all **unconfirmed signals**.
+An automated system can only raise a signal; it can never create a safety event.
 
-排序：紧急度 → 响应时限
+Sort: urgency → response deadline
 
 ┌────────────────────────────┐
-│ [信号 · 未确认] SS-2210     │
-│ 紧急度：高（文字+图标）      │
-│ 类别：自伤风险的可能提及     │
-│ 来源：参与者本人提交         │
-│ 范围：参与者 P-118 ·         │
-│       研究项目 RP-3          │
-│ 收到：4 小时前               │
-│ 负责人：未认领               │
-│ 响应时限：还剩 4 小时        │
-│ 摘要（最小必要）：           │
-│   «一句话摘要»               │
-│           [开始分诊]         │
+│ [Signal · unconfirmed] SS-2210 │
+│ Urgency: high (words + icon) │
+│ Category: possible mention of self-harm risk │
+│ Source: submitted by the participant │
+│ Scope: participant P-118 ·   │
+│       research project RP-3  │
+│ Received: 4 hours ago        │
+│ Owner: unclaimed             │
+│ Response deadline: 4 hours left │
+│ Summary (the minimum necessary): │
+│   «a one-sentence summary»   │
+│           [Start triage]     │
 └────────────────────────────┘
 
 ┌────────────────────────────┐
-│ [信号 · 未确认] SS-2211     │
-│ 来源：[自动产生 · 未经人工确认]│
-│ 自动分类：可能的诈骗话术      │
-│ 自动系统给出的可能性不是结论。│
-│           [开始分诊]         │
+│ [Signal · unconfirmed] SS-2211 │
+│ Source: [raised automatically · not confirmed by a person] │
+│ Automated classification: possible fraud script │
+│ A possibility offered by an automated system is not a conclusion. │
+│           [Start triage]     │
 └────────────────────────────┘
 ```
 
-**状态矩阵**
+**State matrix**
 
-| 状态 | 呈现与文案原文 |
+| State | Presentation and copy in full |
 |---|---|
-| LOADING | `正在载入信号队列…`（骨架屏禁用：§225 明列 Safety decision 不得用骨架） |
-| EMPTY | `当前没有待分诊的信号。这是正常状态。新的信号进入后会按紧急度排在这里。` |
-| ERROR | `没能获取信号队列。**这不代表没有待处理的信号。** 请重试；若持续失败，按值班流程通过其他渠道确认，不要以此屏为准。[重试]` |
-| FORBIDDEN | `你的角色不能查看安全信号队列。这不是出错。` |
-| PROTECTED | `无法显示这个内容。这条信号可能已由他人分诊。返回队列继续。` |
+| LOADING | `Loading the signal queue…` (skeleton screens forbidden: §225 lists Safety decision explicitly) |
+| EMPTY | `There are no signals awaiting triage. This is a normal state. New signals will appear here, ordered by urgency.` |
+| ERROR | `The signal queue could not be fetched. **This does not mean there are no signals waiting.** Please try again; if it keeps failing, confirm through another channel under the duty process and do not treat this screen as authoritative. [Try again]` |
+| FORBIDDEN | `Your role cannot view the safety signal queue. Nothing has gone wrong.` |
+| PROTECTED | `This content cannot be shown. This signal may have been triaged by somebody else. Go back to the queue and carry on.` |
 
-**无障碍要点**
+**Accessibility points**
 
-- 紧急度：`高` 文字 + 三角图标 + `--color-warning`（三重冗余）；**不得**用红色行底作为唯一标识。
-- 来源为自动时，可访问名以 `自动产生的信号，未经人工确认` 开头，屏幕阅读器先听到限定词再听到分类。
-- 响应时限用相对时间 + 绝对时间：`还剩 4 小时（截至 2026-08-03 18:00）`。
+- Urgency: the word `high` + a triangle icon + `--color-warning` (three redundant channels); a red row background **must not** be the only marker.
+- Where the source is automated, the accessible name begins `Signal raised automatically, not confirmed by a person`, so a screen reader hears the qualifier before the classification.
+- The response deadline gives relative and absolute time: `4 hours left (until 2026-08-03 18:00)`.
 
 ---
 
-### F3 人工分诊视图
+### F3 The human triage view
 
-**目标 / 要回答的问题**
+**Purpose / the questions it answers**
 
-- 我需要知道的最小必要背景是什么？
-- 这个人当前的同意与暂停状态是什么？（决定我能做什么）
-- 有哪些结论可选？它们同等正当。
-- 我要立刻做的现实的下一步是什么？
+- What is the minimum background I need to know?
+- What are this person's current consent and suspension states? (they determine what I can do)
+- What conclusions are available? They are equally legitimate.
+- What is the realistic next step I should take right now?
 
-**线框**
+**Wireframe**
 
 ```
-<h1>分诊 · SS-2210</h1>
-[信号 · 未确认]  响应时限：还剩 4 小时
+<h1>Triage · SS-2210</h1>
+[Signal · unconfirmed]  Response deadline: 4 hours left
 
-⚠ 本平台不是紧急求助渠道。
-如判断有立即危险：先按「升级联系人」联系
-现实渠道，再回来记录处置。
+⚠ This platform is not an emergency service.
+If you judge there is immediate danger: contact the real-world
+channels through "escalation contacts" first, then come back
+and record the disposition.
               [升级联系人清单]
 
 ── 最小必要背景 ───────────────
