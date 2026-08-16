@@ -239,7 +239,7 @@ Limits: you cannot see the content of her existing entries
 
 **Not yet implemented**: accepting and declining an invitation is still only on the participant's side (UI_INVENTORY B20); and a supporter withdrawing themselves has no command.
 
-**目标 / 要回答的问题**
+**Purpose / the questions it answers**
 
 - Who invited me, and what for?
 - What will I get, what will I not get, and until when?
@@ -369,7 +369,7 @@ Attribution: submitted in your name («Mr Wang»)
 | FORBIDDEN | `Your role cannot submit life-story contributions. Nothing has gone wrong.` |
 | PROTECTED | The generic PROTECTED copy. **The current implementation explains a 404 as "this requires the participant to have approved your relationship and consented to supporter contributions" — that is a design defect: it leaks the person's consent status to the supporter.** It must be changed to the generic copy; see §8 |
 
-**确认文案原文**
+**Confirmation copy in full**
 
 ```
 Submit this addition for «Mrs Lin» to review?
@@ -435,9 +435,9 @@ It does not become her testimony — only she can confirm testimony.
 **A key design judgement: `Is this the person's testimony: no` is a field of its own, present on every card, including the accepted ones.**
 The current implementation tucks that sentence into a parenthesis on the status label (`accepted (recorded as your contribution, not the person's testimony)`) — a parenthesis is a typographic signal that can be skipped over. A field is not.
 
-**状态矩阵**
+**State matrix**
 
-| 状态 | 呈现与文案原文 |
+| State | Presentation and copy in full |
 |---|---|
 | LOADING | `Loading your contributions…` |
 | EMPTY | `You have not submitted any contributions yet. That is normal. When she invites you to add to something, the record of what you submitted will appear here. [Find out what I can add to]` |
@@ -519,24 +519,24 @@ Record that you gave help with "setting up the device"?
 [Confirm and record]        [Go back]
 ```
 
-**无障碍要点**
+**Accessibility points**
 
-- 「你可以帮」/「必须她本人」两栏在移动端垂直堆叠且各有小标题，不用表格布局。
-- 记录确认后播报：`已记录你的协助。`
+- The "you can help with" and "must be her" columns stack vertically on mobile, each with its own subheading, rather than using a table layout.
+- After the record is confirmed it announces: `Your help has been recorded.`
 
 ---
 
-### D6 报告关切 / 访问被撤销状态
+### D6 Reporting a concern / the access-revoked state
 
-> 这是两个必须共存于一处、但**绝不能互相解释**的界面：报告是支持者主动发起的；访问被撤销是本人的决定，其原因**不得**向支持者披露。
+> These are two interfaces that must live in one place and **must never explain each other**: a report is something a supporter initiates; revoked access is the person's own decision, and its reason **must not** be disclosed to the supporter.
 
-**目标 / 要回答的问题**
+**Purpose / the questions it answers**
 
-- 我担心的这件事，属于哪一类？该走哪条路？
-- 紧急情况我该去哪？（答案：不是这里）
-- 我的访问没有了，我现在能做什么？
+- What kind of thing am I worried about, and which route does it take?
+- Where do I go in an emergency? (the answer: not here)
+- My access is gone — what can I do now?
 
-**D6-a 报告一个问题 · 线框**
+**D6-a report a problem · wireframe**
 
 ```
 <h1>Report a problem</h1>
@@ -640,9 +640,9 @@ Cases awaiting assignment    7  [Open the queue]
 Assigned to me               3  [View]
 Past the handling deadline   1  [View]
 
-── 有期限的 ───────────────────
-申诉待复核            2  · 最近期限：3 天后
-恢复复核              1
+── With deadlines ─────────────
+Appeals awaiting review      2  · nearest deadline: in 3 days
+Restoration reviews          1
 
 ── Safety-related ─────────────
 Cases linked to a safety signal   2
@@ -865,14 +865,15 @@ Request evidence beyond the current scope?
 - How can they appeal?
 - Can I change it afterwards? (The answer: no. So the confirmation screen must say that plainly, and give the appeal and restoration route on the same screen.)
 
-**线框**
+**Wireframe**
 
 ```
-<h1>记录决定 · 个案 MC-1043</h1>
+<h1>Record the decision · case MC-1043</h1>
 
-决定一旦记录即写入审计，不可修改、不可删除。
-如果记录有误，只能通过申诉或恢复流程处理，
-原始记录会被保留。
+Once recorded, a decision is written to the audit trail and can be
+neither changed nor deleted. If a record is wrong, it can only be
+dealt with through the appeal or restoration process, and the
+original record is kept.
 
 ── Disposition ────────────────
 ( ) Not upheld, close
@@ -950,7 +951,7 @@ that does not require MFA.
   *(Checked against the code 2026-08-16 and corrected: this previously said the implementation used a `<select>` defaulting to "warning" and referred to §8. That was true of the version rebuilt on 2026-08-05 and is no longer. `StaffModeratorPanel.tsx` now renders one button per decision from a `CHOICES` table, each with its effect stated beside it rather than in a tooltip, and nothing is chosen until a button is pressed — so the dark-pattern risk the note described, a default amounting to a disposition nobody chose, has been removed. The implementation also carries only the five decisions that genuinely act (Dismiss / Hide / Remove / Restore / Warn); see §8 for the five deliberately absent.)*
 - The confirmation dialog is `role="alertdialog"` with the seven-line structure as a `<dl>`; focus lands on the title when it opens, and `aria-describedby` points at the whole `<dl>`.
 - "Confirm and record the decision" and "Go back and change it" are the same width and weight; "go back" must never be a text link.
-- 记录成功后播报：`决定已记录，以你的身份署名，不可修改。个案已从队列移除。`
+- After a successful record it announces: `The decision has been recorded in your name and cannot be changed. The case has been removed from the queue.`
 
 ---
 
@@ -1269,7 +1270,7 @@ Sort: urgency → response deadline
 If you judge there is immediate danger: contact the real-world
 channels through "escalation contacts" first, then come back
 and record the disposition.
-              [升级联系人清单]
+              [The escalation contact list]
 
 ── The minimum necessary background ──
 Source: submitted by the participant under "safety concerns"
@@ -1943,16 +1944,16 @@ Complaints and ethics questions: «an independent channel»
 
 ---
 
-### H5 无障碍声明
+### H5 Accessibility statement
 
-**目标 / 要回答的问题**
+**Purpose / the questions it answers**
 
-- 这个平台声称达到什么标准？
-- 哪些地方还没达到？（必须诚实列出）
-- 我遇到障碍怎么办、多久有回应？
-- 有哪些可调的设置？
+- What standard does this platform claim to meet?
+- Where does it fall short? (this must be listed honestly)
+- What do I do if I hit a barrier, and how soon will I hear back?
+- What settings can I adjust?
 
-**线框**
+**Wireframe**
 
 ```
 <h1>Accessibility statement</h1>
@@ -2102,51 +2103,51 @@ automated testing (not including real user testing)
 
 ---
 
-## §9 设计取舍（已决定，附理由）
+## §9 Design trade-offs (decided, with reasons)
 
-| # | 取舍 | 决定 | 理由 |
+| # | Trade-off | Decision | Reason |
 |---|---|---|---|
-| T-1 | 举报人自述：完全不给 vs 默认折叠 | **默认折叠 + 警示 + 审计** | 完全不给会让处置失去必要语境（Doc 20 §187 要求 report summary 与 evidence），导致审核者转而去翻更多历史——反而扩大暴露面。折叠 + 审计是可检验的中间态 |
-| T-2 | 举报时间：完全隐藏 vs 区间 | **区间（<24h / 1–3 天 / >3 天）** | 完全隐藏会使处理时限与老化管理失效（§39 要求 ageing cases）。区间保留了运营能力，切断了精确推断 |
-| T-3 | 安全分诊结论：3 项（Doc 20 §196 是 4 项）vs 4 项 | **4 项（关闭 / 继续观察 / 升级 / 转为事件）**；现有实现只有 3 项（缺「继续观察」） | §196 明列 Monitor。缺了它会把「还不确定」挤进「关闭」或「升级」，人为制造二元判断 |
-| T-4 | 安全屏密度：密集档（更多信息一屏内）vs 标准档 | **标准档** | 安全工作区优化的是「不出错」，不是「看得多」。§20 的 urgency 指响应速度，不是屏幕密度 |
-| T-5 | 支持者工作区密度 | **参与者宽松档** | 支持者常常也是老年配偶或同龄亲友；按「非参与者=员工密度」处理是错误假设 |
-| T-6 | 「转给安全团队」的位置：审核决定之内 vs 与决定并列 | **并列且等权** | 放进决定选项里会让它成为「一种处置」，从而与审核处置互斥；实际上两条线必须各自独立进行（§194） |
-| T-7 | 恢复（F6-b）：一键恢复 vs 七项逐条确认 | **七项逐条确认** | §203 列举了七个前置条件；把它们做成一个按钮等于让界面替人断言这些条件已满足 |
-| T-8 | 紧急限制说明：每屏重复 vs 只在帮助页 | **每屏重复（共用组件，内容一致）** | 安全屏的使用场景就是「出事的时候」，此时没有人会去翻帮助页 |
-| T-9 | H1 登录桩：做得像真登录（利于演示）vs 明确标注为桩 | **明确标注为桩** | THREAT_MODEL 把无认证列为固有高风险；界面必须主动对抗误解。演示美观让位于诚实 |
-| T-10 | 空队列文案：正向鼓励 vs 中性 | **中性** | 祝贺式空态（「全部处理完，太棒了！」）会奖励清空队列的行为，对审核与安全是直接的判断污染 |
-| T-11 | 计数在 LOADING 时显示 0 vs 显示 `…` | **显示 `…`** | 「未读到」不是「零」。安全/审核场景下这个区别是安全关键的 |
-| T-12 | 骨架屏 | **队列、决定、处置、批准一律禁用** | §225 明确列出：骨架屏不得模仿 approval / Safety decision |
+| T-1 | The reporter's account: withhold entirely vs collapsed by default | **Collapsed by default + a warning + an audit record** | Withholding it entirely strips a disposition of the context it needs (Doc 20 §187 requires the report summary and the evidence), which drives a moderator to go digging through more history instead — widening the exposure rather than narrowing it. Collapsed + audited is a checkable middle state |
+| T-2 | Report timing: hide it entirely vs bands | **Bands (<24h / 1–3 days / >3 days)** | Hiding it entirely breaks deadline and ageing management (§39 requires ageing cases). Bands keep the operational capability and cut off precise inference |
+| T-3 | Safety triage conclusions: 3 vs 4 (Doc 20 §196 lists 4) | **4 (close / keep watching / escalate / convert to an event)**; the current implementation has only 3, missing "keep watching" | §196 lists Monitor explicitly. Without it, "not sure yet" is forced into either "close" or "escalate", manufacturing a binary judgement. *(Verified against the code 2026-08-16: `DISPOSITIONS` still holds three entries — this trade-off's description of the implementation is still accurate.)* |
+| T-4 | Safety screen density: dense (more on one screen) vs standard | **Standard** | The safety workspace optimises for not getting it wrong, not for seeing more. The urgency in §20 refers to response speed, not screen density |
+| T-5 | Supporter workspace density | **The participant's spacious level** | A supporter is often an older spouse or a friend of the same generation; treating "not a participant" as "staff density" is a false assumption |
+| T-6 | Where "hand to the safety team" sits: inside the moderation decision vs beside it | **Beside it, with equal weight** | Putting it among the decision options makes it "a kind of disposition" and therefore mutually exclusive with one; in fact the two lines must proceed independently (§194) |
+| T-7 | Restoration (F6-b): one-click vs seven separate confirmations | **Seven separate confirmations** | §203 enumerates seven preconditions; turning them into a single button means the interface asserts on somebody's behalf that all seven are met |
+| T-8 | The emergency-limitation notice: repeated on every screen vs only on the help page | **Repeated on every screen (a shared component, identical content)** | A safety screen is used precisely when something has gone wrong, and nobody goes hunting through a help page at that moment |
+| T-9 | The H1 sign-in stub: make it look like a real sign-in (better for demonstrations) vs mark it plainly as a stub | **Mark it plainly as a stub** | THREAT_MODEL lists the absence of authentication as an inherent high risk, and the interface must actively work against the misreading. A handsome demonstration gives way to honesty |
+| T-10 | Empty-queue copy: encouraging vs neutral | **Neutral** | A congratulatory empty state ("all done, well done!") rewards the act of clearing the queue, which is direct contamination of judgement in moderation and safety |
+| T-11 | Counts during LOADING: show 0 vs show `…` | **Show `…`** | "Not read yet" is not "zero". In a safety or moderation context that distinction is safety-critical |
+| T-12 | Skeleton screens | **Forbidden for queues, decisions, dispositions and approvals** | §225 lists it explicitly: a skeleton must not imitate an approval or a Safety decision |
 
 ---
 
-## §10 未决项（需产品 / 伦理 / 法务决策，本文件不擅自决定）
+## §10 Open items (needing a product / ethics / legal decision; this document does not decide them)
 
-| # | 未决项 | 影响的界面 | 需要谁决定 | 阻塞程度 |
+| # | Open item | Interfaces affected | Who decides | How blocking |
 |---|---|---|---|---|
-| U-1 | **紧急联系渠道的具体内容**：F6-c 中的当地紧急电话号码与危机支援服务名称，取决于部署地区；Doc 20 §204 要求「Emergency wording must be approved for the Conceptual Prototype setting」 | F1、F3、F6、D6、H4、参与者帮助屏 | 伦理审查 + 部署地区法务 | **高**：占位文字不能上线，即使是原型 |
-| U-2 | **概念原型阶段是否显示「值班响应」承诺**：当前无真实值班，但界面若完全不写，安全屏会失去「下一步」；若写了，可能被误解为真实服务 | F1、F3、F6、D6 | 产品 + 伦理 | 高 |
-| U-3 | **H1 的 FORBIDDEN 文案在真实部署时必须改为通用式**：合成环境下「这个标识没有任何工作区权限」是有用的调试信息，真实环境下它是账号枚举 | H1 | 安全 + 产品 | 中（部署前必须解决） |
-| U-4 | **举报人是否以及何时被告知处置结果**：§193 允许「Action Taken where disclosure is permitted」，但「permitted」的判定标准未定义 | D6、参与者报告中心、E4 | 产品 + 法务 | 中 |
-| U-5 | **既往处置的显示窗口取 12 个月**：本文件按比例原则暂定，Doc 20 未规定具体窗口 | E3 | 产品 + 审核政策 | 中 |
-| U-6 | **申诉期限取 14 天**：Doc 20 §191 要求有申诉但未规定期限 | E4、E5 | 产品 + 法务 | 中 |
-| U-7 | **「独立复核人」的定义**：§191 要求 independent reviewer「where required」；当前只实现了「非原决定人」这一条 | E5 | 产品 + 治理 | 中 |
-| U-8 | **支持者协助记录的可见性**：D5 假定本人可见；Doc 20 §183 只说「records assistance when relevant to fidelity」，未说谁可见 | D5 | 研究设计 + 伦理 | 中 |
-| U-9 | **支持者访问被撤销时的通用原因文案**：§185 允许「generic reason where appropriate」，但「appropriate」未定义；本文件采取最保守解释（不给具体原因） | D6-b | 产品 + 隐私 | 低 |
-| U-10 | **通知边界**：恢复（E5）与暂停（F6）时谁被通知、通知内容多详细，涉及 I18 通知策略（本文件范围外） | E5、F5、F6 | 产品 + I18 设计负责人 | 中 |
-| U-11 | **S-1 的队列自动载入**：改变现有可访问名会破坏测试，需产品确认是否接受这次测试改动 | E2、F2 | 产品 | 低 |
-| U-12 | **安全事件的严重度与类别取值表**：F4/F5 的必填字段需要受控词表，当前后端枚举与 Doc 20 未完全对齐 | F4、F5 | 研究设计 + 后端 | 中 |
-| U-13 | **审核处置的「比例说明」是否必填**：本文件设为必填（§189 列出 proportionality），会增加审核者负担 | E4 | 产品 + 审核政策 | 低 |
+| U-1 | **The actual content of the emergency contact channels**: the local emergency number and crisis-support service name in F6-c depend on the deployment region; Doc 20 §204 requires that "Emergency wording must be approved for the Conceptual Prototype setting" | F1, F3, F6, D6, H4, the participant help screen | Ethics review + legal counsel for the deployment region | **High**: placeholder text must not go live, even in a prototype |
+| U-2 | **Whether a "duty response" promise is shown during the conceptual prototype phase**: there is no real duty rota today, but if the interface says nothing at all a safety screen loses its "next step"; if it does say something, it may be mistaken for a real service | F1, F3, F6, D6 | Product + ethics | High |
+| U-3 | **H1's FORBIDDEN copy must become generic on a real deployment**: in a synthetic environment "this identifier holds no workspace permissions" is useful debugging information; in a real one it is account enumeration | H1 | Security + product | Medium (must be resolved before deployment) |
+| U-4 | **Whether and when a reporter is told the outcome**: §193 permits "Action Taken where disclosure is permitted", but the criteria for "permitted" are undefined | D6, the participant reporting centre, E4 | Product + legal | Medium |
+| U-5 | **The 12-month window for previous dispositions**: set provisionally in this document on the principle of proportionality; Doc 20 specifies no window | E3 | Product + moderation policy | Medium |
+| U-6 | **The 14-day appeal window**: Doc 20 §191 requires that an appeal exists but specifies no period | E4, E5 | Product + legal | Medium |
+| U-7 | **The definition of an "independent reviewer"**: §191 requires an independent reviewer "where required"; only "not the original decision-maker" is implemented today | E5 | Product + governance | Medium |
+| U-8 | **Who can see a supporter's record of help**: D5 assumes the person themselves can; Doc 20 §183 says only "records assistance when relevant to fidelity" and does not say who sees it | D5 | Research design + ethics | Medium |
+| U-9 | **The generic reason given when a supporter's access is revoked**: §185 permits a "generic reason where appropriate", but "appropriate" is undefined; this document takes the most conservative reading (give no specific reason) | D6-b | Product + privacy | Low |
+| U-10 | **Notification boundaries**: who is notified on restoration (E5) and suspension (F6), and in how much detail, which belongs to the I18 notification policy (outside this file's scope) | E5, F5, F6 | Product + the I18 design owner | Medium |
+| U-11 | **S-1's automatic queue loading**: changing an existing accessible name breaks tests, and product needs to confirm whether that test change is acceptable | E2, F2 | Product | Low |
+| U-12 | **The value tables for safety event severity and category**: F4/F5's mandatory fields need a controlled vocabulary, and the backend enumerations are not yet fully aligned with Doc 20 | F4, F5 | Research design + backend | Medium |
+| U-13 | **Whether the "proportionality" note on a moderation disposition is mandatory**: this document makes it mandatory (§189 lists proportionality), which adds to a moderator's burden | E4 | Product + moderation policy | Low |
 
 ---
 
-## 附：本文件覆盖清单
+## Appendix: what this file covers
 
-| 组 | 单元 | 状态 |
+| Group | Units | Status |
 |---|---|---|
-| D | D1 支持者首页 / D2 邀请与权限复核 / D3 贡献提交 / D4 贡献状态列表 / D5 共享活动支持 / D6 报告关切与访问被撤销 | 6 / 6 |
-| E | E1 审核仪表盘 / E2 报告队列 / E3 案件详情 / E4 决定与确认 / E5 申诉与恢复 / E6 审核→安全联动 | 6 / 6 |
-| F | F1 安全仪表盘 / F2 信号队列 / F3 人工分诊 / F4 关闭与转换 / F5 安全事件与动作 / F6 暂停恢复与紧急限制 | 6 / 6 |
-| H | H1 登录身份入口 / H2 安全邀请落地页 / H3 账户激活 / H4 公开研究信息 / H5 无障碍声明 | 5 / 5 |
-| | **合计** | **23 / 23** |
+| D | D1 supporter home / D2 invitations and permission review / D3 submitting a contribution / D4 contribution status list / D5 supporting a shared activity / D6 reporting a concern and revoked access | 6 / 6 |
+| E | E1 moderation dashboard / E2 report queue / E3 case detail / E4 decisions and confirmation / E5 appeals and restoration / E6 the moderation → safety handover | 6 / 6 |
+| F | F1 safety dashboard / F2 signal queue / F3 human triage / F4 closing and converting / F5 safety events and actions / F6 suspension, restoration and emergency limits | 6 / 6 |
+| H | H1 sign-in / identity entry / H2 secure invitation landing page / H3 account activation / H4 public study information / H5 accessibility statement | 5 / 5 |
+| | **Total** | **23 / 23** |
