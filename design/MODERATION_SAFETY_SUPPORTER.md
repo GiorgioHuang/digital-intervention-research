@@ -1788,86 +1788,87 @@ Both choices are equally valid.
 ⚠ This platform is not an emergency service (explanation)
 ```
 
-**不得出现的元素（§92 avoids urgency pressure）**
+**Elements that must not appear (§92, avoids urgency pressure)**
 
-- 倒计时器、「名额有限」、「今天截止」、进度条式的「你已完成 20%」
-- 预选的「继续」、把「我不参加」做成小字链接
-- 任何在未验证身份前显示的姓名、地址、健康信息
+- Countdown timers, "limited places", "closes today", or a progress-bar-style "you are 20% complete"
+- A pre-selected "continue", or "I do not want to take part" rendered as small print
+- Any name, address or health information shown before the identity has been verified
 
-**状态矩阵**
+**State matrix**
 
-| 状态 | 呈现与文案原文 |
+| State | Presentation and copy in full |
 |---|---|
-| LOADING | `正在载入邀请…` |
-| EMPTY | 不适用 |
-| ERROR | `没能载入这份邀请。这可能是网络问题。可以再试一次，或联系研究支持（联系方式见下）。[重试]` |
-| FORBIDDEN | 不适用（未登录 surface） |
-| PROTECTED | **链接无效、已过期、已使用、从不存在——四种情况文案必须完全一致**：`这个链接现在不能使用。如果你确实收到过邀请，请联系研究支持核对。[联系支持]` |
+| LOADING | `Loading the invitation…` |
+| EMPTY | Not applicable |
+| ERROR | `This invitation could not be loaded. It may be a network problem. You can try again, or contact research support (details below). [Try again]` |
+| FORBIDDEN | Not applicable (an unauthenticated surface) |
+| PROTECTED | **An invalid link, an expired one, one already used, and one that never existed — the copy must be identical for all four**: `This link cannot be used at the moment. If you did receive an invitation, contact research support to check. [Contact support]` |
 
-**无障碍要点**
+**Accessibility points**
 
-- 「参加是完全自愿的」是 `<h2>` 区块，不是脚注。
-- 两个选择等宽等重，DOM 顺序 = 视觉顺序。
-- 页面 `lang="zh-CN"`；未登录页也必须有 skip-link 与可见焦点。
+- "Taking part is entirely voluntary" is an `<h2>` block, not a footnote.
+- The two choices are the same width and weight, and DOM order = visual order.
+- The page declares `lang="en"`; an unauthenticated page still needs a skip link and visible focus.
+  *(Corrected 2026-08-16: this said `lang="zh-CN"`, which was right when the interface was Chinese. Every interface string is English since D-9, and `apps/web/index.html` still declares `lang="zh-CN"` — so a screen reader applies Chinese pronunciation rules to English text, and a translation tool is told the page is in a language it is not. The document now states the correct value; the code fix is listed in §8.)*
 
 ---
 
-### H3 账户激活
+### H3 Account activation
 
-**目标 / 要回答的问题**
+**Purpose / the questions it answers**
 
-- 我要做几步、现在第几步？
-- 为什么要验证身份？
-- 别人能帮我完成吗？
-- 我用的是共用设备怎么办？
-- 忘了怎么办？
+- How many steps are there, and which one am I on?
+- Why does my identity have to be verified?
+- Can somebody help me do it?
+- What if I am on a shared device?
+- What if I forget?
 
-**线框**
+**Wireframe**
 
 ```
-<h1>启用你的账户</h1>
-第 2 步，共 3 步  ●●○
+<h1>Set up your account</h1>
+Step 2 of 3  ●●○
 
-── 为什么需要这一步 ────────────
-我们需要确认是你本人在启用账户，
-这样别人不能用你的名义参加研究。
+── Why this step is needed ────
+We need to confirm that it is you setting up the account,
+so that nobody else can take part in the study in your name.
 
-── 这一步要做什么 ──────────────
-输入你收到的一次性验证码。
+── What to do in this step ────
+Enter the one-time code you were sent.
 
-验证码  [      ]
-        [继续]
-        [没有收到验证码？]
+Code  [      ]
+        [Continue]
+        [Did not receive a code?]
 
-── 需要人帮忙吗 ───────────────
-可以。你可以请你信任的人协助你操作。
-协助的人不会因此获得你的账户权限。
-[了解协助方式]
+── Would you like someone to help? ──
+Yes. You can ask somebody you trust to help you do this.
+Helping does not give them any access to your account.
+[About getting help]
 
-── 共用设备提醒 ───────────────
-如果这台设备别人也会用：
-[ ] 这是共用设备
-   勾选后：不在这台设备保存登录状态，
-   离开时自动结束会话，
-   通知内容不显示细节。
+── A note about shared devices ──
+If other people also use this device:
+[ ] This is a shared device
+   Once ticked: your signed-in state is not kept on this device,
+   the session ends automatically when you leave,
+   and notifications show no detail.
 ```
 
-**状态矩阵**
+**State matrix**
 
-| 状态 | 呈现与文案原文 |
+| State | Presentation and copy in full |
 |---|---|
-| LOADING | `正在验证…`（按钮 `disabled`，不得允许重复提交） |
-| EMPTY | 不适用 |
-| ERROR | `没能验证这个验证码。你没有被锁定，可以再试。如果多次失败，请[申请新的验证码]或[联系研究支持]。` ——不指责用户，给下一步 |
-| FORBIDDEN | 不适用 |
-| PROTECTED | 验证码错误 / 已使用 / 已过期 / 账户不存在：**文案一致**：`这个验证码现在不能使用。你可以申请一个新的验证码，或联系研究支持。` |
+| LOADING | `Checking…` (the button is `disabled`; repeat submissions must not be allowed) |
+| EMPTY | Not applicable |
+| ERROR | `That code could not be verified. You have not been locked out and you can try again. If it keeps failing, [request a new code] or [contact research support].` — never blames the user, and always gives a next step |
+| FORBIDDEN | Not applicable |
+| PROTECTED | A wrong code / one already used / an expired one / no such account: **the copy is identical**: `This code cannot be used at the moment. You can request a new code, or contact research support.` |
 
-**无障碍要点**
+**Accessibility points**
 
-- 步骤指示既是文字（`第 2 步，共 3 步`）也是图形，不能只有圆点。
-- 验证码输入 `inputmode="numeric" autocomplete="one-time-code"`，单一输入框而非 6 个分离框（分离框对屏幕阅读器与运动障碍用户极不友好）。
-- 「共用设备」复选说明与复选框通过 `aria-describedby` 关联，勾选后效果用 `aria-live` 播报。
-- 时间限制（验证码有效期）必须可延长或可重新申请（§296）。
+- The step indicator is both words (`Step 2 of 3`) and a graphic; dots alone are not enough.
+- The code input is `inputmode="numeric" autocomplete="one-time-code"` and is a **single field**, not six separate boxes (separate boxes are extremely hostile to screen-reader users and to people with motor impairments).
+- The shared-device explanation is associated with its checkbox through `aria-describedby`, and the effect of ticking it is announced via `aria-live`.
+- The time limit (how long a code is valid) must be extendable or renewable (§296).
 
 ---
 
@@ -2077,6 +2078,7 @@ WCAG 2.2 AA，以及七种使用模式的可用性
 | C-6 | `StaffModeratorPanel.tsx`: the queue card renders `reportDescription` directly (the reporter's own account) | **The reporter's own account may contain identifying information about them, and it appears at the queue level** | Show only `reportCategory` at the queue level; move the account itself into E3's collapsed-by-default area | ❌ **STILL OPEN** — line 124 renders `Reported as {reportCategory}: {reportDescription}` on the card. This is the §6 reporter-protection surface, and the queue is the screen §E2 identifies as the highest-risk one |
 | C-7 | `SupporterApp.tsx`: the status label puts "not their own testimony" inside a parenthesis | A parenthesis is a typographic signal that can be skipped over | Make it a field of its own, `Is this the person's testimony: no`, on every card | ❌ **STILL OPEN** — line 75 is still `Accepted (recorded as your contribution, not as their own testimony)` |
 | C-8 | `App.tsx` / `StaffApp.tsx`, the development stub sign-in | The stub had one sentence and did not say that the identity entered is never verified | Adopt the §H1 warning block (`role="alert"`, with its four consequences) | ⚠️ **PARTLY DONE** — `App.tsx:213–215` now says "Development sign-in stub… Nothing here verifies who you are — this is not authentication (ADR-104)", which covers the core omission. It is not yet the §H1 block with all four consequences enumerated |
+| C-10 | `apps/web/index.html` declares `lang="zh-CN"` | **The document language is wrong.** Every interface string has been English since D-9, so a screen reader applies Chinese pronunciation rules to English text, and assistive technology and translation tools are told the page is in a language it is not. WCAG 3.1.1 (Language of Page) is a Level A criterion | Change to `lang="en"` | ❌ **OPEN** — found 2026-08-16 while converting the documents; it is a consequence of the English conversion itself, not a pre-existing defect |
 | C-9 | Every panel: errors showed only `Not successful: {code}` | Breaks §231 (does not say what was saved, what did **not** happen, or how to recover) | Adopt the §1.2 generic ERROR structure plus each screen's own additional sentence | ✅ **DONE** — the panels call `staffLoadError` / `staffActionError` from `errors.ts`, which separates a failed read from a refused command and states the reason and the next step |
 
 ### 8.2 Suggested (not errors, but short of the specification)
