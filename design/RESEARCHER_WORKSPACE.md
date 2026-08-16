@@ -252,118 +252,118 @@ The corresponding boundary statement in the researcher workspace (appearing in C
 
 ## 2. C. Researcher workspace (C1–C17)
 
-### C1 研究者仪表盘（Doc 20 §37）
+### C1 Researcher dashboard (Doc 20 §37)
 
-**① 目标与密度**：让研究者在一屏内知道"今天谁在等我"，并且**不把它做成信息流**。密度：dense；分区卡片网格（桌面 3 列 / 平板 2 列 / 手机 1 列）。每张卡片是一个**队列**，不是一个 KPI 数字——数字只作次要标注。**禁止**把"发现数""参与者数"做成成就式大数字（无暗黑模式原则）。
+**① Purpose and density**: let a researcher see in one screen "who is waiting on me today", and **do not make it a feed**. Density: dense; a grid of section cards (3 columns on desktop / 2 on tablet / 1 on mobile). Each card is a **queue**, not a KPI number — the numbers are only secondary annotation. Turning "number of findings" or "number of participants" into achievement-style large numerals is **forbidden** (the no-dark-patterns principle).
 
-**② 线框**
+**② Wireframe**
 
 ```text
 ┌───────────────────────────────────────────────────────────────────────┐
-│ [跳到主要内容]                                                        │
-│ 研究者工作区   身份：researcher_lin（密码级认证）  项目：RP-001 ▾     │
+│ [Skip to main content]                                                │
+│ Researcher workspace  Identity: researcher_lin (password tier)  Project: RP-001 ▾ │
 ├───────────────────────────────────────────────────────────────────────┤
-│ ⓘ 全部数据为合成数据（概念研究阶段）。这里的任何数字都不是经验结果。  │
-│ ⓘ 本屏的强认证动作：无。批准类动作在各自的屏内，会提前标注。          │
+│ ⓘ All data is synthetic (conceptual research phase). No number here is an empirical result. │
+│ ⓘ Strong-authentication actions on this screen: none. Approval actions live on their own screens and are marked in advance. │
 ├───────────────────────────────────────────────────────────────────────┤
-│ ┌ 等我处理（我的待办）─────────┐ ┌ 等别人处理（我提交的）──────────┐ │
-│ │ • 协议版本待我评审      3 条 │ │ • 我提交待批准的协议     2 条   │ │
-│ │ • 证据评审待我完成      1 条 │ │ • 我申请待批准的导出     1 条   │ │
-│ │ • 解释待我起草          2 条 │ │   （职责分离：我不能自批）      │ │
-│ │            [打开待办队列]    │ │            [查看提交状态]       │ │
+│ ┌ Waiting for me ──────────────┐ ┌ Waiting for others (mine) ──────┐ │
+│ │ • Protocol versions to review 3 │ │ • Protocols I submitted, awaiting approval 2 │ │
+│ │ • Evidence reviews to finish  1 │ │ • Exports I requested, awaiting approval 1 │ │
+│ │ • Interpretations to draft    2 │ │   (separation of duties: I cannot approve my own) │ │
+│ │            [Open my queue]      │ │            [See submission status] │ │
 │ └──────────────────────────────┘ └─────────────────────────────────┘ │
-│ ┌ 入组与评估 ──────────────────┐ ┌ 交付异常 ───────────────────────┐ │
-│ │ 在组 24 · 待激活 3 · 退出 1  │ │ 投递未确认 2 · 失败 1 · 中断 1  │ │
-│ │ 评估到期 5 · 逾期 2          │ │ 「未确认 ≠ 对方已收到」         │ │
+│ ┌ Enrolment and assessment ────┐ ┌ Delivery problems ──────────────┐ │
+│ │ Enrolled 24 · awaiting activation 3 · withdrawn 1 │ │ Delivery unconfirmed 2 · failed 1 · interrupted 1 │ │
+│ │ Assessments due 5 · overdue 2 │ │ "unconfirmed ≠ they received it" │ │
 │ └──────────────────────────────┘ └─────────────────────────────────┘ │
-│ ┌ 安全（最小必要）─────────────┐ ┌ 数据质量与数据集 ───────────────┐ │
-│ │ 开放安全信号 2 · 当前暂停 1  │ │ 未解决质量问题 4（阻断级 1）    │ │
-│ │ ⓘ 详细审阅在安全工作区进行。 │ │ 可锁定数据集版本 1（需强认证）  │ │
+│ ┌ Safety (minimum necessary) ──┐ ┌ Data quality and datasets ──────┐ │
+│ │ Open safety signals 2 · currently suspended 1 │ │ Unresolved quality problems 4 (1 blocking) │ │
+│ │ ⓘ Detailed review happens in the safety workspace. │ │ Dataset versions lockable 1 (needs strong authentication) │ │
 │ └──────────────────────────────┘ └─────────────────────────────────┘ │
-│ ┌ AI 人工复核 ─────────────────┐ ┌ 里程碑 ─────────────────────────┐ │
-│ │ 待人工复核的 AI 草稿 6       │ │ 概念研究完成判据 3/7            │ │
-│ │ ⓘ AI 草稿不是决定。          │ │ [查看研究可追溯矩阵]            │ │
+│ ┌ AI awaiting human review ────┐ ┌ Milestones ─────────────────────┐ │
+│ │ AI drafts awaiting human review 6 │ │ Conceptual research completion criteria 3/7 │ │
+│ │ ⓘ An AI draft is not a decision. │ │ [View the research traceability matrix] │ │
 │ └──────────────────────────────┘ └─────────────────────────────────┘ │
 └───────────────────────────────────────────────────────────────────────┘
 ```
 
-**③ 状态矩阵**
+**③ State matrix**
 
-| 态 | 呈现 |
+| State | Presentation |
 |---|---|
-| 加载 | 六张卡片骨架，保留卡片标题（标题是静态文案，先渲染）；`aria-busy` 于网格容器 |
-| 空队列 | 每卡片独立空态。待办：`现在没有需要你处理的事。` 安全：`当前没有开放的安全信号。` 不显示 0 的大数字 |
-| 错误 | **逐卡片降级**，不整屏失败：该卡片显示 `这一块没能加载（<码>）。[重试]`，其余卡片正常 |
-| 权限不足 | 无权限的卡片不渲染空壳，而是显示 `你的角色看不到这一块（需要 <角色>）。`；安全卡片对非 SafetyReviewer 只显示计数不显示内容 |
-| 需要 MFA | 仪表盘本身不含 MFA 动作；跳转到含 MFA 动作的屏时，链接文字带 `（需要强认证）` |
+| Loading | Six card skeletons keeping the card headings (the headings are static copy and render first); `aria-busy` on the grid container |
+| Empty queue | Each card has its own empty state. Queue: `There is nothing needing your attention.` Safety: `There are no open safety signals.` No large zeros |
+| Error | **Degrade card by card**, never fail the whole screen: that card shows `This section could not be loaded (<code>). [Try again]` while the rest render normally |
+| Insufficient permission | A card you cannot see is not rendered as an empty shell; it says `Your role cannot see this section (it needs <role>).` The safety card shows counts only, and no content, to anyone who is not a SafetyReviewer |
+| MFA required | The dashboard itself contains no MFA actions; links to screens that do carry `(requires strong authentication)` in the link text |
 
-**④ 关键交互与确认文案**：仪表盘**没有**高影响动作，只有导航。任何"一键批准"都是设计错误。
+**④ Key interactions and confirmation copy**: the dashboard has **no** high-impact actions, only navigation. Any "approve in one click" here is a design error.
 
-**⑤ 无障碍**：网格用 `<section aria-labelledby>` × 6，屏幕阅读器可按标题跳转；卡片内计数写成完整句（`协议版本待我评审：3 条`）而不是孤立数字；`role="status"` 只在刷新完成时播报一次汇总 `待办已更新：待我处理 6 条。`
+**⑤ Accessibility**: the grid is 6 × `<section aria-labelledby>`, so a screen reader can jump by heading; counts inside a card are written as complete sentences (`Protocol versions awaiting my review: 3`) rather than as isolated numbers; `role="status"` announces one summary only when a refresh completes: `Queue updated: 6 items waiting for you.`
 
 ---
 
-### C2 研究项目与研究问题（§57–58）— 已有局部实现
+### C2 Research projects and research questions (§57–58) — partially implemented
 
-**① 目标与密度**：建立 `ResearchProject` 与 `ResearchQuestion`，并把"PICO + 不确定性 + 证据需求"结构化。密度：标准偏 dense；表单为多步但**不隐藏后续步骤的存在**（§247–249）。创建流程不要求填全未来细节（§57）。
+**① Purpose and density**: create a `ResearchProject` and a `ResearchQuestion`, and give "PICO + uncertainty + evidence needed" a structure. Density: standard leaning dense; the form is multi-step but **does not hide the existence of the later steps** (§247–249). Creation does not require every future detail to be filled in (§57).
 
-**② 线框**
+**② Wireframe**
 
 ```text
-研究项目 › 新建项目
+Research projects › New project
 ┌───────────────────────────────────────────────────────────────┐
-│ 步骤 1/3 目的与范围   2/3 组织与负责人   3/3 首个研究问题     │
-│ （草稿随时可存；创建项目不需要填完未来的全部细节。）          │
+│ Step 1/3 purpose and scope   2/3 organisation and leads   3/3 first research question │
+│ (A draft can be saved at any time; creating a project does not require every future detail.) │
 ├───────────────────────────────────────────────────────────────┤
-│ 标题*        [_____________________________________]          │
-│ 目的*        [多行，≤76 字符/行 ______________________]        │
-│ 范围         [多行 __________________________________]        │
-│ 组织*        [下拉：organisation ▾]                            │
-│ 负责人*      [多选：actor ▾]                                   │
-│                                   [保存草稿]  [下一步]        │
+│ Title*       [_____________________________________]          │
+│ Purpose*     [multi-line, ≤76 characters per line ____]        │
+│ Scope        [multi-line __________________________]          │
+│ Organisation*[dropdown: organisation ▾]                        │
+│ Leads*       [multi-select: actor ▾]                           │
+│                                   [Save draft]  [Next]        │
 └───────────────────────────────────────────────────────────────┘
 
-研究项目 › RP-001 › 研究问题
+Research projects › RP-001 › Research questions
 ┌───────────────────────────────────────────────────────────────┐
-│ 主要问题（1 条，必填）                                        │
-│  人群 P  [__] 干预 I [__] 对照 C [__] 结局 O [__] 情境 [__]   │
-│  不确定性*     [为什么现在不知道答案 ______________]           │
-│  可行性目标    [__________________________________]           │
-│  证据需求*     [需要哪一类证据才能回答 ____________]           │
-│  认识论定位*   [下拉：未来经验问题 ▾]   ⧗ 未来经验问题        │
-│  ⓘ 概念研究阶段：多数问题应落在「未来经验问题」或「设计假设」。│
-│ ─ AI 起草 ────────────────────────────────────────────────── │
-│  [让 AI 起草问题措辞]                                          │
-│  ┌ AI 草稿（未采纳）─────────────────────────────────────┐    │
-│  │ 🤖 AI 起草 · 这是草稿，不是研究问题。                 │    │
-│  │ 「在社区居住的 65 岁以上成年人中，数字化怀旧干预…」   │    │
-│  │        [采纳为我的措辞] [修改后采纳] [丢弃]           │    │
+│ Primary question (exactly 1, required)                        │
+│  Population P [__] Intervention I [__] Comparator C [__] Outcome O [__] Setting [__] │
+│  Uncertainty*     [why the answer is not known now _______]    │
+│  Feasibility goal [__________________________________]         │
+│  Evidence needed* [what kind of evidence would answer it __]   │
+│  Epistemic position* [dropdown: future empirical question ▾]  ⧗ future empirical question │
+│  ⓘ In the conceptual research phase, most questions should land on "future empirical question" or "design assumption". │
+│ ─ AI drafting ─────────────────────────────────────────────── │
+│  [Have AI draft the wording]                                   │
+│  ┌ AI draft (not adopted) ───────────────────────────────┐    │
+│  │ 🤖 Drafted by AI · this is a draft, not a research question. │
+│  │ "Among community-dwelling adults aged 65 and over, does a digital reminiscence intervention…" │
+│  │        [Adopt as my wording] [Edit then adopt] [Discard] │  │
 │  └───────────────────────────────────────────────────────┘    │
-│ 次要问题（0..n）                            [新增次要问题]     │
-│                                   [保存草稿]  [提交问题]      │
+│ Secondary questions (0..n)                  [Add a secondary question] │
+│                                   [Save draft]  [Submit the question] │
 └───────────────────────────────────────────────────────────────┘
 ```
 
-**③ 状态矩阵**
+**③ State matrix**
 
-| 态 | 呈现 |
+| State | Presentation |
 |---|---|
-| 加载 | 表单字段以禁用+骨架标签渲染；已填内容从本地草稿恢复并提示 `已恢复你上次未保存的内容。` |
-| 空队列 | 项目列表空：`还没有研究项目。研究项目是所有协议、数据集与发现的归属。[新建项目]` |
-| 错误 | `VALIDATION_ERROR` 就地锚定到字段（`aria-describedby` 指向错误文本，焦点移到首个错误字段）；网络错误保留全部输入，文案 `没有提交成功，你填的内容都还在。[重试]` |
-| 权限不足 | 无 `project.create`：表单不渲染，显示 `你的角色不能创建研究项目（需要 Researcher）。你仍然可以查看已有项目。` |
-| 需要 MFA | 创建/起草**不需要** MFA。项目**批准**（`project.approve`）需要 MFA，但那属于 C6 批准视图；本屏在"提交"按钮旁提前说明：`提交后由批准人以强认证（MFA）批准。你不能批准自己提交的内容。` |
+| Loading | Form fields render disabled with skeleton labels; anything already typed is restored from the local draft with the notice `Restored what you had not saved.` |
+| Empty queue | An empty project list: `There are no research projects yet. A research project is what every protocol, dataset and finding belongs to. [New project]` |
+| Error | `VALIDATION_ERROR` anchors in place to the field (`aria-describedby` points at the error text, and focus moves to the first field in error); a network error keeps every input, worded `This was not submitted, and everything you typed is still here. [Try again]` |
+| Insufficient permission | Without `project.create` the form is not rendered, and it says `Your role cannot create research projects (it needs Researcher). You can still view existing projects.` |
+| MFA required | Creating and drafting do **not** require MFA. **Approving** a project (`project.approve`) does, but that belongs to the C6 approval view; this screen states it in advance beside the submit button: `After submitting, an approver approves it with strong authentication (MFA). You cannot approve what you submitted yourself.` |
 
-**④ 关键交互与确认文案**
+**④ Key interactions and confirmation copy**
 
-- 提交研究问题（确认对话框）：
-  `确认提交这个研究问题？提交后会记录你是提交人，此后你不能批准它（职责分离）。问题的认识论定位是「未来经验问题」——界面会一直这样标注它。`
-  按钮：`确认提交` / `返回继续修改`
-- 采纳 AI 草稿（就地确认，非对话框）：
-  `采纳后这段文字成为你的措辞，由你负责。AI 参与会被记录在这条问题的来源里。`
-- 丢弃草稿：`丢弃这份 AI 草稿？它不会被保存。`
+- Submitting a research question (confirmation dialog):
+  `Submit this research question? Submitting records you as the submitter, and you will not be able to approve it afterwards (separation of duties). This question's epistemic position is "future empirical question" — the interface will go on marking it that way.`
+  Buttons: `Confirm and submit` / `Go back and keep editing`
+- Adopting an AI draft (confirmed in place, not in a dialog):
+  `Once adopted, this text becomes your wording and is yours. The AI's involvement is recorded in this question's provenance.`
+- Discarding a draft: `Discard this AI draft? It will not be saved.`
 
-**⑤ 无障碍**：三步表单用 `<ol>` 步骤指示 + `aria-current="step"`；AI 草稿区 `role="region" aria-label="AI 草稿（未采纳）"`，草稿文本前有可读的"AI 起草"文字（不靠图标）；PICO 五字段各有独立 `<label>`，不用 placeholder 代替 label。
+**⑤ Accessibility**: the three-step form uses an `<ol>` step indicator + `aria-current="step"`; the AI draft area is `role="region" aria-label="AI draft (not adopted)"` with readable "drafted by AI" text before the draft (never carried by an icon); each of the five PICO fields has its own `<label>`, and a placeholder is never used in place of a label.
 
 ---
 
