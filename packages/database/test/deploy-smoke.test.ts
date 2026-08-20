@@ -5,6 +5,28 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
+const DEPLOY_YML = join(fileURLToPath(new URL('../../../', import.meta.url)), '.github/workflows/deploy.yml');
+
+/**
+ * The workflow with its comments removed.
+ *
+ * Every assertion about deploy.yml reads this rather than the file as
+ * written, and the first version of the concurrency check is why. It read
+ * the file as written and passed with `cancel-in-progress` flipped to
+ * `true` — because the comment above the setting contains the words
+ * "`cancel-in-progress: false` is deliberate", and a sentence explaining a
+ * setting satisfied the assertion about the setting. That is D-84 exactly:
+ * a guard its own comment can satisfy has commented itself into
+ * uselessness. The same trap is waiting for anything else asserted here,
+ * because the reason for a control is always written next to it.
+ */
+const workflowWithoutComments = (): string =>
+  readFileSync(DEPLOY_YML, 'utf8')
+    .split('\n')
+    .map((line) => (/^\s*#/.test(line) ? '' : line.replace(/\s#.*$/, '')))
+    .join('\n');
+
+
 /**
  * The deployment smoke test's access-token gate check.
  *
@@ -187,25 +209,7 @@ describe('the deploy workflow only deploys this repository', () => {
  * `if:` guard above, and the reason both are asserted rather than trusted.
  */
 describe('the deploy workflow runs one deploy at a time', () => {
-  const raw = readFileSync(
-    join(fileURLToPath(new URL('../../../', import.meta.url)), '.github/workflows/deploy.yml'),
-    'utf8',
-  );
-  /**
-   * Comments are stripped before anything is asserted, and the first
-   * version of this file is why.
-   *
-   * The `cancel-in-progress` check read the file as written and passed with
-   * the setting flipped to `true` — because the comment above it contains
-   * the words "`cancel-in-progress: false` is deliberate", and a sentence
-   * explaining the setting satisfied the assertion about the setting. That
-   * is D-84's finding reproduced exactly: a guard that its own comment can
-   * satisfy has commented itself into uselessness.
-   */
-  const workflow = raw
-    .split('\n')
-    .map((line) => (/^\s*#/.test(line) ? '' : line.replace(/\s#.*$/, '')))
-    .join('\n');
+  const workflow = workflowWithoutComments();
 
   it('declares a concurrency group at the workflow level', () => {
     // Workflow level, not job level: a job-level group would still let two
@@ -226,5 +230,49 @@ describe('the deploy workflow runs one deploy at a time', () => {
        somebody optimising CI time would otherwise set it to true and think
        it harmless. */
     expect(workflow.replace(/\s+/g, ' ')).toContain('cancel-in-progress: false');
+  });
+});
+
+/**
+ * The two values in this workflow that must never reach a log.
+ *
+ * `::add-mask::` is what keeps the Neon connection string and the Cloud Run
+ * service URL out of the run's logs and its step summary. Nothing turned
+ * red if either line were deleted — the deploy would still succeed, the
+ * logs would simply start containing the secret, and a green tick would
+ * report it as fine. That is the same shape as D-88's `if:`: a control
+ * whose removal changes no behaviour and no appearance.
+ *
+ * The comment-stripped copy is used deliberately. The comments above both
+ * lines explain the masking and contain the word `add-mask`, so asserting
+ * against the raw file would pass with the masking gone (D-84).
+ */
+describe('the deploy workflow keeps secrets out of its own logs', () => {
+  const stripped = workflowWithoutComments();
+
+  it('masks the database connection string before it is used', () => {
+    // Order matters: masking after the value has been echoed is too late,
+    // so the mask must come before anything that could print it.
+    const dburl = stripped.indexOf('DBURL=$(gcloud secrets versions access');
+    expect(dburl, 'the migration step no longer reads the connection string this way').toBeGreaterThan(-1);
+    const mask = stripped.indexOf('::add-mask::$DBURL', dburl);
+    expect(mask, 'DATABASE_URL is read from Secret Manager but never masked').toBeGreaterThan(-1);
+  });
+
+  it('masks the service URL, and keeps it out of the step summary', () => {
+    const url = stripped.indexOf('URL=$(gcloud run services describe');
+    expect(url, 'the smoke step no longer resolves the service URL this way').toBeGreaterThan(-1);
+    const mask = stripped.indexOf('::add-mask::$URL', url);
+    expect(mask, 'the service URL is resolved but never masked — a public log would carry the deployment address').toBeGreaterThan(-1);
+
+    // The summary is rendered on the run's page, so it is read more widely
+    // than the logs are. It may say that the revision answered; it may not
+    // say where.
+    const summary = stripped
+      .split('\n')
+      .filter((line) => line.includes('GITHUB_STEP_SUMMARY'))
+      .join('\n');
+    expect(summary, 'nothing is written to the step summary any more').not.toBe('');
+    expect(summary, 'the step summary would publish the deployment address').not.toMatch(/\$URL|\$\{\{\s*vars\./);
   });
 });

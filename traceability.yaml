@@ -2238,3 +2238,34 @@
   code: ["design/DESIGN_SYSTEM.md", "design/DESIGN_DECISIONS.md"]
   tests: ["apps/web/test/design-tokens.test.ts"]
   docs: ["design/DESIGN_DECISIONS.md D-89", "design/DESIGN_SYSTEM.md §A.2", "design/DESIGN_SYSTEM.md §I.3"]
+
+- implementation_id: IMP-CI-DEPLOY-LOG-MASKING-001
+  module: PLATFORM
+  summary: >-
+    The two values in the deploy workflow that must never reach a log now have a guard.
+    The Neon connection string is read from Secret Manager in the clear because the
+    migration step needs it, and the Cloud Run service URL is resolved in the clear
+    because the smoke step has to call it; what keeps either out of the run's logs and
+    its step summary is the ::add-mask:: that precedes their use. Nothing was turning
+    red if either line were deleted. The deploy would still succeed, the smoke checks
+    would still pass, the logs would simply start carrying the value, and a green tick
+    would report the whole thing as fine - the same shape as the fork guard's if:, a
+    control whose removal changes no behaviour and no appearance. The test asserts the
+    mask appears after the value is read rather than merely somewhere in the file,
+    because masking a value after it has been echoed is too late, and separately that
+    nothing interpolating the URL or a repository variable is written to the step
+    summary, which is rendered on the run's page and so read more widely than the logs.
+    It reads a comment-stripped copy of the workflow: the comments above both lines
+    explain the masking and contain the word add-mask, so asserting against the file as
+    written would pass with the masking gone, which is D-84 exactly. Three mutations
+    verified red - each mask deleted in turn, and the service URL written back into the
+    step summary, which is the defect this masking was originally added to fix.
+  trace_ids: [ATR-003]
+  adr_ids: [ADR-061, ADR-062]
+  docs:
+    - "governance/THREAT_MODEL.md B6"
+  code:
+    - .github/workflows/deploy.yml
+  tests:
+    - packages/database/test/deploy-smoke.test.ts
+  status: implemented

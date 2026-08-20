@@ -1,6 +1,6 @@
 # THREAT_MODEL
 
-> Status as of 2026-07-31. Method: enumerate threats by trust boundary (STRIDE categories), set against the **mitigations actually implemented** (with code/test evidence) and the **residual risk**. The honesty principle: where there is no mitigation, say so; a simulator is not real protection.
+> Status as of 2026-08-16. Method: enumerate threats by trust boundary (STRIDE categories), set against the **mitigations actually implemented** (with code/test evidence) and the **residual risk**. The honesty principle: where there is no mitigation, say so; a simulator is not real protection.
 
 ## 1. System trust boundaries
 
@@ -10,10 +10,17 @@
                           v                        |
               [permission engine / module commands]  [worker/scheduler (pg-boss)]
                           |
-              [provider simulators: AI / communication / storage scanning]  <-- real providers pending
+                          +--> [Google, identity]        <-- real (ADR-104)
+                          +--> [Cloudflare R2, objects]  <-- real (ADR-106)
+                          +--> [Knowledge Graph MCP]     <-- real (ADR-052/110)
+                          +--> [simulators: AI / communication / malware scanning]  <-- real providers pending
+
+[GitHub Actions] --Workload Identity--> [Cloud Run + Neon + Secret Manager]
 ```
 
-The boundaries: B1 browser ↔ API; B2 API ↔ database; B3 worker/scheduler ↔ database; B4 platform ↔ external providers (currently simulators); B5 staff ↔ governance data.
+The boundaries: B1 browser ↔ API; B2 API ↔ database; B3 worker/scheduler ↔ database; B4 platform ↔ external providers (**four are now real; the rest are simulators**); B5 staff ↔ governance data; B6 the deploy pipeline ↔ the running deployment.
+
+**B6 was missing from this file until 2026-08-16**, through the period in which the repository was prepared for publication and the deploy pipeline gained the ability to reach production. The most serious hole this project has actually found (D-88, below) lived on a boundary the threat model did not name. A boundary that is not listed is not assessed, and nothing reports that it was skipped — which is the failure mode this document exists to prevent, occurring in this document.
 
 ## 2. B1 browser ↔ API
 
@@ -45,7 +52,11 @@ The boundaries: B1 browser ↔ API; B2 API ↔ database; B3 worker/scheduler ↔
 | Callback replay (T) | The nonce is globally unique, and a repeat is an idempotent no-op | m16 tests | Low |
 | A provider lying about delivery (R) | Two state machines: Provider Accepted ≠ Delivered; reconciliation on timeout moves to Delivery Unknown, and success is never assumed | Messaging tests + sweep tests | Low |
 | An AI acting beyond its rights (E) | The Tool Gateway refuses 17 Level-5 items by name; AI can only produce a signal; model aliases are allow-listed | m11 integration tests | Medium: needs re-assessment once a real model is connected (the prompt-injection surface) |
-| Supply chain (once a real SDK is introduced) | **Not mitigated** — there is currently no real provider dependency | — | A dependency review is due once a provider is chosen |
+| Supply chain (once a real SDK is introduced) | **Partly overtaken by events**: `@aws-sdk/client-s3` (for R2) and the Google token libraries are now real dependencies | — | **A dependency review is now due, not deferred** — the condition this row waited for has been met |
+| Object storage credentials leaking (I/E) | The R2 key pair lives only in Secret Manager (`HADI_R2_ACCESS_KEY_ID` / `HADI_R2_SECRET_ACCESS_KEY`), is attached to the revision by reference, and never enters the repository or a log | deploy.yml; the four-settings test in m16 | Medium — there is no rotation procedure, and no expiry on the keys |
+| Half-configured storage silently falling back (T) | All four settings or none: the platform refuses to start on a partial configuration rather than writing participants' files into a Postgres column, and the deploy attaches the four together or not at all | `m16-integration/test/blob-store.test.ts`; the deploy asserts the running revision's reported `fileStorage` matches what was attached | Low |
+| An object key disclosing its contents (I) | Keys are opaque prefixed ids, never a filename the participant chose — a bucket listing carries no words of theirs | m16 round-trip test asserts the key on every call | Low |
+| Bytes at rest in the bucket (I) | **Not assessed.** Transport is HTTPS and the credentials are held as above, but at-rest encryption and bucket-level access policy are vendor properties this project has neither configured nor verified | — | **Open** — R2 is connected and holding synthetic files; this must be settled before any real file is stored |
 
 ## 5. B5 staff ↔ governance data
 
@@ -57,14 +68,32 @@ The boundaries: B1 browser ↔ API; B2 API ↔ database; B3 worker/scheduler ↔
 | Rewriting a decision after the fact (R/T) | Moderation decisions, approval history and drill records are append-only (triggers) | Direct SQL attack tests | Low |
 | Peeking into a queue beyond one's rights (I) | Queue reads are isolated by role (an approver has no triage queue, and vice versa) | e2e cross-role 403 | Low |
 
-## 6. The top residual risks (in priority order)
+## 6. B6 the deploy pipeline ↔ the running deployment
+
+The pipeline holds more authority than any user of the platform does: Workload Identity into the GCP project, the production database connection string, and the ability to replace the code that is serving. It is reached by pushing a commit, and — through `workflow_run` — by causing a CI run.
+
+| Threat (STRIDE) | Mitigation | Evidence | Residual risk |
+|---|---|---|---|
+| A fork deploying to production (E) | **This was open.** `deploy` runs on `workflow_run`, in *this* repository's context with its secrets, and is started by a CI run anybody can cause; `branches: [main]` on the trigger matches the *triggering run's* branch, which for a fork's pull request is the fork's own branch name. Fork → branch named `main` → PR → CI passes → deploy runs as us. Closed by three conditions: `head_repository.full_name == github.repository`, `event == 'push'`, `head_branch == 'main'` | `deploy-smoke.test.ts` asserts **each condition separately**, so losing any one of them fails with its reason attached (D-88) | Low |
+| Deploying a commit CI did not verify (T) | The checkout pins `ref: workflow_run.head_sha` — the commit that passed, not whatever main has moved to since | Same test pins `head_sha`: it and the fork guards are a pair, and changing either alone is dangerous | Low |
+| Two deploys racing (T/D) | A workflow-level `concurrency` group. Observed 2026-08-16: two deploys ran concurrently, one died on the migration lock — the visible half. The silent half is worse: two `gcloud run deploy` calls carrying different commits race, and whichever finishes last is what serves, so the deployed code can quietly be older than main with nothing red anywhere | `deploy-smoke.test.ts`, asserted at workflow level and against a comment-stripped copy | Low |
+| Cancelling a run that holds the migration lock (D) | `cancel-in-progress: false`, deliberately: a superseded run queues rather than dying, because a half-applied migration is worse than a deploy that waits | Same test, and the reason is written down so that optimising CI time does not quietly reverse it | Low |
+| Secrets reaching a public log (I) | `::add-mask::` on the database connection string and on the Cloud Run service URL; the step summary states only that the revision answered | `deploy-smoke.test.ts` — added 2026-08-16, because **nothing had been turning red if either mask were deleted**: the deploy would still succeed and the logs would simply start carrying the value | Low |
+| A deploy reporting success while serving a broken revision (T) | The revision answers for itself: liveness, readiness, the SPA shell, the access-token gate actually refusing an ungated `/v1` request, and the reported `fileStorage` matching what was attached | The gate check's retry logic is itself unit-tested — only ambiguous answers (000/5xx) are retried, so a gate that had failed open fails immediately rather than being given six more chances to look transient | Low |
+| The pipeline's own authority (E) | Keyless Workload Identity Federation — no long-lived key exists to be stolen from GitHub. Deployment values are repository Variables; anything genuinely secret is in Secret Manager or Actions Secrets | deploy.yml; DEPLOYMENT.md states the boundary | Medium — the WIF binding's own conditions have not been reviewed in this document |
+
+## 7. The top residual risks (in priority order)
 
 1. **Authentication**: ADR-104 has been ruled and implemented as Sign in with Google (D-68). An environment still running on `AUTH_MODE=dev-header` has **no real authentication and must not be exposed publicly**; the steps to switch are in DEPLOYMENT.md, "Switching on Sign in with Google". What remains: the strong-authentication tier depends either on the operator's assertion that a Workspace domain enforces two-step verification, or on a re-authentication (step-up) each time.
 2. **No rate limits or quotas** — to be implemented once the hosting platform is settled; currently limited to a synthetic environment.
-3. **Scanning, AI and communication are all simulators** — each needs its threat assessment redone when a real provider is connected (the interfaces do not change; an ACL adapter is swapped in).
-4. **Encryption in transit and at rest, and key management, are not in place** — dependent on hosting approval (ADR-103/119/121).
+3. **Scanning, AI and communication are still simulators** — each needs its threat assessment redone when a real provider is connected (the interfaces do not change; an ACL adapter is swapped in). **Identity, object storage and the Knowledge Graph are no longer among them**: Google (ADR-104), Cloudflare R2 (ADR-106) and the Knowledge Graph MCP endpoint (ADR-052/110) are connected and in use in the deployed environment, which is what makes the dependency review in B4 due now rather than later.
+4. **Encryption at rest, and key management, are not in place** — dependent on hosting approval (ADR-103/119/121). Transit is no longer among them: the deployed environment is HTTPS end to end (Cloud Run, Neon, R2). **At rest is now a live question rather than a deferred one**, because R2 is holding files: see B4's "bytes at rest" row, which is open.
 5. **The prompt-injection surface has not been assessed** — this must be done before a real LLM is connected (the Tool Gateway allow-list is the first line of defence, not the whole of it).
 
-## 7. Maintenance convention
+## 8. Maintenance convention
 
 When a trust boundary is added or a provider is connected, update this file and cite the corresponding traceability entry in the PR; when any "residual risk" is closed, code and test evidence must accompany it, kept in step with PILOT_READINESS_REPORT.
+
+**That convention did not hold, and this is the record of it.** Between 2026-07-31 and 2026-08-16 three providers were connected (Google, Cloudflare R2, the Knowledge Graph MCP endpoint) and a trust boundary was created (B6, the deploy pipeline), and this file changed for none of them. Nothing reported the omission, because nothing can: the convention is a sentence, and a sentence has no failing state. The gap was found only because the pipeline itself turned out to contain the most serious hole the project has found (D-88) — on a boundary this document did not list.
+
+Two things follow. The convention is kept, because a rule that is sometimes followed is better than none. But it is now written down as **unenforced**, so that a reader takes this file as current-as-of its status line rather than as current — the difference between the two is exactly what made the omission invisible.

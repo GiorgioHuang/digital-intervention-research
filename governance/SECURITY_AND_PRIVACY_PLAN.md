@@ -1,17 +1,20 @@
 # SECURITY_AND_PRIVACY_PLAN
 
-> Status as of 2026-07-31. This plan describes the security/privacy controls that are **implemented with test evidence**, and the items that are **not yet met and must not be claimed as met**. Basis: Handbook Doc 14 (security/privacy/consent architecture), Doc 15 (API conventions), Doc 4 (the consent model). Vocabulary: `Implemented / Verified / Pending External Approval / Deferred`.
+> Status as of 2026-08-16. This plan describes the security/privacy controls that are **implemented with test evidence**, and the items that are **not yet met and must not be claimed as met**. Basis: Handbook Doc 14 (security/privacy/consent architecture), Doc 15 (API conventions), Doc 4 (the consent model). Vocabulary: `Implemented / Verified / Pending External Approval / Deferred`.
 
 ## 1. Identity and authentication
 
 | Control | Status | Evidence |
 |---|---|---|
-| Production identity authentication (OIDC/Keycloak) | **Pending External Approval (ADR-104)** | — |
-| The development-period dev-header stub (enabled only by an explicit AUTH_MODE=dev-header; production mode refuses to start) | Implemented | `apps/api/src/http-context.ts`, `apps/api/src/config.ts` |
+| Production identity authentication | **Implemented and deployed** — ADR-104 was ruled as Sign in with Google (D-68), not OIDC/Keycloak. ID tokens are verified explicitly (issuer, audience, `exp` with a skew tolerance, and a nonce bound to the sign-in attempt, compared in constant time); a domain restriction is checked against the `hd` claim Google asserts, never against the text after an `@` | `apps/api/src/auth/google-token.ts`; `apps/api/test/google-token.test.ts` (18 tests); the deployed revision reports `authMode: google` |
+| Session management | Implemented — server-side sessions: a 256-bit random token that is **stored only as a hash**, an explicit TTL, and revocation (`revoked_at` + a reason, checked on every lookup) | `apps/api/src/auth/session-store.ts`; `session-store.integration.test.ts` |
+| The dev-header stub | Implemented, and **off in the deployed environment**. Enabled only by an explicit `AUTH_MODE=dev-header`; with `AUTH_MODE=google` the header is ignored entirely, and authentication strength is read from the session rather than from a header a client can write (D-67) | `apps/api/src/http-context.ts`, `apps/api/src/config.ts`; `auth-mode.test.ts` (19 tests) |
 | Authentication-strength tiers (password / step-up / mfa) carried with the request and adjudicated by the policy engine | Implemented | `packages/policy/src/engine.ts`; e2e: approving without MFA → 401 STEP_UP_AUTHENTICATION_REQUIRED |
 | The MFA-required list (protocol/intervention/finding approval, DatasetLock, SafetyEvent transitions, export approval, approval decisions, break-glass) | Implemented | Each `minimumAuthStrength: 'mfa'` entry in `packages/policy/src/catalogue.ts` |
 
-**The gap (which must not be claimed as met)**: real IdP integration, session management, credential policy and real MFA factors — all to be implemented once ADR-104 is approved.
+**The gap (which must not be claimed as met)**: **real MFA factors.** Three of the four items this paragraph used to list are now met — IdP integration, session management, and credential policy (there are no credentials here to have a policy about: Google holds them, and this platform never sees a password).
+
+What is *not* met is the one that matters most, and the wording has to be exact. A session is marked `mfa` when the account's `hd` claim names a domain listed in `GOOGLE_MFA_DOMAINS` — that is **an assertion that the domain is configured to enforce MFA, not a factor this platform verified at sign-in**. It is inherited trust in someone else's configuration. Ten actions in the catalogue require the `mfa` tier, including approving a protocol version, locking a dataset and break-glass; each of those rests on that inheritance. The distinction is invisible from inside the platform, which is why it is written here: nothing in the token says a second factor was used, and nothing here could check it if it did.
 
 ## 2. Authorisation: Effective Permission
 
@@ -47,7 +50,7 @@
 
 ## 6. Integration and supply chain
 
-- External providers: **object storage has been chosen — Cloudflare R2 (ADR-106, ruled 2026-08-07) — but is not yet connected**; the credentials are not configured and it still goes through the Postgres simulator. **AI / communication / IdP / hosting / malware scanner (ADR-109/111/104/103/126) are still unchosen**: deterministic simulators + an ACL interface, failing closed. The scanner had no number in the ADR register until 2026-08-07, when it was added as ADR-126.
+- External providers: **object storage is connected.** Cloudflare R2 (ADR-106) is configured and in use — the deployed revision reports `fileStorage: object-store`, and the Postgres simulator is no longer the path uploads take there. All four settings or none: the platform refuses to start on a partial configuration rather than silently writing participants' files into a database column, and object keys are opaque ids rather than filenames a participant chose. The key pair lives in Secret Manager; **there is no rotation procedure and no expiry**, and at-rest encryption is a vendor property this project has neither configured nor verified (THREAT_MODEL B4). **Identity and the Knowledge Graph are also connected** (ADR-104 Google, ADR-052/110 the MCP endpoint). **AI / communication / hosting / malware scanner (ADR-109/111/103/126) remain unchosen**: deterministic simulators + an ACL interface, failing closed. The scanner had no number in the ADR register until 2026-08-07, when it was added as ADR-126.
 - Provider callbacks: HMAC signature verification + nonce replay protection (`m16 provider-adapter.ts`, with negative tests: forged, replayed and unknown references all refused).
 - AI governance: the Model Gateway allow-lists aliases; the Tool Gateway refuses 17 Level-5 forbidden actions by name; AI can only produce a SafetySignal and can never produce a SafetyEvent.
 
