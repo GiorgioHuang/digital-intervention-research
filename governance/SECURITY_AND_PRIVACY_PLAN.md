@@ -62,10 +62,10 @@ What is *not* met is the one that matters most, and the wording has to be exact.
 
 ## 8. Action plan (in the order approvals unlock it)
 
-1. ADR-104 approved → OIDC integration (replacing the dev-header stub, keeping the M01 UserAccount authoritative), and real MFA factors.
-2. Hosting platform approved (ADR-103) → encryption at rest and in transit, key management, network boundaries and secret management land.
+1. ~~ADR-104 approved → identity integration~~ **done, and not as OIDC**: ADR-104 was ruled as Sign in with Google (D-68), the M01 UserAccount stayed authoritative, and the dev-header stub is off in the deployed environment. **What is left of this item is real MFA factors** — see §1, where the inherited-from-a-domain distinction is spelled out. This item is kept rather than struck, because striking it would lose the part that has not been done.
+2. Hosting platform approved (ADR-103) → **encryption at rest**, key management and network boundaries land. Two parts of this arrived ahead of the approval rather than through it: transit is HTTPS end to end (Cloud Run, Neon, R2), and secret management is Secret Manager with keyless Workload Identity. Neither was approved; both are simply how the prototype environment was built, which is a different thing and is why the item stays open.
 3. ADR-117 approved → envelope encryption of message bodies implemented.
-4. Provider contracts → the simulators are replaced one at a time by real ACL adapters (the interfaces do not change, see THREAT_MODEL §6).
+4. Provider contracts → the simulators are replaced one at a time by real ACL adapters (the interfaces do not change, see THREAT_MODEL §7).
 5. Penetration testing and an independent security review: carried out once the real infrastructure is ready and before any real recruitment (a readiness-gate item).
 
 **This plan does not change the readiness-gate judgement: recruitment of real participants must not begin before ethics approval and the external approvals above have been obtained.**

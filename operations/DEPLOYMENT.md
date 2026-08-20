@@ -1,16 +1,33 @@
 # DEPLOYMENT
 
-> **This repository is public.** Every value that points at the real
-> deployment — domain names, endpoints, project identifiers — lives in
-> repository Variables (Settings → Secrets and variables → Actions →
-> Variables), and appears in this document only as an angle-bracket
-> placeholder. Think before you paste a real value in here: **anyone can
-> read it.** Values that must stay secret (database connection strings,
-> session secrets, access tokens) belong in Secret Manager or Actions
-> Secrets, not in Variables — Variables are visible to collaborators, and
-> once one is printed into a log it is public.
+> **This repository is written to be publishable, and is private today.**
+> The distinction matters less than it looks: every value that points at
+> the real deployment — domain names, endpoints, project identifiers —
+> lives in repository Variables (Settings → Secrets and variables →
+> Actions → Variables) and appears in this document only as an
+> angle-bracket placeholder, and that holds whatever the repository's
+> visibility is set to. Publishing must be a decision, not an event that
+> retroactively exposes whatever had accumulated in the tree — and a value
+> pasted in here while private is still in the history when it stops
+> being. Think before you paste a real one: **assume anyone can read it.**
+> Values that must stay secret (database connection strings, session
+> secrets, access tokens) belong in Secret Manager or Actions Secrets,
+> not in Variables — Variables are visible to collaborators, and once one
+> is printed into a log it is public.
+>
+> The commit that first applied this discipline said it cleared the file
+> tree only, and that these values remained in the history behind it.
+> **That is no longer true**: a later history rewrite removed them, and
+> the check is repeatable — searching every commit for a client ID, a
+> `.run.app` hostname or a literal `KNOWLEDGE_MCP_URL` now finds only
+> placeholders (`1234.apps.googleusercontent.com`,
+> `knowledge-graph.internal.example`) and localhost. The note is kept
+> rather than deleted because "cleared the tree, not the history" is the
+> normal outcome of this kind of tidying, and a reader who remembers the
+> old wording needs to be told which of the two states this repository is
+> actually in.
 
-> Cloud Run + Neon deployment and CI/CD notes. This follows the pattern already proven by aging-knowledge-graph in the same GCP project (keyless WIF authentication, Secret Manager, `gcloud run deploy --source .`). **This deployment environment carries a conceptual research prototype holding synthetic data only** (ADR-061/062). There are two authentication modes (ADR-104): `AUTH_MODE=google` is real authentication (see "Switching on Sign in with Google" below), and `AUTH_MODE=dev-header` is the development / synthetic-pilot stub, where identity is whatever `x-actor-id` claims it to be. **The current deployment runs on the stub**, and the access-token gate is a compensating boundary, not authentication.
+> Cloud Run + Neon deployment and CI/CD notes. This follows the pattern already proven by aging-knowledge-graph in the same GCP project (keyless WIF authentication, Secret Manager, `gcloud run deploy --source .`). **This deployment environment carries a conceptual research prototype holding synthetic data only** (ADR-061/062). There are two authentication modes (ADR-104): `AUTH_MODE=google` is real authentication (see "Switching on Sign in with Google" below), and `AUTH_MODE=dev-header` is the development / synthetic-pilot stub, where identity is whatever `x-actor-id` claims it to be. **The current deployment runs on `AUTH_MODE=google`** — real authentication; the stub is off and `x-actor-id` is ignored. The access-token gate is still attached as a compensating boundary, and it is not authentication: it is one shared token, so it says a request came from someone who has the token, never who.
 
 ## Architecture
 

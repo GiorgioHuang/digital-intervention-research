@@ -144,7 +144,7 @@ The mobile baseline breakpoint is 360px; every wireframe is expressed as a **sin
 └────────────────────────────────┘
 ```
 
-The reason: THREAT_MODEL §6.1, "no real authentication", is an **inherent high risk**. The banner is the only place that can go on telling an operator "what you are doing right now carries no authentication behind it", and it must not be collapsed for the sake of appearance or shown only on the sign-in screen.
+The reason: THREAT_MODEL §7.1, "no real authentication", was an **inherent high risk** — and is now narrower: authentication is real (ADR-104), and what remains inherent is that MFA strength is inherited from a domain's configuration rather than verified per sign-in. The banner is the only place that can go on telling an operator "what you are doing right now carries no authentication behind it", and it must not be collapsed for the sake of appearance or shown only on the sign-in screen.
 
 ### 1.7 What this file consumes from the design system (A1–A9 / the I series)
 

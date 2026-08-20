@@ -10,7 +10,7 @@ It is a working modular monolith (TypeScript, NestJS, PostgreSQL, React) coverin
 >
 > - Every participant, message, assessment and outcome in it is **synthetic**. Nothing here describes anything that happened to a real person.
 > - It has **no ethics approval** (ATR-025) and must not be used to recruit or study real participants.
-> - Providers are deterministic simulators: AI, communications and malware scanning are stubs, and identity is a development stub unless Google sign-in is configured.
+> - AI, communications and malware scanning are deterministic simulators. Identity, object storage and the Healthy Aging Knowledge Graph are real — the deployed prototype runs on Sign in with Google, and uploaded bytes go to Cloudflare R2. Real infrastructure holding synthetic data is still synthetic data.
 > - Nothing it produces is empirical evidence. What a prototype like this *can* show is whether the model is coherent — whether an invariant survives a case designed to break it, whether a definition stays stable under use.
 
 ## What it is for
@@ -79,13 +79,13 @@ Modules M01–M18: identity and organisation, participant, consent and permissio
 |---|---|
 | deploy it, or understand the environment | `operations/DEPLOYMENT.md` |
 | know what is built, and what is honestly not | `governance/IMPLEMENTATION_BASELINE.md`, then `governance/PILOT_READINESS_REPORT.md` |
-| know why something was built that way | `design/DESIGN_DECISIONS.md` (D-1…D-91) and `governance/IMPLEMENTATION_DECISIONS.md` (the ADR dispositions) |
+| know why something was built that way | `design/DESIGN_DECISIONS.md` (D-1…D-92) and `governance/IMPLEMENTATION_DECISIONS.md` (the ADR dispositions) |
 | change an interface | `design/DESIGN_BRIEF.md`, then the workspace specification in `design/` |
 | understand the research framing | `research/CONCEPTUAL_RESEARCH_PLAN.md` |
 | see where the model contradicts itself | `research/CONTRADICTION_REGISTER.md` |
 | trace a requirement to its code and tests | `traceability.yaml` (+ `research-traceability.yaml`), whose rules are in `governance/TRACEABILITY_IMPLEMENTATION_MATRIX.md` |
 
-`design/DESIGN_DECISIONS.md` is the most useful file for understanding the project's character: ninety-one rulings, most of them recording something that looked finished and was not.
+`design/DESIGN_DECISIONS.md` is the most useful file for understanding the project's character: ninety-two rulings, most of them recording something that looked finished and was not.
 
 Both traceability files stay at the repository root deliberately — the checkers read them from there, and one of them fails on finding a `traceability.yaml` anywhere else, because a misplaced copy once meant an entry was silently never checked.
 
