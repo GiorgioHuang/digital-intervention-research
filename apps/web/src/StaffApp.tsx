@@ -29,9 +29,11 @@ const SCREENS: { key: StaffScreen; label: string }[] = [
 /**
  * Staff workspace shell. The workspace picker is navigation, not
  * authority: every command is judged server-side by the permission
- * engine, so opening a panel grants nothing. Auth strength is chosen at
- * the dev login stub to mirror the X-Auth-Strength header (OIDC pending
- * ADR-104); MFA-tier actions are labelled in each panel.
+ * engine, so opening a panel grants nothing. Authentication strength is
+ * chosen at the dev login stub, mirroring the X-Auth-Strength header the
+ * server reads only in that mode; under `AUTH_MODE=google` (ADR-104) it
+ * comes from the session instead and the picker is not shown. MFA-tier
+ * actions are labelled in each panel either way.
  */
 /**
  * `onExit` is absent when this address serves only the staff workspace:

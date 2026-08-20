@@ -2,7 +2,7 @@
 
 > Covers UI_INVENTORY's **D1–D6 (supporter, 6), E1–E6 (moderation, 6), F1–F6 (safety, 6) and H1–H5 (public and invitation, 5)** — **23 interface units** in total.
 > Source of specification: Doc 20 v1.3 §18–20, §22, §27, §38–40, §92–93, §127–129, §180–204, §224–246, §265–267, §280–282, §285–307, §310–320; DESIGN_BRIEF; THREAT_MODEL; ACCESSIBILITY_TEST_PLAN.
-> Phase framing (ADR-061/062): all synthetic data, simulated providers, and the **dev-header identity stub**. The interfaces described here must present that honestly and **must not imply that ethics approval has been obtained, that real authentication exists, or that real participants are being reached**.
+> Phase framing (ADR-061/062): all synthetic data, simulated providers for AI, communications and malware scanning, and **two identity modes** — real Sign in with Google (ADR-104) in the deployed environment, and the dev-header stub in local development and the test suite. The interfaces described here must present that honestly and **must not imply that ethics approval has been obtained or that real participants are being reached**. This framing used to add "or that real authentication exists", written when the stub was the only mode there was; that instruction is now removed rather than translated forward, because obeying it would make the interface lie in the other direction. **Which mode is running is a fact about the environment, not about the design**, and the interface already says so conditionally: `EpistemicStatus` renders the unverified-identity statement only when `authMode === 'dev-header'`.
 > This file defines only the D/E/F/H groups. The design system foundation (A1–A9) and the cross-screen shared components (I1–I18) are defined in separately delivered files; this file only **consumes** their tokens and components, and the consumption list is in §1.7.
 
 > **On the copy blocks in this file.** The literal copy quoted throughout is a
@@ -173,6 +173,12 @@ This file depends on the tokens and components below; where the foundation names
 - Where do I go when something goes wrong?
 
 **Wireframe (mobile first)**
+
+> **Status (checked 2026-08-16): this banner is not implemented.** `SupporterApp.tsx` renders no phase statement at all — a supporter sees nothing telling them the person they are supporting is synthetic, and nothing about which identity mode is running. The staff workspace has `EpistemicStatus` for this; the supporter workspace has no equivalent.
+>
+> The wireframe is **left as specified rather than corrected down to what exists**, because the spec is the thing that is right here. Editing it to match would quietly lower the requirement, and a reader would then have no way to learn that the honesty statement is missing rather than deliberately absent.
+>
+> `EpistemicStatus` must not simply be dropped in: it is written for the research screens and speaks about outputs, interpretations and findings, which is not what a supporter is looking at. The supporter's version is a shorter claim — that the person and everything about them is synthetic — and the second line above is conditional on the mode, since under `AUTH_MODE=google` it would be false.
 
 ```
 Conceptual research prototype · synthetic data
@@ -1629,7 +1635,16 @@ Reversibility: the suspension can be lifted; **this suspension record cannot be 
 
 > The shared constraint (§22): **these interfaces expose the least information possible.** An unauthenticated surface must never reveal whether a given person is a participant, has been invited, or has activated an account.
 
-### H1 Sign-in / identity entry (currently the dev-header stub + the access-password banner)
+### H1 Sign-in / identity entry (both modes: Sign in with Google, and the dev-header stub)
+
+> **Status (checked 2026-08-16): the migration this section describes has happened.** Everything below was written when the stub was the only mode there was, and it is left in the present tense of that moment rather than rewritten, because the "Now (the stub) / Later (OIDC)" table further down is the interesting part and it can only be read against what it was predicting.
+>
+> What is built: `App.tsx` and `StaffApp.tsx` branch on `authMode`. Under `'google'` they render `GoogleSignIn`; under `'dev-header'` they render the identifiers form and the authentication-strength picker described here. So this is not a screen that was replaced — it is a screen that acquired a second form, and the stub form still looks exactly as specified below when the environment is in that mode.
+>
+> **The structural prediction held.** Each row of that table said the stub's parts were self-contained enough to be swapped whole, and each of them was: the alert block, the identifiers section and the strength picker all sit inside the same `authMode === 'dev-header'` branch, and switching modes removes them together without touching the layout around them. The one correction is the destination: ADR-104 was ruled as **Sign in with Google**, not the OIDC/Keycloak the table names — which changed the button and changed nothing structural.
+>
+> One thing below is now false as an instruction rather than merely dated: "Is what I am typing authentication? (the answer must be: **no**)" is the right answer in the stub and the wrong one under Google. The interface answers it conditionally rather than constantly — `EpistemicStatus` renders the unverified-identity statement only when `authMode === 'dev-header'`.
+
 
 **Purpose / the questions it answers**
 

@@ -3,7 +3,7 @@
 > Scope of delivery: UI_INVENTORY section A (the 9 design-system foundation items, A1–A9) and the cross-screen state foundation in section I (I11 loading/skeleton/empty/offline/syncing/stale, I12 version conflict, I13 error severity).
 > Source of specification: Doc 20 v1.3 §13, §43–56, §224–246, §277–307, §310–320; DESIGN_BRIEF §2/§4/§6; ACCESSIBILITY_TEST_PLAN.
 > This document **changes no code**. §F is a paste-ready CSS draft; landing it is the implementation agent's work.
-> Phase statement: conceptual research prototype (ADR-061/062). All synthetic data, simulated providers, dev-header identity stub. This design system must not imply that ethics approval has been obtained or that real participants are being recruited.
+> Phase statement: conceptual research prototype (ADR-061/062). All synthetic data, simulated providers for AI, communications and malware scanning, and **two identity modes** — real Sign in with Google (ADR-104) in the deployed environment, and the dev-header stub in local development and the test suite. This design system must not imply that ethics approval has been obtained or that real participants are being recruited.
 
 ---
 

@@ -2,7 +2,7 @@
 
 > Scope: the 19 items of UI_INVENTORY.md section B (B1–B7 implemented, B8–B19 not).
 > Specification sources: Doc 20 v1.3 §16, §36, §95–178, §205–220; constraint sources: DESIGN_BRIEF.md, ADR-050, ADR-020, ACCESSIBILITY_TEST_PLAN.md.
-> Phase statement (ADR-061/062): entirely synthetic data, simulated providers, a dev-header identity stub. The consent and approval screens described here are a UX model **of the future system being modelled**, and the interface must not imply that ethics approval has been obtained or that real participants are being recruited.
+> Phase statement (ADR-061/062): entirely synthetic data, simulated providers for AI, communications and malware scanning, and **two identity modes** — real Sign in with Google (ADR-104) in the deployed environment, and the dev-header stub in local development and the test suite. The consent and approval screens described here are a UX model **of the future system being modelled**, and the interface must not imply that ethics approval has been obtained or that real participants are being recruited.
 >
 > This file does not define concrete values for colour, type size or spacing — those belong to the design system foundation (A1–A9). It cites token names, never colour values.
 >
@@ -3178,7 +3178,7 @@ The M11 gateway exists, but a message draft assistant introduces the research-va
 ### C7 (affects B13 and the whole app): how is "who is using this" obtained in assisted mode?
 
 B13's assisted mode requires the interface to show "Nurse Li is using this now" and to record actions as the assistant's. Identity is currently the dev-header stub with no notion of two identities (actor + on-behalf-of). This needs M01 and permission-side support and is not purely a design question.
-*(D-15 ruled a different answer: **read-only assistance**. The assistant never acts for the participant, so no second identity is introduced and "who did what" in the record is the participant throughout — which was already true. What is added is honesty about who is present, with the assistant's name held on the device only.)*
+*(D-15 ruled a different answer: **read-only assistance**. The assistant never acts for the participant, so no second identity is introduced and "who did what" in the record is the participant throughout — which was already true. What is added is honesty about who is present, with the assistant's name held on the device only. The question's premise has also expired: identity is no longer the dev-header stub — the deployed environment runs Sign in with Google (ADR-104). That changes nothing about this ruling, because D-15's answer never depended on the stub; it is recorded so the question is not re-opened on a fact that is no longer true.)*
 
 ### C8 (affects B12/B18): the exact scope of "governance records are kept" after a participant asks for deletion
 

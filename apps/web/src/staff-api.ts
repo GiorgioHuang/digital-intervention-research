@@ -3,10 +3,15 @@ import { accessTokenHeader, platformClientHeader, raiseApiError, type ApiError }
 /**
  * Staff-side HTTP client. Same boundary rules as the participant client:
  * HTTP only, no module imports. The UI never decides authority — every
- * command is judged by the server's permission engine; this client just
- * forwards the dev-header identity and the authentication strength so
- * MFA-tier actions are honestly represented (production OIDC pending
- * ADR-104).
+ * command is judged by the server's permission engine. This client sends
+ * `x-actor-id` and `x-auth-strength` on every request in both modes; what
+ * differs is the far end. Under the dev-header stub the server reads them,
+ * which is how MFA-tier actions stay honestly represented in local
+ * development. Under `AUTH_MODE=google` (ADR-104) the server reads
+ * neither — identity and strength come from the session — so a client
+ * claiming `mfa` for itself gets nothing. Identity and strength are read
+ * together or not at all, deliberately (D-67): a strength check that
+ * outlived the stub would look present and be worthless.
  */
 export interface OrganisationItem {
   organisationId: string;

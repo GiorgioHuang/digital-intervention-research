@@ -1,8 +1,10 @@
 /**
  * Thin HTTP client for the platform API (Doc 15 conventions). The web app
  * never imports module packages — it talks to the API boundary only.
- * Dev-header auth mirrors the API's development stub (production OIDC
- * pending ADR-104).
+ * `x-actor-id` goes on every request, and whether it means anything is the
+ * server's decision, not this client's: under `AUTH_MODE=dev-header` the
+ * server reads it, and under `AUTH_MODE=google` (ADR-104, the deployed
+ * environment) it is ignored in favour of the session.
  */
 export interface ApiError {
   code: string;

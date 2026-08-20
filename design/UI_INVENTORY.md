@@ -134,7 +134,7 @@
 
 | # | Screen | Doc | Status |
 |---|---|---|---|
-| H1 | Sign-in / identity entry (currently the dev-header stub + the access-password banner) | §22, ADR-104 | ✅ Implemented (as a stub) |
+| H1 | Sign-in / identity entry (Sign in with Google, plus the access-token banner; the dev-header stub remains for local development) | §22, ADR-104 | ✅ Implemented — `GoogleSignIn.tsx`; no longer "as a stub" (corrected 2026-08-16) |
 | H2 | The secure invitation landing page | §22, §92 | Not implemented |
 | H3 | Account activation | §22, §93 | Not implemented |
 | H4 | Public study information and support contacts | §22 | Not implemented |

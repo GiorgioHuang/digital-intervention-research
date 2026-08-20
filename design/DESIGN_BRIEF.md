@@ -65,4 +65,4 @@ The interface must distinguish and make visible the labels: observation / infere
 
 ## 8. A reminder about scope
 
-This is currently a conceptual research prototype (ADR-061/062): entirely synthetic data, simulated providers, a dev-header identity stub. The consent and approval screens are a UX model **of the future system being modelled**; present them faithfully in the design, but they must not imply that ethics approval has been obtained or that real participants are being recruited.
+This is currently a conceptual research prototype (ADR-061/062): entirely synthetic data, simulated providers for AI, communications and malware scanning, and **two identity modes** — real Sign in with Google (ADR-104) in the deployed environment, and the dev-header stub in local development and the test suite. The consent and approval screens are a UX model **of the future system being modelled**; present them faithfully in the design, but they must not imply that ethics approval has been obtained or that real participants are being recruited.

@@ -10,7 +10,7 @@
 
 ## 0. How to read this, and the statement of scope
 
-**The facts of the phase (which the interface must tell the truth about)**: this is currently a conceptual research prototype (ADR-061/062). The participants are synthetic personas, the data is synthetic, the providers are simulators, and identity is the dev-header stub. Therefore:
+**The facts of the phase (which the interface must tell the truth about)**: this is currently a conceptual research prototype (ADR-061/062). The participants are synthetic personas, the data is synthetic, AI, communications and malware scanning are simulators, and there are **two identity modes** — real Sign in with Google (ADR-104) in the deployed environment, and the dev-header stub in local development and the test suite. Therefore:
 
 - **Every number, every table and every analysis output** that appears in the researcher workspace must carry a data-source marking: `[synthetic data]`.
 - No screen may use wording implying that ethics approval has been obtained or that real participants are being recruited.

@@ -29,8 +29,13 @@ import { applyPreferences, loadPreferences } from './preferences.js';
  * actions — never a feed, never engagement-driven. Consent controls and
  * safety entries stay reachable from every screen via the persistent nav.
  *
- * Session comes from the dev-header stub for now (OIDC pending ADR-104):
- * the participant enters the identifiers issued during synthetic setup.
+ * The session comes from whichever mode the environment is in, and this
+ * component asks rather than assumes: `authMode === 'google'` renders Sign
+ * in with Google (ADR-104, the deployed environment), `'dev-header'` renders
+ * the synthetic-setup identifiers. This comment used to say the stub was
+ * the only path and OIDC was pending — it stayed that way after both had
+ * stopped being true, which is why it now describes the branch rather than
+ * the moment.
  */
 type Screen =
   | 'home'
