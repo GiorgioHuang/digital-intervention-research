@@ -79,13 +79,13 @@ Modules M01–M18: identity and organisation, participant, consent and permissio
 |---|---|
 | deploy it, or understand the environment | `operations/DEPLOYMENT.md` |
 | know what is built, and what is honestly not | `governance/IMPLEMENTATION_BASELINE.md`, then `governance/PILOT_READINESS_REPORT.md` |
-| know why something was built that way | `design/DESIGN_DECISIONS.md` (D-1…D-92) and `governance/IMPLEMENTATION_DECISIONS.md` (the ADR dispositions) |
+| know why something was built that way | `design/DESIGN_DECISIONS.md` (D-1…D-93) and `governance/IMPLEMENTATION_DECISIONS.md` (the ADR dispositions) |
 | change an interface | `design/DESIGN_BRIEF.md`, then the workspace specification in `design/` |
 | understand the research framing | `research/CONCEPTUAL_RESEARCH_PLAN.md` |
 | see where the model contradicts itself | `research/CONTRADICTION_REGISTER.md` |
 | trace a requirement to its code and tests | `traceability.yaml` (+ `research-traceability.yaml`), whose rules are in `governance/TRACEABILITY_IMPLEMENTATION_MATRIX.md` |
 
-`design/DESIGN_DECISIONS.md` is the most useful file for understanding the project's character: ninety-two rulings, most of them recording something that looked finished and was not.
+`design/DESIGN_DECISIONS.md` is the most useful file for understanding the project's character: ninety-three rulings, most of them recording something that looked finished and was not.
 
 Both traceability files stay at the repository root deliberately — the checkers read them from there, and one of them fails on finding a `traceability.yaml` anywhere else, because a misplaced copy once meant an entry was silently never checked.
 
@@ -119,6 +119,7 @@ Beyond build, typecheck, lint and the test suites:
 - **Deprecated event names** (`MatchCompleted`, `MessageDeliveryConfirmed`, `ActorBlocked`, `UserReported`, `SafetyEventDetected`, `DatasetLockConfirmed`, …) fail lint — only canonical names are emitted.
 - **Traceability.** An entry marked `implemented` or `verified` must point at code and test files that exist, and a `traceability.yaml` outside the root is an error.
 - **Migration drill.** Up → down → up against a fresh database.
+- **Documentation references.** A document may say a thing is unbuilt, but it may not point at a file that is not there — and a test asserts CI still runs this check, and both traceability checks, in the job the deploy is gated on.
 - **Design-system rules.** Measured contrast ratios, no two semantic colour families sharing a value, every `data-*` mode having a writer, tables inside a scroll container, and confirmation-tier actions having a real confirmation.
 - **Deployment guards.** The `workflow_run` trigger's fork conditions and the one-deploy-at-a-time concurrency group are each asserted separately, because an `if:` is the easiest thing to lose in a refactor and losing it turns nothing red.
 

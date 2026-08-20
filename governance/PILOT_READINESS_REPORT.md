@@ -2,10 +2,10 @@
 
 > Status as of 2026-08-16. **Conclusion: synthetic-pilot validation passed; readiness for a formal pilot = Pending External Approval. This system has no ethics approval and must not be used to recruit real participants (ATR-025).**
 
-## What is in place (code + test evidence; see the 154 entries in traceability.yaml)
+## What is in place (code + test evidence; see the 155 entries in traceability.yaml)
 
 - All sixteen module domains M01–M13 and M16–M18 are Implemented; M14 reporting / controlled export / portability export is Implemented (external submission explicitly deferred); M15 approval / governance retention / break-glass is Implemented.
-- 822 deterministic tests across 17 packages (CI runs the full suite on every push, against a fresh database plus a migration drill up→down→up).
+- 828 deterministic tests across 26 packages (86 test files, counted 2026-08-16) (CI runs the full suite on every push, against a fresh database plus a migration drill up→down→up).
 - Every critical invariant has code and test evidence: the seven elements of Effective Permission, granular consent and the propagation of withdrawal, immutability of protocols / interventions / evidence snapshots / dataset locks, AI Draft ≠ Testimony, Block failing closed, independent MatchDecision, single consumption of MutualAcceptance, CommunicationBasis, the two message state machines and exact SendConfirmation, callback authentication and replay protection, human authority over SafetySignal, the complete list of Level-5 AI prohibitions, Output ≠ Interpretation ≠ Finding, and separation of duties (self-approval forbidden at two layers).
 - The synthetic pilot's end-to-end main line plus the scenario matrix (see SYNTHETIC_PILOT_PLAN.md).
 - **A deployed environment that is no longer a stub in two of its most load-bearing places.** Sign in with Google (ADR-104) is live — the deployed revision reports `authMode: google`, so the dev-header stub, where identity was whatever a header said, is off. Cloudflare R2 (ADR-106) is connected — it reports `fileStorage: object-store`, so uploaded bytes no longer go into the Postgres column whose own migration calls it a simulator. Both are asserted by the deploy's smoke step against the *running* revision rather than inferred from what the workflow attached, because the settings can be right while an older revision is still serving.

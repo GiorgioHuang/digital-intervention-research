@@ -23,6 +23,7 @@
     "dev:deps:down": "docker compose down",
     "drill:backup": "node tools/backup-restore-drill.mjs",
     "traceability:research": "node tools/check-research-traceability.mjs",
+  "docs:check": "node tools/check-doc-references.mjs",
     "seed:demo": "pnpm --filter @platform/synthetic-pilot run seed:demo"
   },
   "devDependencies": {

@@ -539,7 +539,13 @@ The full rules are in §B.4.
 
 ### A.9 The icon system (A8; Doc 20 §320)
 
-**No icon library is introduced** (dependency constraints + size + offline use). The approach: inline SVG in `apps/web/src/components/icons.tsx`, with `viewBox="0 0 24 24"`, `stroke="currentColor"`, `stroke-width="2"`, `fill="none"`, `aria-hidden="true"`, `focusable="false"`.
+> **Status (checked 2026-08-16): specified, not implemented.** There is no icon anywhere in the interface — `apps/web/src` contains **zero** `<svg>` elements, there is no `icons.tsx` under `apps/web/src/components/` and never has been, and no component uses the `.icon` class. What does exist is dead: three `--icon-size-*` tokens and two `.icon` rules in the stylesheet that nothing reads.
+>
+> This section is kept, because the reasoning below is the part worth keeping — particularly the ruling that no icon may appear without a text label, which is a constraint on what may be built rather than a description of what was. But it read as "here is how icons are done here", present tense, and a reader would have gone looking for a file that was never written. **An interface with no icons is not a defect**; describing one that does not exist is.
+>
+> The dead CSS is left in place rather than deleted, on the narrow ground that a design token costs nothing and this specification is still live. That is the *only* reason, and it does not extend to the components: if this is built, it starts from the shapes table below, not from the two orphaned rules.
+
+**No icon library is introduced** (dependency constraints + size + offline use). The approach when this is built: inline SVG in a new `icons.tsx` under `apps/web/src/components/`, with `viewBox="0 0 24 24"`, `stroke="currentColor"`, `stroke-width="2"`, `fill="none"`, `aria-hidden="true"`, `focusable="false"`.
 
 | Token | Value | Notes |
 |---|---|---|

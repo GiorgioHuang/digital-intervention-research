@@ -60,6 +60,12 @@ jobs:
       - name: Research traceability matrix check
         run: pnpm traceability:research
 
+      # A document may say a thing is unbuilt; it may not point at a file
+      # that is not there. Found DESIGN_SYSTEM describing an icon system,
+      # in the present tense, around a file that had never existed.
+      - name: Documentation reference check
+        run: pnpm docs:check
+
       - name: Migration drill (up → down-all → up)
         run: |
           pnpm migrate

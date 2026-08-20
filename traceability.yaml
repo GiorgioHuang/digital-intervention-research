@@ -2269,3 +2269,40 @@
   tests:
     - packages/database/test/deploy-smoke.test.ts
   status: implemented
+
+- implementation_id: IMP-DOCS-REFERENCE-CHECK-001
+  module: PLATFORM
+  summary: >-
+    A document may say a thing is unbuilt; it may not point at a file that is not there.
+    DESIGN_SYSTEM section A.9 described the icon system in the present tense - "the
+    approach: inline SVG in apps/web/src/components/icons.tsx" - around a file that has
+    never existed. There is no icon anywhere in the interface: zero svg elements in
+    apps/web/src, no component using the .icon class, and three icon-size tokens plus two
+    .icon rules in the stylesheet that nothing reads. The section had read that way for as
+    long as it had existed and nothing could say so, because a broken path in prose is
+    invisible to every check a repository normally has - a reader would have gone looking
+    for the file rather than for the claim. An interface with no icons is not a defect;
+    describing one that does not exist is. The checker reads every markdown file in
+    governance, research, design and operations plus the README, extracts backticked file
+    paths whose first segment is one of this repository's own top-level directories, and
+    fails on any that does not exist. Bare filenames are skipped deliberately - a name in
+    a sentence asserts nothing about location - and docs/ is skipped entirely because it is
+    the upstream Handbook. Paths belonging to the audited external knowledge-graph
+    repository are excepted by exact path, each carrying its reason, because an exception
+    list that only says skip becomes a place to hide a real break. Wired into CI, and a
+    companion test asserts that CI actually runs this and both traceability checks inside
+    the job the deploy is gated on, since deleting a run: line removes a check and turns
+    nothing red. Mutations verified: the original icons.tsx claim restored, a
+    doc-referenced source file renamed, each of the three check steps deleted in turn, the
+    docs step moved to another job, and the package.json script removed.
+  trace_ids: [ATR-003]
+  adr_ids: [ADR-061, ADR-062]
+  docs:
+    - "design/DESIGN_DECISIONS.md D-93"
+  code:
+    - tools/check-doc-references.mjs
+    - .github/workflows/ci.yml
+    - package.json
+  tests:
+    - packages/database/test/ci-checks.test.ts
+  status: implemented
