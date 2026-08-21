@@ -174,11 +174,11 @@ This file depends on the tokens and components below; where the foundation names
 
 **Wireframe (mobile first)**
 
-> **Status (checked 2026-08-16): this banner is not implemented.** `SupporterApp.tsx` renders no phase statement at all — a supporter sees nothing telling them the person they are supporting is synthetic, and nothing about which identity mode is running. The staff workspace has `EpistemicStatus` for this; the supporter workspace has no equivalent.
+> **Status: built 2026-08-21, and it turned up something larger on the way.** `SyntheticNotice` now renders in the supporter workspace, signed in and signed out, in both modes. It is a new component rather than `EpistemicStatus` reused: that one answers "which kind of knowledge is this?" and speaks about outputs, interpretations and findings, which is what a researcher is looking at. A supporter is looking at a person, and the claim they need is smaller — that the person and everything about them is simulated. The second line, about nobody being verified, is conditional on `authMode`; under Google it would be false.
 >
-> The wireframe is **left as specified rather than corrected down to what exists**, because the spec is the thing that is right here. Editing it to match would quietly lower the requirement, and a reader would then have no way to learn that the honesty statement is missing rather than deliberately absent.
+> **The larger thing: this workspace could not sign anybody in at all under `AUTH_MODE=google`.** It had no notion of an authentication mode — it took a typed actor id and sent it as `x-actor-id`, which is the stub's way in and the only one it had. The server ignores that header outside the stub, so every request from here answered 401 in the deployed environment. Meanwhile the participant workspace was actively sending supporters this way, by name: *"if you were invited to support someone, use the supporter entrance."* And supporters are invited **by Google account address** — they were always meant to sign in like everybody else. It now asks the server which entrance it has and draws that one, the same single pass the participant workspace makes.
 >
-> `EpistemicStatus` must not simply be dropped in: it is written for the research screens and speaks about outputs, interpretations and findings, which is not what a supporter is looking at. The supporter's version is a shorter claim — that the person and everything about them is synthetic — and the second line above is conditional on the mode, since under `AUTH_MODE=google` it would be false.
+> The heading also said "Supporter workspace (development environment)" unconditionally, including where it was not the development environment.
 
 ```
 Conceptual research prototype · synthetic data

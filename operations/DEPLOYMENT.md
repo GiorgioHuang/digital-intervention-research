@@ -217,6 +217,38 @@ This is not a defect: the reason that gate exists in the first place is set out 
 Set `AUTH_MODE` back to `dev-header`; the data is unaffected. Google links that have been established, invitations and sessions all stay in the database, and switching back to `google` makes them effective again. Do not expose the stub mode publicly.
 
 
+## Rotating a secret
+
+Nothing in this repository described how to replace a secret, for any of the five it holds. THREAT_MODEL recorded the absence for the R2 key pair; it was never R2-specific — `HADI_DATABASE_URL`, `HADI_SESSION_SECRET` and `HADI_ACCESS_TOKEN` were in the same state, and writing an R2-only procedure would have closed one row while leaving the same hole open beside it.
+
+**The common shape.** Secret Manager keeps versions, and the deploy attaches each secret as `NAME:latest`. Adding a version is therefore not the switch — a running revision keeps serving what it started with. The switch is a new revision:
+
+```bash
+printf '%s' "$NEW_VALUE" | gcloud secrets versions add HADI_<NAME> --project "$PROJECT" --data-file=-
+# then deploy: push to main, or run the Deploy workflow by hand (workflow_dispatch)
+```
+
+Never `echo` a secret without `-n`, and prefer `printf` — a trailing newline becomes part of the value, and the failure it produces (a credential that is right except for one invisible byte) is one of the more expensive hours available.
+
+Disable the old version only after the new revision is serving and verified. `gcloud secrets versions disable` is reversible; `destroy` is not.
+
+**What each one costs while it changes.**
+
+| Secret | Overlap possible? | What breaks, and for how long |
+|---|---|---|
+| `HADI_R2_ACCESS_KEY_ID` + `HADI_R2_SECRET_ACCESS_KEY` | **Yes** — Cloudflare allows several API tokens at once | Nothing, if the new token is created before the old is revoked. The two secrets are **one credential**: add both versions, then deploy once. A revision holding one new half and one old half cannot start at all — the all-four-or-none rule is a safety net here rather than a hazard |
+| `HADI_SESSION_SECRET` | No | Only sign-ins **already in progress**. It signs sign-in nonces and nothing else; sessions are rows keyed by a hash of a random token and do not depend on it, so nobody signed in is logged out. A nonce lives 300 seconds (`NONCE_TTL_SECONDS`), so the blast radius is people who pressed "Sign in with Google" in the last five minutes and have not come back yet. They retry and it works |
+| `HADI_ACCESS_TOKEN` | **No** — the middleware is built with one string | Everybody holding the old token is locked out the moment the new revision serves. There is no grace period, and the platform cannot give one without accepting two tokens. Tell the holders first; this is the one that needs a clock |
+| `HADI_DATABASE_URL` | Not with one role | The deploy runs migrations with it *before* the new revision starts, so a wrong value fails the deploy rather than the service — which is the good case. For a true overlap, create a second Neon role, move to it, then retire the first |
+
+**Verification, and the thing it does not verify.**
+
+The deploy's smoke step checks liveness, readiness, the SPA shell, the access-token gate, and that the revision's reported `fileStorage` matches what was attached. That is enough for four of the five.
+
+**It is not enough for the R2 pair, and the reason matters.** `/ready` derives `fileStorage` from the blob store's *description string*, which is built from configuration — it never calls R2. So a rotation to a wrong, expired or revoked R2 credential **deploys green**: the smoke test passes, `/ready` says `object-store`, and the first person to discover it is the first participant to upload a photograph. This is the "configured rather than exercised" gap in the limitations above, and rotation is where it bites hardest, because rotation is exactly when the credential is most likely to be wrong.
+
+Until that is closed, an R2 rotation is not finished when the deploy goes green. Somebody has to upload a file through the interface and read it back. Write down that you did.
+
 ## Demo accounts (synthetic data)
 
 The deployment's database starts empty — the dev-header sign-in stub requires the actor/participant to genuinely exist in the database. Run the seed once:

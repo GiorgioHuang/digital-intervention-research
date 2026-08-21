@@ -1,9 +1,12 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { deliveryStatus } from './status.js';
 import { accessTokenHeader, PlatformApiError, raiseApiError, type ApiError } from './api.js';
 import { staffActionError } from './errors.js';
 import { nameOrGap } from './names.js';
 import { AccessTokenGate } from './components/AccessTokenGate.js';
+import { GoogleSignIn } from './components/GoogleSignIn.js';
+import { SyntheticNotice } from './components/SyntheticNotice.js';
+import { completeRedirect, currentSession, detectAuthMode, type AuthMode } from './auth.js';
 
 interface SupporterSession {
   actorId: string;
@@ -120,6 +123,23 @@ interface SupporterMessage {
 export function SupporterApp({ onExit }: { onExit: () => void }) {
   const [session, setSession] = useState<SupporterSession | null>(null);
   const [actorId, setActorId] = useState('');
+  /**
+   * How people sign in here, asked of the server (ADR-104).
+   *
+   * This workspace had no such question at all: it took a typed actor id
+   * and put it in `x-actor-id`, which is the dev-header stub's way in and
+   * the only way in it had. Under `AUTH_MODE=google` the server ignores
+   * that header entirely, so every request from here answered 401 in the
+   * deployed environment — while the participant workspace was actively
+   * sending supporters this way ("if you were invited to support someone,
+   * use the supporter entrance"). Supporters are invited by Google account
+   * address; they were always meant to sign in like everybody else.
+   *
+   * `undefined` while the question is outstanding, so neither entrance is
+   * shown and then replaced.
+   */
+  const [authMode, setAuthMode] = useState<AuthMode | undefined>(undefined);
+  const [signInProblem, setSignInProblem] = useState('');
   const [form, setForm] = useState({ contentText: '' });
   const [mine, setMine] = useState<Contribution[] | null>(null);
   const [report, setReport] = useState({ actorId: '', description: '' });
@@ -188,32 +208,76 @@ export function SupporterApp({ onExit }: { onExit: () => void }) {
     }
   };
 
+  /**
+   * Sign-in, on the way in and on the way back from Google — the same one
+   * pass the participant workspace makes, and for the same reason: which
+   * entrance this deployment has, whether this page load is the return leg,
+   * and whether there is already a session are one question, not three.
+   */
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const detected = await detectAuthMode();
+      if (cancelled) return;
+      setAuthMode(detected);
+      if (detected !== 'google') return;
+
+      const redirect = await completeRedirect();
+      if (cancelled) return;
+      if (redirect?.error !== undefined) setSignInProblem(redirect.error);
+      const found = redirect?.session ?? (await currentSession().catch(() => undefined));
+      if (cancelled || found === undefined) return;
+      const s = { actorId: found.actorId };
+      setSession(s);
+      void run(() => loadPeople(s), '');
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   if (session === null) {
     return (
       <main>
-        <h1>Supporter workspace (development environment)</h1>
+        {/* The heading no longer says "development environment"
+            unconditionally: it said that in the deployed environment too,
+            where it is not true. */}
+        <h1>Supporter workspace</h1>
+        <SyntheticNotice authMode={authMode} />
         <p>
           You can propose additions to the life story of someone close to you. Whether to accept is always their
           decision, and anything accepted is recorded as your contribution — it does not become their own testimony.
         </p>
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (actorId === '') return;
-            const s = { actorId };
-            setSession(s);
-            void run(() => loadPeople(s), '');
-          }}
-        >
-          <p>
-            <label htmlFor="sup-actor">Account identifier (actor id)</label>{' '}
-            <input id="sup-actor" value={actorId} onChange={(e) => setActorId(e.target.value)} />
-          </p>
-          <button type="submit">Continue</button>{' '}
+        {signInProblem !== '' && <p role="alert">{signInProblem}</p>}
+        {authMode === undefined && <p>One moment…</p>}
+        {authMode === 'google' && (
+          <GoogleSignIn
+            description="Use the Google account the invitation was sent to."
+            onError={setSignInProblem}
+          />
+        )}
+        {authMode === 'dev-header' && (
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (actorId === '') return;
+              const s = { actorId };
+              setSession(s);
+              void run(() => loadPeople(s), '');
+            }}
+          >
+            <p>
+              <label htmlFor="sup-actor">Account identifier (actor id)</label>{' '}
+              <input id="sup-actor" value={actorId} onChange={(e) => setActorId(e.target.value)} />
+            </p>
+            <button type="submit">Continue</button>
+          </form>
+        )}
+        <p>
           <button type="button" onClick={onExit}>
             Back
           </button>
-        </form>
+        </p>
       </main>
     );
   }
@@ -221,6 +285,7 @@ export function SupporterApp({ onExit }: { onExit: () => void }) {
   return (
     <main>
       <h1>Supporter workspace</h1>
+      <SyntheticNotice authMode={authMode} />
       <AccessTokenGate />
       {/*
         A supporter used to have to type an archive identifier they could

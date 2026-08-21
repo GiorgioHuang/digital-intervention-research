@@ -2306,3 +2306,60 @@
   tests:
     - packages/database/test/ci-checks.test.ts
   status: implemented
+
+- implementation_id: IMP-WEB-SUPPORTER-AUTH-001
+  module: WEB
+  summary: >-
+    The supporter workspace could not sign anybody in under real authentication. It had
+    no notion of an authentication mode at all - it took a typed actor id and sent it as
+    x-actor-id, which is the dev-header stub's way in and the only one it had. The server
+    reads that header only under the stub (stub ? header('x-actor-id') : undefined, D-67),
+    so in the deployed environment every request from this workspace answered 401. The
+    participant workspace was meanwhile sending supporters here by name - if you were
+    invited to support someone, use the supporter entrance - and supporters are invited by
+    Google account address, so they were always meant to sign in like everybody else. It
+    now asks the server which entrance the deployment has and draws that one, in the same
+    single pass the participant workspace makes, because which entrance exists, whether
+    this page load is the return leg of a sign-in, and whether there is already a session
+    are one question rather than three. The heading also called itself the development
+    environment unconditionally, including where it was not. Found while building the
+    phase notice the specification had shown for this screen all along.
+  trace_ids: [ATR-005]
+  adr_ids: [ADR-104]
+  docs:
+    - "design/DESIGN_DECISIONS.md D-96"
+  code:
+    - apps/web/src/SupporterApp.tsx
+  tests:
+    - apps/web/test/moderator-supporter.test.tsx
+  status: implemented
+
+- implementation_id: IMP-WEB-SUPPORTER-SYNTHETIC-NOTICE-001
+  module: WEB
+  summary: >-
+    A supporter was told nothing about where they were. Somebody could be invited by a
+    person they know, sign in, read a life story and write into it, and never learn that
+    the person is a synthetic persona and the story is not anyone's. The specification had
+    shown a banner on this screen from the beginning; it had simply never been built, and
+    nothing could report that because a wireframe has no failing state. SyntheticNotice
+    renders signed in and signed out, in both authentication modes. It is a new component
+    rather than EpistemicStatus reused - that one answers which kind of knowledge is this
+    and speaks about outputs, interpretations, findings and reports, because that is what a
+    researcher is looking at; a supporter is looking at a person, and putting the
+    researcher's paragraphs in front of them would bury the smaller claim they actually
+    need. The sentence about nobody being verified is conditional on authMode and must be:
+    under Google the people signing in are real and only the data is synthetic, which is
+    the claim that must not weaken by being bundled with one that is false. Four mutations
+    verified red - the notice removed, the unverified sentence made unconditional, the
+    mode branch collapsed back to the identifiers form, and the heading's unconditional
+    development environment restored.
+  trace_ids: [ATR-025]
+  adr_ids: [ADR-061, ADR-062]
+  docs:
+    - "design/DESIGN_DECISIONS.md D-96"
+  code:
+    - apps/web/src/components/SyntheticNotice.tsx
+    - apps/web/src/SupporterApp.tsx
+  tests:
+    - apps/web/test/moderator-supporter.test.tsx
+  status: implemented

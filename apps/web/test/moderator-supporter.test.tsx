@@ -38,6 +38,13 @@ function stubSupporterFetch(
   vi.stubGlobal(
     'fetch',
     vi.fn(async (path: string, init?: RequestInit) => {
+      // Auth plumbing, answered but not recorded: `calls` exists to assert
+      // on what this workspace asks the domain for, and the entrance
+      // question is not one of those. Recorded, it would silently shift
+      // every positional assertion below by one.
+      if (path === '/health') {
+        return new Response(JSON.stringify({ status: 'ok', authMode: 'dev-header' }), { status: 200 });
+      }
       calls.push({
         path,
         ...(init?.body === undefined ? {} : { body: JSON.parse(init.body as string) as Record<string, unknown> }),
@@ -67,7 +74,14 @@ function stubSupporterFetch(
 }
 
 async function signIn() {
-  render(<SupporterApp onExit={() => undefined} />);
+  // The workspace now asks the server which entrance it has before drawing
+  // one (ADR-104), so the identifiers form is not on screen until that
+  // answer lands. With /health unstubbed the answer is unreadable, which
+  // `detectAuthMode` reads as the dev-header stub — the mode these cases
+  // are about.
+  await act(async () => {
+    render(<SupporterApp onExit={() => undefined} />);
+  });
   fireEvent.change(screen.getByLabelText(/Account identifier/), { target: { value: 'actor_sup' } });
   await act(async () => {
     fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
@@ -98,7 +112,9 @@ describe('supporter workspace (contribution ≠ testimony)', () => {
         },
       ],
     });
-    render(<SupporterApp onExit={() => undefined} />);
+    await act(async () => {
+      render(<SupporterApp onExit={() => undefined} />);
+    });
     // Honest framing before login: the participant decides.
     expect(screen.getByText(/always their\s+decision/)).toBeTruthy();
     fireEvent.change(screen.getByLabelText(/Account identifier/), { target: { value: 'actor_sup' } });
@@ -271,5 +287,110 @@ describe('supporter workspace (contribution ≠ testimony)', () => {
     );
     expect(status).toBeTruthy();
     expect(status.textContent).not.toContain('Provider Accepted');
+  });
+});
+
+/**
+ * The supporter workspace under real authentication.
+ *
+ * It had no notion of an authentication mode at all: it took a typed actor
+ * id and sent it as `x-actor-id`, which is the dev-header stub's way in
+ * and the only one it had. Under `AUTH_MODE=google` the server ignores
+ * that header entirely (`stub ? header('x-actor-id') : undefined`), so
+ * every request from this workspace answered 401 in the deployed
+ * environment — while the participant workspace was actively sending
+ * supporters here: "if you were invited to support someone, use the
+ * supporter entrance". Supporters are invited by Google account address,
+ * so they were always meant to sign in like everyone else.
+ */
+describe('supporter workspace: how somebody gets in', () => {
+  beforeEach(() => {
+    (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+  });
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllGlobals();
+  });
+
+  const stubMode = (authMode: 'google' | 'dev-header') =>
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (path: string) => {
+        if (path === '/health') {
+          return new Response(JSON.stringify({ status: 'ok', authMode }), { status: 200 });
+        }
+        // Nobody is signed in yet, which is the state this is about.
+        if (path === '/v1/auth/session') {
+          return new Response(JSON.stringify({ error: {} }), { status: 401 });
+        }
+        return new Response(JSON.stringify({ data: [] }), { status: 200 });
+      }),
+    );
+
+  const renderApp = async () => {
+    await act(async () => {
+      render(<SupporterApp onExit={() => undefined} />);
+    });
+  };
+
+  it('offers Google sign-in, and never the header identifiers, when the deployment uses Google', async () => {
+    stubMode('google');
+    await renderApp();
+    expect(screen.getByRole('button', { name: /Sign in with Google/ })).toBeTruthy();
+    // The typed identifier is the defect, not merely a second option: the
+    // server ignores it in this mode, so a supporter could fill it in,
+    // press Continue and be shown an empty workspace with no idea why.
+    expect(screen.queryByLabelText(/Account identifier/)).toBeNull();
+  });
+
+  it('still offers the header identifiers under the development stub', async () => {
+    stubMode('dev-header');
+    await renderApp();
+    expect(screen.getByLabelText(/Account identifier/)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /Sign in with Google/ })).toBeNull();
+  });
+
+  /**
+   * A supporter could be invited by somebody they know, sign in, read a
+   * life story and write into it, and never learn that the person is a
+   * synthetic persona. The staff workspace has said so from the start.
+   */
+  it('says the people here are synthetic, in both modes and before signing in', async () => {
+    for (const mode of ['google', 'dev-header'] as const) {
+      stubMode(mode);
+      await renderApp();
+      const notice = screen.getByRole('note', { name: /About this workspace/ });
+      expect(notice.textContent).toContain('[synthetic data]');
+      expect(notice.textContent).toMatch(/simulated/);
+      cleanup();
+    }
+  });
+
+  /**
+   * The unverified-identity sentence is conditional, and must be. Under
+   * Google the people signing in are real; only the data is synthetic, and
+   * that is the claim that must not weaken by being bundled with one that
+   * is false.
+   */
+  it('claims nobody is verified only under the stub', async () => {
+    stubMode('dev-header');
+    await renderApp();
+    expect(screen.getByRole('note', { name: /About this workspace/ }).textContent).toMatch(
+      /nobody signing in has been verified/,
+    );
+    cleanup();
+
+    stubMode('google');
+    await renderApp();
+    expect(screen.getByRole('note', { name: /About this workspace/ }).textContent).not.toMatch(
+      /nobody signing in has been verified/,
+    );
+  });
+
+  /** It said "(development environment)" in the deployed environment too. */
+  it('does not call itself the development environment when it is not', async () => {
+    stubMode('google');
+    await renderApp();
+    expect(screen.getByRole('heading', { level: 1 }).textContent).not.toMatch(/development environment/i);
   });
 });
