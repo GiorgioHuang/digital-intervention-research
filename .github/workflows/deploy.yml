@@ -282,9 +282,17 @@ jobs:
             --format='value(status.url)')
           # Masked, and kept out of the run summary. This repository is
           # public, and so are its workflow logs and summaries: printing the
-          # service URL there publishes the deployment address to anyone who
-          # opens a build. The same `::add-mask::` treatment the database URL
-          # already gets above.
+          # service URL there publishes it to anyone who opens a build. The
+          # same `::add-mask::` treatment the database URL already gets.
+          #
+          # Worth being exact about which address this is, because the
+          # repository's own About box now carries the deployment's custom
+          # domain and that could be read as making this pointless. It is
+          # not the same address. What is masked here is the Cloud Run
+          # `*.run.app` URL, which reaches the service directly — past
+          # whatever sits in front of the custom domain. Publishing where
+          # people are invited to go is a decision; publishing the way
+          # around the front door is not the same decision.
           echo "::add-mask::$URL"
           echo "Deployed revision answered; URL withheld from public logs." >> "$GITHUB_STEP_SUMMARY"
 

@@ -150,8 +150,13 @@ describe('the deploy smoke test’s access-token gate check', () => {
  * this job would check out `workflow_run.head_sha` — the fork's commit —
  * and deploy it, holding the production database secret while it did.
  *
- * The repository is about to become public, which is what turns this from
- * a theoretical hole into an open door. The guard is one `if:` expression,
+ * **The repository is public** (since 2026-08-20). This was written when it
+ * was about to be, as a hole that publication would open; it is open now,
+ * and anyone can fork this repository today. The guard is not prophylactic
+ * any more and must not be weakened on the reasoning that nobody has tried
+ * — the whole point is that the first attempt would succeed silently.
+ *
+ * The guard is one `if:` expression,
  * and an `if:` expression is the easiest thing in a workflow to lose in a
  * refactor: nothing fails, nothing looks different, and the door is open
  * again. Hence a test, and hence one that names each condition separately

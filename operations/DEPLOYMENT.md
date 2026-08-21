@@ -1,15 +1,24 @@
 # DEPLOYMENT
 
-> **This repository is written to be publishable, and is private today.**
-> The distinction matters less than it looks: every value that points at
+> **This repository is public** (it was made public on 2026-08-20; this
+> banner said "private today" for a few hours after that, which is how
+> quickly a sentence about state goes wrong). Every value that points at
 > the real deployment — domain names, endpoints, project identifiers —
 > lives in repository Variables (Settings → Secrets and variables →
 > Actions → Variables) and appears in this document only as an
-> angle-bracket placeholder, and that holds whatever the repository's
-> visibility is set to. Publishing must be a decision, not an event that
-> retroactively exposes whatever had accumulated in the tree — and a value
-> pasted in here while private is still in the history when it stops
-> being. Think before you paste a real one: **assume anyone can read it.**
+> angle-bracket placeholder. That held while the repository was private
+> too, deliberately: publishing must be a decision, not an event that
+> retroactively exposes whatever had accumulated in the tree, and a value
+> pasted in while private is still in the history when it stops being.
+> Think before you paste a real one: **anyone can read it.**
+>
+> The repository's **About box carries the deployment's custom domain**,
+> and that is a decision, not a leak — a public research prototype may say
+> where it is. It does not weaken the rule above, because the two are
+> different addresses: the Cloud Run `*.run.app` URL is masked out of the
+> workflow logs, and it reaches the service directly, past whatever sits in
+> front of the custom domain. Publishing where people are invited to go is
+> not the same as publishing the way around the front door.
 > Values that must stay secret (database connection strings, session
 > secrets, access tokens) belong in Secret Manager or Actions Secrets,
 > not in Variables — Variables are visible to collaborators, and once one
