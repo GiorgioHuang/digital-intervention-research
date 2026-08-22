@@ -2439,3 +2439,42 @@
   tests:
     - packages/database/test/deploy-smoke.test.ts
   status: implemented
+
+- implementation_id: IMP-WEB-HOME-FOLD-001
+  module: WEB
+  summary: >-
+    The participant home page asked too much of somebody who had just opened it, and the
+    problem was not the word count. Measured on an enrolled participant with one
+    contribution waiting - the case that matters, rather than the empty account which
+    flatters the page - it showed 191 words and 11 controls, with the two buttons that
+    actually wanted an answer sitting third and fourth in a field of eight that wanted
+    nothing. The thing to do and the things merely available had been given the same
+    weight. A1.6 had answered this same complaint once already by grouping the eight
+    buttons into three named sections, and its own note says why - eight unlabelled buttons
+    are a wall rather than a choice - but grouping named the parts of the wall without
+    making it smaller. The groups are now details elements closed on arrival, and what is
+    waiting comes first: 113 words and 3 visible controls, most of the remaining words
+    being the task itself. Help is deliberately not folded even though the bottom bar
+    already carries it, which is the exact redundancy removed everywhere else on the page:
+    the cost of the duplication is one line and the cost of being wrong is somebody in
+    difficulty having to open a disclosure first. Nothing was removed - every destination
+    is still reachable by name and that is asserted separately, because a fold that loses a
+    right is not a tidier page but a smaller promise. A budget test guards the regrowth,
+    since that is exactly how the page got here: five entries became eight, each addition
+    reasonable on its own, and nothing was watching the total. Two limits are recorded
+    rather than worked around: jsdom does not implement details, so the assertions are on
+    the structure that decides a browser's behaviour rather than on visibility, and the
+    measurement excludes closed disclosures by hand - the first version counted textContent
+    and reported 186 words where a participant sees 114.
+  trace_ids: [ATR-021]
+  adr_ids: [ADR-061, ADR-062]
+  docs:
+    - "design/DESIGN_DECISIONS.md D-100"
+    - "design/PARTICIPANT_WORKSPACE.md A1.5, A1.6"
+  code:
+    - apps/web/src/App.tsx
+    - apps/web/src/components/MyResearchPart.tsx
+  tests:
+    - apps/web/test/home.test.tsx
+    - apps/web/test/home-budget.test.tsx
+  status: implemented

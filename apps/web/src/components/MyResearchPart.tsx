@@ -31,7 +31,22 @@ const STAGE_WORDING: Record<string, string> = {
 
 const LEFT = new Set(['Withdrawn', 'Completed', 'Discontinued']);
 
-export function MyResearchPart({ session }: { session: Session }) {
+/**
+ * `headingLevel` exists because this block is now folded into a <details>
+ * on the home page, where the summary already names it. Repeating the name
+ * as an h2 immediately below the summary reads as two headings for one
+ * thing. Where it stands alone the h2 is still correct, so the level moves
+ * rather than the heading disappearing — a section without a heading is
+ * not a tidier section, it is an unnamed one.
+ */
+export function MyResearchPart({
+  session,
+  headingLevel = 2,
+}: {
+  session: Session;
+  headingLevel?: 2 | 3;
+}) {
+  const Heading = (headingLevel === 3 ? 'h3' : 'h2') as 'h2' | 'h3';
   const [enrolments, setEnrolments] = useState<MyEnrolment[] | null>(null);
   const [loadError, setLoadError] = useState<PresentedError | null>(null);
   const [actionError, setActionError] = useState<PresentedError | null>(null);
@@ -67,7 +82,7 @@ export function MyResearchPart({ session }: { session: Session }) {
 
   return (
     <section aria-labelledby="my-research-heading">
-      <h2 id="my-research-heading">Your part in the research</h2>
+      <Heading id="my-research-heading">Your part in the research</Heading>
 
       {enrolments === null && loadError === null && <LoadingState label="Loading your part in the research…" />}
       {loadError !== null && <ErrorState error={loadError} />}
