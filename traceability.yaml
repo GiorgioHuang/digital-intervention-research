@@ -2538,3 +2538,38 @@
   tests:
     - apps/web/test/home.test.tsx
   status: implemented
+
+- implementation_id: IMP-WEB-PARTICIPANT-SCREEN-BUDGETS-001
+  module: WEB
+  summary: >-
+    A budget on every participant screen, not only the home page. The failure mode this
+    guards is not a bad decision but a series of reasonable ones with no running count: the
+    home page reached eight destinations one honest addition at a time, and nothing was
+    watching the total until somebody looked at the finished page and called it a wall.
+    Each screen is reached the way a participant reaches it, through the home page's
+    disclosures, and measured as it appears on arrival - closed details reduced to their
+    summary by hand, because jsdom does not implement them and counting textContent would
+    report what is in the DOM rather than what is on screen. The numbers are what each
+    measured on 2026-08-22 plus room for about one honest addition, and they are a ratchet
+    rather than a target: raising one is expected, raising one silently is the thing that
+    put the home page where it was, so the failure message says to raise it in the same
+    commit and give a reason. Two limits are recorded rather than worked around. Every list
+    is stubbed empty except the enrolment, so these are arrival states with no content -
+    the floor rather than the ceiling - and a screen whose per-item markup is verbose can
+    still grow without limit as real data arrives. And the headroom is uneven in
+    proportion: mutation-testing showed that adding three buttons to a one-control screen
+    trips nothing, because one to four is exactly the allowance, which is accepted rather
+    than tightened, since a guard that needs a budget change for every addition becomes a
+    chore and a chore gets deleted. Mutations verified red - the display settings unfolded
+    on help, the six impossible withdrawals restored on consent, a paragraph added to
+    matching, and a home disclosure renamed so the route breaks with a message naming it.
+  trace_ids: [ATR-021]
+  adr_ids: [ADR-061, ADR-062]
+  docs:
+    - "design/DESIGN_DECISIONS.md D-100"
+    - "design/DESIGN_DECISIONS.md D-101"
+  code:
+    - apps/web/src/App.tsx
+  tests:
+    - apps/web/test/participant-screen-budgets.test.tsx
+  status: implemented
