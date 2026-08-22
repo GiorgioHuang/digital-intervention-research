@@ -247,7 +247,11 @@ The deploy's smoke step checks liveness, readiness, the SPA shell, the access-to
 
 **It is not enough for the R2 pair, and the reason matters.** `/ready` derives `fileStorage` from the blob store's *description string*, which is built from configuration — it never calls R2. So a rotation to a wrong, expired or revoked R2 credential **deploys green**: the smoke test passes, `/ready` says `object-store`, and the first person to discover it is the first participant to upload a photograph. This is the "configured rather than exercised" gap in the limitations above, and rotation is where it bites hardest, because rotation is exactly when the credential is most likely to be wrong.
 
-Until that is closed, an R2 rotation is not finished when the deploy goes green. Somebody has to upload a file through the interface and read it back. Write down that you did.
+**There is now a check for exactly this, and it is manual on purpose.** Run the Deploy workflow by hand (Actions → Deploy to Cloud Run → Run workflow) and it adds one step: `tools/r2-round-trip.mjs` writes an object, reads it back, compares the bytes, deletes it, and confirms it is gone — through the platform's own `createBlobStore`, so it exercises the code that stores participants' files rather than a second S3 client that could be right where the real one is wrong. A broken credential fails the deploy there instead of failing a participant later.
+
+It does not run on ordinary pushes, and that is the ruling rather than an oversight: every run writes into the participants' bucket. A check meant to be reached for deliberately, at the moment of doubt, must not become a routine write to production storage. The consequence is worth stating plainly — **a routine push carrying a broken R2 credential still deploys green.** Only running the check finds out.
+
+So: after rotating the R2 pair, run the workflow by hand. That is the step that finishes the rotation.
 
 ## Demo accounts (synthetic data)
 

@@ -2363,3 +2363,42 @@
   tests:
     - apps/web/test/moderator-supporter.test.tsx
   status: implemented
+
+- implementation_id: IMP-CI-R2-ROUND-TRIP-001
+  module: OPS
+  summary: >-
+    Whether the object-store credentials actually work had no check at all. /ready reports
+    fileStorage by reading the blob store's description string, which is built from
+    configuration and never calls R2, so a deployment carrying a wrong, expired or revoked
+    credential reports object-store, passes every smoke check and deploys green - and the
+    first person to find out would be the first participant to upload a photograph.
+    Rotation is when a credential is most likely to be wrong and a rotation deploy looks
+    exactly like any other push, which is what makes the gap worth closing. The round trip
+    writes an object, reads it back, compares the bytes, deletes it and confirms it is gone,
+    going through the platform's own createBlobStore rather than a second S3 client - a
+    private client would prove that these credentials work with this script's idea of the
+    endpoint, which is not the question; the question is whether the path that stores
+    participants' files works, including its refusal on a partial configuration. Delete is
+    verified too, because a silent no-op delete would leave every run behind in the bucket
+    and would mean the platform cannot honour a withdrawal either. Manual runs only
+    (workflow_dispatch), by the owner's ruling: every run writes into the participants'
+    bucket, and a check meant to be reached for deliberately at the moment of doubt must
+    not become a routine write to production storage. The consequence is recorded rather
+    than glossed - a routine push carrying a broken credential still deploys green, and
+    only running the check finds out. Five mutations verified red: the workflow_dispatch
+    condition removed, the R2_PRESENT condition removed, a credential mask deleted, the
+    script switched to its own S3 client, and the whole step deleted. The last of those
+    also caught a defect in this test itself - slice(indexOf(x)) returns the last character
+    rather than the empty string when x is absent, so the has-the-step-at-all guard passed
+    with the step gone, which is D-90's finding made again in the test written after it.
+  trace_ids: [ATR-003]
+  adr_ids: [ADR-106]
+  docs:
+    - "design/DESIGN_DECISIONS.md D-97"
+    - "governance/THREAT_MODEL.md B4"
+  code:
+    - tools/r2-round-trip.mjs
+    - .github/workflows/deploy.yml
+  tests:
+    - packages/database/test/deploy-smoke.test.ts
+  status: implemented

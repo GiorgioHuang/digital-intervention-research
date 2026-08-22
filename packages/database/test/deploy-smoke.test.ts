@@ -5,7 +5,8 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
-const DEPLOY_YML = join(fileURLToPath(new URL('../../../', import.meta.url)), '.github/workflows/deploy.yml');
+const REPO_ROOT = fileURLToPath(new URL('../../../', import.meta.url));
+const DEPLOY_YML = join(REPO_ROOT, '.github/workflows/deploy.yml');
 
 /**
  * The workflow with its comments removed.
@@ -279,5 +280,75 @@ describe('the deploy workflow keeps secrets out of its own logs', () => {
       .join('\n');
     expect(summary, 'nothing is written to the step summary any more').not.toBe('');
     expect(summary, 'the step summary would publish the deployment address').not.toMatch(/\$URL|\$\{\{\s*vars\./);
+  });
+});
+
+/**
+ * The R2 round-trip runs on manual runs and no others.
+ *
+ * This check writes an object into the participants' bucket. That is
+ * acceptable for something reached for deliberately — after a rotation,
+ * when a credential is most likely to be wrong and the deploy looks exactly
+ * like any other push — and it is not acceptable on every push, which was
+ * the owner's ruling.
+ *
+ * So the `workflow_dispatch` condition is not a preference: losing it turns
+ * a deliberate check into a routine write to production storage, and
+ * nothing about the workflow would look different afterwards. That is the
+ * same shape as the fork guard's `if:` (D-88), pointing the other way — the
+ * fork guard fails open on security, this one fails open on behaviour.
+ */
+describe('the deploy workflow only exercises R2 when asked to', () => {
+  const workflow = workflowWithoutComments();
+  /*
+   * `slice(indexOf(x))` returns the last character when x is absent, not
+   * the empty string — so a guard written as `expect(step).not.toBe('')`
+   * passes with the whole step deleted. That is D-90's finding, made again
+   * here while writing the test that was supposed to have learned it. The
+   * index is asserted found, and the slice taken from it afterwards.
+   */
+  const stepAt = workflow.indexOf('name: R2 round-trip');
+  const step = stepAt === -1 ? '' : workflow.slice(stepAt);
+
+  it('has the step at all', () => {
+    expect(stepAt, 'the R2 round-trip step is gone from deploy.yml').toBeGreaterThan(-1);
+  });
+
+  it('runs only on a manual dispatch', () => {
+    const condition = step.slice(0, step.indexOf('run:'));
+    expect(
+      condition.replace(/\s+/g, ' '),
+      'without this, every push writes an object into the participants’ bucket',
+    ).toContain("github.event_name == 'workflow_dispatch'");
+  });
+
+  it('runs only when R2 is actually attached', () => {
+    const condition = step.slice(0, step.indexOf('run:'));
+    expect(
+      condition.replace(/\s+/g, ' '),
+      'without this it runs against the Postgres simulator and fails for the wrong reason',
+    ).toContain("env.R2_PRESENT == 'true'");
+  });
+
+  it('masks the credentials it reads out of Secret Manager', () => {
+    // Same rule as the database URL: read in the clear because the script
+    // needs them, masked before anything can print them.
+    for (const secret of ['R2_ACCESS_KEY_ID', 'R2_SECRET_ACCESS_KEY']) {
+      const read = step.indexOf(`${secret}=$(gcloud secrets versions access`);
+      expect(read, `${secret} is no longer read this way`).toBeGreaterThan(-1);
+      expect(
+        step.indexOf(`::add-mask::$${secret}`, read),
+        `${secret} is read from Secret Manager but never masked`,
+      ).toBeGreaterThan(-1);
+    }
+  });
+
+  it('goes through the platform’s own blob store rather than a second client', () => {
+    // A private S3 client here would prove that these credentials work with
+    // this script's idea of the endpoint, which is not the question.
+    expect(step).toContain('tools/r2-round-trip.mjs');
+    const script = readFileSync(join(REPO_ROOT, 'tools/r2-round-trip.mjs'), 'utf8');
+    expect(script, 'the round-trip no longer uses createBlobStore').toContain('createBlobStore');
+    expect(script, 'the round-trip builds its own S3 client').not.toContain('new S3Client');
   });
 });
