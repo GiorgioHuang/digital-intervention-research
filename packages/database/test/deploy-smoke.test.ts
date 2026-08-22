@@ -343,6 +343,23 @@ describe('the deploy workflow only exercises R2 when asked to', () => {
     }
   });
 
+  it('does not publish the bucket name on the way past', () => {
+    /* The store's description is `Cloudflare R2 bucket <name>`, and the
+       bucket name is a repository Variable — public the moment it enters a
+       log, and these logs are public. The first run of this check printed
+       it. The error path may still use the description: it is only reached
+       when the store is *not* R2, where the description names the Postgres
+       simulator and no bucket at all. */
+    const script = readFileSync(join(REPO_ROOT, 'tools/r2-round-trip.mjs'), 'utf8');
+    const stdout = script.split('\n').filter((line) => line.includes('console.log('));
+    expect(stdout.length, 'the round-trip reports nothing at all now').toBeGreaterThan(0);
+    for (const line of stdout) {
+      expect(line, 'the success line publishes the bucket name into a public log').not.toContain(
+        'description',
+      );
+    }
+  });
+
   it('goes through the platform’s own blob store rather than a second client', () => {
     // A private S3 client here would prove that these credentials work with
     // this script's idea of the endpoint, which is not the question.
@@ -350,5 +367,58 @@ describe('the deploy workflow only exercises R2 when asked to', () => {
     const script = readFileSync(join(REPO_ROOT, 'tools/r2-round-trip.mjs'), 'utf8');
     expect(script, 'the round-trip no longer uses createBlobStore').toContain('createBlobStore');
     expect(script, 'the round-trip builds its own S3 client').not.toContain('new S3Client');
+  });
+});
+
+/**
+ * The deployment's coordinates are masked before anything can print them.
+ *
+ * This repository is public and so are these logs, and the rule
+ * DEPLOYMENT.md states — a repository Variable is public the moment it
+ * enters a log — was being broken by the workflow itself rather than by
+ * anything anyone typed. `setup-gcloud` prints its whole environment as a
+ * group, so the project identifier appeared in every run five times over;
+ * the R2 round-trip published the bucket name the first time it ran.
+ *
+ * Order is the whole of it. A mask registered after a value has been
+ * printed does not go back for it, so this has to be the first step in the
+ * job — which is exactly the kind of property that survives review and
+ * then quietly dies in a reordering.
+ */
+describe('the deploy workflow masks before it can leak', () => {
+  const workflow = workflowWithoutComments();
+
+  it('masks the coordinates in the very first step', () => {
+    const firstStep = workflow.indexOf('- name:', workflow.indexOf('steps:'));
+    const secondStep = workflow.indexOf('- name:', firstStep + 1);
+    const first = workflow.slice(firstStep, secondStep === -1 ? undefined : secondStep);
+    expect(
+      first,
+      'the masking step is no longer first — anything printed before it stays in the public log',
+    ).toContain('::add-mask::');
+  });
+
+  it('masks each value that locates the real deployment', () => {
+    const step = workflow.slice(0, workflow.indexOf('- name: Check deploy configuration'));
+    for (const v of [
+      'vars.GCP_PROJECT_ID',
+      'vars.R2_ACCOUNT_ID',
+      'vars.R2_BUCKET',
+      'vars.GOOGLE_CLIENT_ID',
+      'vars.KNOWLEDGE_MCP_URL',
+      'vars.STAFF_HOSTS',
+    ]) {
+      expect(step, `${v} is no longer masked, and these logs are public`).toContain(v);
+    }
+  });
+
+  it('never writes a variable straight into a notice', () => {
+    // The staff hostname used to be announced outright. A ::notice:: is
+    // rendered on the run's page, so it is read more widely than the log.
+    const notices = workflow
+      .split('\n')
+      .filter((line) => /echo "::(notice|warning)::/.test(line))
+      .join('\n');
+    expect(notices, 'a notice interpolates a repository variable').not.toMatch(/\$\{\{\s*vars\./);
   });
 });

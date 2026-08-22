@@ -72,6 +72,33 @@ jobs:
        github.event.workflow_run.event == 'push' &&
        github.event.workflow_run.head_branch == 'main')
     steps:
+      # Mask before anything can print. This repository is public and so
+      # are these logs, and the rule DEPLOYMENT.md states — a Variable is
+      # public the moment it enters a log — was being broken by the
+      # workflow itself, not by anything anyone typed. `setup-gcloud`
+      # prints its whole environment as a group, so the project identifier
+      # appeared in every run as CLOUDSDK_PROJECT, GCLOUD_PROJECT and three
+      # more. The R2 round-trip published the bucket name the first time it
+      # ran. Masking has to happen in the first step, because a mask
+      # registered after a value is printed does not go back for it.
+      #
+      # Only values that locate the real deployment. Masking is not free:
+      # GitHub replaces every occurrence of the string anywhere in the log,
+      # so a bucket named something ordinary would black out that ordinary
+      # word everywhere. That is the trade this makes deliberately, and it
+      # is the reason this list is short rather than "every variable".
+      - name: Keep the deployment's coordinates out of public logs
+        run: |
+          for V in "${{ vars.GCP_PROJECT_ID }}" \
+                   "${{ vars.R2_ACCOUNT_ID }}" \
+                   "${{ vars.R2_BUCKET }}" \
+                   "${{ vars.GOOGLE_CLIENT_ID }}" \
+                   "${{ vars.KNOWLEDGE_MCP_URL }}" \
+                   "${{ vars.STAFF_HOSTS }}"; do
+            [ -n "$V" ] && echo "::add-mask::$V"
+          done
+          echo "Masked the deployment coordinates that are set; unset ones have nothing to mask."
+
       - name: Check deploy configuration
         id: cfg
         run: |
@@ -234,7 +261,7 @@ jobs:
           # choice, not a code change.
           if [ -n "${{ vars.STAFF_HOSTS }}" ]; then
             echo "VITE_STAFF_HOSTS=${{ vars.STAFF_HOSTS }}" > apps/web/.env.production
-            echo "::notice::staff workspace served on: ${{ vars.STAFF_HOSTS }}"
+            echo "::notice::staff workspace served on the configured STAFF_HOSTS (withheld from public logs)."
           else
             rm -f apps/web/.env.production
             echo "::notice::STAFF_HOSTS not set — one address serves every workspace, with the staff and supporter doors on the participant sign-in screen."

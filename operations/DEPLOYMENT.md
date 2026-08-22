@@ -253,6 +253,10 @@ It does not run on ordinary pushes, and that is the ruling rather than an oversi
 
 So: after rotating the R2 pair, run the workflow by hand. That is the step that finishes the rotation.
 
+**First run: 2026-08-22, passed.** Those were the first bytes ever to enter the bucket — R2 had been connected since 2026-08-08 and, until then, nothing had ever verified that the credentials worked. The participant-facing chain is still unexercised: no byte has entered from a browser session.
+
+**That first run also broke the rule at the top of this file, and the workflow was the one breaking it.** Three ways: `setup-gcloud` prints its whole environment as a group, so the project identifier appeared in every run five times over; the staff hostname was announced outright in a `::notice::`; and the round-trip's success line named the bucket. All three are fixed — every coordinate is masked in the **first** step of the job, because a mask registered after a value has been printed does not go back for it. Runs before 2026-08-22 still carry those values in their logs, and this repository is public; treat the project identifier, the bucket name and the staff hostname as already disclosed rather than as still private.
+
 ## Demo accounts (synthetic data)
 
 The deployment's database starts empty — the dev-header sign-in stub requires the actor/participant to genuinely exist in the database. Run the seed once:

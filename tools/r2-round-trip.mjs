@@ -41,6 +41,14 @@ if (!store.description.startsWith('Cloudflare R2')) {
   process.exit(1);
 }
 
+/*
+ * The description names the bucket, and the bucket name is a repository
+ * Variable — which this repository's own rule says becomes public the
+ * moment it is printed into a log, and these logs are public. The first
+ * run of this check published it. Nothing below prints the description;
+ * what a reader needs is whether the round trip worked, not where.
+ */
+
 // Opaque, like every key this platform writes, and prefixed so that a leftover
 // from a killed run is recognisable rather than mysterious.
 const key = `deploy-check_${randomBytes(16).toString('hex')}`;
@@ -72,7 +80,7 @@ try {
     throw new Error('the object is still readable after delete');
   }
 
-  console.log(`R2 round-trip passed: ${store.description}, ${payload.length} bytes written, read and deleted.`);
+  console.log(`R2 round-trip passed: ${payload.length} bytes written, read back byte-for-byte, deleted, and confirmed gone.`);
 } catch (error) {
   console.error(`::error::R2 round-trip failed: ${error instanceof Error ? error.message : String(error)}`);
   if (wrote) {

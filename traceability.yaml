@@ -2402,3 +2402,40 @@
   tests:
     - packages/database/test/deploy-smoke.test.ts
   status: implemented
+
+- implementation_id: IMP-CI-DEPLOY-COORDINATE-MASKING-001
+  module: PLATFORM
+  summary: >-
+    The deploy workflow was publishing the deployment's coordinates into public logs, in
+    breach of the rule DEPLOYMENT.md states at the top of the file - that a repository
+    Variable becomes public the moment it enters a log. Nothing anybody typed caused it;
+    the workflow did. Three routes. The setup-gcloud action prints its whole environment
+    as a group, so the GCP project identifier appeared in every run as CLOUDSDK_PROJECT,
+    CLOUDSDK_CORE_PROJECT, GCLOUD_PROJECT, GCP_PROJECT and GOOGLE_CLOUD_PROJECT, and had
+    done for as long as deploys existed. The staff hostname was written straight into a
+    notice, which is rendered on the run's page and therefore read more widely than the
+    log. And the R2 round-trip's success line interpolated the blob store's description,
+    which is Cloudflare R2 bucket followed by the bucket name - introduced one commit
+    earlier and published by its own first run. Every coordinate is now masked in the first
+    step of the job: the project id, the R2 account id and bucket, the Google client id,
+    the knowledge endpoint and the staff hosts. Position is the whole control, because a
+    mask registered after a value has been printed does not go back for it, so the test
+    asserts the step is first rather than merely present. The list is deliberately short:
+    masking replaces every occurrence of the string anywhere in the log, so a bucket named
+    something ordinary would black out that ordinary word throughout. Recorded as
+    disclosure rather than as a fix - runs before 2026-08-22 still carry these values and
+    the repository is public, so the project identifier, bucket name and staff hostname are
+    to be treated as already disclosed. Four mutations verified red: the masking step moved
+    after setup-gcloud, the bucket dropped from the list, the staff hostname written back
+    into a notice, and the round-trip's success line naming the bucket again.
+  trace_ids: [ATR-003]
+  adr_ids: [ADR-061, ADR-062]
+  docs:
+    - "design/DESIGN_DECISIONS.md D-98"
+    - "governance/THREAT_MODEL.md B6"
+  code:
+    - .github/workflows/deploy.yml
+    - tools/r2-round-trip.mjs
+  tests:
+    - packages/database/test/deploy-smoke.test.ts
+  status: implemented
