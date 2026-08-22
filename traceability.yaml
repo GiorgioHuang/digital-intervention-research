@@ -2478,3 +2478,63 @@
     - apps/web/test/home.test.tsx
     - apps/web/test/home-budget.test.tsx
   status: implemented
+
+- implementation_id: IMP-WEB-CONSENT-WITHDRAW-OFFERED-001
+  module: WEB
+  summary: >-
+    The consent screen offered a withdrawal the platform could not honour. The withdraw
+    button rendered for every scope regardless of its state, and the server refuses two of
+    those states outright - with nothing recorded it answers RESOURCE_NOT_FOUND, No consent
+    recorded for this scope, and on an already withdrawn scope INVALID_STATE_TRANSITION. A
+    participant who had just arrived and decided nothing was shown six of these, one per
+    scope, every one certain to fail. The clutter is the smaller half. A 404 reaches the
+    participant as that could not be completed with no reason given, which is protected
+    existence working exactly as designed - so somebody who pressed withdraw my consent and
+    was told only that it did not work has every reason to wonder what they had agreed to.
+    An offer the platform cannot honour is the control this project keeps removing, and
+    this one was worse than empty because it was about consent. Declined and Deferred are
+    left alone: the server accepts a withdrawal in those states, so hiding it would remove
+    something that works, which is a copy question rather than a defect. Found by measuring
+    every participant screen rather than by reading the code - consent showed 18 controls,
+    a third of them impossible. Three mutations verified red, including the button restored
+    to unconditional and a version that blocks only the undecided case.
+  trace_ids: [ATR-021]
+  adr_ids: [ADR-061, ADR-062]
+  docs:
+    - "design/DESIGN_DECISIONS.md D-101"
+  code:
+    - apps/web/src/components/ConsentPanel.tsx
+  tests:
+    - apps/web/test/consent-panel.test.tsx
+  status: implemented
+
+- implementation_id: IMP-WEB-HELP-IS-HELP-001
+  module: WEB
+  summary: >-
+    Help and safety was mostly not help. Measured, the display-preferences block was 191
+    words and 15 controls against the safety panel's 131 and 8 - the biggest thing on the
+    page, on the page somebody reaches when they are in difficulty. Two people were being
+    failed at once: one waded through text-size settings to reach what they came for, and
+    the other had to guess that make the text bigger lived under Help and safety. It is now
+    folded behind a summary that names it in the words somebody would use looking for it,
+    which the heading beneath it does not, so the fold makes it easier to find on this page
+    rather than harder. Where display preferences ought to live is a larger question than
+    folding them - the bottom bar has four slots by D-10's arithmetic and none spare - and
+    is left to the owner. The same screen carried a second defect of a different kind: the
+    signing-out block described the dev-header stub and rendered unconditionally, so the
+    deployed environment, which signs people in with Google, told participants something
+    untrue about how they got here and offered a button naming a thing they had never done.
+    Both the explanation and the button are now conditional on the mode. The screen went
+    from 420 words and 24 controls to 237 and 9. The first version of the sign-out guard
+    read whichever mode happened to be active and asserted accordingly, and detectAuthMode
+    falls back to the stub in jsdom, so it checked the stub every time and could never have
+    seen the defect; it is now written against a Google deployment specifically.
+  trace_ids: [ATR-021]
+  adr_ids: [ADR-104]
+  docs:
+    - "design/DESIGN_DECISIONS.md D-101"
+  code:
+    - apps/web/src/App.tsx
+  tests:
+    - apps/web/test/home.test.tsx
+  status: implemented

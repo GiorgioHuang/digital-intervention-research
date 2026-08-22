@@ -529,20 +529,53 @@ export function App() {
               not an emergency service.
             </p>
             <SafetyPanel session={session} />
-            <DisplayPreferencesPanel />
+            {/*
+              Folded, and it is the biggest thing on this page: 191 words
+              and 15 controls against the safety panel's 131 and 8. Two
+              people were being failed at once — somebody in difficulty
+              waded through text-size settings to reach the thing they came
+              for, and somebody who could not read the screen had to guess
+              that "make the text bigger" lived under "Help and safety".
+
+              Folding fixes the first. The summary fixes the second, and is
+              the reason this is not simply hidden: it says what is inside
+              in the words somebody would use looking for it, where the
+              heading beneath it ("How this looks and reads") does not.
+              A closed disclosure with a plain label is easier to find on
+              this page than fifteen controls buried in it.
+
+              Where this ought to live is a larger question than folding it
+              — the bottom bar has four slots by D-10's arithmetic and none
+              spare — and it is the owner's to answer, not mine.
+            */}
+            <details>
+              <summary>Make the text bigger, or change the colours</summary>
+              <DisplayPreferencesPanel />
+            </details>
             {/*
               The only way out of a session was to reload the page. Someone
               signed in with identifiers that no longer work — after a demo
               environment is reseeded, for instance — met a 404 on every
               screen and no control that would let them try different ones.
             */}
+            {/*
+              This block described the dev-header stub — "identifies you by
+              the identifiers you typed in" — and rendered unconditionally,
+              so the deployed environment, which signs people in with
+              Google, told them something untrue about how they got here
+              and offered a button that named a thing they had never done.
+              The same shape as D-94's ten sites, and this one is on screen
+              in front of participants.
+            */}
             <section aria-labelledby="signout-heading">
-              <h2 id="signout-heading">Signing in as someone else</h2>
-              <p>
-                This development environment identifies you by the identifiers you typed in. If they stop working —
-                after this demo environment is set up again, for example — nothing here is broken; the identifiers
-                have changed.
-              </p>
+              <h2 id="signout-heading">{authMode === 'google' ? 'Signing out' : 'Signing in as someone else'}</h2>
+              {authMode === 'dev-header' && (
+                <p>
+                  This development environment identifies you by the identifiers you typed in. If they stop working —
+                  after this demo environment is set up again, for example — nothing here is broken; the identifiers
+                  have changed.
+                </p>
+              )}
               <p>
                 <button
                   onClick={() => {
@@ -552,7 +585,7 @@ export function App() {
                     setScreen('home');
                   }}
                 >
-                  Sign out and enter different identifiers
+                  {authMode === 'google' ? 'Sign out' : 'Sign out and enter different identifiers'}
                 </button>
               </p>
             </section>

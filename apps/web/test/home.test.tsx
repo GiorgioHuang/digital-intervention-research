@@ -180,3 +180,106 @@ describe('participant home', () => {
     }
   });
 });
+
+/**
+ * Help and safety is for help and safety.
+ *
+ * Measured: the display-preferences block was 191 words and 15 controls,
+ * against the safety panel's 131 and 8 — the biggest thing on the page,
+ * on the page somebody reaches when they are in difficulty. Two people
+ * were being failed at once: one waded through text-size settings to reach
+ * what they came for, and the other had to guess that "make the text
+ * bigger" lived under "Help and safety".
+ *
+ * Folding answers the first. The summary answers the second, and is why
+ * this is not simply hiding: it names what is inside in the words somebody
+ * would use looking for it, which the heading underneath does not.
+ */
+describe('the help screen', () => {
+  beforeEach(() => {
+    (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+  });
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllGlobals();
+  });
+
+  const openHelp = async () => {
+    stubFetch();
+    await act(async () => {
+      render(<App />);
+    });
+    await signIn();
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Help and safety' }));
+    });
+  };
+
+  it('leads with safety, and folds the display settings behind a plain label', async () => {
+    await openHelp();
+    // What the page is for stays open.
+    expect(screen.getByRole('button', { name: /Report/i })).toBeTruthy();
+
+    const summary = [...document.querySelectorAll('main details > summary')].find((el) =>
+      /text bigger/i.test(el.textContent ?? ''),
+    );
+    expect(summary, 'the display settings are not behind a summary that says what they are').toBeTruthy();
+    expect((summary!.parentElement as HTMLDetailsElement).hasAttribute('open')).toBe(false);
+    // Folded, not removed.
+    expect(screen.getByRole('heading', { name: 'How this looks and reads' })).toBeTruthy();
+  });
+
+  /**
+   * This block described the dev-header stub and rendered unconditionally,
+   * so the deployed environment — which signs people in with Google — told
+   * participants something untrue about how they got here, and offered a
+   * button naming a thing they had never done.
+   *
+   * Written against a Google deployment specifically. The first version of
+   * this test read whichever mode happened to be active and asserted
+   * accordingly — and `detectAuthMode` falls back to the stub here, so it
+   * checked the stub's wording every time and could never have seen the
+   * defect it was written for.
+   */
+  it('does not explain typed identifiers to somebody who signed in with Google', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (path: string, init?: RequestInit) => {
+        if (path === '/health') {
+          return new Response(JSON.stringify({ status: 'ok', authMode: 'google' }), { status: 200 });
+        }
+        if (path === '/v1/auth/session') {
+          return new Response(
+            JSON.stringify({ actorId: 'actor_ann', displayName: 'Ann', authStrength: 'password', participantId: 'pt_ann', expiresAt: '2099-01-01T00:00:00Z' }),
+            { status: 200 },
+          );
+        }
+        return new Response(
+          JSON.stringify((init?.method ?? 'GET') === 'GET' ? { data: [], meta: {} } : { data: { id: 'x' } }),
+          { status: 200 },
+        );
+      }),
+    );
+    await act(async () => {
+      render(<App />);
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Help and safety' }));
+    });
+    const section = screen.getByRole('heading', { name: 'Signing out' }).closest('section')!;
+    expect(section.textContent, 'a Google sign-in is still explained as typed identifiers').not.toMatch(
+      /identifiers you typed/,
+    );
+    expect(screen.getByRole('button', { name: 'Sign out' })).toBeTruthy();
+    expect(
+      screen.queryByRole('button', { name: 'Sign out and enter different identifiers' }),
+      'the button still offers to enter identifiers nobody typed',
+    ).toBeNull();
+  });
+
+  it('still explains the identifiers under the development stub', async () => {
+    await openHelp();
+    const section = screen.getByRole('heading', { name: 'Signing in as someone else' }).closest('section')!;
+    expect(section.textContent).toMatch(/identifiers you typed/);
+  });
+});

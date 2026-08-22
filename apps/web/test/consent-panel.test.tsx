@@ -261,3 +261,68 @@ describe('ConsentPanel (Doc 20 consent UX rules)', () => {
     expect(screen.getByText(/made with somebody helping/)).toBeTruthy();
   });
 });
+
+/**
+ * Withdrawal is offered only where the platform can honour it.
+ *
+ * The button used to render for every scope regardless of state, and the
+ * server refuses two of those states outright: with nothing recorded it
+ * answers RESOURCE_NOT_FOUND ("No consent recorded for this scope"), and on
+ * an already-withdrawn scope INVALID_STATE_TRANSITION. A participant who
+ * had just arrived, having decided nothing, was shown six of these — one
+ * per scope — every one certain to fail.
+ *
+ * The failure matters more than the clutter. A 404 reaches them as "that
+ * could not be completed" with no reason given, which is protected
+ * existence working exactly as designed — so somebody who pressed
+ * "withdraw my consent" and was told only that it did not work has every
+ * reason to wonder what they had agreed to.
+ */
+describe('withdrawal is offered only where it can be honoured', () => {
+  beforeEach(() => {
+    (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+  });
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllGlobals();
+  });
+
+  const withdrawButtons = () =>
+    screen.queryAllByRole('button', { name: /^Withdraw consent for/ }).map((b) => b.textContent ?? '');
+
+  it('offers it for a granted scope and for no undecided one', async () => {
+    stubFetch();
+    await act(async () => {
+      render(<ConsentPanel session={session} />);
+    });
+    const offered = withdrawButtons();
+    // The fixture decides two scopes; the rest are undecided, and the
+    // server would answer RESOURCE_NOT_FOUND for every one of those.
+    expect(offered.some((t) => t.includes('Take part in the research'))).toBe(true);
+    expect(
+      offered.length,
+      `withdrawal is offered ${offered.length} times, and only one scope is in a state that can be withdrawn`,
+    ).toBe(1);
+  });
+
+  it('does not offer it again for a scope already withdrawn', async () => {
+    stubFetch();
+    await act(async () => {
+      render(<ConsentPanel session={session} />);
+    });
+    // open-matching is Withdrawn in the fixture: the server answers
+    // INVALID_STATE_TRANSITION, so offering it is offering a refusal.
+    expect(withdrawButtons().some((t) => t.toLowerCase().includes('meet'))).toBe(false);
+  });
+
+  it('still says what the standing choice is for every scope', async () => {
+    // Removing an impossible action must not remove the information. The
+    // participant still needs to see where each scope stands, including
+    // the ones that cannot be withdrawn.
+    stubFetch();
+    await act(async () => {
+      render(<ConsentPanel session={session} />);
+    });
+    expect(screen.getAllByText(/Current choice:/).length).toBeGreaterThanOrEqual(6);
+  });
+});

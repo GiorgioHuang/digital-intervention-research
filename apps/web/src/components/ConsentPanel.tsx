@@ -226,7 +226,34 @@ export function ConsentPanel({ session, assistedBy }: { session: Session; assist
               >
                 Decline "{label}"
               </button>{' '}
-              <button onClick={() => setPendingWithdrawal(scope)}>Withdraw consent for "{label}"</button>
+              {/*
+                Offered only where it can be honoured.
+                
+                This button used to render for every scope regardless of
+                state, and the server refuses two of those states outright:
+                with nothing recorded it answers RESOURCE_NOT_FOUND ("No
+                consent recorded for this scope"), and on an already
+                withdrawn scope INVALID_STATE_TRANSITION. So a participant
+                who had just arrived was shown six buttons, one per scope,
+                every one of which was certain to fail.
+                
+                The failure is the bad part rather than the clutter. A 404
+                here reaches them as "that could not be completed", with no
+                reason given — protected existence, working exactly as
+                designed — so somebody pressing "withdraw my consent" and
+                being told only that it did not work has every reason to
+                wonder what they agreed to. An offer the platform cannot
+                honour is the control this project keeps taking out (D-2,
+                D-5, D-21, D-34, D-75); this one was worse than empty,
+                because it was about consent.
+                
+                Declined and Deferred are left alone: the server accepts a
+                withdrawal there, so hiding it would be removing something
+                that works, which is a copy question rather than a defect.
+              */}
+              {state !== undefined && state.decision !== 'Withdrawn' && (
+                <button onClick={() => setPendingWithdrawal(scope)}>Withdraw consent for "{label}"</button>
+              )}
               {pendingWithdrawal === scope && (
                 <div role="alertdialog" aria-labelledby={`wd-${scope}`}>
                   <p id={`wd-${scope}`}>
