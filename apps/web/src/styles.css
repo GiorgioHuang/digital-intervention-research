@@ -1003,6 +1003,79 @@ summary {
 button:hover,
 a[role='button']:hover { background-color: var(--color-action-secondary-bg-hover); }
 
+/* ---------- Navigation is not action ----------------------------------- */
+/*
+ * A disclosure that leads somewhere is not a button, and on the participant
+ * home every one of them looked like one: the same white pill, the same
+ * teal semibold, the same border as "Add this to my story". So the single
+ * thing that wanted a decision carried exactly the weight of a folder.
+ *
+ * The hierarchy this builds is between KINDS — a thing to do against a
+ * place to go — and never inside a pair of choices, where visual weight
+ * would be steering (DESIGN_BRIEF: "visual weight must not steer the
+ * participant toward one option"). Nothing here touches an option pair.
+ *
+ * Rows rather than pills: full width, no enclosure, separated by hairlines,
+ * with the marker on the right where a list of destinations expects it.
+ * The target height is untouched — R1 still governs.
+ */
+.nav-rows > details {
+  border-block-end: var(--border-hairline) solid var(--color-border-subtle);
+}
+.nav-rows > details:first-of-type {
+  border-block-start: var(--border-hairline) solid var(--color-border-subtle);
+}
+.nav-rows > details > summary {
+  display: flex;
+  inline-size: 100%;
+  justify-content: space-between;
+  padding-inline: var(--space-1);
+  border: 0;
+  border-radius: 0;
+  background-color: transparent;
+  color: var(--color-text-primary);
+  font-weight: var(--type-weight-medium);
+}
+.nav-rows > details > summary::-webkit-details-marker { display: none; }
+.nav-rows > details > summary { list-style: none; }
+/* The marker is the only thing that moves, and it says which way. */
+.nav-rows > details > summary::after {
+  content: '';
+  inline-size: 0.55rem;
+  block-size: 0.55rem;
+  margin-inline-start: var(--space-3);
+  border-inline-end: 2px solid var(--color-text-secondary);
+  border-block-end: 2px solid var(--color-text-secondary);
+  transform: rotate(-45deg);
+  transition: transform var(--motion-duration-fast) var(--motion-ease-standard);
+}
+.nav-rows > details[open] > summary::after { transform: rotate(45deg); }
+.nav-rows > details > summary:hover { background-color: var(--color-surface-sunken); }
+.nav-rows > details > *:not(summary) { padding-block-end: var(--space-3); }
+
+/* ---------- A thing to decide is an object -------------------------------- */
+/*
+ * The waiting item was loose text on the page: heading, paragraph, quote,
+ * two buttons, all sitting on the same ground as everything else, so the
+ * one thing that wanted an answer did not read as a thing at all.
+ */
+.task { margin-block: var(--space-5); }
+.task > :first-child { margin-block-start: 0; }
+.task > :last-child { margin-block-end: 0; }
+/*
+ * Both answers, exactly alike. Equal weight is a rule here, not a
+ * preference (DESIGN_BRIEF; DESIGN_SYSTEM §788 asserts background, weight
+ * and border are identical for a pair) — so they are given the same width
+ * as well, which the ragged text-sized buttons were not.
+ */
+.task__answers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-block-start: var(--space-4);
+}
+.task__answers > button { flex: 1 1 14rem; justify-content: center; }
+
 /* The primary action (at most one per screen, Doc 20 §13.2) */
 .btn-primary {
   background-color: var(--color-action-primary-bg);

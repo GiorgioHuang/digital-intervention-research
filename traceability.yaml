@@ -2573,3 +2573,67 @@
   tests:
     - apps/web/test/participant-screen-budgets.test.tsx
   status: implemented
+
+- implementation_id: IMP-WEB-PARTICIPANT-HIERARCHY-001
+  module: WEB
+  summary: >-
+    On the participant home every element was the same button. The decision that wanted an
+    answer, the folded destinations and the help link were all identical outlined pills in
+    the same teal semibold, so the one thing to do carried exactly the weight of a folder.
+    The design system already held the vocabulary that was missing - .card and .btn-primary
+    were defined, and .btn-primary was used once, on the sign-in submit, and nowhere inside
+    the workspace. The obvious repair was wrong and worth recording: giving the affirmative
+    answer the primary treatment is how a page normally gets hierarchy, and here it would
+    have steered somebody toward accepting another person's words into their own life
+    story, which DESIGN_BRIEF forbids outright. So the hierarchy is built between kinds
+    rather than within a pair. The waiting contribution becomes a card - an object with
+    edges instead of loose text on the page. Its two answers are given the same width as
+    well as the same weight, where before the longer label made the wider button. The
+    destinations stop being pills and become quiet full-width rows separated by hairlines,
+    with a chevron on the right, because a place to go is not an action. The assisted-mode
+    disclosure, which sits above the page heading on every screen and was the loudest thing
+    on it while being the one fewest people need, is quietened the same way; its position
+    is left alone because where it lives is a question about who is sitting with somebody
+    rather than a visual one. Measured at a real 390px viewport driven over CDP, since
+    Chromium's --window-size is ignored in headless and the first screenshots were laid out
+    at 500px and cropped, which read as a horizontal overflow that does not exist.
+  trace_ids: [ATR-021]
+  adr_ids: [ADR-061, ADR-062]
+  docs:
+    - "design/DESIGN_DECISIONS.md D-102"
+  code:
+    - apps/web/src/styles.css
+    - apps/web/src/App.tsx
+    - apps/web/src/components/WaitingForYou.tsx
+  tests:
+    - apps/web/test/home.test.tsx
+  status: implemented
+
+- implementation_id: IMP-WEB-EQUAL-WEIGHT-ACCEPTANCE-001
+  module: WEB
+  summary: >-
+    DESIGN_SYSTEM section 788 specifies an acceptance test for equal-weight pairs - assert
+    that background, font weight and border are exactly equal for each - and it had never
+    been written. The rule it belongs to is DESIGN_BRIEF's, that visual weight must not
+    steer the participant toward one option, which is the rule standing between this
+    interface and a dark pattern. It had nothing holding it through every commit that
+    touched a choice, and it nearly cost something immediately: making the affirmative
+    answer a solid primary button is the obvious way to give a page hierarchy, it looks
+    like better design, and nothing in the suite would have gone red. Asserted on the class
+    rather than on getComputedStyle - every difference of weight here arrives as a class,
+    jsdom does not resolve var() so comparing computed styles would compare two unresolved
+    strings, and identical classes is the stronger claim because it fails where a nudge
+    would actually be introduced. Covers the life-story accept/refuse pair and all six
+    consent grant/decline pairs. Mutations verified red: the affirmative answer weighted,
+    and one consent scope out of six weighted, which is the easiest to miss.
+  trace_ids: [ATR-021]
+  adr_ids: [ADR-061, ADR-062]
+  docs:
+    - "design/DESIGN_SYSTEM.md A.?"
+    - "design/DESIGN_DECISIONS.md D-102"
+  code:
+    - apps/web/src/components/WaitingForYou.tsx
+    - apps/web/src/components/ConsentPanel.tsx
+  tests:
+    - apps/web/test/equal-weight.test.tsx
+  status: verified

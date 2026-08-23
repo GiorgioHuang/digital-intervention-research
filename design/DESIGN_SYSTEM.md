@@ -785,7 +785,7 @@ When two options are **equal in value**, **neither** may use `.btn-primary`; the
 | Withdrawal confirmation | `Confirm withdrawal of "…"` / `Go back, do not withdraw` | As above (withdrawal is the user's right, and "go back" must not be made to look preferable) |
 
 `.btn-primary` is permitted only for a single forward action with **no opposing option** (`Save draft`, `Submit report`, `Enter`).
-**Acceptance**: for each equal-weight pair, assert that `getComputedStyle`'s `backgroundColor`, `fontWeight` and `borderWidth` are exactly the same.
+**Acceptance**: for each equal-weight pair, assert that `getComputedStyle`'s `backgroundColor`, `fontWeight` and `borderWidth` are exactly the same. **Implemented 2026-08-22, and it had never been written until then** — the rule that stops this interface nudging people had nothing holding it, through every commit that touched a choice. Asserted on the *class* rather than on `getComputedStyle`: every difference of weight in this codebase arrives as a class (`btn-primary`, `btn-danger`), jsdom does not resolve `var()` so comparing computed styles would be comparing two unresolved strings, and identical classes is the stronger claim anyway because it fails at the point where a nudge would actually be introduced. `apps/web/test/equal-weight.test.tsx` covers the life-story pair and all six consent pairs; mutations verified red include weighting one scope out of six, which is the easiest of all to miss.
 
 ---
 

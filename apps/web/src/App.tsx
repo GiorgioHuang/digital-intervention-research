@@ -413,7 +413,16 @@ export function App() {
           }}
         />
         <AccessTokenGate />
-        <AssistedMode helper={helper} onChange={setHelper} />
+        {/*
+          Quietened rather than moved. It sits above the page's own heading
+          on every screen, and as a pill it was the loudest element on the
+          participant home while being the one fewest people need. Where it
+          lives is a question about who is sitting with somebody, not a
+          visual one, so the position stays and only the weight changes.
+        */}
+        <div className="nav-rows">
+          <AssistedMode helper={helper} onChange={setHelper} />
+        </div>
         {screen === 'home' && (
           <section aria-labelledby="home-heading">
             <h1 id="home-heading">What would you like to do today?</h1>
@@ -443,6 +452,7 @@ export function App() {
               is still searched by the browser's find-in-page.
             */}
             <WaitingForYou session={session} />
+            <div className="nav-rows">
             <details>
               <summary>Your information and who can see it</summary>
               <ul>
@@ -485,6 +495,7 @@ export function App() {
               <summary>Your part in the research</summary>
               <MyResearchPart session={session} headingLevel={3} />
             </details>
+            </div>
             {/*
               Help is the one thing that does not fold. It is duplicated by
               the bottom bar, which is exactly the redundancy removed

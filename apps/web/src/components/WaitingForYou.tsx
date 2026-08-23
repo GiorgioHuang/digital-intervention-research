@@ -91,17 +91,23 @@ export function WaitingForYou({ session }: { session: Session }) {
       )}
 
       {(items ?? []).map((c) => (
-        <article key={c.contributionId} aria-label={`Contribution ${c.contributionId}`}>
+        <article key={c.contributionId} className="card task" aria-label={`Contribution ${c.contributionId}`}>
           <h3>Someone has offered something for your life story</h3>
           <p>
             Only you can decide this. Nothing is added to your story unless you accept it, and if you accept, it is
             shown as their account of things — not as your own words.
           </p>
           <blockquote>{c.contentText}</blockquote>
-          <p>
-            <button onClick={() => void startAccepting(c)}>Add this to my story</button>{' '}
+          {/*
+            Both answers, exactly alike, and now the same width as well —
+            they were text-sized before, so the longer one was the wider
+            one. Equal weight is a rule here rather than a preference
+            (DESIGN_BRIEF), and width is weight.
+          */}
+          <div className="task__answers">
+            <button onClick={() => void startAccepting(c)}>Add this to my story</button>
             <button onClick={() => void decide(c, 'Rejected')}>Do not add this</button>
-          </p>
+          </div>
 
           {choosingFor?.contributionId === c.contributionId && (
             <div role="group" aria-labelledby={`where-${c.contributionId}`}>
