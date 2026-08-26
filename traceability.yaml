@@ -2637,3 +2637,35 @@
   tests:
     - apps/web/test/equal-weight.test.tsx
   status: verified
+
+- implementation_id: IMP-API-CLOCK-AUTHORITATIVE-001
+  module: M01
+  summary: >-
+    Nine tests began failing on their own, on unchanged code, because the date moved. An
+    invitation's expiry was written from the injected clock and read against the database's
+    now(). In production the two agree and nothing is wrong; under a fixed test clock they
+    diverge, silently, and stay in agreement only while real time remains inside the
+    invitation window. The session-store suite pinned its permission service to
+    2026-08-08 and built its stores with no clock at all, so invitations written fourteen
+    days out from the fixed date expired against real time on 2026-08-22 - and on 2026-08-26
+    the suite was red on code nobody had touched since. CI had last run on the 22nd and was
+    green, so the failure was waiting rather than visible. Four read sites now compare
+    against the injected clock instead of the database's: claiming an invitation at sign-in,
+    resolving a session, listing an organisation's pending invitations, and listing a
+    participant's supporter invitations. The clock is authoritative in both directions,
+    which is what a deterministic clock is for. The test's own helpers were the mirror image
+    of the same fault - they inserted expiries relative to the database's now() while the
+    code under test read the fixed clock - and now share one clock with everything else.
+    Found while starting unrelated design work: a full run went from 863 passing to 846 with
+    no code change of mine, and stashing the working tree reproduced it.
+  trace_ids: [ATR-005]
+  adr_ids: [ADR-104]
+  docs:
+    - "design/DESIGN_DECISIONS.md D-103"
+  code:
+    - apps/api/src/auth/session-store.ts
+    - packages/modules/m01-identity-org/src/application/commands.ts
+    - packages/modules/m01-identity-org/src/application/queries.ts
+  tests:
+    - apps/api/test/session-store.integration.test.ts
+  status: implemented

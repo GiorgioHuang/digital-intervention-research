@@ -185,10 +185,10 @@ export async function listPendingInvitations(
        LEFT JOIN identity_org.user_accounts a ON a.id = i.user_account_id
        JOIN identity_org.organisation_memberships m ON m.user_account_id = i.user_account_id
       WHERE i.invitation_state = 'Pending'
-        AND i.expires_at > now()
+        AND i.expires_at > $2
         AND m.organisation_id = $1
       ORDER BY i.created_at DESC`,
-    [organisationId],
+    [organisationId, deps.clock.now()],
   );
   return res.rows.map((r: Record<string, unknown>) => ({
     invitationId: r['id'] as string,

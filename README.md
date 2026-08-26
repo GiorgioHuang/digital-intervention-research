@@ -79,13 +79,13 @@ Modules M01–M18: identity and organisation, participant, consent and permissio
 |---|---|
 | deploy it, or understand the environment | `operations/DEPLOYMENT.md` |
 | know what is built, and what is honestly not | `governance/IMPLEMENTATION_BASELINE.md`, then `governance/PILOT_READINESS_REPORT.md` |
-| know why something was built that way | `design/DESIGN_DECISIONS.md` (D-1…D-102) and `governance/IMPLEMENTATION_DECISIONS.md` (the ADR dispositions) |
+| know why something was built that way | `design/DESIGN_DECISIONS.md` (D-1…D-103) and `governance/IMPLEMENTATION_DECISIONS.md` (the ADR dispositions) |
 | change an interface | `design/DESIGN_BRIEF.md`, then the workspace specification in `design/` |
 | understand the research framing | `research/CONCEPTUAL_RESEARCH_PLAN.md` |
 | see where the model contradicts itself | `research/CONTRADICTION_REGISTER.md` |
 | trace a requirement to its code and tests | `traceability.yaml` (+ `research-traceability.yaml`), whose rules are in `governance/TRACEABILITY_IMPLEMENTATION_MATRIX.md` |
 
-`design/DESIGN_DECISIONS.md` is the most useful file for understanding the project's character: one hundred and two rulings, most of them recording something that looked finished and was not.
+`design/DESIGN_DECISIONS.md` is the most useful file for understanding the project's character: one hundred and three rulings, most of them recording something that looked finished and was not.
 
 Both traceability files stay at the repository root deliberately — the checkers read them from there, and one of them fails on finding a `traceability.yaml` anywhere else, because a misplaced copy once meant an entry was silently never checked.
 

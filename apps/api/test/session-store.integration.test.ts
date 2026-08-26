@@ -22,6 +22,25 @@ import {
 import { createSessionStore, hashToken, type SessionStore } from '../src/auth/session-store.js';
 import type { GoogleIdentity } from '../src/auth/google-token.js';
 
+/*
+ * One clock, not two.
+ *
+ * These stores used to be built without a `now`, so they ran on the real
+ * clock while m01 ran on a FixedClock pinned to 2026-08-08. An invitation
+ * was therefore *written* with an expiry fourteen days after the fixed
+ * date and *read* against real time — which agreed for exactly as long as
+ * real time stayed inside that window, and stopped agreeing on 2026-08-22.
+ * Nine tests then began failing on their own, on unchanged code, four days
+ * later. A suite that passes because of the date is not passing.
+ */
+const TEST_CLOCK = new FixedClock('2026-08-08T12:00:00Z');
+const testNow = (): Date => TEST_CLOCK.now();
+
+/* An hour past the test clock, as a SQL literal — these inserts carry
+   positional parameters and renumbering them to bind a date would be a
+   larger edit than the fix deserves. */
+const ONE_HOUR_ON = `'${new Date(TEST_CLOCK.now().getTime() + 3_600_000).toISOString()}'::timestamptz`;
+
 const DATABASE_URL =
   process.env['DATABASE_URL'] ?? 'postgres://platform:platform_dev_only@localhost:5432/research_platform';
 
@@ -88,9 +107,12 @@ describe.skipIf(!dbAvailable)('sessions, invitations, and who a Google account t
   async function invite(accountId: string, email: string, expiresInMinutes = 60): Promise<string> {
     const id = newId('invite');
     await pool.query(
+      // Relative to the same clock the sign-in path reads, not to the
+      // database's. Written against `now()` this helper produced expiries
+      // that only agreed with the fixed clock by accident of the date.
       `INSERT INTO identity_org.account_invitations (id, user_account_id, issuer, invited_email, expires_at)
-       VALUES ($1, $2, $3, $4, now() + ($5 || ' minutes')::interval)`,
-      [id, accountId, ISSUER, email, String(expiresInMinutes)],
+       VALUES ($1, $2, $3, $4, $5)`,
+      [id, accountId, ISSUER, email, new Date(testNow().getTime() + expiresInMinutes * 60_000)],
     );
     return id;
   }
@@ -100,6 +122,7 @@ describe.skipIf(!dbAvailable)('sessions, invitations, and who a Google account t
     pool = createPool({ connectionString: DATABASE_URL, applicationName: 'session-store-test' });
     sessions = createSessionStore({
       pool,
+      now: testNow,
       sessionTtlMinutes: 60,
       stepUpTtlMinutes: 10,
       mfaDomains: ['mfa-enforced.test'],
@@ -107,6 +130,7 @@ describe.skipIf(!dbAvailable)('sessions, invitations, and who a Google account t
     });
     closedSessions = createSessionStore({
       pool,
+      now: testNow,
       sessionTtlMinutes: 60,
       stepUpTtlMinutes: 10,
       mfaDomains: [],
@@ -114,7 +138,7 @@ describe.skipIf(!dbAvailable)('sessions, invitations, and who a Google account t
     });
     permissions = createPermissionService({
       pool,
-      clock: new FixedClock('2026-08-08T12:00:00Z'),
+      clock: TEST_CLOCK,
       policy: POLICY_V1,
       roleAssignments: createRoleAssignmentQuery(pool),
       participantIdentity: createParticipantQuery(pool),
@@ -285,7 +309,7 @@ describe.skipIf(!dbAvailable)('sessions, invitations, and who a Google account t
       `INSERT INTO identity_org.account_invitations
          (id, issuer, invited_email, expires_at, invited_by,
           relationship_participant_id, relationship_type, relationship_permitted_actions)
-       VALUES ($1, $2, $3, now() + interval '1 hour', $4, $5, 'FamilyMember', $6)`,
+       VALUES ($1, $2, $3, ${ONE_HOUR_ON}, $4, $5, 'FamilyMember', $6)`,
       [
         newId('invite'),
         ISSUER,
@@ -354,7 +378,7 @@ describe.skipIf(!dbAvailable)('sessions, invitations, and who a Google account t
       `INSERT INTO identity_org.account_invitations
          (id, issuer, invited_email, expires_at,
           relationship_participant_id, relationship_type, relationship_permitted_actions)
-       VALUES ($1, $2, $3, now() + interval '1 hour', $4, 'FamilyMember', $5)`,
+       VALUES ($1, $2, $3, ${ONE_HOUR_ON}, $4, 'FamilyMember', $5)`,
       [newId('invite'), ISSUER, 'daughter@example.org', inviterParticipant, ['life-story.contribute']],
     );
 
@@ -393,7 +417,7 @@ describe.skipIf(!dbAvailable)('sessions, invitations, and who a Google account t
       `INSERT INTO identity_org.account_invitations
          (id, issuer, invited_email, expires_at,
           relationship_participant_id, relationship_type, relationship_permitted_actions)
-       VALUES ($1, $2, $3, now() + interval '1 hour', $4, 'FamilyMember', $5)`,
+       VALUES ($1, $2, $3, ${ONE_HOUR_ON}, $4, 'FamilyMember', $5)`,
       [newId('invite'), ISSUER, 'daughter@example.org', inviterParticipant, ['life-story.contribute']],
     );
 
@@ -420,7 +444,7 @@ describe.skipIf(!dbAvailable)('sessions, invitations, and who a Google account t
       `INSERT INTO identity_org.account_invitations
          (id, issuer, invited_email, expires_at,
           relationship_participant_id, relationship_type, relationship_permitted_actions)
-       VALUES ($1, $2, $3, now() + interval '1 hour', $4, 'FamilyMember', $5)`,
+       VALUES ($1, $2, $3, ${ONE_HOUR_ON}, $4, 'FamilyMember', $5)`,
       [newId('invite'), ISSUER, 'daughter@example.org', inviterParticipant, ['life-story.contribute']],
     );
     const who = identity({ subject: 'google-sub-daughter', email: 'daughter@example.org' });
@@ -602,6 +626,7 @@ describe.skipIf(!dbAvailable)('sessions, invitations, and who a Google account t
       await pool.query('DELETE FROM identity_org.role_assignments');
       bootstrapSessions = createSessionStore({
         pool,
+        now: testNow,
         sessionTtlMinutes: 60,
         stepUpTtlMinutes: 10,
         mfaDomains: [],

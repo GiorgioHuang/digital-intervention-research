@@ -645,9 +645,9 @@ export async function listSupporterInvitations(
   const res = await deps.pool.query(
     `SELECT id, invited_email, relationship_type, relationship_permitted_actions, expires_at, created_at
        FROM identity_org.account_invitations
-      WHERE relationship_participant_id = $1 AND invitation_state = 'Pending' AND expires_at > now()
+      WHERE relationship_participant_id = $1 AND invitation_state = 'Pending' AND expires_at > $2
       ORDER BY created_at DESC`,
-    [input.participantId],
+    [input.participantId, deps.clock.now()],
   );
   return res.rows.map((r: Record<string, unknown>) => ({
     invitationId: r['id'] as string,

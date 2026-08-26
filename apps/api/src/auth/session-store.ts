@@ -101,7 +101,7 @@ export function createSessionStore(options: SessionStoreOptions): SessionStore {
 
         const identityRow =
           linked.rows[0] ??
-          (await admit(client, identity, options.allowSelfSignup));
+          (await admit(client, identity, now(), options.allowSelfSignup));
 
         // An invitation sent to somebody who had ALREADY registered used to
         // sit unclaimed forever: the linked-identity branch returned before
@@ -112,7 +112,7 @@ export function createSessionStore(options: SessionStoreOptions): SessionStore {
         // idempotent because the invitation is marked spent in the same
         // transaction.
         if (linked.rows[0] !== undefined) {
-          await applyPendingInvitationTo(client, identity, identityRow.user_account_id);
+          await applyPendingInvitationTo(client, identity, identityRow.user_account_id, now());
         }
 
         const account = await client.query<{ display_name: string; account_state: string }>(
@@ -216,8 +216,8 @@ export function createSessionStore(options: SessionStoreOptions): SessionStore {
            JOIN identity_org.user_accounts a ON a.id = s.user_account_id
           WHERE s.token_hash = $1
             AND s.revoked_at IS NULL
-            AND s.expires_at > now()`,
-        [hashToken(token)],
+            AND s.expires_at > $2`,
+        [hashToken(token), now()],
       );
       const row = result.rows[0];
       if (row === undefined) return undefined;
@@ -259,8 +259,8 @@ export function createSessionStore(options: SessionStoreOptions): SessionStore {
            JOIN identity_org.external_identities e ON e.id = s.external_identity_id
           WHERE s.token_hash = $1
             AND s.revoked_at IS NULL
-            AND s.expires_at > now()`,
-        [hashToken(token)],
+            AND s.expires_at > $2`,
+        [hashToken(token), now()],
       );
       const row = result.rows[0];
       if (row === undefined) throw new PlatformError('AUTHENTICATION_REQUIRED', 'Authentication required');
@@ -307,9 +307,10 @@ export function createSessionStore(options: SessionStoreOptions): SessionStore {
 async function admit(
   client: { query: Pool['query'] },
   identity: GoogleIdentity,
+  asOf: Date,
   allowSelfSignup: boolean,
 ): Promise<{ id: string; user_account_id: string }> {
-  const invitation = await findPendingInvitation(client, identity);
+  const invitation = await findPendingInvitation(client, identity, asOf);
 
   if (invitation === undefined) {
     if (!allowSelfSignup) {
@@ -340,8 +341,9 @@ async function applyPendingInvitationTo(
   client: { query: Pool['query'] },
   identity: GoogleIdentity,
   accountId: string,
+  asOf: Date,
 ): Promise<void> {
-  const invitation = await findPendingInvitation(client, identity);
+  const invitation = await findPendingInvitation(client, identity, asOf);
   if (invitation === undefined) return;
   // An invitation naming a DIFFERENT pre-created account cannot be applied
   // to this one: the two accounts are two people as far as the audit trail
@@ -375,6 +377,7 @@ interface PendingInvitation {
 async function findPendingInvitation(
   client: { query: Pool['query'] },
   identity: GoogleIdentity,
+  asOf: Date,
 ): Promise<PendingInvitation | undefined> {
   if (!identity.emailVerified || identity.email === undefined) return undefined;
   const result = await client.query<PendingInvitation>(
@@ -384,9 +387,9 @@ async function findPendingInvitation(
       WHERE issuer = $1
         AND lower(invited_email) = lower($2)
         AND invitation_state = 'Pending'
-        AND expires_at > now()
+        AND expires_at > $3
       FOR UPDATE`,
-    [identity.issuer, identity.email],
+    [identity.issuer, identity.email, asOf],
   );
   return result.rows[0];
 }
