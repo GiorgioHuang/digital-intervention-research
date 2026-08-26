@@ -42,6 +42,37 @@
     -apple-system, 'PingFang SC', 'Noto Sans CJK SC', 'Microsoft YaHei', sans-serif;
   --type-family-mono: ui-monospace, SFMono-Regular, Menlo, 'Noto Sans Mono CJK SC', monospace;
 
+  /* ---------- Classical, the participant workspace's own language ---------
+   * From the handoff's design-system/styles.css, kept at its own values
+   * rather than approximated. Declared here because a literal colour may
+   * only live in a token block (DESIGN_SYSTEM §0.1, enforced); the
+   * participant workspace remaps the semantic tokens onto these below, so
+   * every component that already speaks in semantic tokens changes with it.
+   *
+   * The base gold reaches about 3:1 on this ground — fine for a border or
+   * an icon, not for text. That is why -700 exists and why interactive text
+   * uses it. The handoff says so outright and the ramp is built for it.
+   */
+  --cl-bg: #f3f2f2;
+  --cl-surface: #eae9e9;
+  --cl-text: #201f1d;
+  --cl-text-2: #3a3835;
+  --cl-text-3: #4a4844;
+  --cl-text-4: #605d5d;
+  --cl-divider: #cfcdcb;
+  --cl-neutral-100: #f8f4f4;
+  --cl-neutral-200: #eae7e7;
+  --cl-neutral-300: #d7d3d3;
+  --cl-neutral-400: #bab6b6;
+  --cl-accent: #b68235;
+  --cl-accent-100: #fff3e4;
+  --cl-accent-200: #ffe3bf;
+  --cl-accent-300: #facb8d;
+  --cl-accent-700: #7d5411;
+  --cl-accent-800: #5a3b0a;
+  --cl-family-display: 'Cormorant Garamond', Georgia, 'Times New Roman', serif;
+  --cl-family-body: Lora, Georgia, 'Times New Roman', serif;
+
   --type-size-0: 0.833rem;
   --type-size-1: 1rem;
   --type-size-2: 1.125rem;
@@ -722,6 +753,65 @@ main {
 
    Body paragraphs keep the --measure-default line-length cap. Researchers
    are people too. */
+/* ---------- The participant workspace speaks Classical -------------------
+ * A remap, not a second stylesheet. Every component here already draws
+ * itself from semantic tokens, so pointing those tokens at the Classical
+ * ramp re-skins buttons, cards, hairlines and states at once — and the
+ * staff and supporter workspaces, which do not carry this attribute, are
+ * left exactly as they were.
+ *
+ * No literal colours in this block, deliberately: DESIGN_SYSTEM §0.1 keeps
+ * them in token blocks and a test enforces it.
+ */
+[data-workspace='participant'] {
+  --type-family-ui: var(--cl-family-body);
+
+  --color-surface-page: var(--cl-bg);
+  --color-surface-raised: var(--cl-neutral-100);
+  --color-surface-sunken: var(--cl-neutral-200);
+
+  --color-text-primary: var(--cl-text);
+  --color-text-secondary: var(--cl-text-4);
+  --color-text-link: var(--cl-accent-700);
+
+  --color-border-subtle: var(--cl-divider);
+
+  /* Interactive text is -700, never the base gold: the handoff is explicit
+     that the gold reaches only about 3:1 on this ground. */
+  --color-action-secondary-fg: var(--cl-accent-700);
+  --color-action-secondary-border: var(--cl-accent);
+  --color-action-secondary-bg-hover: var(--cl-accent-100);
+
+  --color-action-primary-bg: var(--cl-accent-700);
+  --color-action-primary-fg: var(--cl-neutral-100);
+  --color-action-primary-bg-hover: var(--cl-accent-800);
+  --color-action-primary-bg-active: var(--cl-accent-800);
+
+  --color-focus-ring: var(--cl-accent-700);
+
+  background-color: var(--cl-bg);
+  color: var(--cl-text);
+  font-family: var(--cl-family-body);
+}
+
+/* Headings and controls are the display face; body copy is not. */
+[data-workspace='participant'] :is(h1, h2, h3, h4, summary, button, label, legend) {
+  font-family: var(--cl-family-display);
+}
+[data-workspace='participant'] :is(h1, h2, h3, h4) {
+  font-weight: var(--type-weight-semibold);
+  letter-spacing: 0;
+}
+/* Display text goes lighter than the interface headings — the system's own
+   rule, and the reason the h1 stops shouting. */
+[data-workspace='participant'] h1 {
+  font-weight: var(--type-weight-regular);
+}
+/* Every figure is tabular: clocks, dates, the telephone number, counts. */
+[data-workspace='participant'] :is(time, .figure, td, th) {
+  font-variant-numeric: tabular-nums;
+}
+
 main[data-workspace='staff'] {
   max-width: var(--measure-desktop);
   --density-surface: 0.9;

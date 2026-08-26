@@ -356,7 +356,7 @@ export function App() {
   }
 
   return (
-    <div>
+    <div data-workspace="participant">
       <a className="skip-link" href="#main-content">
         Skip to main content
       </a>

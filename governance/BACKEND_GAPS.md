@@ -1,0 +1,42 @@
+# BACKEND_GAPS
+
+> What the Canadian Elder Life Story handoff asks for that this platform cannot yet
+> serve. Kept as the front end is built, not written up afterwards, on the owner's
+> instruction: **build the front end first, record the missing back end for later.**
+>
+> Status started 2026-08-22. A row leaves this file when an endpoint exists **and** a
+> screen reads from it — not when either half alone is done.
+
+## How the front end behaves while a row here is open
+
+Every screen built against a gap says so on the screen, in the participant's words, and
+offers nothing it cannot honour. That is not politeness: this project has removed a
+control that promised what the platform could not deliver more than once (D-2, D-5,
+D-21, D-34, D-75), and the consent screen was found offering six withdrawals that were
+certain to fail (D-101). A design handed over complete is exactly the circumstance in
+which that mistake gets made again, at speed.
+
+## Gaps
+
+| # | What the design needs | What exists | What is missing |
+|---|---|---|---|
+| B-1 | **Story entries** — list of a participant's own memories with title, excerpt, and provenance meta ("Your words, spoken · 3 min · June 2026" / "Anne's account · accepted May 2026") | M17 Life Story holds items and contributions | A query returning entries with **provenance and duration** in the shape the list needs; nothing records "spoken" against "written", and nothing records an audio length |
+| B-2 | **Speech capture** — record audio, show an elapsed clock, then "We will type this out for you" | nothing | Audio upload, storage against a life-story item, and transcription. R2 holds bytes; there is no audio pipeline and no transcription provider (ADR-109 is unchosen) |
+| B-3 | **Photographs on a memory** — attach, caption, and "take the photograph out" | R2 object storage is connected and exercised | Image upload from the browser, a per-item photo relation, a caption field, and removal. **Malware scanning is still a simulator** (ADR-126) — nothing may claim a photograph has been checked |
+| B-4 | **The uncaptioned-photo prompt** — "A photograph with no words", "You added a photograph on Tuesday" | nothing | Depends on B-3; also needs "has no caption" to be a queryable state |
+| B-5 | **Consent, the design's shape** — four questions, each with two or three options, each change confirmed immediately | M03 holds **six scopes** with grant / decline / withdraw | The two models do not map. This is a ruling for the owner, not a mapping exercise — see D-103 |
+| B-6 | **Community posts** — other participants' shared stories with name, age, city, excerpt | M18 community spaces and a chronological feed | Sharing a **life-story piece** to the community; the design's post shape (age, city, first name only); the "Choose one of mine to share" path |
+| B-7 | **"This mattered to me"** — a per-post count and a per-viewer state | nothing | An approval relation and its count. The design is explicit that it is **not** a like: the word matters and so does the absence of a running score anywhere else |
+| B-8 | **Comments** — list, post, delete your own, report someone else's | nothing | Comment storage, authorship, deletion, and the report path below |
+| B-9 | **Reports** — five reasons, optional note, "send and hide this from me" | M09 safety signals and M18 moderation exist | A participant-facing report endpoint carrying the design's reasons, and a **hide-from-me** relation, which is a per-viewer suppression the platform does not have |
+| B-10 | **Exercises and tapping** — four exercises; taps counted for the study and **never shown** | nothing | An exercise-result record. Note the design's rule: the participant sees elapsed time only, and a score must never be displayed. Whatever is built must make displaying one awkward |
+| B-11 | **Messages as conversations** — thread rows open to a conversation | M07 delivery and threads exist | The design opens a thread to a toast; a real conversation view needs the existing thread queries wired up |
+| B-12 | **French at parity** | nothing | Only Home has FR copy in the prototype. A Canadian study needs FR everywhere, and the platform has no localisation layer at all |
+| B-13 | **Helper mode, decisions deferred** — "those decisions are put aside and shown to you again once helping stops" | `AssistedMode` is read-only assistance (D-15) | Deferring a decision while a helper is present, and re-presenting it afterwards. D-15 ruled read-only assistance deliberately; this is a change to that ruling, not an addition |
+| B-14 | **Recent decisions** — "What you decided recently", three rows of `{what, when}` | the audit trail records decisions | A participant-facing query over their own decisions, in plain words rather than action codes |
+
+## Not gaps — deliberate absences the design shares
+
+- No timers, no auto-dismissing anything. The platform already refuses this and so does the design.
+- No score, ever, on an exercise.
+- Photographs: **no photographic assets exist**, and the design uses labelled grey placeholders throughout. Production must not substitute stock imagery of older people for real participants' photographs.
