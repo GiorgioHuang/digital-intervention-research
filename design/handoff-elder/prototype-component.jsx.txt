@@ -1,0 +1,348 @@
+class Component extends DCLogic {
+  state = {
+    screen: 'home', mode: 'speak', rec: 'idle', elapsed: '0:00', secs: 0,
+    helperMode: false, lang: 'en', zoom: 1, hc: false,
+    pending: true, toast: '', captionMode: '', taps: 0, tapSecs: 0, tapElapsed: '0:00', onbStep: 1,
+    openPost: 0, likes: {}, myComments: {}, draft: '',
+    confirmDelete: false, reportTarget: 'this story', reportReason: '', memPublic: false, memPhoto: false,
+    consent: { see: 'Only me', research: 'Not yet', suggest: 'Yes — Anne', contact: 'Yes, by post' }
+  };
+  contentRef = React.createRef();
+
+  posts = [
+    {
+      who: 'Doreen, 81 · Thunder Bay', firstName: 'Doreen', title: 'The mill closed on a Friday',
+      excerpt: 'By the Monday half the street was looking for work, and nobody said much about it.',
+      body1: 'They told the day shift at two in the afternoon and the night shift never came in at all. By the Monday half the street was looking for work, and nobody said much about it. That was the way of things then. You did not talk about money in front of the children.',
+      body2: 'My husband was forty-four. He got on with the roads after that and he never once complained about it in my hearing, though I knew. Twenty-two years at the mill and he kept his lunch tin the whole time afterwards.',
+      shared: 'Shared with the community · June 2026', likes: 34,
+      comments: [
+        { who: 'Ellis', when: '2 days ago', text: 'Ours went the same way, only it was a Tuesday. The lunch tin got me.' },
+        { who: 'Bernice', when: 'Yesterday', text: 'Thank you for writing this down. My father kept his boots by the door for years.' }
+      ]
+    },
+    {
+      who: 'Hubert, 76 · Trois-Rivières', firstName: 'Hubert', title: 'Ce que mon père m’a montré',
+      excerpt: 'Il réparait tout lui-même, et il voulait que je regarde avant de toucher.',
+      body1: 'Il réparait tout lui-même, et il voulait que je regarde avant de toucher. On restait une heure devant une machine sans rien dire. Je trouvais cela long. Aujourd’hui je fais la même chose et personne ne me croit quand je dis que c’est plus rapide.',
+      body2: 'Il est mort en 1994. Ses outils sont dans mon garage, rangés comme il les rangeait, et je n’ai jamais changé leur place.',
+      shared: 'Partagé avec la communauté · Mai 2026', likes: 21,
+      comments: [{ who: 'Doreen', when: '4 days ago', text: 'I read this with the translation. The tools in their place — yes.' }]
+    },
+    {
+      who: 'Ellis, 88 · Victoria', firstName: 'Ellis', title: 'Two winters on the coast boats',
+      excerpt: 'You slept when the sea let you, and you ate whatever the cook had going.',
+      body1: 'You slept when the sea let you, and you ate whatever the cook had going. Nobody asked whether you were tired. There was a run up past Bella Bella where the light went at three in the afternoon and did not come back until nine.',
+      body2: 'I was nineteen and I thought it was the finest job in the world. I still think so, and I have had better paid ones since.',
+      shared: 'Shared with the community · April 2026', likes: 47,
+      comments: [
+        { who: 'Hubert', when: 'Last week', text: 'Nineteen and the finest job in the world. That is exactly how it was.' },
+        { who: 'Margaret', when: 'Last week', text: 'My brother did the same run. He never described the dark like this.' },
+        { who: 'Doreen', when: '3 days ago', text: 'Please write more about the cook.' }
+      ]
+    }
+  ];
+
+  plural(n, one, many) { return n + ' ' + (n === 1 ? one : many); }
+
+  privStyle(on) {
+    return {
+      display: 'flex', width: '100%', textAlign: 'left', padding: '16px', cursor: 'pointer',
+      borderRadius: 'var(--radius-sm)', background: on ? 'var(--color-accent-100)' : 'transparent',
+      border: on ? '1px solid var(--color-accent)' : '1px solid var(--color-divider)',
+      color: 'var(--color-text)'
+    };
+  }
+
+  toggleLike(i) {
+    this.setState(st => ({ likes: Object.assign({}, st.likes, { [i]: !st.likes[i] }) }));
+  }
+
+  go = (screen) => () => { clearInterval(this._tap); this.setState({ screen, toast: '', memPublic: false, memPhoto: false }); };
+
+  // A fresh composer always starts private with no photograph.
+  composer(mode) { return { screen: 'record', mode, rec: 'idle', memPublic: false, memPhoto: false, toast: '' }; }
+
+  tick() {
+    const s = this.state.secs + 1;
+    this.setState({ secs: s, elapsed: Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0') });
+  }
+
+  startRec = () => {
+    clearInterval(this._t);
+    this.setState({ rec: 'recording', secs: 0, elapsed: '0:00' });
+    this._t = setInterval(() => this.tick(), 1000);
+  };
+  stopRec = () => { clearInterval(this._t); this.setState({ rec: 'recorded' }); };
+  componentWillUnmount() { clearInterval(this._t); clearInterval(this._tap); }
+
+  startTapClock() {
+    clearInterval(this._tap);
+    this.setState({ screen: 'tapping', taps: 0, tapSecs: 0, tapElapsed: '0:00', toast: '' });
+    this._tap = setInterval(() => this.setState(st => {
+      const n = st.tapSecs + 1;
+      return { tapSecs: n, tapElapsed: Math.floor(n / 60) + ':' + String(n % 60).padStart(2, '0') };
+    }), 1000);
+  }
+  stopTapClock() { clearInterval(this._tap); }
+
+  pipStyle(n) {
+    return {
+      flex: 1, height: '3px',
+      background: this.state.onbStep >= n ? 'var(--color-accent)' : 'var(--color-neutral-300)'
+    };
+  }
+
+  say(msg) { this.setState({ toast: msg }); }
+
+  readAloud = () => {
+    const el = this.contentRef.current;
+    if (!el || !window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(el.innerText);
+    u.rate = 0.9;
+    window.speechSynthesis.speak(u);
+  };
+
+  navStyle(name) {
+    const on = this.state.screen === name;
+    return {
+      flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+      gap: '5px', minHeight: '72px', padding: '8px 2px', cursor: 'pointer', background: 'transparent',
+      border: 0, borderTop: on ? '2px solid var(--color-accent)' : '2px solid transparent',
+      marginTop: '-1px', fontFamily: 'var(--font-heading)', fontWeight: 600, fontSize: '13px',
+      color: on ? 'var(--color-accent-800)' : '#4a4844'
+    };
+  }
+  segStyle(mode) {
+    const on = this.state.mode === mode;
+    return {
+      flex: 1, minHeight: '52px', cursor: 'pointer', background: on ? 'var(--color-accent-100)' : 'transparent',
+      border: 0, borderRight: '1px solid var(--color-divider)', fontFamily: 'var(--font-heading)',
+      fontWeight: 600, fontSize: '16px', color: on ? 'var(--color-accent-800)' : '#4a4844',
+      boxShadow: on ? 'inset 0 0 0 1px var(--color-accent)' : 'none'
+    };
+  }
+  optStyle(on) {
+    return {
+      minHeight: '52px', padding: '13px 16px', cursor: 'pointer', borderRadius: '4px', textAlign: 'left',
+      background: on ? 'var(--color-accent-100)' : 'transparent',
+      border: on ? '1px solid var(--color-accent)' : '1px solid var(--color-divider)',
+      fontFamily: 'var(--font-body)', fontSize: '16px',
+      color: on ? 'var(--color-accent-800)' : 'var(--color-text)'
+    };
+  }
+
+  consentRows() {
+    const c = this.state.consent;
+    const row = (key, question, note, options) => ({
+      question, note, current: c[key],
+      options: options.map(label => ({
+        label: label + (c[key] === label ? ' ✓' : ''), on: c[key] === label, style: this.optStyle(c[key] === label),
+        pick: () => this.setState({ consent: Object.assign({}, this.state.consent, { [key]: label }), toast: 'Saved. ' + question + ' — ' + label + '.' })
+      }))
+    });
+    return [
+      row('see', 'Who can see your life story?', 'This covers everything you have put in, including photographs.', ['Only me', 'Me and my family', 'The community']),
+      row('research', 'Can the researchers read your stories?', 'They would read them with your name removed.', ['Not yet', 'Yes']),
+      row('suggest', 'Can Anne suggest things to add?', 'She can offer. You still decide each one.', ['Yes — Anne', 'Nobody']),
+      row('contact', 'How may we contact you?', 'About the study only. Never to sell you anything.', ['Yes, by post', 'By telephone', 'Do not contact me'])
+    ];
+  }
+
+  renderVals() {
+    const s = this.state;
+    return {
+      isWelcome: s.screen === 'welcome', isHome: s.screen === 'home', isStory: s.screen === 'story',
+      isRecord: s.screen === 'record', isCaption: s.screen === 'caption', isReview: s.screen === 'review',
+      isConsent: s.screen === 'consent', isCommunity: s.screen === 'community',
+      isMessages: s.screen === 'messages', isHelp: s.screen === 'help', isHelper: s.screen === 'helper',
+      isExercises: s.screen === 'exercises', isTapping: s.screen === 'tapping',
+      isGoogle: s.screen === 'google', isOnb: s.screen === 'onboarding',
+      signedIn: ['welcome', 'google', 'onboarding', 'report'].indexOf(s.screen) === -1,
+      onb1: s.onbStep === 1, onb2: s.onbStep === 2, onb3: s.onbStep === 3,
+      onbStepLabel: 'Step ' + s.onbStep + ' of 3',
+      pip1: this.pipStyle(1), pip2: this.pipStyle(2), pip3: this.pipStyle(3),
+      goGoogle: this.go('google'),
+      finishGoogle: () => this.setState({ screen: 'onboarding', onbStep: 1, toast: '' }),
+      startOnboarding: () => this.setState({ screen: 'onboarding', onbStep: 1, toast: '' }),
+      onbNext: () => this.setState(st => ({ onbStep: Math.min(3, st.onbStep + 1) })),
+      onbBack: () => this.setState(st => st.onbStep === 1 ? { screen: 'welcome' } : { onbStep: st.onbStep - 1 }),
+      finishOnboarding: () => this.setState({ screen: 'home', toast: 'Welcome, Margaret. Your story is private until you say otherwise.' }),
+      goExercises: () => { this.stopTapClock(); this.setState({ screen: 'exercises', toast: '' }); },
+      tapElapsed: s.tapElapsed,
+      tap: () => this.setState(st => ({ taps: st.taps + 1 })),
+      finishExercise: () => { this.stopTapClock(); this.setState({ screen: 'exercises', taps: 0, toast: 'Done. Thank you for trying it.' }); },
+      openTapping: () => this.startTapClock(),
+      notBuilt: () => this.say('Only tapping is built in this prototype.'),
+
+      goWelcome: this.go('welcome'), goHome: this.go('home'), goStory: this.go('story'),
+      goCaption: this.go('caption'), goReview: this.go('review'), goConsent: this.go('consent'),
+      goCommunity: this.go('community'), goMessages: this.go('messages'), goHelp: this.go('help'),
+      goHelper: this.go('helper'), noop: () => this.say('This part is not built in the prototype.'),
+
+      goRecordSpeak: () => this.setState(this.composer('speak')),
+      goRecordWrite: () => this.setState(this.composer('write')),
+      goRecordAsk: () => this.setState(this.composer('ask')),
+      setSpeak: () => this.setState({ mode: 'speak', rec: 'idle' }),
+      setWrite: () => this.setState({ mode: 'write' }),
+      setAsk: () => this.setState({ mode: 'ask' }),
+      pickPrompt: () => this.setState(this.composer('write')),
+      modeSpeak: s.mode === 'speak', modeWrite: s.mode === 'write', modeAsk: s.mode === 'ask',
+      idle: s.rec === 'idle', recording: s.rec === 'recording', recorded: s.rec === 'recorded',
+      elapsed: s.elapsed, startRec: this.startRec, stopRec: this.stopRec,
+      tabSpeak: this.segStyle('speak'), tabWrite: this.segStyle('write'), tabAsk: this.segStyle('ask'),
+      hasPhoto: s.memPhoto, noPhoto: !s.memPhoto,
+      addPhoto: () => this.setState({ memPhoto: true, toast: '' }),
+      removePhoto: () => this.setState({ memPhoto: false, toast: '' }),
+      setPrivate: () => this.setState({ memPublic: false }),
+      setPublic: () => this.setState({ memPublic: true }),
+      isPublicChoice: s.memPublic,
+      privStylePrivate: this.privStyle(!s.memPublic),
+      privStylePublic: this.privStyle(s.memPublic),
+      privIsPrivate: !s.memPublic, privIsPublic: s.memPublic,
+      privNowLabel: s.memPublic ? 'the community may read it' : 'only me',
+      privTickPrivate: s.memPublic ? '' : ' ✓',
+      privTickPublic: s.memPublic ? ' ✓' : '',
+      saveLabel: s.memPublic ? 'Keep it, and let the community read it' : 'Keep this in my story',
+      saveMemory: () => this.setState({
+        screen: 'story', rec: 'idle', memPublic: false, memPhoto: false,
+        toast: s.memPublic
+          ? 'Kept in your story, and the community can read it. You can take it back any time.'
+          : 'Kept in your story. Only you can see it.'
+      }),
+
+      captionSpeak: () => this.setState({ captionMode: 'speak' }),
+      captionType: () => this.setState({ captionMode: 'type' }),
+      captionSpeaking: s.captionMode === 'speak', captionTyping: s.captionMode === 'type',
+      saveCaption: () => this.setState({ screen: 'home', captionMode: '', toast: 'Saved. The photograph now has your words with it.' }),
+
+      hasPending: s.pending, noPending: !s.pending,
+      acceptContribution: () => this.setState({ screen: 'home', pending: false, toast: "Added to your story, shown as Anne's account of things." }),
+      declineContribution: () => this.setState({ screen: 'home', pending: false, toast: 'Not added. Anne is told only that you decided against it.' }),
+
+      helperMode: s.helperMode,
+      startHelper: () => this.setState({ helperMode: true, screen: 'home', toast: 'Helping has started. Decisions are put aside until it stops.' }),
+      stopHelper: () => this.setState({ helperMode: false, toast: 'Helping has stopped.' }),
+
+      larger: () => this.setState(st => ({ zoom: Math.min(1.4, +(st.zoom + 0.1).toFixed(2)) })),
+      smaller: () => this.setState(st => ({ zoom: Math.max(0.9, +(st.zoom - 0.1).toFixed(2)) })),
+      toggleHc: () => this.setState({ hc: !s.hc }),
+      toggleLang: () => this.setState({ lang: s.lang === 'en' ? 'fr' : 'en' }),
+      langLabel: s.lang === 'en' ? 'FR' : 'EN', isFr: s.lang === 'fr', isEn: s.lang === 'en',
+      readAloud: this.readAloud, contentRef: this.contentRef,
+      toast: s.toast,
+
+      contentStyle: {
+        flex: 1, overflowY: 'auto', padding: '24px 22px 34px', zoom: s.zoom,
+        background: s.hc ? '#ffffff' : 'var(--color-bg)', color: s.hc ? '#000000' : 'var(--color-text)'
+      },
+
+      navHome: this.navStyle('home'), navStory: this.navStyle('story'),
+      navCommunity: this.navStyle('community'), navMessages: this.navStyle('messages'),
+      navHelp: this.navStyle('help'),
+
+      decisions: [
+        { what: 'Added a photograph', when: 'Tue 18 Aug' },
+        { what: 'Kept your story private', when: 'Fri 14 Aug' },
+        { what: "Accepted Anne's account of the crossing", when: 'Mon 3 Aug' }
+      ],
+      prompts: [
+        'Where did you live when you were ten?',
+        'Who taught you something you still use?',
+        'What was your first paid work?',
+        'Tell me about a winter you remember.',
+        'Who in your family should be remembered?',
+        'What did you cook for people?'
+      ],
+      entries: [
+        { title: 'The allotment on Barrington', excerpt: 'We had the third plot along, and the soil was better than anything I have had since.', meta: 'Your words, spoken · 3 min · June 2026' },
+        { title: 'Nursing nights at the Victoria', excerpt: 'Nights were quieter, but you learned faster on nights than you ever did on days.', meta: 'Your words, written · May 2026' },
+        { title: 'The crossing from Sydney', excerpt: "Mum says the boat was late and they waited on the pier most of the afternoon.", meta: "Anne's account · accepted May 2026" }
+      ],
+      consents: this.consentRows(),
+      shared: this.posts.map((p, i) => {
+        const liked = !!s.likes[i];
+        return {
+          who: p.who, title: p.title, excerpt: p.excerpt,
+          read: () => this.setState({ screen: 'post', openPost: i, toast: '' }),
+          like: () => this.toggleLike(i),
+          likeStyle: {
+            display: 'flex', alignItems: 'center', gap: '7px', minHeight: '48px', padding: '10px 15px',
+            background: liked ? 'var(--color-accent-100)' : 'transparent',
+            border: liked ? '1px solid var(--color-accent)' : '1px solid var(--color-divider)',
+            borderRadius: 'var(--radius-sm)', fontFamily: 'var(--font-heading)', fontWeight: 600,
+            fontSize: '15px', color: liked ? 'var(--color-accent-800)' : 'var(--color-text)', cursor: 'pointer'
+          },
+          likeFill: liked ? 'currentColor' : 'none',
+          likeLabel: this.plural(p.likes + (liked ? 1 : 0), 'person', 'people') + ' said it mattered',
+          likeAria: liked
+            ? 'You said this mattered. Press to take it back.'
+            : 'Say this mattered to me. ' + this.plural(p.likes, 'person', 'people') + ' already ' + (p.likes === 1 ? 'has' : 'have') + '.',
+          commentLabel: this.plural(p.comments.length + (s.myComments[i] ? 1 : 0), 'comment', 'comments'),
+          commentAria: 'Read the ' + this.plural(p.comments.length + (s.myComments[i] ? 1 : 0), 'comment', 'comments') + ' on this story'
+        };
+      }),
+      isPost: s.screen === 'post',
+      post: this.posts[s.openPost],
+      likePost: () => this.toggleLike(s.openPost),
+      postLikeFill: s.likes[s.openPost] ? 'currentColor' : 'none',
+      postLikeLabel: s.likes[s.openPost] ? 'You said this mattered' : 'This mattered to me',
+      postLikeStyle: {
+        display: 'flex', alignItems: 'center', gap: '9px', minHeight: '58px', padding: '12px 18px',
+        background: s.likes[s.openPost] ? 'var(--color-accent-100)' : 'transparent',
+        border: '1px solid var(--color-accent)', borderRadius: 'var(--radius-sm)',
+        fontFamily: 'var(--font-heading)', fontWeight: 600, fontSize: '17px',
+        color: 'var(--color-accent-800)', cursor: 'pointer'
+      },
+      likedByLine: (() => {
+        const n = this.posts[s.openPost].likes + (s.likes[s.openPost] ? 1 : 0);
+        return n === 1 ? 'One person said this mattered to them.' : n + ' people said this mattered to them.';
+      })(),
+      comments: this.posts[s.openPost].comments.map(c => ({
+        who: c.who, when: c.when, text: c.text, mine: false, reportable: true,
+        report: () => this.setState({ screen: 'report', reportTarget: c.who + '’s comment', reportReason: '', toast: '' })
+      })).concat(s.myComments[s.openPost] ? [{
+        who: 'Margaret', when: 'Just now', text: s.myComments[s.openPost], mine: true, reportable: false,
+        askDelete: () => this.setState({ confirmDelete: true })
+      }] : []),
+      confirmDelete: s.confirmDelete,
+      cancelDelete: () => this.setState({ confirmDelete: false }),
+      doDelete: () => {
+        const next = Object.assign({}, s.myComments);
+        delete next[s.openPost];
+        this.setState({ myComments: next, confirmDelete: false, toast: 'Your comment is deleted.' });
+      },
+      isReport: s.screen === 'report',
+      goPost: () => this.setState({ screen: 'post', toast: '' }),
+      reportPost: () => this.setState({ screen: 'report', reportTarget: 'this story', reportReason: '', toast: '' }),
+      reportHeading: 'Report ' + s.reportTarget,
+      reportReasons: ['It is upsetting or cruel', 'It is not true', 'It is about me and I did not agree to it', 'Someone is asking me for money', 'Something else'].map(label => ({
+        label: label + (s.reportReason === label ? ' ✓' : ''), on: s.reportReason === label,
+        style: this.optStyle(s.reportReason === label),
+        pick: () => this.setState({ reportReason: label })
+      })),
+      sendReport: () => {
+        if (!s.reportReason) return this.say('Choose what the matter is, or telephone us instead.');
+        this.setState({ screen: 'post', toast: 'Sent. The study office will read it and write back to you.' });
+      },
+      hideAndReport: () => {
+        if (!s.reportReason) return this.say('Choose what the matter is, or telephone us instead.');
+        this.setState({ screen: 'community', toast: 'Sent, and you will not see it again.' });
+      },
+      commentsHeading: this.plural(this.posts[s.openPost].comments.length + (s.myComments[s.openPost] ? 1 : 0), 'comment', 'comments'),
+      draft: s.draft,
+      setDraft: (e) => this.setState({ draft: e.target.value }),
+      speakComment: () => this.say('Speaking a comment is not built in this prototype.'),
+      postComment: () => {
+        const text = (s.draft || '').trim();
+        if (!text) return this.say('Write something first, or press “Speak it instead”.');
+        this.setState({ myComments: Object.assign({}, s.myComments, { [s.openPost]: text }), draft: '', toast: 'Posted. You can delete it any time.' });
+      },
+      threads: [
+        { who: 'Anne Fraser', when: 'Monday', preview: 'I put in the bit about the tomatoes — see what you think, no hurry.', open: () => this.say('Threads are not built in this prototype.') },
+        { who: 'Study office, Dalhousie', when: '2 Aug', preview: 'Your yearly check-in. Nothing needs doing today.', open: () => this.say('Threads are not built in this prototype.') }
+      ]
+    };
+  }
+}

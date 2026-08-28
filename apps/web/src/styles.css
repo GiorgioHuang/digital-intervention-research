@@ -72,6 +72,9 @@
   --cl-accent-800: #5a3b0a;
   --cl-family-display: 'Cormorant Garamond', Georgia, 'Times New Roman', serif;
   --cl-family-body: Lora, Georgia, 'Times New Roman', serif;
+  /* High contrast is pure black on pure white, by the handoff. */
+  --cl-hc-bg: #ffffff;
+  --cl-hc-text: #000000;
 
   --type-size-0: 0.833rem;
   --type-size-1: 1rem;
@@ -753,6 +756,130 @@ main {
 
    Body paragraphs keep the --measure-default line-length cap. Researchers
    are people too. */
+/* ---------- The tab bar, as the handoff draws it ------------------------
+ * A column per tab — a 22px icon over a 13px label — which is what lets
+ * five of them stand at 320px where five text-only tabs wrapped. Measured
+ * rather than assumed: D-10 settled on four with width arithmetic, and the
+ * owner's ruling to follow the design supersedes the conclusion, not the
+ * obligation to check it. The active tab is marked by a rule along its top
+ * edge, pulled up a pixel so it sits on the divider rather than under it.
+ */
+[data-workspace='participant'] .nav-primary li { flex: 1 1 0; min-inline-size: 0; }
+[data-workspace='participant'] .nav-primary button {
+  inline-size: 100%;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  min-block-size: 4.5rem;
+  padding-inline: var(--space-1);
+  border: 0;
+  border-block-start: 2px solid transparent;
+  margin-block-start: -1px;
+  border-radius: 0;
+  background-color: transparent;
+  font-family: var(--cl-family-display);
+  font-size: var(--type-size-0);
+  color: var(--cl-text-3);
+}
+[data-workspace='participant'] .nav-primary [aria-current='page'] {
+  border-block-start-color: var(--cl-accent);
+  background-color: transparent;
+  color: var(--cl-accent-800);
+}
+.elder-tab__icon { inline-size: 1.375rem; block-size: 1.375rem; }
+/*
+ * Below 390px the 13px label is wider than the tab it sits in, and
+ * "Community" is one word, so it clips rather than wraps. Measured: 60px
+ * per tab at 320, 65 at 360, 71 at 390. The handoff gives no narrow rule —
+ * it says the layout scales by stretching — so the type steps down by one
+ * notch instead, which keeps every word whole and stays above the kicker
+ * size the same system uses for legible small text. A clipped word is not
+ * a smaller word.
+ */
+@media (max-width: 24.5rem) {
+  [data-workspace='participant'] .nav-primary button { font-size: var(--type-size-00, 0.72rem); }
+}
+
+/* ---------- The elder handoff's global chrome ---------------------------
+ * Toolbar and helper banner, from the handoff's "Global chrome". Both sit
+ * above the content on every signed-in screen and neither scrolls away —
+ * text size and reading aloud are the brief, not a preference panel.
+ */
+.elder-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background-color: var(--cl-neutral-100);
+  border-block-end: var(--border-hairline) solid var(--cl-divider);
+}
+.elder-toolbar__label {
+  font-family: var(--cl-family-body);
+  font-size: var(--type-size-0);
+  color: var(--cl-text-4);
+}
+.elder-toolbar__spacer { flex: 1; }
+/* 44, not the handoff's 34: its own accessibility requirement says never
+   below 44, and a rule outranks a measurement that contradicts it. */
+.elder-toolbar__square {
+  min-inline-size: var(--target-min);
+  min-block-size: var(--target-min);
+  justify-content: center;
+  padding: 0;
+  font-family: var(--cl-family-display);
+  border-color: var(--cl-divider);
+}
+.elder-toolbar__read {
+  font-family: var(--cl-family-body);
+  font-size: var(--type-size-0);
+  color: var(--cl-accent-700);
+  border-color: var(--cl-divider);
+}
+.elder-toolbar__square[aria-pressed='true'] {
+  background-color: var(--cl-accent-100);
+  border-color: var(--cl-accent);
+  color: var(--cl-accent-800);
+}
+
+.elder-helper-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background-color: var(--cl-accent-100);
+  border-block-end: var(--border-hairline) solid var(--cl-accent-300);
+}
+.elder-helper-banner p {
+  flex: 1;
+  margin: 0;
+  font-family: var(--cl-family-body);
+  color: var(--cl-accent-800);
+}
+.elder-helper-banner button {
+  border-color: var(--cl-accent-700);
+  color: var(--cl-accent-800);
+}
+
+/* The content region carries the zoom and the high-contrast switch, so
+   both apply to what is read and to nothing else — the toolbar must not
+   shrink itself out of reach along with the text it is shrinking. */
+/* The six steps the handoff allows, enumerated rather than interpolated —
+   which keeps the values in the stylesheet where the token layer can see
+   them, and keeps the reading controls out of inline styles. */
+[data-elder-content][data-zoom='90'] { zoom: 0.9; }
+[data-elder-content][data-zoom='100'] { zoom: 1; }
+[data-elder-content][data-zoom='110'] { zoom: 1.1; }
+[data-elder-content][data-zoom='120'] { zoom: 1.2; }
+[data-elder-content][data-zoom='130'] { zoom: 1.3; }
+[data-elder-content][data-zoom='140'] { zoom: 1.4; }
+[data-elder-content][data-contrast='high'] {
+  --color-surface-page: var(--cl-hc-bg);
+  --color-text-primary: var(--cl-hc-text);
+  background-color: var(--cl-hc-bg);
+  color: var(--cl-hc-text);
+}
+
 /* ---------- The participant workspace speaks Classical -------------------
  * A remap, not a second stylesheet. Every component here already draws
  * itself from semantic tokens, so pointing those tokens at the Classical

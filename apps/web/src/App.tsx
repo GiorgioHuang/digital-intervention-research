@@ -4,6 +4,9 @@ import { currentSurface } from './surface.js';
 import { SupporterApp } from './SupporterApp.js';
 import { AccessTokenGate } from './components/AccessTokenGate.js';
 import { AssistedMode } from './components/AssistedMode.js';
+import { AccessibilityToolbar } from './components/elder/AccessibilityToolbar.js';
+import { HelperBanner } from './components/elder/HelperBanner.js';
+import { TabIcon } from './components/elder/TabIcon.js';
 import { CommunityPanel } from './components/CommunityPanel.js';
 import { ConsentPanel } from './components/ConsentPanel.js';
 import { DisplayPreferencesPanel } from './components/DisplayPreferencesPanel.js';
@@ -63,16 +66,41 @@ type Screen =
  * access to Consent and Help, not to Community. It stays one tap from
  * Home, which is itself always in the bar.
  */
-const PRIMARY_DESTINATIONS: { key: Screen; label: string; fullLabel: string }[] = [
-  { key: 'home', label: 'Home', fullLabel: 'Home' },
-  { key: 'consent', label: 'Consent', fullLabel: 'My consent choices' },
-  { key: 'message', label: 'Messages', fullLabel: 'Messages' },
-  { key: 'help', label: 'Help', fullLabel: 'Help and safety' },
+/*
+ * Five, from the handoff's tab bar: Home · My story · Community · Messages
+ * · Help. D-10 settled on four with width arithmetic, and this is the owner
+ * ruling that supersedes it — so the arithmetic is redone rather than
+ * assumed. Measured at 320px, the narrowest phone this has to serve, each
+ * tab has 64px and the longest label ("Messages") sets the floor; see the
+ * nav test.
+ *
+ * Consent leaves the bar and moves into Home's first chevron row, where the
+ * handoff puts it ("Your information and who can see it"). Doc 20 §33 wants
+ * permanent access to consent and help; help keeps its slot, and consent is
+ * one tap from a Home that is itself always in the bar.
+ */
+const PRIMARY_DESTINATIONS: { key: Screen; label: string; fullLabel: string; icon: string }[] = [
+  { key: 'home', label: 'Home', fullLabel: 'Home', icon: 'house' },
+  { key: 'life-story', label: 'My story', fullLabel: 'My life story', icon: 'book-open' },
+  { key: 'community', label: 'Community', fullLabel: 'Other people’s stories', icon: 'users' },
+  { key: 'message', label: 'Messages', fullLabel: 'Messages', icon: 'mail' },
+  { key: 'help', label: 'Help', fullLabel: 'Help and safety', icon: 'help-circle' },
 ];
 
 export function App() {
   const [session, setSession] = useState<Session | null>(null);
   const [screen, setScreen] = useState<Screen>('home');
+  /*
+   * The reading controls, from the handoff's global chrome. They live here
+   * rather than in the toolbar so that the content region carries them and
+   * the toolbar itself does not shrink out of reach along with the text.
+   * `zoom` is stepped through an updater so that rapid taps accumulate
+   * instead of racing, which the handoff calls out specifically.
+   */
+  const [zoom, setZoom] = useState(1);
+  const [highContrast, setHighContrast] = useState(false);
+  const [language, setLanguage] = useState<'en' | 'fr'>('en');
+  const contentRef = useRef<HTMLDivElement | null>(null);
   const [form, setForm] = useState({ actorId: '', participantId: '' });
   const [signInProblem, setSignInProblem] = useState('');
   const [checking, setChecking] = useState(false);
@@ -395,13 +423,47 @@ export function App() {
                 aria-label={d.fullLabel}
                 onClick={() => setScreen(d.key)}
               >
+                <TabIcon name={d.icon} />
                 {d.label}
               </button>
             </li>
           ))}
         </ul>
       </nav>
-      <main id="main-content">
+      {/*
+        The global chrome, from the handoff. Both sit above the content and
+        neither scrolls away: text size and reading aloud are the brief.
+      */}
+      {helper !== null && (
+        <HelperBanner
+          helperName={helper}
+          participantName="You"
+          onStop={() => setHelper(null)}
+        />
+      )}
+      <AccessibilityToolbar
+        zoom={zoom}
+        onZoom={(next) => setZoom((from) => next(from))}
+        highContrast={highContrast}
+        onHighContrast={setHighContrast}
+        language={language}
+        onLanguage={setLanguage}
+        readAloudTarget={contentRef}
+      />
+      <main
+        id="main-content"
+        ref={contentRef}
+        data-elder-content=""
+        data-contrast={highContrast ? 'high' : undefined}
+        /*
+          An attribute rather than an inline custom property. The zoom is a
+          finite set — six steps between 0.9 and 1.4, from the handoff — so
+          it can be enumerated in the stylesheet, and the guard against
+          inline styles bypassing the token layer stays satisfied rather
+          than worked around. It caught this on the first run.
+        */
+        data-zoom={String(Math.round(zoom * 100))}
+      >
         <SessionGuard
           shared={shared}
           onSignOut={() => {

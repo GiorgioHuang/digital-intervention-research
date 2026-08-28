@@ -2669,3 +2669,43 @@
   tests:
     - apps/api/test/session-store.integration.test.ts
   status: implemented
+
+- implementation_id: IMP-WEB-ELDER-CHROME-001
+  module: WEB
+  summary: >-
+    The global chrome from the Canadian Elder Life Story handoff, on the owner's ruling to
+    implement the design strictly. An accessibility toolbar on every signed-in screen with
+    text size, read aloud, high contrast and a language toggle; a helper banner while
+    somebody is helping; and the five-destination tab bar. Text size and reading aloud are
+    the brief rather than a preference panel, so they are permanently on screen and a build
+    that moved either into a settings page would break the requirement while satisfying no
+    test - hence a guard on their presence. The zoom is stepped through an updater so rapid
+    presses accumulate, which the handoff calls out and which a version reading the value
+    from render would silently drop; that is the person pressing A+ four times because the
+    first press did not seem to work. Three departures, each recorded rather than
+    reconciled quietly. The handoff specifies 34px toolbar controls and separately states
+    that touch targets never go below 44; the rule wins over the measurement and these are
+    44, which is also this platform's floor. Five tabs supersede D-10's four, and the
+    ruling supersedes the conclusion rather than the obligation to re-measure - measured at
+    320, 360 and 390 the labels clipped below 390 because Community is one word and cannot
+    wrap, so the type steps down one notch under 24.5rem, a clipped word not being a
+    smaller word. And the tab icons are the first of DESIGN_SYSTEM A.9's icon system to be
+    built, drawn on Lucide's grid and inlined rather than added as a dependency, with A.9's
+    own rule still governing - every icon carries a word, asserted. The zoom is an
+    enumerated data attribute rather than an inline custom property because the guard
+    against inline styles bypassing the token layer caught it on the first run and was
+    right to. Four mutations verified red, including the zoom read from the closure.
+  trace_ids: [ATR-021]
+  adr_ids: [ADR-061, ADR-062]
+  docs:
+    - "design/handoff-elder/HANDOFF.md"
+    - "design/DESIGN_DECISIONS.md D-104"
+  code:
+    - apps/web/src/components/elder/AccessibilityToolbar.tsx
+    - apps/web/src/components/elder/HelperBanner.tsx
+    - apps/web/src/components/elder/TabIcon.tsx
+    - apps/web/src/App.tsx
+    - apps/web/src/styles.css
+  tests:
+    - apps/web/test/elder-chrome.test.tsx
+  status: implemented
