@@ -808,18 +808,43 @@ main {
  */
 .elder-toolbar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-2) var(--space-3);
+  row-gap: var(--space-2);
   background-color: var(--cl-neutral-100);
   border-block-end: var(--border-hairline) solid var(--cl-divider);
+}
+/*
+ * Nothing in this bar breaks inside itself.
+ *
+ * Squeezed, the label came apart letter by letter — "T / ex / t" — and
+ * "Read aloud" went to four lines. A control narrower than its own word is
+ * not a smaller control, it is a broken one, and this is the bar an
+ * 78-year-old uses to make the text bigger. So every item refuses to
+ * shrink and refuses to wrap; if the row runs out of width, the row wraps
+ * instead, as whole controls onto a second line.
+ */
+.elder-toolbar > * {
+  flex: 0 0 auto;
+  white-space: nowrap;
 }
 .elder-toolbar__label {
   font-family: var(--cl-family-body);
   font-size: var(--type-size-0);
   color: var(--cl-text-4);
 }
-.elder-toolbar__spacer { flex: 1; }
+/* Each group holds together; the bar breaks between groups and nowhere
+   else. `min-inline-size: 0` is deliberately absent — these must not be
+   allowed to shrink, which is what broke the words in the first place. */
+.elder-toolbar__group {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 0 0 auto;
+}
+.elder-toolbar__group--end { margin-inline-start: auto; }
 /* 44, not the handoff's 34: its own accessibility requirement says never
    below 44, and a rule outranks a measurement that contradicts it. */
 .elder-toolbar__square {
@@ -831,6 +856,7 @@ main {
   border-color: var(--cl-divider);
 }
 .elder-toolbar__read {
+  padding-inline: var(--space-3);
   font-family: var(--cl-family-body);
   font-size: var(--type-size-0);
   color: var(--cl-accent-700);

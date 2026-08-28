@@ -35,6 +35,14 @@ which that mistake gets made again, at speed.
 | B-13 | **Helper mode, decisions deferred** — "those decisions are put aside and shown to you again once helping stops" | `AssistedMode` is read-only assistance (D-15) | Deferring a decision while a helper is present, and re-presenting it afterwards. D-15 ruled read-only assistance deliberately; this is a change to that ruling, not an addition |
 | B-14 | **Recent decisions** — "What you decided recently", three rows of `{what, when}` | the audit trail records decisions | A participant-facing query over their own decisions, in plain words rather than action codes |
 
+## Where the build departs from the handoff, and why
+
+| # | The handoff says | The build does | Why |
+|---|---|---|---|
+| X-1 | Toolbar controls are 34×34 | 44×44 | The same document requires that targets are "44px absolute floor … Never below 44". Both cannot hold; a stated rule outranks a measurement that contradicts it |
+| X-2 | The toolbar is one row | Two groups, breaking between them | Arithmetic. Six controls at 44px come to 429px against 362px of usable width at 390. The handoff's row fits because its squares are 34px on a 404px frame. Nothing is shrunk and no word breaks |
+| X-3 | Five tabs, 13px labels | Same, stepping to a smaller size below 24.5rem | Measured: "Community" is one word and clipped at 320 and 360. A clipped word is not a smaller word |
+
 ## Not gaps — deliberate absences the design shares
 
 - No timers, no auto-dismissing anything. The platform already refuses this and so does the design.

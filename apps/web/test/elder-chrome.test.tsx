@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { act } from 'react';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { App } from '../src/App.js';
 
 const json = (b: unknown) => new Response(JSON.stringify(b), { status: 200 });
@@ -109,5 +111,79 @@ describe('the elder chrome', () => {
   it('shows the helper banner only while somebody is helping', async () => {
     await arrive();
     expect(screen.queryByText(/is helping\./)).toBeNull();
+  });
+});
+
+/**
+ * The toolbar reached a real browser broken, and the way it got there is
+ * the part worth guarding.
+ *
+ * "Read aloud" was rendered only where `speechSynthesis` existed. jsdom has
+ * none, so every measurement I took was of a bar with one fewer control
+ * than the one people were using — and the missing control was the widest.
+ * On a phone the row then squeezed until the label came apart letter by
+ * letter, "T / ex / t", and "Read aloud" went to four lines. A control
+ * narrower than its own word is not a smaller control; it is a broken one,
+ * and this is the bar somebody uses to make the text bigger.
+ *
+ * So the shape of this bar may not depend on the environment: every
+ * control is always present, disabled where it cannot work.
+ */
+describe('the toolbar has one shape everywhere', () => {
+  beforeEach(() => {
+    (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (path: string, init?: RequestInit) => {
+        if (path === '/health') return json({ status: 'ok', authMode: 'dev-header' });
+        if ((init?.method ?? 'GET') !== 'GET') return json({ data: { id: 'x' } });
+        return json({ data: [], meta: {} });
+      }),
+    );
+  });
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllGlobals();
+  });
+
+  const arrive = async () => {
+    await act(async () => {
+      render(<App />);
+    });
+    fireEvent.change(screen.getByLabelText('Account identifier (actor id)'), { target: { value: 'a' } });
+    fireEvent.change(screen.getByLabelText('Participant identifier'), { target: { value: 'p' } });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+    });
+  };
+
+  it('offers read aloud even where the browser cannot speak', async () => {
+    // jsdom has no speechSynthesis, which is precisely the environment that
+    // hid this. The control is here, and disabled, rather than absent.
+    expect('speechSynthesis' in window, 'this test no longer proves anything').toBe(false);
+    await arrive();
+    const read = screen.getByRole('button', { name: /Read aloud/ });
+    expect(read).toBeTruthy();
+    expect((read as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  /**
+   * Six controls at the 44px this platform requires come to 429px against
+   * 362px of usable width at 390. The handoff's own bar fits because its
+   * squares are 34px on a 404px frame, and its accessibility section
+   * forbids going below 44 — both cannot hold. The bar is therefore two
+   * groups that break between themselves and never inside a control.
+   */
+  it('breaks between groups, never inside a control', async () => {
+    await arrive();
+    const groups = document.querySelectorAll('.elder-toolbar__group');
+    expect(groups.length, 'the toolbar is one row again and will squeeze its words').toBe(2);
+    // Asserted against the stylesheet, as the token tests do: jsdom applies
+    // no stylesheet, so a computed-style check here would read '' and pass
+    // for the wrong reason whatever the CSS said.
+    const css = readFileSync(resolve(process.cwd(), 'src/styles.css'), 'utf8');
+    const bar = css.slice(css.indexOf('.elder-toolbar {'), css.indexOf('.elder-helper-banner'));
+    expect(bar, 'toolbar items may shrink again').toContain('flex: 0 0 auto');
+    expect(bar, 'toolbar items may wrap inside themselves again').toContain('white-space: nowrap');
   });
 });
