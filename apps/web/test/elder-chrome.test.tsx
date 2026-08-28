@@ -51,6 +51,18 @@ describe('the elder chrome', () => {
   });
 
   /**
+   * The handoff has a FR/EN toggle. The owner ruled the study English only,
+   * so it is gone rather than left switching between English and English —
+   * a control that promises a translation nobody is writing is the empty
+   * control this project keeps removing (D-2, D-5, D-21, D-34, D-75).
+   */
+  it('offers no language toggle, because there is no second language', async () => {
+    await arrive();
+    expect(screen.queryByRole('button', { name: /Passer en français|Switch to English/ })).toBeNull();
+    expect(screen.queryByText(/^(FR|EN)$/)).toBeNull();
+  });
+
+  /**
    * The zoom is stepped through an updater rather than from the value read
    * at render, which the handoff calls out: rapid taps must accumulate. A
    * version that read `zoom` from the closure would drop every tap that
@@ -176,14 +188,25 @@ describe('the toolbar has one shape everywhere', () => {
    */
   it('breaks between groups, never inside a control', async () => {
     await arrive();
-    const groups = document.querySelectorAll('.elder-toolbar__group');
-    expect(groups.length, 'the toolbar is one row again and will squeeze its words').toBe(2);
-    // Asserted against the stylesheet, as the token tests do: jsdom applies
-    // no stylesheet, so a computed-style check here would read '' and pass
-    // for the wrong reason whatever the CSS said.
+    /*
+     * One row is the owner's instruction, and it holds at 320px only
+     * because the width was measured rather than assumed: the language
+     * toggle is gone, the gap is the handoff's own 6px rather than the
+     * spacing token I had rounded it up to, and the decorative "Text"
+     * label is dropped. Four controls, 266px of them, inside 292px of
+     * usable width at the narrowest phone this serves.
+     *
+     * Asserted against the stylesheet, as the token tests do: jsdom applies
+     * no stylesheet, so a computed-style check would read '' and pass for
+     * the wrong reason whatever the CSS said.
+     */
     const css = readFileSync(resolve(process.cwd(), 'src/styles.css'), 'utf8');
     const bar = css.slice(css.indexOf('.elder-toolbar {'), css.indexOf('.elder-helper-banner'));
     expect(bar, 'toolbar items may shrink again').toContain('flex: 0 0 auto');
     expect(bar, 'toolbar items may wrap inside themselves again').toContain('white-space: nowrap');
+    expect(
+      document.querySelectorAll('.elder-toolbar > *').length,
+      'a fifth control is back in the top bar, which is what put it on two rows',
+    ).toBe(4);
   });
 });

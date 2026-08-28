@@ -28,16 +28,12 @@ export function AccessibilityToolbar({
   onZoom,
   highContrast,
   onHighContrast,
-  language,
-  onLanguage,
   readAloudTarget,
 }: {
   zoom: number;
   onZoom: (next: (from: number) => number) => void;
   highContrast: boolean;
   onHighContrast: (next: boolean) => void;
-  language: 'en' | 'fr';
-  onLanguage: (next: 'en' | 'fr') => void;
   /** The region whose words are read. Nothing outside it is spoken. */
   readAloudTarget: React.RefObject<HTMLElement | null>;
 }) {
@@ -75,62 +71,62 @@ export function AccessibilityToolbar({
   return (
     <div className="elder-toolbar">
       {/*
-        Two groups, and the reason is arithmetic rather than taste.
-        Measured at 390px: the six controls come to 429px against 362px of
-        usable width. The handoff's own bar fits because its squares are
-        34px on a 404px frame; at the 44px its accessibility section
-        requires, they do not. Both cannot hold, so the row becomes two
-        rows — each group whole, nothing shrunk, nothing broken mid-word.
+        One row, on the owner's instruction.
+        
+        It fits because the language toggle is gone: this study is English
+        only, and a FR/EN control promised a French that was never coming.
+        That freed the width the second row had been costing. What remains
+        still refuses to shrink and refuses to wrap inside itself — the
+        first version of this bar squeezed until the label came apart
+        letter by letter, and a control narrower than its own word is not a
+        smaller control.
       */}
-      <div className="elder-toolbar__group">
-        <span className="elder-toolbar__label">Text</span>
-        <button
-          type="button"
-          className="elder-toolbar__square"
-          aria-label="Make the text smaller"
-          onClick={() => onZoom((from) => step(from, -ZOOM_STEP))}
-          disabled={zoom <= ZOOM_MIN}
-        >
-          A−
-        </button>
-        <button
-          type="button"
-          className="elder-toolbar__square"
-          aria-label="Make the text bigger"
-          onClick={() => onZoom((from) => step(from, ZOOM_STEP))}
-          disabled={zoom >= ZOOM_MAX}
-        >
-          A+
-        </button>
-        <button
-          type="button"
-          className="elder-toolbar__read"
-          onClick={speak}
-          disabled={!speechAvailable}
-          {...(speechAvailable ? {} : { title: 'This browser cannot read the screen out.' })}
-        >
-          <span aria-hidden="true">🔊</span> Read aloud
-        </button>
-      </div>
-      <div className="elder-toolbar__group elder-toolbar__group--end">
-        <button
-          type="button"
-          className="elder-toolbar__square"
-          aria-pressed={highContrast}
-          aria-label="Stronger black and white"
-          onClick={() => onHighContrast(!highContrast)}
-        >
-          <span aria-hidden="true">◐</span>
-        </button>
-        <button
-          type="button"
-          className="elder-toolbar__square"
-          onClick={() => onLanguage(language === 'en' ? 'fr' : 'en')}
-          aria-label={language === 'en' ? 'Passer en français' : 'Switch to English'}
-        >
-          {language === 'en' ? 'FR' : 'EN'}
-        </button>
-      </div>
+      {/*
+        The handoff's visible "Text" label is dropped, and it is the price
+        of one row at 320px — measured, not guessed: the row was 50px over
+        there, and this and the gap coming back to the handoff's own 6px
+        are exactly that. It is the least harmful thing to lose. A− beside
+        A+ is a near-universal pairing, and neither button is unlabelled:
+        each carries "Make the text smaller"/"bigger" as its accessible
+        name, so a screen reader announces more than the word "Text" ever
+        gave a sighted reader.
+      */}
+      <button
+        type="button"
+        className="elder-toolbar__square"
+        aria-label="Make the text smaller"
+        onClick={() => onZoom((from) => step(from, -ZOOM_STEP))}
+        disabled={zoom <= ZOOM_MIN}
+      >
+        A−
+      </button>
+      <button
+        type="button"
+        className="elder-toolbar__square"
+        aria-label="Make the text bigger"
+        onClick={() => onZoom((from) => step(from, ZOOM_STEP))}
+        disabled={zoom >= ZOOM_MAX}
+      >
+        A+
+      </button>
+      <button
+        type="button"
+        className="elder-toolbar__read"
+        onClick={speak}
+        disabled={!speechAvailable}
+        {...(speechAvailable ? {} : { title: 'This browser cannot read the screen out.' })}
+      >
+        <span aria-hidden="true">🔊</span> Read aloud
+      </button>
+      <button
+        type="button"
+        className="elder-toolbar__square elder-toolbar__push"
+        aria-pressed={highContrast}
+        aria-label="Stronger black and white"
+        onClick={() => onHighContrast(!highContrast)}
+      >
+        <span aria-hidden="true">◐</span>
+      </button>
     </div>
   );
 }

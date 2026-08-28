@@ -810,9 +810,10 @@ main {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-2);
+  /* The handoff's own 6px, which I had rounded up to the spacing token and
+     which is part of what put this bar on two rows at 320. */
+  gap: 6px;
   padding: var(--space-2) var(--space-3);
-  row-gap: var(--space-2);
   background-color: var(--cl-neutral-100);
   border-block-end: var(--border-hairline) solid var(--cl-divider);
 }
@@ -835,16 +836,11 @@ main {
   font-size: var(--type-size-0);
   color: var(--cl-text-4);
 }
-/* Each group holds together; the bar breaks between groups and nowhere
-   else. `min-inline-size: 0` is deliberately absent — these must not be
-   allowed to shrink, which is what broke the words in the first place. */
-.elder-toolbar__group {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  flex: 0 0 auto;
-}
-.elder-toolbar__group--end { margin-inline-start: auto; }
+/* The contrast control sits at the far end of the row. An auto margin, not
+   a spacer element: a spacer in a flex row that may wrap takes a whole
+   line to itself, which is how an earlier version of this bar ended up on
+   four rows. */
+.elder-toolbar__push { margin-inline-start: auto; }
 /* 44, not the handoff's 34: its own accessibility requirement says never
    below 44, and a rule outranks a measurement that contradicts it. */
 .elder-toolbar__square {
@@ -856,7 +852,7 @@ main {
   border-color: var(--cl-divider);
 }
 .elder-toolbar__read {
-  padding-inline: var(--space-3);
+  padding-inline: var(--space-2);
   font-family: var(--cl-family-body);
   font-size: var(--type-size-0);
   color: var(--cl-accent-700);

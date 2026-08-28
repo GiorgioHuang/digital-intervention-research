@@ -99,7 +99,6 @@ export function App() {
    */
   const [zoom, setZoom] = useState(1);
   const [highContrast, setHighContrast] = useState(false);
-  const [language, setLanguage] = useState<'en' | 'fr'>('en');
   const contentRef = useRef<HTMLDivElement | null>(null);
   const [form, setForm] = useState({ actorId: '', participantId: '' });
   const [signInProblem, setSignInProblem] = useState('');
@@ -446,8 +445,6 @@ export function App() {
         onZoom={(next) => setZoom((from) => next(from))}
         highContrast={highContrast}
         onHighContrast={setHighContrast}
-        language={language}
-        onLanguage={setLanguage}
         readAloudTarget={contentRef}
       />
       <main

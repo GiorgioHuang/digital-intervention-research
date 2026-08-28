@@ -31,7 +31,7 @@ which that mistake gets made again, at speed.
 | B-9 | **Reports** — five reasons, optional note, "send and hide this from me" | M09 safety signals and M18 moderation exist | A participant-facing report endpoint carrying the design's reasons, and a **hide-from-me** relation, which is a per-viewer suppression the platform does not have |
 | B-10 | **Exercises and tapping** — four exercises; taps counted for the study and **never shown** | nothing | An exercise-result record. Note the design's rule: the participant sees elapsed time only, and a score must never be displayed. Whatever is built must make displaying one awkward |
 | B-11 | **Messages as conversations** — thread rows open to a conversation | M07 delivery and threads exist | The design opens a thread to a toast; a real conversation view needs the existing thread queries wired up |
-| B-12 | **French at parity** | nothing | Only Home has FR copy in the prototype. A Canadian study needs FR everywhere, and the platform has no localisation layer at all |
+| ~~B-12~~ | ~~French at parity~~ | — | **Closed by decision, not by work (2026-08-28, owner): the study is English only.** The handoff's FR/EN toggle is removed rather than left switching between English and English. Reopening this is a real piece of work — there is no localisation layer — so it is struck through rather than deleted, and anybody proposing French should read that as "not started", not as "nearly there" |
 | B-13 | **Helper mode, decisions deferred** — "those decisions are put aside and shown to you again once helping stops" | `AssistedMode` is read-only assistance (D-15) | Deferring a decision while a helper is present, and re-presenting it afterwards. D-15 ruled read-only assistance deliberately; this is a change to that ruling, not an addition |
 | B-14 | **Recent decisions** — "What you decided recently", three rows of `{what, when}` | the audit trail records decisions | A participant-facing query over their own decisions, in plain words rather than action codes |
 
@@ -40,7 +40,8 @@ which that mistake gets made again, at speed.
 | # | The handoff says | The build does | Why |
 |---|---|---|---|
 | X-1 | Toolbar controls are 34×34 | 44×44 | The same document requires that targets are "44px absolute floor … Never below 44". Both cannot hold; a stated rule outranks a measurement that contradicts it |
-| X-2 | The toolbar is one row | Two groups, breaking between them | Arithmetic. Six controls at 44px come to 429px against 362px of usable width at 390. The handoff's row fits because its squares are 34px on a 404px frame. Nothing is shrunk and no word breaks |
+| X-2 | A visible "Text" label before A−/A+ | No visible label | The owner requires one row. Measured at 320px the row was 50px over; dropping the label and taking the gap back to the handoff's own 6px is exactly that. Neither button is unlabelled — each carries "Make the text smaller"/"bigger" as its accessible name |
+| X-4 | A FR/EN toggle in the toolbar | No toggle | The study is English only (owner, 2026-08-28). Removing it is also what bought the width for one row |
 | X-3 | Five tabs, 13px labels | Same, stepping to a smaller size below 24.5rem | Measured: "Community" is one word and clipped at 320 and 360. A clipped word is not a smaller word |
 
 ## Not gaps — deliberate absences the design shares
