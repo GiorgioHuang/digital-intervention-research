@@ -145,6 +145,7 @@ export const POLICY_V1: PolicyConfiguration = {
       'message.confirm-send',
       'object.upload',
       'object.assign',
+      'object.caption',
       'object.view-own',
       'object.delete-own',
     ],
@@ -246,6 +247,15 @@ export const POLICY_V1: PolicyConfiguration = {
      * about what somebody did.
      */
     'object.view-own': { ownerPermitted: true, ownerOnly: true },
+    /*
+     * Writing the words that go with a photograph. Its own action rather
+     * than `object.upload` reused, for the reason stated just above about
+     * `object.view-own`: a write action standing in for a different write
+     * tells an auditor the wrong thing about what somebody did. Adding a
+     * file and saying who is in it are different acts, and only the second
+     * one puts a person's name next to a picture.
+     */
+    'object.caption': { ownerPermitted: true, ownerOnly: true },
     /*
      * Taking a photograph back. `object_state` has allowed 'Deleted'
      * since the first migration and nothing ever wrote it, so a

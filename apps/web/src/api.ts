@@ -241,6 +241,14 @@ export interface ContributionAwaitingReview {
   createdAt: string;
 }
 
+export interface UncaptionedPhotograph {
+  objectId: string;
+  /** The life-story item it is attached to. */
+  owningResourceId: string;
+  declaredContentType: string;
+  addedAt: string;
+}
+
 export interface OwnDecision {
   /** The audited action. The words are the server's, not the screen's. */
   action: string;
@@ -421,6 +429,19 @@ export const api = {
    * holds the vocabulary: a screen that translated action codes itself
    * would drift from what the platform actually recorded.
    */
+  /**
+   * Photographs in this person's story with nothing said about them. One,
+   * because the Home card is one unfinished thing rather than a list of
+   * chores.
+   */
+  listUncaptionedPhotographs: (s: Session, limit = 1) =>
+    get<{ data: { id: string; attributes: UncaptionedPhotograph }[] }>(
+      s,
+      `/v1/participants/${s.participantId}/uncaptioned-photographs?limit=${String(limit)}`,
+    ),
+  /** An empty caption clears it; it never removes the photograph. */
+  captionPhotograph: (s: Session, objectId: string, caption: string) =>
+    post<{ data: { attributes: { caption: string | null } } }>(s, `/v1/objects/${objectId}/caption`, { caption }),
   listMyRecentDecisions: (s: Session, limit = 3) =>
     get<{ data: { id: string; attributes: OwnDecision }[] }>(
       s,

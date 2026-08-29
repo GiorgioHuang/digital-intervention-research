@@ -607,3 +607,148 @@ async function loadOwnedObject(
   assertAllowed(decision, false);
   return row as Record<string, unknown>;
 }
+
+export interface UncaptionedPhotograph {
+  objectId: string;
+  /** The life-story item it is attached to, so the screen can open it. */
+  owningResourceId: string;
+  declaredContentType: string;
+  /** When it was added — the card says "You added a photograph on Tuesday". */
+  addedAt: string;
+}
+
+/**
+ * Photographs somebody added to their life story and has not said
+ * anything about.
+ *
+ * This is the state behind the design's "FINISH WHAT YOU STARTED" card:
+ * "A photograph with no words … Nobody knows yet who is in it." It is not
+ * a nag and it is not a completion score. It is one specific thing a
+ * person started and did not finish, and it is worth surfacing because a
+ * photograph with nobody named in it is the part of a life story most
+ * likely to be lost — the person who knows is the one looking at it.
+ *
+ * Images only. A PDF or an audio file attached to a story is not a
+ * photograph with nobody in it, and asking somebody to say who is in their
+ * consent form would be nonsense.
+ *
+ * Available only, which matters more here than it looks: an object is
+ * Available only after a clean malware scan, a checksum, a classification
+ * and an owning resource (the release gate in the first storage
+ * migration). A quarantined upload is not a photograph in somebody's story
+ * yet, and putting it on Home would be telling them a file is in a place
+ * it has not reached.
+ */
+export async function listUncaptionedPhotographs(
+  deps: StorageDeps,
+  ctx: RequestContext,
+  ownerParticipantId: string,
+  limit = 1,
+): Promise<UncaptionedPhotograph[]> {
+  const decision = await deps.checkPermission(ctx, {
+    action: 'object.view-own',
+    resource: {
+      type: 'StoredObject',
+      id: 'uncaptioned',
+      state: 'Available',
+      protectedExistence: true,
+      ownerParticipantId,
+    },
+  });
+  assertAllowed(decision, false);
+  const capped = Math.min(Math.max(limit, 1), 20);
+  const res = await deps.pool.query(
+    `SELECT id, owning_resource_id, declared_content_type, created_at
+       FROM storage_ops.stored_objects
+      WHERE owner_participant_id = $1
+        AND object_state = 'Available'
+        AND owning_resource_type = 'LifeStoryItem'
+        AND declared_content_type LIKE 'image/%'
+        AND caption IS NULL
+      ORDER BY created_at DESC
+      LIMIT $2`,
+    [ownerParticipantId, capped],
+  );
+  return res.rows.map((r) => ({
+    objectId: r.id as string,
+    owningResourceId: r.owning_resource_id as string,
+    declaredContentType: r.declared_content_type as string,
+    addedAt: (r.created_at as Date).toISOString(),
+  }));
+}
+
+/**
+ * Saying who is in a photograph, and when it was.
+ *
+ * Its own permission (`object.caption`) rather than the upload's: adding a
+ * file and saying who is in it are different acts, and only the second one
+ * puts a person's name next to a picture. The catalogue entry says the
+ * same thing at more length.
+ *
+ * Clearing is allowed and is not a deletion. Somebody who wrote a name and
+ * then thought better of it must be able to take it back without taking
+ * the photograph back too, so an empty caption stores null — the state the
+ * photograph was in before, which the Home card will find again. A stored
+ * empty string would read as "answered" to every query and would be a
+ * silent way of losing the question.
+ */
+export async function captionObject(
+  deps: StorageDeps,
+  ctx: RequestContext,
+  input: { objectId: string; caption: string },
+): Promise<{ caption: string | null }> {
+  const owner = await deps.pool.query(
+    `SELECT owner_participant_id, object_state FROM storage_ops.stored_objects WHERE id = $1`,
+    [input.objectId],
+  );
+  const row = owner.rows[0];
+  /*
+   * Protected existence (ADR-050): a caller who does not own this must not
+   * learn whether it exists. The permission is checked against the owner
+   * where there is one, and against a value that cannot match where there
+   * is not — so a missing object and somebody else's object refuse
+   * identically.
+   */
+  const decision = await deps.checkPermission(ctx, {
+    action: 'object.caption',
+    resource: {
+      type: 'StoredObject',
+      id: input.objectId,
+      state: 'Available',
+      protectedExistence: true,
+      ownerParticipantId: (row?.owner_participant_id as string | undefined) ?? 'no-such-owner',
+    },
+  });
+  assertAllowed(decision, false);
+  if (row === undefined) {
+    throw new PlatformError('RESOURCE_NOT_FOUND', 'No such file');
+  }
+  if (row.object_state !== 'Available') {
+    throw new PlatformError(
+      'INVALID_STATE_TRANSITION',
+      'This file is not ready yet, so nothing can be written about it',
+    );
+  }
+  const caption = input.caption.trim();
+  const stored = caption === '' ? null : caption;
+  await withTransaction(deps.pool, async (client) => {
+    await client.query(
+      `UPDATE storage_ops.stored_objects
+          SET caption = $2, caption_written_at = $3, record_version = record_version + 1, updated_at = $3
+        WHERE id = $1`,
+      [input.objectId, stored, stored === null ? null : deps.clock.now()],
+    );
+    await recordAuditEvent(client, ctx, {
+      action: 'object.caption',
+      targetType: 'StoredObject',
+      targetId: input.objectId,
+      occurredAt: deps.clock.now(),
+      result: 'Succeeded',
+      source: 'M16',
+      // The words themselves are never copied here: audit rows carry
+      // references and safe metadata only (Doc 14 §61), and a caption is
+      // a participant's own writing about their own photograph.
+    });
+  });
+  return { caption: stored };
+}

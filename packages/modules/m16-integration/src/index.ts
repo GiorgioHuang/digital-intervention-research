@@ -15,6 +15,8 @@ export {
   releaseObject,
   getObjectStatus,
   listObjectsForResource,
+  listUncaptionedPhotographs,
+  captionObject,
   deleteObject,
   assertObjectSendable,
   DEFAULT_STORAGE_CONFIG,
@@ -24,4 +26,5 @@ export {
   type StorageDeps,
   type StoredObjectStatus,
   type AttachedObject,
+  type UncaptionedPhotograph,
 } from './application/storage-pipeline.js';

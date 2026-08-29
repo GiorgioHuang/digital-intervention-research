@@ -8,7 +8,10 @@ import { AccessibilityToolbar } from './components/elder/AccessibilityToolbar.js
 import { HelperBanner } from './components/elder/HelperBanner.js';
 import { ReviewContribution } from './components/ReviewContribution.js';
 import { RecentDecisions } from './components/RecentDecisions.js';
+import { UnfinishedPhotograph } from './components/UnfinishedPhotograph.js';
+import { CaptionPhotograph } from './components/CaptionPhotograph.js';
 import { greetingFor } from './greeting.js';
+import type { UncaptionedPhotograph } from './api.js';
 import { TabIcon } from './components/elder/TabIcon.js';
 import { CommunityPanel } from './components/CommunityPanel.js';
 import { ConsentPanel } from './components/ConsentPanel.js';
@@ -53,6 +56,7 @@ type Screen =
   | 'life-story'
   | 'data-copy'
   | 'review'
+  | 'caption'
   | 'helper'
   | 'help';
 
@@ -107,6 +111,10 @@ export function App() {
    * name rather than flashing a nameless greeting and then adding one.
    */
   const [displayName, setDisplayName] = useState<string | null>(null);
+  /** The photograph being captioned, carried to the `caption` screen. */
+  const [captioning, setCaptioning] = useState<UncaptionedPhotograph | null>(null);
+  /** Whether Home has an unfinished thing on it. Decides the second line. */
+  const [hasUnfinished, setHasUnfinished] = useState(false);
   /*
    * The reading controls, from the handoff's global chrome. They live here
    * rather than in the toolbar so that the content region carries them and
@@ -539,7 +547,19 @@ export function App() {
               ends: a participant who has done the things that are their
               turn is finished for the day.
             */}
-            <p>Anything that needs a decision from you is below, and when it is done, it is done.</p>
+            {/*
+              The handoff's second line is "One thing is unfinished. When it
+              is done, it is done." — which is only true when something is,
+              so it is said only then. The other line is the anti-feed
+              statement said outright (design A1.5), and both end the same
+              way on purpose: this page finishes. A participant who has
+              done the things that are their turn is done for the day.
+            */}
+            <p>
+              {hasUnfinished
+                ? 'One thing is unfinished. When it is done, it is done.'
+                : 'Anything that needs a decision from you is below, and when it is done, it is done.'}
+            </p>
             {/*
               What is waiting comes first, and everything else folds away.
 
@@ -558,6 +578,20 @@ export function App() {
               still here, still reachable by name, and a closed <details>
               is still searched by the browser's find-in-page.
             */}
+            {/*
+              The handoff's order: greeting, the one unfinished thing, then
+              what is waiting. The unfinished thing comes first because it
+              is the person's own — something they started — and what is
+              waiting came from somebody else.
+            */}
+            <UnfinishedPhotograph
+              session={session}
+              onPresence={setHasUnfinished}
+              onCaption={(photograph) => {
+                setCaptioning(photograph);
+                setScreen('caption');
+              }}
+            />
             <WaitingForYou
               session={session}
               onReview={(contributionId) => {
@@ -655,6 +689,16 @@ export function App() {
         */}
         {screen === 'helper' && (
           <HelperScreen helper={helper} onChange={setHelper} onDone={() => setScreen('help')} />
+        )}
+        {screen === 'caption' && captioning !== null && (
+          <CaptionPhotograph
+            session={session}
+            photograph={captioning}
+            onDone={() => {
+              setCaptioning(null);
+              setScreen('home');
+            }}
+          />
         )}
         {screen === 'consent' && <ConsentPanel session={session} assistedBy={helper} />}
         {screen === 'access' && (

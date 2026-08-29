@@ -39,6 +39,9 @@ import {
   DEFAULT_STORAGE_CONFIG,
   getObjectStatus,
   listObjectsForResource,
+  listUncaptionedPhotographs,
+  captionObject,
+  type UncaptionedPhotograph,
   deleteObject as deleteStoredObject,
   initiateUpload,
   releaseObject,
@@ -579,6 +582,48 @@ export class CommandController {
       owningResourceId,
     });
     return { data: items.map((a) => ({ type: 'StoredObject', id: a.objectId, attributes: a })) };
+  }
+
+  /**
+   * Photographs in this person's life story with nothing said about them.
+   *
+   * The design's Home card: "A photograph with no words … Nobody knows yet
+   * who is in it." One by default, because the card is one unfinished
+   * thing rather than a list of chores.
+   */
+  @Get('participants/:participantId/uncaptioned-photographs')
+  async uncaptionedPhotographs(
+    @Req() req: Request,
+    @Param('participantId') participantId: string,
+    @Query('limit') limit?: string,
+  ) {
+    const ctx = requireActor(req);
+    const parsed = Number.parseInt(limit ?? '', 10);
+    const items: UncaptionedPhotograph[] = await listUncaptionedPhotographs(
+      this.deps.m16storage,
+      ctx,
+      participantId,
+      Number.isFinite(parsed) ? parsed : 1,
+    );
+    return { data: items.map((o) => ({ type: 'StoredObject', id: o.objectId, attributes: o })) };
+  }
+
+  /**
+   * Saying who is in a photograph. An empty caption clears it — taking the
+   * words back must not mean taking the photograph back.
+   */
+  @Post('objects/:objectId/caption')
+  async captionObject(
+    @Req() req: Request,
+    @Param('objectId') objectId: string,
+    @Body() body: { caption?: string },
+  ) {
+    const ctx = requireActor(req);
+    const result = await captionObject(this.deps.m16storage, ctx, {
+      objectId,
+      caption: body.caption ?? '',
+    });
+    return { data: { type: 'StoredObject', id: objectId, attributes: result } };
   }
 
   @Post('objects/:objectId/delete')
