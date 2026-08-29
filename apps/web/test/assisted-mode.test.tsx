@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { act } from 'react';
-import { AssistedMode } from '../src/components/AssistedMode.js';
+import { HelperScreen } from '../src/components/elder/HelperScreen.js';
 import { MessagePanel } from '../src/components/MessagePanel.js';
 
 const session = { actorId: 'actor_a', participantId: 'pt_a' };
@@ -13,6 +13,17 @@ const recipient = { participantId: 'pt_b', displayName: 'Ben' };
  * adds is honesty about who is present.
  */
 describe('assisted mode', () => {
+  /*
+   * The screen moved. It used to be a disclosure above the heading of
+   * every screen, so "Someone is helping me use this" was the first thing
+   * on Home for everybody who has nobody sitting with them; the design
+   * puts it on Help, opening its own screen. The rules it enforces did not
+   * move, so the tests follow the component rather than being rewritten.
+   */
+  const helperScreen = (helper: string | null, onChange: (h: string | null) => void = () => undefined) => (
+    <HelperScreen helper={helper} onChange={onChange} onDone={() => undefined} />
+  );
+
   beforeEach(() => {
     (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
   });
@@ -23,25 +34,45 @@ describe('assisted mode', () => {
 
   it('the participant turns it on, and the banner says the helper cannot act for them', async () => {
     const changes: (string | null)[] = [];
-    const { rerender } = render(<AssistedMode helper={null} onChange={(h) => changes.push(h)} />);
+    render(helperScreen(null, (h) => changes.push(h)));
     fireEvent.change(screen.getByLabelText('Who is helping you?'), { target: { value: '  Nurse Li  ' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Start' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Start helping' }));
     expect(changes).toEqual(['Nurse Li']);
 
-    rerender(<AssistedMode helper="Nurse Li" onChange={() => undefined} />);
+    // What a helper may not do is the part that matters, and it is on the
+    // screen before anyone presses Start rather than in a banner afterwards.
     const text = document.body.textContent ?? '';
-    expect(text).toContain('Nurse Li is helping you right now');
-    expect(text).toContain('cannot press anything for you');
-    expect(text).toContain('They can see this screen');
+    expect(text).toContain('accept or refuse anything on your behalf');
+    expect(text).toContain('change who can see your story');
+    expect(text).toContain('it stays yours');
+  });
+
+  /**
+   * The design's note reads "those decisions are put aside and shown to you
+   * again once helping stops". Nothing in this platform does that (B-13),
+   * and it is the one thing somebody is relying on while another person
+   * reads their screen — so the sentence must not appear until it is true.
+   */
+  it('does not promise that decisions are held until helping stops', () => {
+    render(helperScreen(null));
+    const text = document.body.textContent ?? '';
+    // Broad on purpose. The promise can come back in any wording, and the
+    // first attempt at this screen tripped this guard with its own denial
+    // — which is the right failure, and the reason the denial is now
+    // phrased so the two cannot be confused.
+    expect(text, 'the app promises to defer decisions, and nothing defers them').not.toMatch(
+      /(put|set) aside|held for you|shown to you again/i,
+    );
+    expect(text).toContain('Nothing is held back for later');
   });
 
   it('the helper name never leaves the device, and the screen says so', () => {
-    render(<AssistedMode helper={null} onChange={() => undefined} />);
+    render(helperScreen(null));
     expect(screen.getByText(/stays on this device/)).toBeTruthy();
   });
 
   it('only the participant can end it', () => {
-    render(<AssistedMode helper="Nurse Li" onChange={() => undefined} />);
+    render(helperScreen('Nurse Li'));
     expect(screen.getByRole('button', { name: 'Stop — nobody is helping me now' })).toBeTruthy();
   });
 });

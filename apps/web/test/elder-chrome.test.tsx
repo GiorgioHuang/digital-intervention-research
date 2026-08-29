@@ -240,7 +240,11 @@ describe('the toolbar has one shape everywhere', () => {
     ).toBeTruthy();
 
     const css = readFileSync(resolve(process.cwd(), 'src/styles.css'), 'utf8');
-    const at = css.indexOf('.nav-primary {');
+    // Anchored to the start of a line. Plain `.nav-primary {` also matches
+    // inside `[data-workspace='participant'] .nav-primary {`, and once that
+    // scoped rule was added ahead of the base one this guard read the wrong
+    // block and reported the bar as no longer fixed when it was.
+    const at = css.indexOf('\n.nav-primary {');
     expect(at, 'the .nav-primary rule has been renamed').toBeGreaterThan(-1);
     expect(
       css.slice(at, css.indexOf('}', at)),
@@ -287,7 +291,7 @@ describe('the toolbar has one shape everywhere', () => {
     // rule is renamed, and slicing from -1 yields '' — which fails every
     // `toContain` for the wrong reason and passes every `not.toContain`
     // somebody adds later (D-90).
-    const from = css.indexOf('@media (max-width: 33.99rem) {');
+    const from = css.indexOf('@media (max-width: 25.9rem) {');
     expect(from, 'the narrow-width block has moved or been renamed').toBeGreaterThan(-1);
     // Both anchors asserted, not just the outer one. Deleting the
     // read-icon rule collapsed this slice to '' and the failure that came
@@ -295,10 +299,15 @@ describe('the toolbar has one shape everywhere', () => {
     // there, found by mutation-testing this very test.
     const iconAt = css.indexOf('.elder-toolbar__read-icon', from);
     expect(iconAt, 'the speaker glyph is back, and it is width this row has not got').toBeGreaterThan(from);
+    // The name gives way at a narrower width than the glyph does — one
+    // breakpoint would have to serve the stricter of the two and would
+    // take the name off a 390 phone.
+    const nameAt = css.indexOf('@media (max-width: 23.4rem) {');
+    expect(nameAt, 'the name and the glyph share a breakpoint again').toBeGreaterThan(iconAt);
     // +1 so the block's own closing brace is inside the slice; without it
     // the last rule reads as unterminated and its assertion fails on the
     // punctuation rather than on the rule.
-    const narrow = css.slice(from, css.indexOf('}', iconAt) + 1);
+    const narrow = css.slice(from, css.indexOf('}', css.indexOf('.elder-toolbar__wordmark', nameAt)) + 1);
     expect(narrow, 'the name no longer gives way on a phone').toContain(
       '.elder-toolbar__wordmark { display: none; }',
     );

@@ -739,6 +739,20 @@ main {
   padding: var(--space-5) var(--space-4) var(--space-8);
   box-sizing: border-box;
 }
+/* The handoff's 24px 22px. The built page had 27 and 18 — a narrower
+   gutter and a deeper top than the drawing, which reads as text pushed
+   towards the edges. */
+[data-workspace='participant'] main {
+  padding-block-start: var(--elder-gutter-block);
+  padding-inline: var(--elder-gutter);
+}
+/* The gutter is the gutter; the heading does not add its own on top of it.
+   Measured, the greeting sat 50px below the toolbar — 24 of padding plus
+   27 of heading margin, which do not collapse through the padding — where
+   the design puts it directly under the bar. */
+[data-workspace='participant'] main > section > :first-child {
+  margin-block-start: 0;
+}
 /* Staff workspaces: the desktop layout (owner's ruling, 2026-08-13: use as
    much of the screen width as possible).
 
@@ -764,6 +778,13 @@ main {
  * obligation to check it. The active tab is marked by a rule along its top
  * edge, pulled up a pixel so it sits on the divider rather than under it.
  */
+/* The handoff's 72px is the whole bar, not the row inside it: the generic
+   nav padding turned a 72px tab into a 91px bar. The tab's own min-height
+   carries the height now, and the safe-area inset still gets its room. */
+[data-workspace='participant'] .nav-primary {
+  padding-block: 0 env(safe-area-inset-bottom, 0px);
+  padding-inline: 0;
+}
 [data-workspace='participant'] .nav-primary li { flex: 1 1 0; min-inline-size: 0; }
 [data-workspace='participant'] .nav-primary button {
   inline-size: 100%;
@@ -771,7 +792,7 @@ main {
   align-items: center;
   justify-content: center;
   gap: var(--space-1);
-  min-block-size: 4.5rem;
+  min-block-size: var(--elder-tab-height);
   padding-inline: var(--space-1);
   border: 0;
   border-block-start: 2px solid transparent;
@@ -787,7 +808,9 @@ main {
   background-color: transparent;
   color: var(--cl-accent-800);
 }
-.elder-tab__icon { inline-size: 1.375rem; block-size: 1.375rem; }
+/* 22px, the handoff's figure. It was 1.375rem (24.75px), which with the
+   4.5rem row made the whole bar 100px against the design's 72. */
+.elder-tab__icon { inline-size: var(--elder-tab-icon); block-size: var(--elder-tab-icon); }
 /*
  * Below 390px the 13px label is wider than the tab it sits in, and
  * "Community" is one word, so it clips rather than wraps. Measured: 60px
@@ -800,6 +823,27 @@ main {
 @media (max-width: 24.5rem) {
   [data-workspace='participant'] .nav-primary button { font-size: var(--type-size-00, 0.72rem); }
 }
+/*
+ * The chevron rows keep the handoff's Lora 18px at every width.
+ *
+ * They wrapped, and the first fix was to step the type down the way X-3
+ * does for "Community" in the tab bar. That was the wrong borrowing. X-3
+ * is about a single word being clipped, which is broken; a sentence
+ * running onto a second line is not. Shrinking body text for a
+ * 78-year-old to keep a line count is a bad trade, and it was costing
+ * every phone 3px of type to fix a case that only arises at 320.
+ *
+ * What fixed 390 was the handoff's own 2px inline padding, which the
+ * build had rounded up to 4.5, and a tighter chevron gap.
+ *
+ * Measured, and stated as measured rather than as hoped: every row is 67px
+ * and single-line at the handoff's own 404px frame and at 390. At 360 and
+ * 320 the longest of the three — "Your information and who can see it" —
+ * takes a second line and that row becomes 96px. The other two hold one
+ * line at every width. That is the accepted cost of keeping the type at
+ * the size it was drawn.
+ */
+
 
 /* ---------- The elder handoff's global chrome ---------------------------
  * Toolbar and helper banner, from the handoff's "Global chrome". Both sit
@@ -866,22 +910,33 @@ main {
    rather than a clip or a zero width: a hidden-but-present item in a flex
    row still takes its gap, which is 6px this row does not have. */
 /*
- * Below the breakpoint, three things give way so that one row holds at
- * 320px — the 400%-zoom target, and the width where this has to be proved
- * rather than assumed.
+ * Two breakpoints, because the three things that give way do not have to
+ * give way together.
  *
- * The name goes first: the mark already stands for it. The speaker glyph
- * goes next — it is decorative and already `aria-hidden`, the label beside
- * it is untouched, and §A.9 forbids an icon without a text label, not a
- * label without an icon. And the bar's own side padding tightens, which is
- * chrome rather than a target and costs nobody a press.
+ * Measured with the whole wide configuration forced on — name, speaker
+ * glyph and untightened padding — the bar needs **400px**. Measured with
+ * the glyph hidden and the padding tight, the name alone fits from
+ * **364px**. One breakpoint would have to serve the stricter number, which
+ * would take the name off the handoff's own 404px frame and off a 390
+ * phone. So the glyph goes first and the name goes later.
  *
- * Together those are the difference between one row and two.
+ * The glyph is the right thing to spend: it is decorative, already
+ * `aria-hidden`, its label is untouched beside it, and §A.9 forbids an
+ * icon without a text label rather than a label without an icon. The
+ * name's absence is the one the owner asked not to have.
+ *
+ * (The first version of this measurement forced only the wordmark visible
+ * while the old breakpoint still had the glyph hidden — so it bisected a
+ * bar that exists at no width, and reported 364 for a configuration that
+ * needs 400. The fix was to force all three.)
  */
-@media (max-width: 33.99rem) {
+@media (max-width: 25.9rem) {
   .elder-toolbar { padding-inline: var(--space-2); }
-  .elder-toolbar__wordmark { display: none; }
   .elder-toolbar__read-icon { display: none; }
+}
+@media (max-width: 23.4rem) {
+  .elder-toolbar__wordmark { display: none; }
+}
 }
 /* The mark's own colour, reached through the token rather than written
    again: --cl-accent IS #b68235, so nothing here reinterprets the brand. */
@@ -960,7 +1015,7 @@ main {
 .elder-toolbar__read {
   padding-inline: var(--space-2);
   font-family: var(--cl-family-body);
-  font-size: var(--type-size-0);
+  font-size: var(--type-size-00, 0.72rem);
   color: var(--cl-accent-700);
   border-color: var(--cl-divider);
 }
@@ -1021,6 +1076,24 @@ main {
 [data-workspace='participant'] {
   --type-family-ui: var(--cl-family-body);
 
+  /* ---- The handoff's own measurements ---------------------------------
+   * Written as rem against this workspace's 18px root — which is why the
+   * root is 18 in the first place, so that 1rem is the handoff's body size
+   * — and multiplied by --density so the reader's own density setting
+   * still moves them. A raw px value would match the design and then stop
+   * responding to a setting this audience is the most likely to use.
+   *
+   * From "Type scale as built" and the Global chrome section:
+   *   content padding 24px 22px · tab bar 72px · tab icon 22px
+   *   chevron row padding 19px 2px · quiet card padding 18px
+   */
+  --elder-gutter: calc(1.222rem * var(--density));      /* 22px */
+  --elder-gutter-block: calc(1.333rem * var(--density));/* 24px */
+  --elder-tab-height: calc(4rem * var(--density));      /* 72px */
+  --elder-tab-icon: 1.222rem;                           /* 22px */
+  --elder-row-y: calc(1.056rem * var(--density));       /* 19px */
+  --elder-card-pad: calc(1rem * var(--density));        /* 18px */
+
   --color-surface-page: var(--cl-bg);
   --color-surface-raised: var(--cl-neutral-100);
   --color-surface-sunken: var(--cl-neutral-200);
@@ -1053,6 +1126,13 @@ main {
 [data-workspace='participant'] :is(h1, h2, h3, h4, summary, button, label, legend) {
   font-family: var(--cl-family-display);
 }
+/* Two exceptions, and both are the handoff's. "Read aloud" is Lora 12.5px
+   and the chevron rows are Lora 18px — they are lines of text to read, not
+   labels on controls. This rule sits after the sweep above because the
+   sweep outranks a plain class selector and was quietly winning. */
+[data-workspace='participant'] :is(.elder-toolbar__read, .nav-rows > .row-summary) {
+  font-family: var(--cl-family-body);
+}
 [data-workspace='participant'] :is(h1, h2, h3, h4) {
   font-weight: var(--type-weight-semibold);
   letter-spacing: 0;
@@ -1062,6 +1142,11 @@ main {
 [data-workspace='participant'] h1 {
   font-weight: var(--type-weight-regular);
 }
+/* The handoff's scale is H1 30-36 and H2 20-25. The h1 lands at 34.6 and
+   was already inside it; the h2 inherited the interface scale's 28.8 and
+   sat a whole step above the design, which is most of why the built page
+   reads heavier than the drawing. -3 is 24px. */
+[data-workspace='participant'] h2 { font-size: var(--type-size-3); }
 /* Every figure is tabular: clocks, dates, the telephone number, counts. */
 [data-workspace='participant'] :is(time, .figure, td, th) {
   font-variant-numeric: tabular-nums;
@@ -1370,11 +1455,23 @@ a[role='button']:hover { background-color: var(--color-action-secondary-bg-hover
 .nav-rows > details:first-of-type {
   border-block-start: var(--border-hairline) solid var(--color-border-subtle);
 }
-.nav-rows > details > summary {
+/* Lora, not Cormorant: the handoff sets these rows in the body face at
+   18px. Cormorant is for headings, buttons and labels — a row that is a
+   destination is a line of text to read. And the handoff's 19px 2px, where
+   these had 9px: the rows were half the height they are drawn at, which is
+   why the built page fitted more on screen and read as denser. */
+.nav-rows > details > summary,
+.nav-rows > .row-summary {
+  font-family: var(--cl-family-body);
+  font-size: var(--type-size-1);
+  padding-block: var(--elder-row-y);
   display: flex;
   inline-size: 100%;
   justify-content: space-between;
-  padding-inline: var(--space-1);
+  /* The handoff's own 2px. These rows are full-bleed to the content
+     column; inset text would break the left edge every other line on the
+     page holds. */
+  padding-inline: 2px;
   border: 0;
   border-radius: 0;
   background-color: transparent;
@@ -1388,7 +1485,7 @@ a[role='button']:hover { background-color: var(--color-action-secondary-bg-hover
   content: '';
   inline-size: 0.55rem;
   block-size: 0.55rem;
-  margin-inline-start: var(--space-3);
+  margin-inline-start: var(--space-2);
   border-inline-end: 2px solid var(--color-text-secondary);
   border-block-end: 2px solid var(--color-text-secondary);
   transform: rotate(-45deg);
@@ -1399,18 +1496,14 @@ a[role='button']:hover { background-color: var(--color-action-secondary-bg-hover
 .nav-rows > details > *:not(summary) { padding-block-end: var(--space-3); }
 
 /* ---------- A waiting thing, named on Home and answered elsewhere --------
- * The handoff's Home row: what is waiting, when it arrived, and a chevron
- * that says it opens. Deliberately the same row language as the disclosure
- * rows above — full width, hairline-separated, marker on the right — so a
- * participant is not asked to learn two kinds of row on one screen. The one
- * difference carries the one distinction that matters: this row is a thing
- * to do, so its first line is the accent and heavier, while a disclosure
- * summary is not.
- *
- * That is hierarchy between kinds, never within a choice: nothing here is
- * one of a pair, so weighting it is not the thing DESIGN_BRIEF forbids.
+ * The handoff draws this as a card, not as a hairline row: "a full-width
+ * row button (1px divider, radius 4px, padding: 18px)". It was built as a
+ * rule-separated row, which made a thing that wants an answer look like a
+ * destination — the one distinction this screen exists to make. An
+ * enclosure says "this is an object, and it is yours to deal with"; a
+ * hairline says "this is one of a list of places to go".
  */
-.row-list { margin: 0; padding: 0; list-style: none; }
+.row-list { margin: 0; padding: 0; list-style: none; display: grid; gap: var(--space-3); }
 .row-list > li { max-width: none; }
 .row-link {
   display: flex;
@@ -1418,44 +1511,37 @@ a[role='button']:hover { background-color: var(--color-action-secondary-bg-hover
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
-  padding-inline: var(--space-1);
-  border: 0;
-  border-block-end: var(--border-hairline) solid var(--color-border-subtle);
-  border-radius: 0;
-  background-color: transparent;
+  padding: var(--elder-card-pad);
+  border: var(--border-hairline) solid var(--cl-divider);
+  border-radius: var(--radius-1);
+  background-color: var(--cl-neutral-100);
   text-align: start;
 }
-.row-list > li:first-child .row-link {
-  border-block-start: var(--border-hairline) solid var(--color-border-subtle);
-}
-/*
- * The last row does not close itself.
- *
- * It did, and the group below it opens with its own hairline — so two
- * full-bleed lines sat 35px apart with nothing between them, which reads as
- * an empty row rather than as a boundary. Seen in a 390px capture, not
- * reasoned about: the line that ends this group is the line that begins the
- * next one.
- */
-.row-list > li:last-child .row-link { border-block-end: 0; }
-.row-link:hover { background-color: var(--color-surface-sunken); }
+.row-link:hover { background-color: var(--cl-accent-100); }
 .row-link__text { display: flex; flex-direction: column; gap: var(--space-1); }
 .row-link__title {
-  color: var(--color-text-primary);
+  font-family: var(--cl-family-display);
+  font-size: var(--type-size-2);
   font-weight: var(--type-weight-semibold);
+  color: var(--color-text-primary);
 }
+/* Lora. It was inheriting Cormorant from the button, and the handoff sets
+   every line of body copy in the body face — a detail line under a title is
+   body copy, not a label. */
 .row-link__detail {
-  color: var(--color-text-secondary);
+  font-family: var(--cl-family-body);
   font-size: var(--type-size-0);
   font-weight: var(--type-weight-regular);
+  color: var(--cl-text-4);
 }
-/* The same 0.55rem mark as the disclosure rows, pointing the same way. */
+/* accent-700, the interactive-text colour: on this ground the base gold
+   reaches only about 3:1, which the handoff is explicit about. */
 .row-link__chevron {
   flex: 0 0 auto;
   inline-size: 0.55rem;
   block-size: 0.55rem;
-  border-inline-end: 2px solid var(--cl-accent-700, var(--color-text-secondary));
-  border-block-end: 2px solid var(--cl-accent-700, var(--color-text-secondary));
+  border-inline-end: 2px solid var(--cl-accent-700);
+  border-block-end: 2px solid var(--cl-accent-700);
   transform: rotate(-45deg);
   font-size: 0;
 }
@@ -1467,9 +1553,31 @@ a[role='button']:hover { background-color: var(--color-action-secondary-bg-hover
   padding-inline: var(--space-1);
   border: 0;
   background-color: transparent;
-  color: var(--cl-accent-700, var(--color-action-primary-bg));
+  color: var(--cl-accent-700);
   font-weight: var(--type-weight-medium);
 }
+/* A chevron row that navigates rather than discloses. The same row
+   language as the disclosures beside it — nobody should have to learn two
+   kinds of row on one screen. */
+.nav-rows > .row-summary {
+  border: 0;
+  border-block-end: var(--border-hairline) solid var(--color-border-subtle);
+  border-radius: 0;
+  background-color: transparent;
+  color: var(--color-text-primary);
+  text-align: start;
+}
+.nav-rows > .row-summary::after {
+  content: '';
+  inline-size: 0.55rem;
+  block-size: 0.55rem;
+  margin-inline-start: var(--space-3);
+  align-self: center;
+  border-inline-end: 2px solid var(--color-text-secondary);
+  border-block-end: 2px solid var(--color-text-secondary);
+  transform: rotate(-45deg);
+}
+.nav-rows > .row-summary:hover { background-color: var(--color-surface-sunken); }
 
 /* ---------- A thing to decide is an object -------------------------------- */
 /*

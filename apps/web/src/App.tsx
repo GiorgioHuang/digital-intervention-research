@@ -3,7 +3,7 @@ import { StaffApp } from './StaffApp.js';
 import { currentSurface } from './surface.js';
 import { SupporterApp } from './SupporterApp.js';
 import { AccessTokenGate } from './components/AccessTokenGate.js';
-import { AssistedMode } from './components/AssistedMode.js';
+import { HelperScreen } from './components/elder/HelperScreen.js';
 import { AccessibilityToolbar } from './components/elder/AccessibilityToolbar.js';
 import { HelperBanner } from './components/elder/HelperBanner.js';
 import { ReviewContribution } from './components/ReviewContribution.js';
@@ -52,6 +52,7 @@ type Screen =
   | 'life-story'
   | 'data-copy'
   | 'review'
+  | 'helper'
   | 'help';
 
 /**
@@ -481,16 +482,6 @@ export function App() {
           }}
         />
         <AccessTokenGate />
-        {/*
-          Quietened rather than moved. It sits above the page's own heading
-          on every screen, and as a pill it was the loudest element on the
-          participant home while being the one fewest people need. Where it
-          lives is a question about who is sitting with somebody, not a
-          visual one, so the position stays and only the weight changes.
-        */}
-        <div className="nav-rows">
-          <AssistedMode helper={helper} onChange={setHelper} />
-        </div>
         {screen === 'home' && (
           <section aria-labelledby="home-heading">
             {/*
@@ -610,6 +601,16 @@ export function App() {
             }}
           />
         )}
+        {/*
+          Helper mode is a screen, reached from Help, and not a row above
+          the heading of every other screen. It was the latter, which put
+          "Someone is helping me use this" ahead of the greeting for
+          everybody who has nobody sitting with them — the single largest
+          difference between the built Home and the design.
+        */}
+        {screen === 'helper' && (
+          <HelperScreen helper={helper} onChange={setHelper} onDone={() => setScreen('help')} />
+        )}
         {screen === 'consent' && <ConsentPanel session={session} assistedBy={helper} />}
         {screen === 'access' && (
           <>
@@ -640,6 +641,16 @@ export function App() {
               If you or someone else is in immediate danger, call your local emergency number. This platform is
               not an emergency service.
             </p>
+            {/*
+              Where the design puts it: a chevron row on Help. Above the
+              safety panel, because somebody who has a person beside them
+              is more likely to be here for that than for a report.
+            */}
+            <div className="nav-rows">
+              <button className="row-summary" onClick={() => setScreen('helper')}>
+                Someone is helping me use this
+              </button>
+            </div>
             <SafetyPanel session={session} />
             {/*
               Folded, and it is the biggest thing on this page: 191 words
