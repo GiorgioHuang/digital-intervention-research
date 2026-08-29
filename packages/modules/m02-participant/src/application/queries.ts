@@ -91,3 +91,54 @@ export async function listParticipantsForOrganisation(
     registeredAt: (r.created_at as Date).toISOString(),
   }));
 }
+
+export interface MyProfile {
+  participantId: string;
+  displayName: string;
+}
+
+/**
+ * What to call the person using the app.
+ *
+ * The handoff greets by name — "Good morning, Margaret" — and nothing
+ * returned one, so Home greeted a stranger. The name has been in
+ * `participant_profile.participants.display_name` since M02's first
+ * migration; what was missing was a way for its owner to read it.
+ *
+ * Owner-only, and the participant is not a parameter the caller chooses.
+ * `participant.view-own` is an owner-permitted action, so the engine
+ * decides whether this actor owns this record — but the row is also
+ * fetched by the id the permission was judged against, which means a
+ * caller cannot pass one participant's id while the engine evaluates
+ * another's context. Neither check is sufficient alone; this is the same
+ * shape as `listParticipantsForOrganisation` above.
+ *
+ * Null when there is no such participant, rather than an error. This is
+ * the app asking about itself, and a missing profile is a real state
+ * during synthetic setup — a screen that says "Good morning" without a
+ * name is correct there, where a 404 on the home screen is not.
+ */
+export async function getMyProfile(
+  deps: M02Deps,
+  ctx: RequestContext,
+  participantId: string,
+): Promise<MyProfile | null> {
+  const decision = await deps.checkPermission(ctx, {
+    action: 'participant.view-own',
+    resource: {
+      type: 'Participant',
+      id: participantId,
+      state: 'Active',
+      protectedExistence: true,
+      ownerParticipantId: participantId,
+    },
+  });
+  assertAllowed(decision, false);
+  const res = await deps.pool.query(
+    `SELECT id, display_name FROM participant_profile.participants WHERE id = $1`,
+    [participantId],
+  );
+  const row = res.rows[0];
+  if (row === undefined) return null;
+  return { participantId: row.id as string, displayName: row.display_name as string };
+}

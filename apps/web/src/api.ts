@@ -231,7 +231,19 @@ export interface ContributionAwaitingReview {
   archiveId: string;
   itemId: string | null;
   contentText: string;
+  contributorActorId: string;
+  /**
+   * Who offered it. Null when the account has no name on record — which is
+   * a different thing from an anonymous contribution, and the screen says
+   * so in words rather than falling back to the account identifier.
+   */
+  contributorDisplayName: string | null;
   createdAt: string;
+}
+
+export interface MyProfile {
+  participantId: string;
+  displayName: string;
 }
 
 export interface AttachedFile {
@@ -392,6 +404,13 @@ export const api = {
    */
   removeFile: (s: Session, objectId: string) =>
     post(s, `/v1/objects/${objectId}/delete`, { confirmed: true }),
+  /**
+   * What to call the person using the app. Null is a real answer, not a
+   * failure: during synthetic setup a session can name a participant with
+   * no profile row, and Home greeting without a name is correct there.
+   */
+  getMyProfile: (s: Session) =>
+    get<{ data: { id: string; attributes: MyProfile } | null }>(s, `/v1/participants/${s.participantId}/profile`),
   listLifeStoryItemFiles: (s: Session, itemId: string) =>
     get<{ data: { id: string; attributes: AttachedFile }[] }>(
       s,

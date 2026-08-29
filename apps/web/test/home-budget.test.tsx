@@ -50,6 +50,8 @@ const stubPopulated = (waiting = 1) =>
                 // `contributorDisplayName` and `offeredAt`, neither of which
                 // the endpoint returns — so the measurement was taken
                 // against a richer page than the one that ships.
+                contributorActorId: 'acct_sam',
+                contributorDisplayName: 'Sam Petrova',
                 createdAt: '2026-08-01T10:00:00Z',
               },
             })),
@@ -159,7 +161,7 @@ describe('what the home page asks of somebody who has just opened it', () => {
       fireEvent.click(screen.getByRole('button', { name: /has offered something for your story/ }));
     });
     expect(
-      screen.getByRole('heading', { name: 'Someone has offered something for your story' }),
+      screen.getByRole('heading', { name: 'Sam Petrova has offered something for your story' }),
       'the row led nowhere',
     ).toBeTruthy();
     expect(screen.getByText(/I remember the allotment/), 'the offered text did not come with it').toBeTruthy();

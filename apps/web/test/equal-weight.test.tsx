@@ -67,6 +67,8 @@ describe('equal-weight pairs stay equal', () => {
                       archiveId: 'arc_1',
                       contentText: 'I remember the allotment that summer.',
                       itemId: null,
+                      contributorActorId: 'acct_sam',
+                      contributorDisplayName: 'Sam Petrova',
                       createdAt: '2026-08-01T10:00:00Z',
                     },
                   },

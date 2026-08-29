@@ -26,6 +26,7 @@ const waiting = {
       attributes: {
         contributionId: 'con_1', archiveId: 'ar_1', itemId: 'li_1',
         contentText: 'She always brought soup when anyone was ill.',
+        contributorActorId: 'acct_anne', contributorDisplayName: 'Anne',
         createdAt: '2026-08-01T00:00:00Z',
       },
     },
@@ -79,6 +80,7 @@ const unattached = {
       attributes: {
         contributionId: 'con_2', archiveId: 'ar_1', itemId: null,
         contentText: 'Offered without saying where it belongs.',
+        contributorActorId: 'acct_anne', contributorDisplayName: 'Anne',
         createdAt: '2026-08-01T00:00:00Z',
       },
     },
@@ -226,16 +228,42 @@ describe('what is waiting for the participant', () => {
   });
 
   /**
-   * The contributor is withheld on purpose. The list query says so in as
-   * many words — naming them here "would let anyone enumerate who has been
-   * writing about them" — and the handoff's row ("Anne has offered…") was
-   * not weighing that. The ruling wins; the gap is recorded as B-17.
+   * The name, which the handoff asks for and the server used to withhold.
+   * The ruling was reversed by the owner (B-17); the reasoning on both
+   * sides is in `listContributionsAwaitingReview`.
    */
-  it('does not name who offered it', async () => {
+  it('names who offered it', async () => {
     stubFetch(waiting);
     await act(async () => {
       render(<WaitingForYou session={session} onReview={() => {}} />);
     });
-    expect(screen.getByText(/^Someone has offered something for your story$/)).toBeTruthy();
+    expect(screen.getByText(/^Anne has offered something for your story$/)).toBeTruthy();
+  });
+
+  /**
+   * An account with no name on record is not an anonymous contribution.
+   * The gap says it is a gap, rather than printing the account identifier
+   * at somebody deciding about their own life story — which is the nearest
+   * string to hand and tells them nothing.
+   */
+  it('says the name is missing rather than showing an identifier', async () => {
+    stubFetch({
+      data: [
+        {
+          id: 'con_3',
+          attributes: {
+            contributionId: 'con_3', archiveId: 'ar_1', itemId: null, contentText: 'x',
+            contributorActorId: 'acct_unnamed', contributorDisplayName: null,
+            createdAt: '2026-08-01T00:00:00Z',
+          },
+        },
+      ],
+    });
+    await act(async () => {
+      render(<WaitingForYou session={session} onReview={() => {}} />);
+    });
+    const row = screen.getByRole('button', { name: /has offered something for your story/ });
+    expect(row.textContent).toContain('name is missing');
+    expect(row.textContent, 'an account identifier is being shown to a participant').not.toContain('acct_');
   });
 });

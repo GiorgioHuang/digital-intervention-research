@@ -101,6 +101,12 @@ export function App() {
    */
   const [reviewing, setReviewing] = useState<string | null>(null);
   /*
+   * What to call this person. Null until it is known, and null is also the
+   * settled answer where there is no profile — so Home greets without a
+   * name rather than flashing a nameless greeting and then adding one.
+   */
+  const [displayName, setDisplayName] = useState<string | null>(null);
+  /*
    * The reading controls, from the handoff's global chrome. They live here
    * rather than in the toolbar so that the content region carries them and
    * the toolbar itself does not shrink out of reach along with the text.
@@ -209,6 +215,34 @@ export function App() {
       cancelled = true;
     };
   }, []);
+
+  /**
+   * The name to greet with, fetched once a session exists.
+   *
+   * A failure is silent on purpose. This is the greeting, not the page —
+   * if the name cannot be read, Home says "Good morning" and everything
+   * else on the screen still works. Putting an error block above somebody's
+   * unfinished photograph because a courtesy failed would be the wrong
+   * order of importance.
+   */
+  useEffect(() => {
+    if (session === null) {
+      setDisplayName(null);
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await api.getMyProfile(session);
+        if (!cancelled) setDisplayName(res.data?.attributes.displayName ?? null);
+      } catch {
+        if (!cancelled) setDisplayName(null);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [session]);
 
   /**
    * The bottom bar is fixed, so `main` has to reserve exactly as much space
@@ -490,12 +524,14 @@ export function App() {
               `greeting.ts` and are tested at fixed instants, so no test
               asserts a greeting that only holds until lunchtime (D-103).
 
-              No name: a participant session is `{actorId, participantId}`
-              and nothing returns what somebody is called (gap B-16). The
-              greeting stands on its own rather than greeting a stranger by
-              an identifier or by an invented placeholder.
+              The name comes from the participant's own profile, which had
+              been in the database since M02's first migration with no way
+              for its owner to read it (B-16, now closed). Null while it is
+              being fetched and null where there is no profile, and in both
+              cases the greeting simply stands on its own — it never greets
+              somebody by an identifier or by an invented placeholder.
             */}
-            <h1 id="home-heading">{greetingFor(new Date(), null)}</h1>
+            <h1 id="home-heading">{greetingFor(new Date(), displayName)}</h1>
             {/*
               The anti-feed statement, said rather than implied (design
               A1.5), and now in one sentence rather than two. This page

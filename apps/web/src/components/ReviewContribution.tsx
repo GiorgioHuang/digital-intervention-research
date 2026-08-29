@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { api, type ContributionAwaitingReview, type MyLifeStoryItem, type Session } from '../api.js';
 import { presentError, type PresentedError } from '../errors.js';
 import { ErrorState, LoadingState } from './StateBlock.js';
+import { nameOrGap } from '../names.js';
 
 /**
  * Deciding on one thing somebody has offered for your story.
@@ -145,16 +146,13 @@ export function ReviewContribution({
       {contribution !== null && outcome === null && (
         <>
           {/*
-            The handoff names the contributor here and this screen cannot.
-            The list query withholds them deliberately, and says the name
-            belongs "on the contribution when the participant opens it" —
-            which is this screen, and there is still no query that returns
-            it. So the absence is real on both sides, and it is recorded
-            (B-17) rather than filled with a guess. Deciding without
-            knowing who wrote it is a worse decision, and saying "someone"
-            at least does not pretend otherwise.
+            The name, here most of all: this is the screen where the
+            decision is actually made, and making it without being told who
+            wrote the words is the position B-17 existed to describe.
           */}
-          <h1 id="review-heading">Someone has offered something for your story</h1>
+          <h1 id="review-heading">
+            {nameOrGap(contribution.contributorDisplayName)} has offered something for your story
+          </h1>
           <p>
             Only you can decide this. Nothing is added to your story unless you accept it, and if you accept, it is
             shown as their account of things — not as your own words.

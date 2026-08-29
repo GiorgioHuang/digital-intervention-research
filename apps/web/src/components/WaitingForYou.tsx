@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { api, type ContributionAwaitingReview, type Session } from '../api.js';
 import { presentError, type PresentedError } from '../errors.js';
 import { ErrorState, LoadingState } from './StateBlock.js';
+import { nameOrGap } from '../names.js';
 
 /**
  * What is genuinely waiting on this participant.
@@ -81,16 +82,17 @@ export function WaitingForYou({
             <button className="row-link" onClick={() => onReview(c.contributionId)}>
               <span className="row-link__text">
                 {/*
-                  "Someone", not a name. The handoff's row reads "Anne has
-                  offered something for your story", and the query that
-                  feeds this withholds the contributor on purpose: naming
-                  them in a list "would let anyone enumerate who has been
-                  writing about them". That ruling stands — it is about a
-                  participant's exposure, and the design was not weighing
-                  it. Who offered it belongs on the contribution when it is
-                  opened, which is gap B-17.
+                  The name, which the handoff asks for and which the server
+                  withheld by a ruling the owner has since reversed (B-17,
+                  2026-08-29 — the reasoning on both sides is recorded in
+                  `listContributionsAwaitingReview`). `nameOrGap` covers the
+                  account with no name on record: that is a gap in the
+                  record, not an anonymous contribution, and it says so
+                  instead of printing an account identifier at somebody.
                 */}
-                <span className="row-link__title">Someone has offered something for your story</span>
+                <span className="row-link__title">
+                  {nameOrGap(c.contributorDisplayName)} has offered something for your story
+                </span>
                 {/*
                   An absolute date, not "Offered Monday". A relative date
                   needs a "now" to be relative to, which is how a page

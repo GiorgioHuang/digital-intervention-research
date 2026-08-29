@@ -186,6 +186,8 @@ export interface ContributionAwaitingReview {
   archiveId: string;
   itemId: string | null;
   contentText: string;
+  /** The account that proposed it. A name is the caller's to look up. */
+  contributorActorId: string;
   createdAt: string;
 }
 
@@ -200,10 +202,27 @@ export interface ContributionAwaitingReview {
  * it was there. Being the only one permitted to decide is not much use
  * without a way to find what is waiting.
  *
- * The contributor is deliberately absent from the result. Who proposed it
- * belongs on the contribution when the participant opens it, not in a
- * list that would let anyone enumerate who has been writing about them;
- * the text itself is what the decision is about.
+ * **The contributor is now returned, and that reverses a ruling this file
+ * used to state.** It read: "Who proposed it belongs on the contribution
+ * when the participant opens it, not in a list that would let anyone
+ * enumerate who has been writing about them." The owner has ruled
+ * otherwise (2026-08-29) and the design shows the name on the list —
+ * "Anne has offered something for your story".
+ *
+ * Recorded rather than quietly changed, because the old reasoning was not
+ * empty and whoever reads this next should see what was traded. Two things
+ * were weighed against it. The endpoint is owner-only — the permission is
+ * `life-story.review-contribution`, which nobody but the archive's owner
+ * holds — so "anyone" was never the caller; it was whoever else can see
+ * the screen, which on a shared tablet is a real audience. Against that:
+ * somebody is deciding whether another person's words enter their own life
+ * story, and doing it without being told who wrote them is the worse
+ * position to be in. The decision needs the name more than the list needs
+ * the discretion.
+ *
+ * The actor id is what comes back from here. Turning it into a name is the
+ * caller's job, through M01's `AccountNameQueryPort` — this module does not
+ * read `identity_org` tables.
  */
 export async function listContributionsAwaitingReview(
   deps: M17Deps,
@@ -222,7 +241,7 @@ export async function listContributionsAwaitingReview(
   });
   assertAllowed(decision, false);
   const res = await deps.pool.query(
-    `SELECT c.id, c.archive_id, c.item_id, c.content_text, c.created_at
+    `SELECT c.id, c.archive_id, c.item_id, c.content_text, c.contributor_actor_id, c.created_at
        FROM life_story.contributions c
        JOIN life_story.archives a ON a.id = c.archive_id
       WHERE a.participant_id = $1
@@ -235,6 +254,7 @@ export async function listContributionsAwaitingReview(
     archiveId: r.archive_id as string,
     itemId: (r.item_id as string | null) ?? null,
     contentText: r.content_text as string,
+    contributorActorId: r.contributor_actor_id as string,
     createdAt: (r.created_at as Date).toISOString(),
   }));
 }

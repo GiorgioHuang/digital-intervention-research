@@ -9,7 +9,7 @@ import {
   type AccountNameQueryPort,
   type M01Deps,
 } from '@platform/m01-identity-org';
-import type { M02Deps } from '@platform/m02-participant';
+import { getMyProfile, type M02Deps } from '@platform/m02-participant';
 import {
   approveRelationship,
   listOwnConsents,
@@ -128,6 +128,22 @@ export interface ApiDeps {
 @Controller('v1')
 export class CommandController {
   constructor(@Inject(API_DEPS) private readonly deps: ApiDeps) {}
+
+  /**
+   * What to call the person using the app.
+   *
+   * Home greeted a stranger — "Good morning" with nowhere to put a name —
+   * because nothing returned one, not because none was stored. Owner-only,
+   * and it carries the name and nothing else: a profile endpoint that grew
+   * to return everything about somebody would become the thing every other
+   * screen reaches for instead of asking for what it needs.
+   */
+  @Get('participants/:participantId/profile')
+  async myProfile(@Req() req: Request, @Param('participantId') participantId: string) {
+    const ctx = requireActor(req);
+    const profile = await getMyProfile(this.deps.m02, ctx, participantId);
+    return { data: profile === null ? null : { type: 'Participant', id: profile.participantId, attributes: profile } };
+  }
 
   /** The participant's own enrolments: where they are, and what to leave. */
   @Get('participants/:participantId/enrolments')
@@ -931,7 +947,25 @@ export class CommandController {
   async contributionsAwaitingReview(@Req() req: Request, @Param('participantId') participantId: string) {
     const ctx = requireActor(req);
     const items = await listContributionsAwaitingReview(this.deps.m17, ctx, participantId);
-    return { data: items.map((c) => ({ type: 'LifeStoryContribution', id: c.contributionId, attributes: c })) };
+    /*
+     * The name, not the account id. Deciding whether someone else's words
+     * enter your own life story without being told who wrote them is a
+     * worse decision, and an opaque identifier in its place tells the
+     * participant nothing at all — the same reasoning that put names on
+     * "who has access to me".
+     *
+     * An account with no name comes back null rather than as its id, and
+     * the screen says so in words. M17 returns the id; turning it into a
+     * name is done here, so that module never reads identity_org.
+     */
+    const names = await this.deps.accountNames.findDisplayNames(items.map((c) => c.contributorActorId));
+    return {
+      data: items.map((c) => ({
+        type: 'LifeStoryContribution',
+        id: c.contributionId,
+        attributes: { ...c, contributorDisplayName: names.get(c.contributorActorId) ?? null },
+      })),
+    };
   }
 
   @Post('life-story/contributions/:contributionId/review')
