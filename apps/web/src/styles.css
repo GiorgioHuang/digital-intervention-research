@@ -1604,28 +1604,26 @@ body:has(.nav-primary) main {
   );
 }
 
-/* Tablet and desktop: back to a static top navigation; with room for the
-   labels there is nothing to compress */
-@media (min-width: 40rem) {
-  .nav-primary {
-    position: static;
-    padding: var(--space-3) var(--space-4);
-    border-block-start: none;
-    border-block-end: var(--border-hairline) solid var(--color-border-subtle);
-  }
-  .nav-primary ul { flex-wrap: wrap; justify-content: flex-start; gap: var(--target-gap); }
-  .nav-primary li { flex: 0 0 auto; }
-  .nav-primary button {
-    width: auto;
-    padding-inline: var(--space-3);
-    font-size: var(--type-size-1);
-    font-weight: var(--type-weight-semibold);
-  }
-  .nav-primary [aria-current='page'] {
-    border-block-start: none;
-    border-inline-start: var(--border-emphasis) solid var(--color-action-primary-bg);
-  }
-  body:has(.nav-primary) main { padding-block-end: var(--space-6); }
+/* Tablet and desktop: the bar stays at the bottom.
+ *
+ * This block used to turn it back into a static top navigation, which
+ * predates the elder handoff and its five-tab bottom bar. `position: static`
+ * puts an element back at its place in the document, and this nav is written
+ * before the toolbar in the markup — so above 40rem the tabs did not merely
+ * move to the top, they landed *above* the reading controls, and the top of
+ * a participant's screen became a row of destinations instead of the
+ * text-size buttons the brief puts on every screen. It looked like a
+ * responsive nicety and was a reversal of the design.
+ *
+ * The tabs stay where the design puts them at every width. What does change
+ * is that they stop stretching: five items sharing 1920px are 380px wide
+ * each, which is a target so large it stops reading as a row of tabs. The
+ * bar itself still spans the screen — it is chrome, like the toolbar above
+ * it — and only the row inside it is held to the content column.
+ */
+.nav-primary ul {
+  max-inline-size: var(--measure-default);
+  margin-inline: auto;
 }
 
 /* A row that is purely an action needs no list marker: a marker beside a

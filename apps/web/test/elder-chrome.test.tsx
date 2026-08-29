@@ -211,6 +211,59 @@ describe('the toolbar has one shape everywhere', () => {
   });
 
   /**
+   * The tabs stay at the bottom at every width.
+   *
+   * They did not. A rule from before the elder handoff turned the bar back
+   * into a static top navigation above 40rem — and because this nav is
+   * written *before* the toolbar in the markup, `position: static` did not
+   * merely move the tabs to the top, it put them above the reading
+   * controls. The top of a wide participant screen became a row of
+   * destinations instead of the text-size buttons the brief puts on every
+   * screen, and nothing in the suite noticed: jsdom applies no stylesheet
+   * and lays nothing out, so no rendering test could ever have caught it.
+   *
+   * So the guard is against the stylesheet text and against the one
+   * structural fact that makes the defect possible.
+   */
+  it('keeps the tabs below the reading controls at every width', async () => {
+    await arrive();
+    const nav = document.querySelector('.nav-primary');
+    const bar = document.querySelector('.elder-toolbar');
+    expect(nav, 'the primary nav is gone').toBeTruthy();
+    // This is what makes the CSS load-bearing: in document order the nav
+    // comes first, so anything that returns it to normal flow puts it above
+    // the toolbar. Asserted so the rule below is not mistaken for a
+    // preference.
+    expect(
+      nav!.compareDocumentPosition(bar!) & Node.DOCUMENT_POSITION_FOLLOWING,
+      'the nav no longer precedes the toolbar; the rule below may be stale',
+    ).toBeTruthy();
+
+    const css = readFileSync(resolve(process.cwd(), 'src/styles.css'), 'utf8');
+    const at = css.indexOf('.nav-primary {');
+    expect(at, 'the .nav-primary rule has been renamed').toBeGreaterThan(-1);
+    expect(
+      css.slice(at, css.indexOf('}', at)),
+      'the tab bar is no longer fixed',
+    ).toMatch(/position:\s*fixed/);
+    // Anywhere in the file, in any media query: a single `position: static`
+    // on this selector is the whole defect.
+    expect(
+      css,
+      'something returns the tab bar to normal flow, which puts it above the reading controls',
+    ).not.toMatch(/\.nav-primary[^{}]*\{[^{}]*position:\s*static/);
+    // The bar is fixed, so main reserves its height. The removed block also
+    // cancelled that reserve, which would have hidden the last row of every
+    // wide screen behind the tabs.
+    expect(css, 'main no longer reserves room for the fixed bar').toContain(
+      'body:has(.nav-primary) main {',
+    );
+    expect(css, 'the reserved room is cancelled again').not.toMatch(
+      /body:has\(\.nav-primary\) main \{ padding-block-end: var\(--space-6\); \}/,
+    );
+  });
+
+  /**
    * The brand, on the owner's instruction: wide screen, controls right, mark
    * and name left. What is worth a test is not that it looks right — it is
    * that it cannot reach the phone, where the four controls were measured to
