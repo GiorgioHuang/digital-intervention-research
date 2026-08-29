@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="4 6 132 28" width="264" height="56" role="img" aria-label="icareu">
+  <g transform="translate(0 4) scale(1.5)" fill="none" stroke="#b68235" stroke-width="2" stroke-linecap="round">
+    <path d="M4 6v4a8 8 0 0 0 16 0V6"></path>
+    <circle cx="12" cy="12.4" r="2.3" fill="#b68235" stroke="none"></circle>
+  </g>
+  <text x="42" y="32" textLength="92" lengthAdjust="spacingAndGlyphs" font-family="Cormorant Garamond, Cormorant, Garamond, Georgia, serif" font-size="34" font-weight="600" fill="#7d5620">icareu</text>
+</svg>

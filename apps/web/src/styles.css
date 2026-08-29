@@ -861,7 +861,6 @@ main {
     /* The auto margin lives here on a wide screen, so everything after it
        is pushed to the right as one group. */
     margin-inline-end: auto;
-    color: var(--cl-text-2);
   }
   /* ...and the contrast button gives its own up. Two auto margins in one
      row would each take a share of the free space and leave the contrast
@@ -869,10 +868,20 @@ main {
      belongs with. */
   .elder-toolbar__push { margin-inline-start: 0; }
 }
-.elder-toolbar__brand-mark { color: var(--cl-accent-700); }
+/* The mark's own colour, reached through the token rather than written
+   again: --cl-accent IS #b68235, so nothing here reinterprets the brand. */
+.elder-toolbar__brand-mark { color: var(--cl-accent); }
+/* The logo file sets the name at roughly 1.4x the mark's height in
+   Cormorant 600; --type-size-3 against a 24px mark is that proportion. The
+   supplied brown is #7d5620 and the token is #7d5411 — a difference of two
+   points of red, and using the token keeps the one accent this app has for
+   text rather than introducing a second brown a shade away from it. */
 .elder-toolbar__wordmark {
   font-family: var(--cl-family-display);
-  font-size: var(--type-size-2);
+  font-size: var(--type-size-3);
+  font-weight: var(--type-weight-semibold);
+  line-height: 1;
+  color: var(--cl-accent-700);
   letter-spacing: 0.01em;
 }
 /* 44, not the handoff's 34: its own accessibility requirement says never

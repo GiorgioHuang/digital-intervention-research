@@ -1,20 +1,27 @@
 /**
  * The mark and wordmark that sit at the left of the top bar on a wide screen.
  *
- * **The mark is a placeholder, and is meant to be replaced.** This project
- * has no logo asset — there is no `.svg`, no favicon, no brand file anywhere
- * in `apps/web` — and inventing a permanent identity for a study is the
- * owner's decision, not a decision to make while laying out a toolbar. So
- * what is drawn here is deliberately restrained and deliberately swappable:
- * it lives in this one file, on the same 24px grid and the same stroke
- * weight as the tab icons (`TabIcon`), so replacing it with a real mark is a
- * single edit to the `<svg>` below and touches nothing else.
+ * The mark is the owner's, supplied 2026-08-29; the source is
+ * `design/brand/icareu-mark.svg` and this is the only place it is drawn, so
+ * replacing it stays a single edit. It arrived already on this project's
+ * icon grid — `viewBox="0 0 24 24"` at stroke-width 2, the same as
+ * `TabIcon` — so nothing had to be adjusted to make it sit with the tab
+ * icons, and its `#b68235` is exactly `--cl-accent`. The token is used
+ * rather than the literal, which is §0.1 (literal colours live in `:root`
+ * and nowhere else) and also means the mark follows the palette if the
+ * palette ever moves.
  *
- * It is hidden below the wide-screen breakpoint. On a phone the four reading
- * controls already fill the row, and this bar holds one row at 320px by
- * measurement, not by luck — see `.elder-toolbar` in `styles.css`. Branding
- * is not worth a second row in the bar an 78-year-old uses to make the text
- * bigger.
+ * The wordmark is live text, not the `<text>` element in the supplied
+ * `icareu-logo.svg`. That file forces its glyphs to a fixed width so it
+ * renders identically without the font; this app self-hosts Cormorant
+ * Garamond, so setting it as text keeps it crisp at any size and keeps it
+ * real text — to a screen reader, and to find-in-page.
+ *
+ * It is hidden below the wide-screen breakpoint. On a phone the four
+ * reading controls already fill the row, and this bar holds one row at
+ * 320px by measurement, not by luck — see `.elder-toolbar` in `styles.css`.
+ * Branding is not worth a second row in the bar an 78-year-old uses to make
+ * the text bigger.
  */
 export function BrandMark() {
   return (
@@ -30,14 +37,13 @@ export function BrandMark() {
         height="24"
         fill="none"
         stroke="currentColor"
-        strokeWidth="1.5"
+        strokeWidth="2"
         strokeLinecap="round"
         aria-hidden="true"
         focusable="false"
       >
-        <circle cx="12" cy="12" r="9.25" />
-        <circle cx="12" cy="9.5" r="2.5" />
-        <path d="M6.9 17.4a5.6 5.6 0 0 1 10.2 0" />
+        <path d="M4 6v4a8 8 0 0 0 16 0V6" />
+        <circle cx="12" cy="12.4" r="2.3" fill="currentColor" stroke="none" />
       </svg>
       <span className="elder-toolbar__wordmark">icareu</span>
     </span>

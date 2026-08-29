@@ -47,3 +47,40 @@ describe('the declared language of the document', () => {
     expect(title).not.toMatch(/[\u3400-\u4dbf\u4e00-\u9fff]/);
   });
 });
+
+/**
+ * The tab icon.
+ *
+ * Two halves that can drift apart without either looking broken: the
+ * declaration in `index.html`, and the file it points at. A rename, or a
+ * change to what the build copies, leaves the declaration pointing at
+ * nothing — and the page still renders perfectly. The tab just quietly goes
+ * back to the browser's blank sheet, which is the state this replaced and
+ * which no screenshot of the app would ever show.
+ */
+describe('the tab icon', () => {
+  const html = readFileSync(join(process.cwd(), 'index.html'), 'utf8');
+
+  it('declares an icon and ships the file it names', () => {
+    const href = /<link[^>]*rel="icon"[^>]*href="([^"]+)"/.exec(html)?.[1];
+    expect(href, 'no icon is declared; the tab falls back to a blank sheet').toBeTruthy();
+    // Served from `public/`, so the URL path is the filename under it.
+    expect(
+      readFileSync(join(process.cwd(), 'public', href!.replace(/^\//, '')), 'utf8'),
+      'the declared icon file is not there',
+    ).toContain('<svg');
+  });
+
+  /**
+   * §D.6 governs what the browser tab may disclose, and the answer is: not
+   * who is using the platform. A brand mark says which site is open — which
+   * the title already says in words — and distinguishes nobody. What must
+   * not appear is a second icon that varies by role or by person.
+   */
+  it('declares one icon, the same for everybody', () => {
+    expect((html.match(/rel="icon"/g) ?? []).length).toBe(1);
+    expect(html, 'an icon is being chosen per role or per person').not.toMatch(
+      /rel="icon"[^>]*(participant|staff|supporter|researcher)/i,
+    );
+  });
+});
