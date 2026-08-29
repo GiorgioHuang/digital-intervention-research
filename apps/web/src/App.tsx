@@ -6,6 +6,8 @@ import { AccessTokenGate } from './components/AccessTokenGate.js';
 import { AssistedMode } from './components/AssistedMode.js';
 import { AccessibilityToolbar } from './components/elder/AccessibilityToolbar.js';
 import { HelperBanner } from './components/elder/HelperBanner.js';
+import { ReviewContribution } from './components/ReviewContribution.js';
+import { greetingFor } from './greeting.js';
 import { TabIcon } from './components/elder/TabIcon.js';
 import { CommunityPanel } from './components/CommunityPanel.js';
 import { ConsentPanel } from './components/ConsentPanel.js';
@@ -49,6 +51,7 @@ type Screen =
   | 'community'
   | 'life-story'
   | 'data-copy'
+  | 'review'
   | 'help';
 
 /**
@@ -90,6 +93,12 @@ const PRIMARY_DESTINATIONS: { key: Screen; label: string; fullLabel: string; ico
 export function App() {
   const [session, setSession] = useState<Session | null>(null);
   const [screen, setScreen] = useState<Screen>('home');
+  /*
+   * Which waiting thing is open on the `review` screen. An id, not the
+   * object: the screen reloads the list for itself, so it cannot show a
+   * decision that has since been made somewhere else.
+   */
+  const [reviewing, setReviewing] = useState<string | null>(null);
   /*
    * The reading controls, from the handoff's global chrome. They live here
    * rather than in the toolbar so that the content region carries them and
@@ -484,7 +493,18 @@ export function App() {
         </div>
         {screen === 'home' && (
           <section aria-labelledby="home-heading">
-            <h1 id="home-heading">What would you like to do today?</h1>
+            {/*
+              The handoff's greeting, and the real clock read at the one
+              place where reading it is the point. The boundaries live in
+              `greeting.ts` and are tested at fixed instants, so no test
+              asserts a greeting that only holds until lunchtime (D-103).
+
+              No name: a participant session is `{actorId, participantId}`
+              and nothing returns what somebody is called (gap B-16). The
+              greeting stands on its own rather than greeting a stranger by
+              an identifier or by an invented placeholder.
+            */}
+            <h1 id="home-heading">{greetingFor(new Date(), null)}</h1>
             {/*
               The anti-feed statement, said rather than implied (design
               A1.5), and now in one sentence rather than two. This page
@@ -510,7 +530,13 @@ export function App() {
               still here, still reachable by name, and a closed <details>
               is still searched by the browser's find-in-page.
             */}
-            <WaitingForYou session={session} />
+            <WaitingForYou
+              session={session}
+              onReview={(contributionId) => {
+                setReviewing(contributionId);
+                setScreen('review');
+              }}
+            />
             <div className="nav-rows">
             <details>
               <summary>Your information and who can see it</summary>
@@ -567,6 +593,22 @@ export function App() {
               <button onClick={() => setScreen('help')}>Get help or report a problem</button>
             </p>
           </section>
+        )}
+        {/*
+          Returning to Home unmounts and remounts it, so the waiting list
+          reloads on its own — a decision made here is gone from Home by
+          the time Home is next seen, without either screen having to tell
+          the other.
+        */}
+        {screen === 'review' && reviewing !== null && (
+          <ReviewContribution
+            session={session}
+            contributionId={reviewing}
+            onDone={() => {
+              setReviewing(null);
+              setScreen('home');
+            }}
+          />
         )}
         {screen === 'consent' && <ConsentPanel session={session} assistedBy={helper} />}
         {screen === 'access' && (

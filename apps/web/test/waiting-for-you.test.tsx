@@ -2,6 +2,20 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { act } from 'react';
 import { WaitingForYou } from '../src/components/WaitingForYou.js';
+import { ReviewContribution } from '../src/components/ReviewContribution.js';
+
+/**
+ * Home names what is waiting; the review screen is where it is answered.
+ *
+ * The deciding used to happen on Home, and the cost was measured rather
+ * than argued: one contribution waiting made Home 108 words and 3
+ * controls, three made it **224 words and 7 controls**, because each one
+ * brought a heading, two sentences, the offered text in full and two
+ * buttons. The tests below moved with the buttons.
+ */
+const review = (id: string, onDone: () => void = () => {}) => (
+  <ReviewContribution session={session} contributionId={id} onDone={onDone} />
+);
 
 const session = { actorId: 'actor_a', participantId: 'pt_a' };
 
@@ -90,7 +104,7 @@ describe('what is waiting for the participant', () => {
   it('shows a proposed contribution with its text, and says only they can decide', async () => {
     const calls = stubFetch(waiting);
     await act(async () => {
-      render(<WaitingForYou session={session} />);
+      render(review('con_1'));
     });
     expect(calls[0]?.path).toBe('/v1/participants/pt_a/life-story/contributions/awaiting-review');
     expect(screen.getByText(/She always brought soup/)).toBeTruthy();
@@ -103,7 +117,7 @@ describe('what is waiting for the participant', () => {
   it('accepting posts the decision and says what it did, in the contributor\'s voice not the participant\'s', async () => {
     const calls = stubFetch(waiting);
     await act(async () => {
-      render(<WaitingForYou session={session} />);
+      render(review('con_1'));
     });
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Add this to my story' }));
@@ -117,7 +131,7 @@ describe('what is waiting for the participant', () => {
   it('declining says plainly that nothing of it enters the story', async () => {
     const calls = stubFetch(waiting);
     await act(async () => {
-      render(<WaitingForYou session={session} />);
+      render(review('con_1'));
     });
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Do not add this' }));
@@ -135,7 +149,7 @@ describe('what is waiting for the participant', () => {
   it('refusing something with no part named needs no part, and sends none', async () => {
     const calls = stubFetch(unattached);
     await act(async () => {
-      render(<WaitingForYou session={session} />);
+      render(review('con_2'));
     });
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Do not add this' }));
@@ -149,7 +163,7 @@ describe('what is waiting for the participant', () => {
   it('accepting it asks where it should go, and the participant chooses', async () => {
     const calls = stubFetch(unattached, [storyPart('li_9', 'My garden years')]);
     await act(async () => {
-      render(<WaitingForYou session={session} />);
+      render(review('con_2'));
     });
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Add this to my story' }));
@@ -168,7 +182,7 @@ describe('what is waiting for the participant', () => {
   it('with no part of the story written, it says so and still allows refusing', async () => {
     stubFetch(unattached, []);
     await act(async () => {
-      render(<WaitingForYou session={session} />);
+      render(review('con_2'));
     });
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Add this to my story' }));
@@ -180,8 +194,48 @@ describe('what is waiting for the participant', () => {
   it('an empty list says nothing is waiting rather than looking broken', async () => {
     stubFetch({ data: [] });
     await act(async () => {
-      render(<WaitingForYou session={session} />);
+      render(<WaitingForYou session={session} onReview={() => {}} />);
     });
-    expect(screen.getByText('Nothing is waiting for you')).toBeTruthy();
+    // A sentence, not a bordered empty-state block: a card drawn around
+    // "there is nothing here" gives absence the weight of a task, on the
+    // one screen whose whole job is to make that difference obvious.
+    expect(screen.getByText('Nothing needs a decision from you today.')).toBeTruthy();
+    expect(document.querySelectorAll('.row-link').length, 'an empty list still drew a row').toBe(0);
+  });
+
+  /**
+   * The row is the whole of what Home says about a waiting thing: what it
+   * is, when it came, and that it opens. What it must NOT contain is the
+   * decision — that is the wall this move exists to take off the page.
+   */
+  it('Home names what is waiting and does not ask for the answer there', async () => {
+    const opened: string[] = [];
+    stubFetch(waiting);
+    await act(async () => {
+      render(<WaitingForYou session={session} onReview={(id) => opened.push(id)} />);
+    });
+    const row = screen.getByRole('button', { name: /has offered something for your story/ });
+    expect(row.textContent, 'the row does not say when it arrived').toMatch(/Offered /);
+    expect(
+      screen.queryByRole('button', { name: 'Add this to my story' }),
+      'the decision is back on Home, which is what put 7 controls on it',
+    ).toBeNull();
+    expect(screen.queryByText(/She always brought soup/), 'the offered text is back on Home').toBeNull();
+    fireEvent.click(row);
+    expect(opened, 'the row does not open the thing it names').toEqual(['con_1']);
+  });
+
+  /**
+   * The contributor is withheld on purpose. The list query says so in as
+   * many words — naming them here "would let anyone enumerate who has been
+   * writing about them" — and the handoff's row ("Anne has offered…") was
+   * not weighing that. The ruling wins; the gap is recorded as B-17.
+   */
+  it('does not name who offered it', async () => {
+    stubFetch(waiting);
+    await act(async () => {
+      render(<WaitingForYou session={session} onReview={() => {}} />);
+    });
+    expect(screen.getByText(/^Someone has offered something for your story$/)).toBeTruthy();
   });
 });

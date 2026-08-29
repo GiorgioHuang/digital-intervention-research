@@ -1326,6 +1326,79 @@ a[role='button']:hover { background-color: var(--color-action-secondary-bg-hover
 .nav-rows > details > summary:hover { background-color: var(--color-surface-sunken); }
 .nav-rows > details > *:not(summary) { padding-block-end: var(--space-3); }
 
+/* ---------- A waiting thing, named on Home and answered elsewhere --------
+ * The handoff's Home row: what is waiting, when it arrived, and a chevron
+ * that says it opens. Deliberately the same row language as the disclosure
+ * rows above — full width, hairline-separated, marker on the right — so a
+ * participant is not asked to learn two kinds of row on one screen. The one
+ * difference carries the one distinction that matters: this row is a thing
+ * to do, so its first line is the accent and heavier, while a disclosure
+ * summary is not.
+ *
+ * That is hierarchy between kinds, never within a choice: nothing here is
+ * one of a pair, so weighting it is not the thing DESIGN_BRIEF forbids.
+ */
+.row-list { margin: 0; padding: 0; list-style: none; }
+.row-list > li { max-width: none; }
+.row-link {
+  display: flex;
+  inline-size: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding-inline: var(--space-1);
+  border: 0;
+  border-block-end: var(--border-hairline) solid var(--color-border-subtle);
+  border-radius: 0;
+  background-color: transparent;
+  text-align: start;
+}
+.row-list > li:first-child .row-link {
+  border-block-start: var(--border-hairline) solid var(--color-border-subtle);
+}
+/*
+ * The last row does not close itself.
+ *
+ * It did, and the group below it opens with its own hairline — so two
+ * full-bleed lines sat 35px apart with nothing between them, which reads as
+ * an empty row rather than as a boundary. Seen in a 390px capture, not
+ * reasoned about: the line that ends this group is the line that begins the
+ * next one.
+ */
+.row-list > li:last-child .row-link { border-block-end: 0; }
+.row-link:hover { background-color: var(--color-surface-sunken); }
+.row-link__text { display: flex; flex-direction: column; gap: var(--space-1); }
+.row-link__title {
+  color: var(--color-text-primary);
+  font-weight: var(--type-weight-semibold);
+}
+.row-link__detail {
+  color: var(--color-text-secondary);
+  font-size: var(--type-size-0);
+  font-weight: var(--type-weight-regular);
+}
+/* The same 0.55rem mark as the disclosure rows, pointing the same way. */
+.row-link__chevron {
+  flex: 0 0 auto;
+  inline-size: 0.55rem;
+  block-size: 0.55rem;
+  border-inline-end: 2px solid var(--cl-accent-700, var(--color-text-secondary));
+  border-block-end: 2px solid var(--cl-accent-700, var(--color-text-secondary));
+  transform: rotate(-45deg);
+  font-size: 0;
+}
+/* Leaving a screen the way you came in. Text, not a button shape: it is a
+   way back, not an action, and giving it a button's weight would put it in
+   competition with the decision the screen exists for. */
+.back-link {
+  min-block-size: var(--target-min);
+  padding-inline: var(--space-1);
+  border: 0;
+  background-color: transparent;
+  color: var(--cl-accent-700, var(--color-action-primary-bg));
+  font-weight: var(--type-weight-medium);
+}
+
 /* ---------- A thing to decide is an object -------------------------------- */
 /*
  * The waiting item was loose text on the page: heading, paragraph, quote,

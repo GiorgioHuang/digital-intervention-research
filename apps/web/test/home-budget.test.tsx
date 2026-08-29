@@ -30,7 +30,7 @@ const CONTROL_BUDGET = 5;
 
 const json = (body: unknown) => new Response(JSON.stringify(body), { status: 200 });
 
-const stubPopulated = () =>
+const stubPopulated = (waiting = 1) =>
   vi.stubGlobal(
     'fetch',
     vi.fn(async (path: string, init?: RequestInit) => {
@@ -40,17 +40,19 @@ const stubPopulated = () =>
       // something waiting. An empty account flatters this page.
       if (path.includes('contributions/awaiting-review')) {
         return json({
-          data: [
-            {
+          data: Array.from({ length: waiting }, (_unused, n) => ({
               attributes: {
-                contributionId: 'ctr_1',
+                contributionId: `ctr_${n + 1}`,
                 archiveId: 'arc_1',
+                itemId: null,
                 contentText: 'I remember the allotment that summer, and how you kept the tomatoes going.',
-                contributorDisplayName: 'Sam Petrova',
-                offeredAt: '2026-08-01T10:00:00Z',
+                // `createdAt`, and no contributor. This mock used to supply
+                // `contributorDisplayName` and `offeredAt`, neither of which
+                // the endpoint returns — so the measurement was taken
+                // against a richer page than the one that ships.
+                createdAt: '2026-08-01T10:00:00Z',
               },
-            },
-          ],
+            })),
         });
       }
       if (path.includes('enrolment')) {
@@ -130,10 +132,80 @@ describe('what the home page asks of somebody who has just opened it', () => {
   it('spends what it does have on the task rather than on navigation', async () => {
     await arrive();
     const { controls } = visibleOnHome();
-    // The decision's own two buttons, plus help. Anything beyond that is a
-    // destination competing with the thing to be decided.
-    expect(screen.getByRole('button', { name: 'Add this to my story' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Do not add this' })).toBeTruthy();
+    // The waiting thing is named and opens; it is no longer answered here.
+    // That is the handoff's shape, and it is what stops the queue setting
+    // the size of the front page.
+    expect(screen.getByRole('button', { name: /has offered something for your story/ })).toBeTruthy();
+    expect(
+      screen.queryByRole('button', { name: 'Add this to my story' }),
+      'the decision is back on Home',
+    ).toBeNull();
     expect(controls, 'a destination has escaped back onto the first screen').toBeLessThanOrEqual(3);
+  });
+
+  /**
+   * Home → review → Home, through the real App.
+   *
+   * The two screens are wired by a pair of state changes, and a pair is
+   * exactly the kind of thing that comes apart: `screen` set to 'review'
+   * without the id set leaves an older adult looking at a blank page
+   * between the toolbar and the tab bar, with nothing on it to press. The
+   * unit tests either side of this cannot see that — they render each
+   * screen directly, with the wiring supplied by hand.
+   */
+  it('opens a waiting thing and comes back with it answered', async () => {
+    await arrive();
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /has offered something for your story/ }));
+    });
+    expect(
+      screen.getByRole('heading', { name: 'Someone has offered something for your story' }),
+      'the row led nowhere',
+    ).toBeTruthy();
+    expect(screen.getByText(/I remember the allotment/), 'the offered text did not come with it').toBeTruthy();
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Do not add this' }));
+    });
+    // The consequence is said, and said here rather than flashing past on
+    // the way to somewhere else.
+    expect(screen.getByRole('status').textContent).toContain('Nothing of it goes into your story');
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Back to Home' }));
+    });
+    expect(screen.getByRole('heading', { name: /^Good (morning|afternoon|evening)$/ })).toBeTruthy();
+  });
+
+  /**
+   * The measurement that made the case, kept as the guard.
+   *
+   * With the decision inline, Home grew with the queue: **108 words and 3
+   * controls** with one contribution waiting, **224 and 7** with three,
+   * because each one brought a heading, two sentences of explanation, the
+   * offered text in full and two buttons. A front page whose size is set by
+   * how many people have written to you is the thing the owner asked to be
+   * rid of, and one waiting item is the case that flatters it. After the
+   * move: 57 and 2 with one, 81 and 4 with three.
+   */
+  it('does not grow with the queue', async () => {
+    stubPopulated(3);
+    await act(async () => {
+      render(<App />);
+    });
+    fireEvent.change(screen.getByLabelText('Account identifier (actor id)'), { target: { value: 'actor_ann' } });
+    fireEvent.change(screen.getByLabelText('Participant identifier'), { target: { value: 'pt_ann' } });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+    });
+    const { words, controls } = visibleOnHome();
+    expect(screen.getAllByRole('button', { name: /has offered something for your story/ }).length).toBe(3);
+    expect(
+      words,
+      `three waiting things put ${words} words on Home (budget ${WORD_BUDGET}); the wall is back`,
+    ).toBeLessThanOrEqual(WORD_BUDGET);
+    expect(controls, `${controls} controls with three waiting (budget ${CONTROL_BUDGET})`).toBeLessThanOrEqual(
+      CONTROL_BUDGET,
+    );
   });
 });

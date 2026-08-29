@@ -62,7 +62,13 @@ describe('participant sign-in', () => {
       render(<App />);
     });
     await signIn('actor_ann', 'pt_ann');
-    expect(screen.getByRole('heading', { name: 'What would you like to do today?' })).toBeTruthy();
+    // The greeting, not a fixed greeting. Home's H1 is now "Good morning" /
+    // "Good afternoon" / "Good evening", and a test naming one of them
+    // would pass all morning and fail after lunch on unchanged code — the
+    // shape of D-103 in miniature. Which greeting is correct is decided in
+    // `greeting.test.ts` at fixed instants; here it only has to be one of
+    // them, which is what proves we are signed in and on Home.
+    expect(screen.getByRole('heading', { name: /^Good (morning|afternoon|evening)$/ })).toBeTruthy();
   });
 
   /**
@@ -75,7 +81,13 @@ describe('participant sign-in', () => {
       render(<App />);
     });
     await signIn('actor_ann', 'pt_ann');
-    expect(screen.getByRole('heading', { name: 'What would you like to do today?' })).toBeTruthy();
+    // The greeting, not a fixed greeting. Home's H1 is now "Good morning" /
+    // "Good afternoon" / "Good evening", and a test naming one of them
+    // would pass all morning and fail after lunch on unchanged code — the
+    // shape of D-103 in miniature. Which greeting is correct is decided in
+    // `greeting.test.ts` at fixed instants; here it only has to be one of
+    // them, which is what proves we are signed in and on Home.
+    expect(screen.getByRole('heading', { name: /^Good (morning|afternoon|evening)$/ })).toBeTruthy();
   });
 
   it('a signed-in person can get back to the form without reloading the page', async () => {

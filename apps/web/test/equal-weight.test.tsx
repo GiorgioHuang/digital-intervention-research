@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
 import { act } from 'react';
-import { WaitingForYou } from '../src/components/WaitingForYou.js';
+import { ReviewContribution } from '../src/components/ReviewContribution.js';
 import { ConsentPanel } from '../src/components/ConsentPanel.js';
 
 /**
@@ -66,8 +66,8 @@ describe('equal-weight pairs stay equal', () => {
                       contributionId: 'ctr_1',
                       archiveId: 'arc_1',
                       contentText: 'I remember the allotment that summer.',
-                      contributorDisplayName: 'Sam Petrova',
-                      offeredAt: '2026-08-01T10:00:00Z',
+                      itemId: null,
+                      createdAt: '2026-08-01T10:00:00Z',
                     },
                   },
                 ],
@@ -77,7 +77,11 @@ describe('equal-weight pairs stay equal', () => {
       ),
     );
     await act(async () => {
-      render(<WaitingForYou session={session as never} />);
+      // The pair lives on the review screen now: Home names what is
+      // waiting and this is where it is answered.
+      render(
+        <ReviewContribution session={session as never} contributionId="ctr_1" onDone={() => {}} />,
+      );
     });
     pairIsEqual(
       screen.getByRole('button', { name: 'Add this to my story' }),

@@ -35,6 +35,8 @@ which that mistake gets made again, at speed.
 | B-13 | **Helper mode, decisions deferred** — "those decisions are put aside and shown to you again once helping stops" | `AssistedMode` is read-only assistance (D-15) | Deferring a decision while a helper is present, and re-presenting it afterwards. D-15 ruled read-only assistance deliberately; this is a change to that ruling, not an addition |
 | B-14 | **Recent decisions** — "What you decided recently", three rows of `{what, when}` | the audit trail records decisions | A participant-facing query over their own decisions, in plain words rather than action codes |
 | B-15 | **A brand mark** — the top bar carries a mark and the wordmark "icareu" at the left on a wide screen (owner, 2026-08-28) | a placeholder mark drawn on the tab-icon grid, in `apps/web/src/components/elder/BrandMark.tsx` | A real mark. There is no logo asset anywhere in the repository, and inventing a permanent identity for a study is the owner's decision. The placeholder is one file and one `<svg>`, so replacing it is a single edit; it is **not** a favicon or an app icon, neither of which exists either |
+| B-16 | **A name to greet** — the handoff's H1 is "Good morning, Margaret" | a participant session is `{actorId, participantId}` | Nothing returns what a participant is called. Home greets without a name rather than addressing somebody by an identifier or by an invented placeholder; `greetingFor(at, name)` already takes the name, so this closes with a query and one argument |
+| B-17 | **Who offered this** — the handoff's row reads "Anne has offered something for your story" | `listContributionsAwaitingReview` withholds the contributor **on purpose** — naming them in a list "would let anyone enumerate who has been writing about them" | That ruling stands for the list. But the same comment says the name belongs "on the contribution when the participant opens it", and the review screen has no query that returns it either — so a participant decides whether text enters their own life story without being told who wrote it. The absence is real on both sides |
 
 ## Where the build departs from the handoff, and why
 
@@ -44,6 +46,9 @@ which that mistake gets made again, at speed.
 | X-2 | A visible "Text" label before A−/A+ | No visible label | The owner requires one row. Measured at 320px the row was 50px over; dropping the label and taking the gap back to the handoff's own 6px is exactly that. Neither button is unlabelled — each carries "Make the text smaller"/"bigger" as its accessible name |
 | X-4 | A FR/EN toggle in the toolbar | No toggle | The study is English only (owner, 2026-08-28). Removing it is also what bought the width for one row |
 | X-3 | Five tabs, 13px labels | Same, stepping to a smaller size below 24.5rem | Measured: "Community" is one word and clipped at 320 and 360. A clipped word is not a smaller word |
+| X-5 | Home's "Waiting for you" row names the contributor | "Someone has offered something for your story" | The query that feeds it withholds the contributor deliberately, to stop a list enumerating who has been writing about somebody. A ruling about a participant's exposure outranks a design that was not weighing it — see B-17 |
+| X-6 | The unfinished card ("FINISH WHAT YOU STARTED") and "What you decided recently" | Neither is on Home | Both need data nothing produces (B-4, B-14). A card with a button that goes nowhere is the mistake this project has made five times over (D-2, D-5, D-21, D-34, D-75); an empty section is worse than an absent one on a screen whose job is to make "there is something to do" legible at a glance |
+| X-7 | Home greets by name | "Good morning" | No name exists to greet with — B-16 |
 
 ## Not gaps — deliberate absences the design shares
 
