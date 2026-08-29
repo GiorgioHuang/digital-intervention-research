@@ -264,37 +264,92 @@ describe('the toolbar has one shape everywhere', () => {
   });
 
   /**
-   * The brand, on the owner's instruction: wide screen, controls right, mark
-   * and name left. What is worth a test is not that it looks right — it is
-   * that it cannot reach the phone, where the four controls were measured to
-   * fill the row and a fifth item is what put this bar on two lines before.
+   * The mark stays; the name is what gives way.
+   *
+   * The first version hid the whole brand below the breakpoint, because
+   * the reading controls filled the row at 320px. The owner's correction
+   * was that the mark must survive there — so the room was found rather
+   * than the mark dropped: the two size buttons became a segmented pair
+   * sharing one border, the decorative speaker glyph goes, and the bar's
+   * own side padding tightens. All three are narrow-width rules, and all
+   * three are what keep 320px on one row, so all three are asserted.
    */
-  it('shows the brand only where there is room for it', async () => {
+  it('keeps the mark at every width and drops only the name', async () => {
     await arrive();
-    expect(screen.getByText('icareu'), 'the wordmark is gone').toBeTruthy();
-    // It is the first item, so the controls that follow are pushed right as
-    // one group rather than the brand being stranded after them.
+    expect(screen.getByText('icareu'), 'the wordmark is gone from the markup').toBeTruthy();
+    expect(document.querySelector('.elder-toolbar__brand-mark'), 'the mark is gone').toBeTruthy();
+    // First in the row, so everything after it is pushed right as one
+    // group rather than the brand being stranded after the controls.
     expect(document.querySelector('.elder-toolbar > *')?.className).toContain('elder-toolbar__brand');
 
     const css = readFileSync(resolve(process.cwd(), 'src/styles.css'), 'utf8');
-    // Anchors asserted found, not merely used. `indexOf` returns -1 when a
-    // rule has been renamed, and slicing from -1 yields '' — which fails
-    // every `toContain` below for the wrong reason and passes every
-    // `not.toContain` one might add later (D-90).
-    const from = css.indexOf('.elder-toolbar__brand { display: none; }');
-    const to = css.indexOf('.elder-toolbar__brand-mark', from + 1);
-    expect(from, 'the brand is no longer hidden by default').toBeGreaterThan(-1);
-    expect(to, 'the brand block no longer ends where this test looks for it').toBeGreaterThan(from);
-    const brand = css.slice(from, to);
-    expect(brand, 'the brand now reaches the phone, where the row has no width for it').toMatch(
-      /@media \(min-width: 34rem\)/,
+    // Anchors asserted found, not merely used: `indexOf` returns -1 when a
+    // rule is renamed, and slicing from -1 yields '' — which fails every
+    // `toContain` for the wrong reason and passes every `not.toContain`
+    // somebody adds later (D-90).
+    const from = css.indexOf('@media (max-width: 33.99rem) {');
+    expect(from, 'the narrow-width block has moved or been renamed').toBeGreaterThan(-1);
+    // Both anchors asserted, not just the outer one. Deleting the
+    // read-icon rule collapsed this slice to '' and the failure that came
+    // out named the wordmark — a guard reporting a defect that was not
+    // there, found by mutation-testing this very test.
+    const iconAt = css.indexOf('.elder-toolbar__read-icon', from);
+    expect(iconAt, 'the speaker glyph is back, and it is width this row has not got').toBeGreaterThan(from);
+    // +1 so the block's own closing brace is inside the slice; without it
+    // the last rule reads as unterminated and its assertion fails on the
+    // punctuation rather than on the rule.
+    const narrow = css.slice(from, css.indexOf('}', iconAt) + 1);
+    expect(narrow, 'the name no longer gives way on a phone').toContain(
+      '.elder-toolbar__wordmark { display: none; }',
     );
-    // Two auto margins in one row leave the contrast control marooned at the
-    // far end. Where the brand takes the auto, the contrast button drops its
-    // own — asserted, because it is one line and easy to lose.
-    expect(brand, 'the brand does not push the controls right').toContain('margin-inline-end: auto');
-    expect(brand, 'the contrast button keeps its own auto margin, which splits the group').toContain(
-      '.elder-toolbar__push { margin-inline-start: 0; }',
+    expect(narrow, 'the mark is being hidden along with the name').not.toContain(
+      '.elder-toolbar__brand { display: none',
+    );
+    expect(narrow, 'the speaker glyph is back, and it is 18px this row has not got').toContain(
+      '.elder-toolbar__read-icon { display: none; }',
+    );
+
+    // One auto margin, not two. Two each take a share of the free space,
+    // which is what left the contrast button alone at the far end.
+    expect(css, 'the controls no longer align right').toContain('margin-inline-end: auto');
+    expect(css, 'a second auto margin is back, which splits the control group').not.toContain(
+      '.elder-toolbar__push',
+    );
+  });
+
+  /**
+   * One control to look at, two things to press.
+   *
+   * "Merge the +/- buttons into one longer button" cannot mean one button:
+   * smaller and bigger are two actions, and a control whose meaning depends
+   * on which half was pressed is not something a screen reader can
+   * announce. So the pair shares a border and keeps two targets, each at
+   * the full floor — and the borders overlap rather than nesting inside a
+   * wrapper, which is what keeps the pair the same height as the buttons
+   * beside it instead of 4px taller.
+   */
+  it('merges the size buttons visually without merging them for real', async () => {
+    await arrive();
+    const halves = document.querySelectorAll('.elder-toolbar__zoom > button');
+    expect(halves.length, 'the size pair is not two buttons').toBe(2);
+    expect(screen.getByRole('button', { name: 'Make the text smaller' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Make the text bigger' })).toBeTruthy();
+
+    const css = readFileSync(resolve(process.cwd(), 'src/styles.css'), 'utf8');
+    const at = css.indexOf('.elder-toolbar__zoom > button {');
+    expect(at, 'the size pair rule has been renamed').toBeGreaterThan(-1);
+    const rule = css.slice(at, css.indexOf('}', at));
+    expect(rule, 'a half of the size pair has dropped below the touch floor').toContain(
+      'min-inline-size: var(--target-min)',
+    );
+    expect(rule, 'a half of the size pair has dropped below the touch floor').toContain(
+      'min-block-size: var(--target-min)',
+    );
+    // A wrapper border would add its own height and make this control
+    // taller than everything beside it. Measured at 54px against 50 the
+    // first time this was built.
+    expect(css, 'the shared edge is drawn as a wrapper again').toContain(
+      '.elder-toolbar__zoom > button + button { margin-inline-start: calc(-1 * var(--border-default)); }',
     );
   });
 });

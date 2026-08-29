@@ -840,7 +840,6 @@ main {
    a spacer element: a spacer in a flex row that may wrap takes a whole
    line to itself, which is how an earlier version of this bar ended up on
    four rows. */
-.elder-toolbar__push { margin-inline-start: auto; }
 /* ---- The brand, on a wide screen only -------------------------------
  * The owner's instruction: on a wide screen the controls align right and
  * the mark and the name sit at the left. Hidden by default rather than
@@ -852,21 +851,37 @@ main {
  * a flex row still takes its gap, which is 6px of the margin this bar does
  * not have to spare.
  */
-.elder-toolbar__brand { display: none; }
-@media (min-width: 34rem) {
-  .elder-toolbar__brand {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    /* The auto margin lives here on a wide screen, so everything after it
-       is pushed to the right as one group. */
-    margin-inline-end: auto;
-  }
-  /* ...and the contrast button gives its own up. Two auto margins in one
-     row would each take a share of the free space and leave the contrast
-     control marooned at the far end, separated from the three controls it
-     belongs with. */
-  .elder-toolbar__push { margin-inline-start: 0; }
+.elder-toolbar__brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  /* The single auto margin in this row: everything after it is pushed to
+     the right as one group, at every width. There was a second auto on the
+     contrast button, which is why that button used to sit alone at the far
+     end with a gap between it and the three controls it belongs with —
+     two autos each take a share of the free space. */
+  margin-inline-end: auto;
+}
+/* Below the breakpoint the name goes and the mark stays. `display: none`
+   rather than a clip or a zero width: a hidden-but-present item in a flex
+   row still takes its gap, which is 6px this row does not have. */
+/*
+ * Below the breakpoint, three things give way so that one row holds at
+ * 320px — the 400%-zoom target, and the width where this has to be proved
+ * rather than assumed.
+ *
+ * The name goes first: the mark already stands for it. The speaker glyph
+ * goes next — it is decorative and already `aria-hidden`, the label beside
+ * it is untouched, and §A.9 forbids an icon without a text label, not a
+ * label without an icon. And the bar's own side padding tightens, which is
+ * chrome rather than a target and costs nobody a press.
+ *
+ * Together those are the difference between one row and two.
+ */
+@media (max-width: 33.99rem) {
+  .elder-toolbar { padding-inline: var(--space-2); }
+  .elder-toolbar__wordmark { display: none; }
+  .elder-toolbar__read-icon { display: none; }
 }
 /* The mark's own colour, reached through the token rather than written
    again: --cl-accent IS #b68235, so nothing here reinterprets the brand. */
@@ -894,6 +909,54 @@ main {
   font-family: var(--cl-family-display);
   border-color: var(--cl-divider);
 }
+/* ---- The size pair: one control, two targets -------------------------
+ * The owner asked for the two size buttons to become one longer control.
+ * The honest form of that is a segmented pair: smaller and bigger are two
+ * actions and one button cannot carry two, so they keep their own targets
+ * and share an edge.
+ *
+ * Sharing the edge is what buys the width, and it is done by overlapping
+ * the two borders rather than by drawing a box around them. A wrapper
+ * border adds its own 2px to the block size, which made this control 54px
+ * tall against 50 for everything beside it and grew the whole bar by 4px —
+ * measured, in the first attempt at this. Overlapped, the pair is exactly
+ * as tall as a single button and 98px wide against the 106 that two
+ * separate buttons and their gap cost.
+ *
+ * Each half is still --target-min in both directions. Note that is 49.5px
+ * here, not 44: the root font is 18px, so 2.75rem is larger than the
+ * arithmetic in older comments assumed.
+ */
+.elder-toolbar__zoom { display: flex; }
+.elder-toolbar__zoom > button {
+  min-inline-size: var(--target-min);
+  min-block-size: var(--target-min);
+  justify-content: center;
+  padding: 0;
+  border-color: var(--cl-divider);
+  border-radius: 0;
+  font-family: var(--cl-family-display);
+}
+/* The two borders become one line. Two adjacent borders would be 2px and
+   read as a seam rather than as a division. */
+.elder-toolbar__zoom > button + button { margin-inline-start: calc(-1 * var(--border-default)); }
+.elder-toolbar__zoom > button:first-child {
+  border-start-start-radius: var(--radius-1);
+  border-end-start-radius: var(--radius-1);
+}
+.elder-toolbar__zoom > button:last-child {
+  border-start-end-radius: var(--radius-1);
+  border-end-end-radius: var(--radius-1);
+}
+/* The half being used must sit above its neighbour, or its focus ring is
+   drawn under the overlap — which is exactly where a keyboard user needs
+   to see it. */
+.elder-toolbar__zoom > button:focus-visible,
+.elder-toolbar__zoom > button:hover { position: relative; z-index: 1; }
+/* The smaller A on the smaller side: what says which half is which without
+   either half needing a word. */
+.elder-toolbar__a-small { font-size: 0.78em; margin-inline-end: -0.08em; }
+
 .elder-toolbar__read {
   padding-inline: var(--space-2);
   font-family: var(--cl-family-body);

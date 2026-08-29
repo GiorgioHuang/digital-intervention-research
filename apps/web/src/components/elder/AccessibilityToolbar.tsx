@@ -105,24 +105,46 @@ export function AccessibilityToolbar({
         name, so a screen reader announces more than the word "Text" ever
         gave a sighted reader.
       */}
-      <button
-        type="button"
-        className="elder-toolbar__square"
-        aria-label="Make the text smaller"
-        onClick={() => onZoom((from) => step(from, -ZOOM_STEP))}
-        disabled={zoom <= ZOOM_MIN}
-      >
-        A−
-      </button>
-      <button
-        type="button"
-        className="elder-toolbar__square"
-        aria-label="Make the text bigger"
-        onClick={() => onZoom((from) => step(from, ZOOM_STEP))}
-        disabled={zoom >= ZOOM_MAX}
-      >
-        A+
-      </button>
+      {/*
+        One control, two buttons.
+
+        The owner asked for the two size buttons to become "one longer
+        +/- button", and the honest form of that is a segmented pair
+        rather than a single element: making the text smaller and making
+        it bigger are two actions, and one button cannot carry two. So
+        they share a border and sit flush against each other — which reads
+        as one control and is one control to look at — while remaining two
+        targets, each still at the 2.75rem floor R1 sets. Merging them for
+        real would mean a control whose meaning depends on which half was
+        pressed, and that is not a thing a screen reader can announce.
+
+        What the merge actually buys is the gap and one border: two
+        44px squares with 6px between them are 106px, and the pair is 88.
+        That is the width the mark needed to stay on screen at 320px.
+      */}
+      <div className="elder-toolbar__zoom">
+        <button
+          type="button"
+          aria-label="Make the text smaller"
+          onClick={() => onZoom((from) => step(from, -ZOOM_STEP))}
+          disabled={zoom <= ZOOM_MIN}
+        >
+          {/*
+            The smaller A on the smaller side. It is the near-universal
+            form of this control, and it says which direction each half
+            goes without either half needing a word.
+          */}
+          <span className="elder-toolbar__a-small">A</span>−
+        </button>
+        <button
+          type="button"
+          aria-label="Make the text bigger"
+          onClick={() => onZoom((from) => step(from, ZOOM_STEP))}
+          disabled={zoom >= ZOOM_MAX}
+        >
+          A+
+        </button>
+      </div>
       <button
         type="button"
         className="elder-toolbar__read"
@@ -130,11 +152,14 @@ export function AccessibilityToolbar({
         disabled={!speechAvailable}
         {...(speechAvailable ? {} : { title: 'This browser cannot read the screen out.' })}
       >
-        <span aria-hidden="true">🔊</span> Read aloud
+        <span className="elder-toolbar__read-icon" aria-hidden="true">
+          🔊
+        </span>{' '}
+        Read aloud
       </button>
       <button
         type="button"
-        className="elder-toolbar__square elder-toolbar__push"
+        className="elder-toolbar__square"
         aria-pressed={highContrast}
         aria-label="Stronger black and white"
         onClick={() => onHighContrast(!highContrast)}

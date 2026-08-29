@@ -17,11 +17,14 @@
  * Garamond, so setting it as text keeps it crisp at any size and keeps it
  * real text — to a screen reader, and to find-in-page.
  *
- * It is hidden below the wide-screen breakpoint. On a phone the four
- * reading controls already fill the row, and this bar holds one row at
- * 320px by measurement, not by luck — see `.elder-toolbar` in `styles.css`.
- * Branding is not worth a second row in the bar an 78-year-old uses to make
- * the text bigger.
+ * **The mark is always on screen; the name is what gives way.** It used to
+ * be the other way round — the whole thing vanished below the breakpoint,
+ * because the four reading controls filled the row at 320px and a second
+ * row in the bar an 78-year-old uses to make the text bigger is not worth a
+ * brand. The room came from elsewhere: merging the two size buttons into a
+ * segmented pair gives back their gap and one border, 18px, and the mark
+ * costs 30. The wordmark, at 68px, is the part that still does not fit, and
+ * it is also the part the mark already stands for.
  */
 export function BrandMark() {
   return (
