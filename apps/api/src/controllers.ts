@@ -44,7 +44,7 @@ import {
   releaseObject,
   type StorageDeps,
 } from '@platform/m16-integration';
-import type { M15Deps } from '@platform/m15-governance';
+import { listMyRecentDecisions, type M15Deps } from '@platform/m15-governance';
 import {
   changeVisibility,
   confirmTestimony,
@@ -143,6 +143,34 @@ export class CommandController {
     const ctx = requireActor(req);
     const profile = await getMyProfile(this.deps.m02, ctx, participantId);
     return { data: profile === null ? null : { type: 'Participant', id: profile.participantId, attributes: profile } };
+  }
+
+  /**
+   * "What you decided recently" — the participant's own decisions, read
+   * back to them.
+   *
+   * The platform recorded all of these and showed none of them to the
+   * person who made them: the only reader of `audit_events` was the staff
+   * view, behind `audit.view`, which no participant holds. This is a
+   * different query and deliberately cannot become that one — the actor is
+   * the caller and is not a parameter, and the actions are an allow-list of
+   * decisions rather than everything that was logged.
+   */
+  @Get('participants/:participantId/decisions')
+  async myRecentDecisions(
+    @Req() req: Request,
+    @Param('participantId') participantId: string,
+    @Query('limit') limit?: string,
+  ) {
+    const ctx = requireActor(req);
+    const parsed = Number.parseInt(limit ?? '', 10);
+    const items = await listMyRecentDecisions(
+      this.deps.m15,
+      ctx,
+      participantId,
+      Number.isFinite(parsed) ? parsed : 3,
+    );
+    return { data: items.map((d, i) => ({ type: 'OwnDecision', id: String(i), attributes: d })) };
   }
 
   /** The participant's own enrolments: where they are, and what to leave. */

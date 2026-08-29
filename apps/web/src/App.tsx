@@ -7,6 +7,7 @@ import { HelperScreen } from './components/elder/HelperScreen.js';
 import { AccessibilityToolbar } from './components/elder/AccessibilityToolbar.js';
 import { HelperBanner } from './components/elder/HelperBanner.js';
 import { ReviewContribution } from './components/ReviewContribution.js';
+import { RecentDecisions } from './components/RecentDecisions.js';
 import { greetingFor } from './greeting.js';
 import { TabIcon } from './components/elder/TabIcon.js';
 import { CommunityPanel } from './components/CommunityPanel.js';
@@ -564,6 +565,14 @@ export function App() {
                 setScreen('review');
               }}
             />
+            {/*
+              The handoff's order: what is waiting, then what was decided,
+              then the places to go. A look back sits between the thing to
+              do and the ways out — after the decision, because it is not
+              one, and before the destinations, because it is about this
+              person rather than about the app.
+            */}
+            <RecentDecisions session={session} />
             <div className="nav-rows">
             <details>
               <summary>Your information and who can see it</summary>

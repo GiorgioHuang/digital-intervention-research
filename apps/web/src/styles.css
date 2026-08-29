@@ -1579,6 +1579,41 @@ a[role='button']:hover { background-color: var(--color-action-secondary-bg-hover
 }
 .nav-rows > .row-summary:hover { background-color: var(--color-surface-sunken); }
 
+/* ---------- What you decided recently -----------------------------------
+ * The handoff: "a hairline-ruled list of {what, when} rows, `what` Lora
+ * 16px #3a3835, `when` Lora 14px #605d5d tabular and right-aligned".
+ *
+ * Right-aligned and tabular together are what make this readable at a
+ * glance rather than read line by line: the dates form a column with a
+ * straight edge, and a proportional figure set would leave it ragged.
+ */
+.decision-list { margin: 0; padding: 0; list-style: none; }
+.decision-list > li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  max-width: none;
+  padding-block: var(--space-3);
+  border-block-end: var(--border-hairline) solid var(--color-border-subtle);
+}
+.decision-list > li:first-child {
+  border-block-start: var(--border-hairline) solid var(--color-border-subtle);
+}
+.decision-list__what {
+  font-family: var(--cl-family-body);
+  font-size: var(--type-size-1);
+  color: var(--cl-text-2);
+}
+.decision-list__when {
+  flex: 0 0 auto;
+  font-family: var(--cl-family-body);
+  font-size: var(--type-size-0);
+  color: var(--cl-text-4);
+  font-variant-numeric: tabular-nums;
+  text-align: end;
+}
+
 /* ---------- A thing to decide is an object -------------------------------- */
 /*
  * The waiting item was loose text on the page: heading, paragraph, quote,

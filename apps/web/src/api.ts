@@ -241,6 +241,13 @@ export interface ContributionAwaitingReview {
   createdAt: string;
 }
 
+export interface OwnDecision {
+  /** The audited action. The words are the server's, not the screen's. */
+  action: string;
+  what: string;
+  when: string;
+}
+
 export interface MyProfile {
   participantId: string;
   displayName: string;
@@ -409,6 +416,16 @@ export const api = {
    * failure: during synthetic setup a session can name a participant with
    * no profile row, and Home greeting without a name is correct there.
    */
+  /**
+   * The last few decisions this person made, in their own words. The server
+   * holds the vocabulary: a screen that translated action codes itself
+   * would drift from what the platform actually recorded.
+   */
+  listMyRecentDecisions: (s: Session, limit = 3) =>
+    get<{ data: { id: string; attributes: OwnDecision }[] }>(
+      s,
+      `/v1/participants/${s.participantId}/decisions?limit=${String(limit)}`,
+    ),
   getMyProfile: (s: Session) =>
     get<{ data: { id: string; attributes: MyProfile } | null }>(s, `/v1/participants/${s.participantId}/profile`),
   listLifeStoryItemFiles: (s: Session, itemId: string) =>

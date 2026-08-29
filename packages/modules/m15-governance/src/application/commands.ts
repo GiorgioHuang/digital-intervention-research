@@ -3,11 +3,26 @@ import { appendToOutbox, recordAuditEvent, withTransaction, type Pool } from '@p
 import { assertAllowed, type PolicyDecisionResult } from '@platform/policy';
 import { M15_EVENTS } from '../contracts/index.js';
 
+/*
+ * `ownerParticipantId` is optional and every command in this file leaves it
+ * unset: governance work is staff work, judged on role and organisation.
+ * It is here for the one query that is not — a participant reading back
+ * what they themselves decided, which the engine can only judge as
+ * owner-permitted if it is told whose record it is. The field was already
+ * part of the platform's resource shape; this module's copy of the type was
+ * simply narrower than the thing it describes.
+ */
 export type PermissionCheck = (
   ctx: RequestContext,
   request: {
     action: string;
-    resource: { type: string; id: string; state: string; protectedExistence: boolean };
+    resource: {
+      type: string;
+      id: string;
+      state: string;
+      protectedExistence: boolean;
+      ownerParticipantId?: string;
+    };
     confirmed?: boolean;
   },
 ) => Promise<PolicyDecisionResult>;

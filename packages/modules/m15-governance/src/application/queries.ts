@@ -204,3 +204,121 @@ export async function listAuditEvents(
     accessReason: (r.access_reason as string | null) ?? null,
   }));
 }
+
+/**
+ * The actions that count as a decision somebody made about their own life
+ * on this platform.
+ *
+ * An allow-list, not a deny-list, and that is the whole safety of this
+ * query. Sixty-odd actions are audited and most of them are reads, sweeps
+ * or staff work; "What you decided recently" must never turn into a log of
+ * everything a participant did, still less of everything done to them. A
+ * new action added anywhere in the platform is absent from this list until
+ * somebody decides it is a decision and writes the words for it.
+ *
+ * Each entry is what the row can honestly be said to mean. The audit store
+ * holds references and safe metadata only (Doc 14 §61) — no content, and
+ * for a contribution review not even which way it went — so the phrases
+ * stop where the record stops. "Decided about something offered for your
+ * story" is less than the design's "Accepted Anne's account of the
+ * crossing", and it is what the row supports.
+ */
+export const OWN_DECISION_ACTIONS: Readonly<Record<string, string>> = Object.freeze({
+  'consent.record': 'Answered a consent question',
+  'consent.withdraw': 'Withdrew a consent',
+  'life-story.create': 'Started your life story',
+  'life-story.edit': 'Wrote in your life story',
+  'life-story.change-visibility': 'Changed who can see part of your story',
+  'life-story.confirm-testimony': 'Confirmed part of your story as your own words',
+  'life-story.withdraw': 'Took part of your story back',
+  'life-story.review-contribution': 'Decided about something offered for your story',
+  'object.upload': 'Added a file to your story',
+  'object.delete-own': 'Removed a file',
+  'relationship.approve': 'Approved someone to be in touch with you',
+  'relationship.revoke': 'Ended someone’s access to you',
+  'enrolment.enrol': 'Joined a study',
+  'enrolment.withdraw': 'Left a study',
+  'block.create': 'Blocked someone',
+  'block.revoke': 'Unblocked someone',
+  'community.join': 'Joined a community space',
+  'community.leave': 'Left a community space',
+  'message.confirm-send': 'Sent a message',
+  'post.publish': 'Shared a story with the community',
+  'participant.export': 'Asked for a copy of your information',
+});
+
+export interface OwnDecision {
+  /** The audited action. The words for it live in `OWN_DECISION_ACTIONS`. */
+  action: string;
+  what: string;
+  when: string;
+}
+
+/**
+ * "What you decided recently" — the handoff's Home section.
+ *
+ * The platform recorded every one of these and showed none of them back to
+ * the person who made them. Sixty-one call sites write to `audit_events`;
+ * the only thing that read one was the staff audit view, behind
+ * `audit.view`, which no participant holds and should not.
+ *
+ * **This is not that query and must not become it.** Three things keep it
+ * apart:
+ *
+ * - The actor is `ctx.actor.id` and is not a parameter. There is no
+ *   argument by which a caller can ask about somebody else, so the query
+ *   cannot be pointed at another person's record even by a caller who
+ *   holds every permission in the catalogue.
+ * - The actions are an allow-list of decisions, so a read, a sweep or a
+ *   staff action never appears here even when the actor performed it.
+ *   `result = 'Succeeded'` keeps out attempts that were refused — a
+ *   participant's own record of what they decided is not the place to
+ *   re-present something the platform stopped.
+ * - It is scoped to the participant whose Home this is, so a supporter who
+ *   is also a participant does not see what they did in somebody else's
+ *   archive on their own front page.
+ *
+ * Reading it is deliberately **not** itself audited, which is a departure
+ * from `listAuditEvents` above and needs saying. That rule exists because
+ * an audit trail whose readers leave no trace is the one record a misuser
+ * has no reason to avoid — it is about people looking at other people's
+ * records. Nobody can look at anybody else through this, and Home loads it
+ * on every visit; recording each of those would fill the store with a
+ * person reading their own history and make the trail harder to read, not
+ * easier.
+ */
+export async function listMyRecentDecisions(
+  deps: M15Deps,
+  ctx: RequestContext,
+  participantId: string,
+  limit = 3,
+): Promise<OwnDecision[]> {
+  const decision = await deps.checkPermission(ctx, {
+    action: 'participant.view-own',
+    resource: {
+      type: 'Participant',
+      id: participantId,
+      state: 'Active',
+      protectedExistence: true,
+      ownerParticipantId: participantId,
+    },
+  });
+  assertAllowed(decision, false);
+  const capped = Math.min(Math.max(limit, 1), 20);
+  const res = await deps.pool.query(
+    `SELECT action, occurred_at
+       FROM governance_audit.audit_events
+      WHERE actor_id = $1
+        AND participant_id = $2
+        AND result = 'Succeeded'
+        AND action = ANY($3::text[])
+      ORDER BY occurred_at DESC
+      LIMIT $4`,
+    [ctx.actor!.id, participantId, Object.keys(OWN_DECISION_ACTIONS), capped],
+  );
+  return res.rows.map((r) => ({
+    action: r.action as string,
+    what: OWN_DECISION_ACTIONS[r.action as string]!,
+    when: (r.occurred_at as Date).toISOString(),
+  }));
+}
