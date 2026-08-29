@@ -841,6 +841,40 @@ main {
    line to itself, which is how an earlier version of this bar ended up on
    four rows. */
 .elder-toolbar__push { margin-inline-start: auto; }
+/* ---- The brand, on a wide screen only -------------------------------
+ * The owner's instruction: on a wide screen the controls align right and
+ * the mark and the name sit at the left. Hidden by default rather than
+ * shown by default, because the phone is the case that is tight: the four
+ * controls are 266px inside 292px of usable width at 320, and the bar holds
+ * one row there by measurement. A brand is not worth a second row.
+ *
+ * `display: none`, not visibility or opacity: a hidden-but-present item in
+ * a flex row still takes its gap, which is 6px of the margin this bar does
+ * not have to spare.
+ */
+.elder-toolbar__brand { display: none; }
+@media (min-width: 34rem) {
+  .elder-toolbar__brand {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    /* The auto margin lives here on a wide screen, so everything after it
+       is pushed to the right as one group. */
+    margin-inline-end: auto;
+    color: var(--cl-text-2);
+  }
+  /* ...and the contrast button gives its own up. Two auto margins in one
+     row would each take a share of the free space and leave the contrast
+     control marooned at the far end, separated from the three controls it
+     belongs with. */
+  .elder-toolbar__push { margin-inline-start: 0; }
+}
+.elder-toolbar__brand-mark { color: var(--cl-accent-700); }
+.elder-toolbar__wordmark {
+  font-family: var(--cl-family-display);
+  font-size: var(--type-size-2);
+  letter-spacing: 0.01em;
+}
 /* 44, not the handoff's 34: its own accessibility requirement says never
    below 44, and a rule outranks a measurement that contradicts it. */
 .elder-toolbar__square {

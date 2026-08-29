@@ -205,8 +205,43 @@ describe('the toolbar has one shape everywhere', () => {
     expect(bar, 'toolbar items may shrink again').toContain('flex: 0 0 auto');
     expect(bar, 'toolbar items may wrap inside themselves again').toContain('white-space: nowrap');
     expect(
-      document.querySelectorAll('.elder-toolbar > *').length,
+      document.querySelectorAll('.elder-toolbar button').length,
       'a fifth control is back in the top bar, which is what put it on two rows',
     ).toBe(4);
+  });
+
+  /**
+   * The brand, on the owner's instruction: wide screen, controls right, mark
+   * and name left. What is worth a test is not that it looks right — it is
+   * that it cannot reach the phone, where the four controls were measured to
+   * fill the row and a fifth item is what put this bar on two lines before.
+   */
+  it('shows the brand only where there is room for it', async () => {
+    await arrive();
+    expect(screen.getByText('icareu'), 'the wordmark is gone').toBeTruthy();
+    // It is the first item, so the controls that follow are pushed right as
+    // one group rather than the brand being stranded after them.
+    expect(document.querySelector('.elder-toolbar > *')?.className).toContain('elder-toolbar__brand');
+
+    const css = readFileSync(resolve(process.cwd(), 'src/styles.css'), 'utf8');
+    // Anchors asserted found, not merely used. `indexOf` returns -1 when a
+    // rule has been renamed, and slicing from -1 yields '' — which fails
+    // every `toContain` below for the wrong reason and passes every
+    // `not.toContain` one might add later (D-90).
+    const from = css.indexOf('.elder-toolbar__brand { display: none; }');
+    const to = css.indexOf('.elder-toolbar__brand-mark', from + 1);
+    expect(from, 'the brand is no longer hidden by default').toBeGreaterThan(-1);
+    expect(to, 'the brand block no longer ends where this test looks for it').toBeGreaterThan(from);
+    const brand = css.slice(from, to);
+    expect(brand, 'the brand now reaches the phone, where the row has no width for it').toMatch(
+      /@media \(min-width: 34rem\)/,
+    );
+    // Two auto margins in one row leave the contrast control marooned at the
+    // far end. Where the brand takes the auto, the contrast button drops its
+    // own — asserted, because it is one line and easy to lose.
+    expect(brand, 'the brand does not push the controls right').toContain('margin-inline-end: auto');
+    expect(brand, 'the contrast button keeps its own auto margin, which splits the group').toContain(
+      '.elder-toolbar__push { margin-inline-start: 0; }',
+    );
   });
 });

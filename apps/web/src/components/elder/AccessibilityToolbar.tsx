@@ -1,4 +1,5 @@
 import { useCallback } from 'react';
+import { BrandMark } from './BrandMark.js';
 
 /**
  * The toolbar that sits on every signed-in screen.
@@ -70,6 +71,19 @@ export function AccessibilityToolbar({
 
   return (
     <div className="elder-toolbar">
+      {/*
+        The brand, on the owner's instruction: on a wide screen the mark and
+        the name sit at the left and the controls align to the right.
+
+        It is a fifth child of this row but it is not a fifth control. Below
+        the wide-screen breakpoint the stylesheet takes it out of the flow
+        entirely (`display: none`), so the phone bar is the same four items,
+        266px of them, that were measured to hold one row at 320px. Where it
+        is shown, it takes the auto margin and the contrast button gives its
+        own up — otherwise the two autos would fight and leave the contrast
+        control marooned at the far end, away from the three it belongs with.
+      */}
+      <BrandMark />
       {/*
         One row, on the owner's instruction.
         
