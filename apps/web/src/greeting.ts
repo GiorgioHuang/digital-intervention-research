@@ -38,3 +38,18 @@ export function greeting(at: Date): string {
  */
 export const greetingFor = (at: Date, name: string | null): string =>
   name === null ? greeting(at) : `${greeting(at)}, ${name}`;
+
+/**
+ * The year in the footer's copyright line.
+ *
+ * A parameter rather than a `new Date()` inside the footer, for the reason
+ * the greeting above is: a component that reads the clock makes every test
+ * of it true until a particular date and false after. This lives beside
+ * the greeting because it is the same hazard and the same answer — decide
+ * it in a pure function, test it at fixed instants, and read the real
+ * clock at exactly one call site.
+ *
+ * The local year, not UTC. A footer read at nine in the evening in
+ * Vancouver on 31 December should say the year it is there.
+ */
+export const copyrightYear = (at: Date): number => at.getFullYear();

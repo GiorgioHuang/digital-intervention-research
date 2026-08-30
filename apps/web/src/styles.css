@@ -59,7 +59,19 @@
   --cl-text-2: #3a3835;
   --cl-text-3: #4a4844;
   --cl-text-4: #605d5d;
-  --cl-divider: #cfcdcb;
+  /* The design system's divider is `color-mix(in srgb, #201f1d 16%,
+     transparent)` — translucent, so it composites over whatever it is
+     drawn on. This was a flat #cfcdcb, which is that mix resolved against
+     the page ground and therefore slightly wrong everywhere else: on the
+     toolbar and on the quiet cards, both of which sit on --cl-neutral-100
+     rather than on --cl-bg. Kept as a hex as well, under a second name,
+     because the contrast tests parse hex and a computed colour cannot be
+     measured by reading the stylesheet. */
+  --cl-divider: color-mix(in srgb, #201f1d 16%, transparent);
+  /* The same divider resolved against the page ground: what a contrast
+     check can compute with, and what a browser without color-mix falls
+     back to through the var() chain. */
+  --cl-divider-solid: #cfcdcb;
   --cl-neutral-100: #f8f4f4;
   --cl-neutral-200: #eae7e7;
   --cl-neutral-300: #d7d3d3;
@@ -1094,6 +1106,22 @@ main {
   --elder-row-y: calc(1.056rem * var(--density));       /* 19px */
   --elder-card-pad: calc(1rem * var(--density));        /* 18px */
 
+  /* ---- Corners --------------------------------------------------------
+   * The design system defines --radius-md: 4px and the handoff's token
+   * table says "--radius-sm / 4px | all corners". Every border-radius in
+   * the artboards is 4px. This workspace was inheriting the platform's
+   * 9-10px control radii, which is a visibly softer object than the one
+   * drawn — a difference that reads as a different product rather than a
+   * different setting.
+   *
+   * Absolute, not density-scaled: a radius is a property of the shape, and
+   * the design system states it as a constant. The staff and supporter
+   * workspaces keep the platform's own radii; this is scoped here.
+   */
+  --radius-1: 4px;
+  --radius-2: 4px;
+  --radius-3: 4px;
+
   --color-surface-page: var(--cl-bg);
   --color-surface-raised: var(--cl-neutral-100);
   --color-surface-sunken: var(--cl-neutral-200);
@@ -1578,6 +1606,99 @@ a[role='button']:hover { background-color: var(--color-action-secondary-bg-hover
   transform: rotate(-45deg);
 }
 .nav-rows > .row-summary:hover { background-color: var(--color-surface-sunken); }
+
+/* ---------- The way in --------------------------------------------------
+ * The design's welcome screen. It sits on the page ground rather than in
+ * the app shell — there is no toolbar and no tab bar here, which the
+ * handoff is explicit about: the bar is hidden on welcome, google,
+ * onboarding and report, because sign-in must not be skippable.
+ */
+.welcome {
+  min-block-size: 100svh;
+  background-color: var(--cl-bg);
+}
+.welcome main { padding-block: var(--elder-gutter-block) var(--space-8); }
+.welcome h1 {
+  margin-block: var(--space-2) 0;
+  /* The design's 36px against Home's 34: this is the one line somebody
+     reads before deciding whether they are in the right place. */
+  font-size: var(--type-size-6, 2.31rem);
+  line-height: 1.1;
+}
+.welcome__lede {
+  font-size: var(--type-size-2);
+  line-height: 1.65;
+}
+/* The quiet lines: the environment note and the no-time-limit promise. */
+.welcome__note {
+  font-size: var(--type-size-0);
+  line-height: 1.6;
+  color: var(--cl-text-4);
+}
+.welcome hr {
+  block-size: 1px;
+  border: 0;
+  margin-block: var(--space-4);
+  background-color: var(--cl-divider);
+}
+/* The way in is ONE target, at the size the design gives it: 66px, which
+   is the handoff's own floor for a primary action.
+   Scoped to the submit button and the Google button by name rather than to
+   every button in the form — the first version used
+   `form > button[type='button']`, which caught the supporter and staff
+   links too and drew three identical full-width outlines under a headline
+   promising one thing. Doc 20 §13.2: at most one primary action per
+   screen, and this screen has exactly one. */
+.welcome form button[type='submit'],
+.welcome .welcome__way-in button {
+  inline-size: 100%;
+  min-block-size: calc(3.667rem * var(--density));
+  font-size: var(--type-size-3);
+}
+/* A button that is a link: no box, no weight, no competition with the way
+   in. */
+.link-button {
+  min-block-size: var(--target-min);
+  padding-inline: 0;
+  border: 0;
+  background-color: transparent;
+  color: var(--cl-accent-700);
+  font-family: var(--cl-family-body);
+  font-size: var(--type-size-1);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.welcome__elsewhere { margin-block-start: var(--space-4); }
+
+/* ---------- The footer --------------------------------------------------
+ * Quiet, and above the fixed tab bar rather than under it. `main` already
+ * reserves the bar's measured height at its foot; the footer sits inside
+ * that page flow, so it scrolls with the content and is never covered.
+ */
+.site-footer {
+  margin-block-start: var(--space-6);
+  padding-block-start: var(--space-3);
+  border-block-start: var(--border-hairline) solid var(--color-border-subtle);
+}
+.site-footer p {
+  margin: 0;
+  font-family: var(--cl-family-body);
+  font-size: var(--type-size-00, 0.72rem);
+  color: var(--cl-text-4);
+}
+
+/* ---------- A kicker ----------------------------------------------------
+ * The design's small caps label: Lora 11px, .14em tracking, uppercase, in
+ * accent-700. Used above the sign-in headline and on the unfinished card.
+ */
+.kicker {
+  font-family: var(--cl-family-body);
+  font-size: var(--type-size-00, 0.72rem);
+  font-weight: var(--type-weight-regular);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--cl-accent-700);
+}
 
 /* ---------- Finish what you started -------------------------------------
  * The handoff: `background: var(--color-neutral-100)`, 1px divider, radius

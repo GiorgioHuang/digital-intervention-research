@@ -4,13 +4,14 @@ import { currentSurface } from './surface.js';
 import { SupporterApp } from './SupporterApp.js';
 import { AccessTokenGate } from './components/AccessTokenGate.js';
 import { HelperScreen } from './components/elder/HelperScreen.js';
+import { SiteFooter } from './components/elder/SiteFooter.js';
 import { AccessibilityToolbar } from './components/elder/AccessibilityToolbar.js';
 import { HelperBanner } from './components/elder/HelperBanner.js';
 import { ReviewContribution } from './components/ReviewContribution.js';
 import { RecentDecisions } from './components/RecentDecisions.js';
 import { UnfinishedPhotograph } from './components/UnfinishedPhotograph.js';
 import { CaptionPhotograph } from './components/CaptionPhotograph.js';
-import { greetingFor } from './greeting.js';
+import { copyrightYear, greetingFor } from './greeting.js';
 import type { UncaptionedPhotograph } from './api.js';
 import { TabIcon } from './components/elder/TabIcon.js';
 import { CommunityPanel } from './components/CommunityPanel.js';
@@ -280,8 +281,29 @@ export function App() {
 
   if (session === null) {
     return (
-      <main>
-        <h1>Healthy Ageing Research Platform (development environment)</h1>
+      /*
+       * `data-workspace="participant"` — which this screen did not carry.
+       * Every Classical token, every face and the whole type scale hang off
+       * that attribute, so the first screen anybody sees was the one screen
+       * rendered in the platform's plain interface styles while the rest of
+       * the app was the design. That is most of why it looked like a
+       * different product from the artboards.
+       */
+      <div data-workspace="participant" className="welcome">
+        <main>
+          {/*
+            The design's opening, in its order: who this is, then what it
+            is for, then the way in. The kicker names the study before the
+            headline promises anything, because somebody who opened this by
+            mistake should be able to tell in one line.
+          */}
+          <p className="kicker">Canadian Elder Life Story Project</p>
+          <h1>Your life, in your own words.</h1>
+          <p className="welcome__lede">
+            This is where you keep your own story. Nobody else can see it unless you say so, and nothing is added
+            unless you accept it.
+          </p>
+          <hr />
         {/*
           Neutral on purpose (§E.11): it says the clock ran out and nothing
           about what was on the screen, because the reason this exists is
@@ -293,13 +315,13 @@ export function App() {
             again to carry on.
           </p>
         )}
-        {authMode === 'dev-header' && (
-          <p>
-            Development sign-in stub: enter the identifiers issued for this synthetic environment. Both belong to the
-            same person — the account identifier and the participant identifier are two names for one demo participant.
-            Nothing here verifies who you are — this is not authentication (ADR-104).
-          </p>
-        )}
+          {authMode === 'dev-header' && (
+            <p className="welcome__note">
+              Development sign-in stub: enter the identifiers issued for this synthetic environment. Both belong to the
+              same person — the account identifier and the participant identifier are two names for one demo
+              participant. Nothing here verifies who you are — this is not authentication (ADR-104).
+            </p>
+          )}
         {/*
           The two identifiers have to belong to the same person. Nothing
           used to check that, so an unpaired combination signed in happily
@@ -365,6 +387,47 @@ export function App() {
             </>
           )}
           {/*
+            An enclosure, not a paragraph. This was plain body text in the
+            middle of a column of plain body text, which on the one screen
+            somebody meets before they are signed in makes the sentence
+            that explains why they cannot get in look like more of the
+            prose explaining what the app is. `.state--danger` is the
+            treatment every other refusal in this app already uses.
+          */}
+          {signInProblem !== '' && (
+            <p role="alert" className="state state--danger">
+              {signInProblem}
+            </p>
+          )}
+          {/*
+            Nothing is offered until the server has said which entrance
+            this deployment has. Drawing one and swapping it a moment
+            later would put a button under a person's finger and then
+            move it.
+          */}
+          {authMode === undefined && <p>One moment…</p>}
+          {authMode === 'google' && (
+            <div className="welcome__way-in">
+              <GoogleSignIn registers onError={setSignInProblem} />
+            </div>
+          )}
+          {authMode === 'dev-header' && (
+            <>
+              {/*
+                The one way forward on this screen, so it is the one filled
+                button (Doc 20 §13.2: at most one primary action per screen).
+                It was drawn as an outline like the other two, which left
+                three identical teal outlines side by side and nothing saying
+                which was the way in — a screen where every choice looks
+                equally likely is a screen that has not been designed.
+              */}
+              <button type="submit" className="btn-primary" disabled={checking}>
+                {checking ? 'Checking…' : 'Continue'}
+              </button>{' '}
+            </>
+          )}
+          <hr />
+          {/*
             §D.6: switched on by hand, never detected. The consequences are
             listed because "shared device" on its own does not tell anyone
             what changes, and the one that costs them something — losing
@@ -391,47 +454,45 @@ export function App() {
               size.
             </small>
           </p>
-          {signInProblem !== '' && <p role="alert">{signInProblem}</p>}
-          {/*
-            Nothing is offered until the server has said which entrance
-            this deployment has. Drawing one and swapping it a moment
-            later would put a button under a person's finger and then
-            move it.
-          */}
-          {authMode === undefined && <p>One moment…</p>}
-          {authMode === 'google' && <GoogleSignIn registers onError={setSignInProblem} />}
-          {authMode === 'dev-header' && (
-            <>
-              {/*
-                The one way forward on this screen, so it is the one filled
-                button (Doc 20 §13.2: at most one primary action per screen).
-                It was drawn as an outline like the other two, which left
-                three identical teal outlines side by side and nothing saying
-                which was the way in — a screen where every choice looks
-                equally likely is a screen that has not been designed.
-              */}
-              <button type="submit" className="btn-primary" disabled={checking}>
-                {checking ? 'Checking…' : 'Continue'}
-              </button>{' '}
-            </>
-          )}
           {/*
             Only where one address serves everything. Where the surfaces
             have their own addresses, a participant is never offered a
             way into somebody else's workspace.
           */}
           {surface === 'single-host' && (
-            <>
-              <button type="button" onClick={() => setMode('supporter')}>
+            <p className="welcome__elsewhere">
+              {/*
+                Not ways in for the person this screen is for. They exist
+                because one address serves three audiences in development,
+                and drawn as full-width outlines they were three identical
+                buttons under a headline promising one thing — the same
+                failure the dev-header path had fixed and this reintroduced
+                for Google. Quiet text links, below the way in, and only
+                where the surfaces share an address.
+              */}
+              <button type="button" className="link-button" onClick={() => setMode('supporter')}>
                 Supporter workspace
               </button>{' '}
-              <button type="button" onClick={() => setMode('staff')}>
+              <button type="button" className="link-button" onClick={() => setMode('staff')}>
                 Staff workspace
               </button>
-            </>
+            </p>
           )}
-        </form>
-      </main>
+          </form>
+          {/*
+            The design's closing line, and it is a promise this platform
+            actually keeps: no screen in it is on a timer and nothing
+            vanishes while it is being read. Worth saying to somebody who
+            reads slowly and has been rushed by software before.
+
+            The one exception is the inactivity sign-out, which is a
+            different thing and is announced at the top of this screen when
+            it happens rather than warned about here.
+          */}
+          <p className="welcome__note">There is no time limit on any screen. Nothing disappears while you read.</p>
+          <SiteFooter year={copyrightYear(new Date())} />
+        </main>
+      </div>
     );
   }
 
@@ -803,6 +864,12 @@ export function App() {
             </section>
           </section>
         )}
+        {/*
+          Inside `main`, which already reserves the fixed tab bar's measured
+          height at its foot — so the footer scrolls with the page and the
+          bar never covers it.
+        */}
+        <SiteFooter year={copyrightYear(new Date())} />
       </main>
     </div>
   );
