@@ -91,4 +91,4 @@ export function CaptionPhotograph({
 }
 
 const addedOn = (iso: string): string =>
-  new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+  new Date(iso).toLocaleDateString('en-GB', { weekday: 'long' });

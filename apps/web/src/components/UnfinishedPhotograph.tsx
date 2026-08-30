@@ -58,16 +58,8 @@ export function UnfinishedPhotograph({
     <section className="unfinished" aria-labelledby="unfinished-heading">
       <p className="unfinished__kicker">Finish what you started</p>
       <h2 id="unfinished-heading">A photograph with no words</h2>
-      {/*
-        The design says "You added a photograph on Tuesday". A weekday
-        alone is only unambiguous for about a week, and this card can be
-        months old — a photograph nobody captioned is exactly the thing that
-        sits. So it is the date, spelled, for the same reason the waiting
-        card spells its own: this is the basis of what somebody does next.
-      */}
-      <p>
-        You added it on {addedOn(item.addedAt)}. Nobody knows yet who is in it.
-      </p>
+      {/* The design's line, and the design's date. */}
+      <p>You added a photograph on {addedOn(item.addedAt)}. Nobody knows yet who is in it.</p>
       <p>
         <button className="primary" onClick={() => onCaption(item)}>
           Add words to this photograph
@@ -77,5 +69,13 @@ export function UnfinishedPhotograph({
   );
 }
 
+/**
+ * "Tuesday" — the design's own form.
+ *
+ * A weekday names a day inside the last week and repeats every seven days
+ * after that, and this card can be months old. The owner has ruled for the
+ * drawing (2026-08-30); I had substituted a spelled date on my own
+ * judgement, which is the substitution being undone here.
+ */
 const addedOn = (iso: string): string =>
-  new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+  new Date(iso).toLocaleDateString('en-GB', { weekday: 'long' });

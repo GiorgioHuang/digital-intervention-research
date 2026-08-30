@@ -151,7 +151,7 @@ export function ReviewContribution({
             wrote the words is the position B-17 existed to describe.
           */}
           <h1 id="review-heading">
-            {nameOrGap(contribution.contributorDisplayName)} has offered something for your story
+            {nameOrGap(contribution.contributorDisplayName)} has offered something for your life story
           </h1>
           <p>
             Only you can decide this. Nothing is added to your story unless you accept it, and if you accept, it is

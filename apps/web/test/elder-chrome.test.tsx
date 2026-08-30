@@ -270,95 +270,70 @@ describe('the toolbar has one shape everywhere', () => {
   /**
    * The mark stays; the name is what gives way.
    *
-   * The first version hid the whole brand below the breakpoint, because
-   * the reading controls filled the row at 320px. The owner's correction
-   * was that the mark must survive there — so the room was found rather
-   * than the mark dropped: the two size buttons became a segmented pair
-   * sharing one border, the decorative speaker glyph goes, and the bar's
-   * own side padding tightens. All three are narrow-width rules, and all
-   * three are what keep 320px on one row, so all three are asserted.
+   * The drawing has no brand in this bar at all — the mark is the owner's
+   * addition, and their instruction was that it survives at every width
+   * while the name may go. So the name is the only thing this bar drops.
    */
   it('keeps the mark at every width and drops only the name', async () => {
     await arrive();
     expect(screen.getByText('icareu'), 'the wordmark is gone from the markup').toBeTruthy();
     expect(document.querySelector('.elder-toolbar__brand-mark'), 'the mark is gone').toBeTruthy();
-    // First in the row, so everything after it is pushed right as one
-    // group rather than the brand being stranded after the controls.
     expect(document.querySelector('.elder-toolbar > *')?.className).toContain('elder-toolbar__brand');
 
     const css = readFileSync(resolve(process.cwd(), 'src/styles.css'), 'utf8');
-    // Anchors asserted found, not merely used: `indexOf` returns -1 when a
-    // rule is renamed, and slicing from -1 yields '' — which fails every
-    // `toContain` for the wrong reason and passes every `not.toContain`
-    // somebody adds later (D-90).
-    const from = css.indexOf('@media (max-width: 25.9rem) {');
+    const from = css.indexOf('@media (max-width: 23.99rem) {');
     expect(from, 'the narrow-width block has moved or been renamed').toBeGreaterThan(-1);
-    // Both anchors asserted, not just the outer one. Deleting the
-    // read-icon rule collapsed this slice to '' and the failure that came
-    // out named the wordmark — a guard reporting a defect that was not
-    // there, found by mutation-testing this very test.
-    const iconAt = css.indexOf('.elder-toolbar__read-icon', from);
-    expect(iconAt, 'the speaker glyph is back, and it is width this row has not got').toBeGreaterThan(from);
-    // The name gives way at a narrower width than the glyph does — one
-    // breakpoint would have to serve the stricter of the two and would
-    // take the name off a 390 phone.
-    const nameAt = css.indexOf('@media (max-width: 23.4rem) {');
-    expect(nameAt, 'the name and the glyph share a breakpoint again').toBeGreaterThan(iconAt);
-    // +1 so the block's own closing brace is inside the slice; without it
-    // the last rule reads as unterminated and its assertion fails on the
-    // punctuation rather than on the rule.
-    const narrow = css.slice(from, css.indexOf('}', css.indexOf('.elder-toolbar__wordmark', nameAt)) + 1);
+    const narrow = css.slice(from, css.indexOf('}', from) + 1);
     expect(narrow, 'the name no longer gives way on a phone').toContain(
       '.elder-toolbar__wordmark { display: none; }',
     );
     expect(narrow, 'the mark is being hidden along with the name').not.toContain(
       '.elder-toolbar__brand { display: none',
     );
-    expect(narrow, 'the speaker glyph is back, and it is 18px this row has not got').toContain(
-      '.elder-toolbar__read-icon { display: none; }',
-    );
 
-    // One auto margin, not two. Two each take a share of the free space,
+    // One auto margin, not two — two each take a share of the free space,
     // which is what left the contrast button alone at the far end.
     expect(css, 'the controls no longer align right').toContain('margin-inline-end: auto');
-    expect(css, 'a second auto margin is back, which splits the control group').not.toContain(
-      '.elder-toolbar__push',
-    );
   });
 
   /**
-   * One control to look at, two things to press.
+   * The drawing's toolbar, control for control.
    *
-   * "Merge the +/- buttons into one longer button" cannot mean one button:
-   * smaller and bigger are two actions, and a control whose meaning depends
-   * on which half was pressed is not something a screen reader can
-   * announce. So the pair shares a border and keeps two targets, each at
-   * the full floor — and the borders overlap rather than nesting inside a
-   * wrapper, which is what keeps the pair the same height as the buttons
-   * beside it instead of 4px taller.
+   * Every one of these was changed on my own judgement and the owner has
+   * ruled for the drawing (2026-08-30): the "Text" label was dropped to buy
+   * width, the two size buttons were merged into a segmented pair, and the
+   * squares were --target-min rather than 34.
+   *
+   * **34x34 contradicts the same document's "44px absolute floor … Never
+   * below 44."** It is the owner's call and it is recorded rather than
+   * argued: 34 clears WCAG 2.2's 24px minimum (2.5.8, AA) and fails its
+   * 44px enhanced target (2.5.5, AAA).
    */
-  it('merges the size buttons visually without merging them for real', async () => {
+  it('is the drawing’s toolbar, control for control', async () => {
     await arrive();
-    const halves = document.querySelectorAll('.elder-toolbar__zoom > button');
-    expect(halves.length, 'the size pair is not two buttons').toBe(2);
+    expect(screen.getByText('Text'), 'the drawing’s Text label is gone again').toBeTruthy();
+    // Two buttons, not a segmented pair: the drawing has them apart.
+    expect(document.querySelectorAll('.elder-toolbar__zoom').length, 'the size pair is merged again').toBe(0);
     expect(screen.getByRole('button', { name: 'Make the text smaller' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Make the text bigger' })).toBeTruthy();
+    // Read aloud carries the drawing's icon beside its label.
+    expect(document.querySelector('.elder-toolbar__read-icon'), 'the speaker icon is gone').toBeTruthy();
 
     const css = readFileSync(resolve(process.cwd(), 'src/styles.css'), 'utf8');
-    const at = css.indexOf('.elder-toolbar__zoom > button {');
-    expect(at, 'the size pair rule has been renamed').toBeGreaterThan(-1);
+    const at = css.indexOf('.elder-toolbar__square {');
+    expect(at, 'the square rule has been renamed').toBeGreaterThan(-1);
     const rule = css.slice(at, css.indexOf('}', at));
-    expect(rule, 'a half of the size pair has dropped below the touch floor').toContain(
-      'min-inline-size: var(--target-min)',
-    );
-    expect(rule, 'a half of the size pair has dropped below the touch floor').toContain(
-      'min-block-size: var(--target-min)',
-    );
-    // A wrapper border would add its own height and make this control
-    // taller than everything beside it. Measured at 54px against 50 the
-    // first time this was built.
-    expect(css, 'the shared edge is drawn as a wrapper again').toContain(
-      '.elder-toolbar__zoom > button + button { margin-inline-start: calc(-1 * var(--border-default)); }',
-    );
+    expect(rule, 'the squares are not the drawing’s 34px').toContain('inline-size: 34px');
+    expect(rule).toContain('block-size: 34px');
+    // The drawing's own padding and gap for the bar.
+    expect(css).toContain('padding: 9px 14px');
+  });
+
+  /** The owner removed it: this study is English only. */
+  it('offers no language toggle', async () => {
+    await arrive();
+    for (const name of ['FR', 'EN']) {
+      expect(screen.queryByRole('button', { name }), `a ${name} toggle is back`).toBeNull();
+    }
   });
 });

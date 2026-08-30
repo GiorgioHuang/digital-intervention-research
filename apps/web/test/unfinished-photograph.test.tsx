@@ -53,10 +53,9 @@ describe('the unfinished photograph', () => {
     const { calls, opened } = await show({ data: [{ id: 'obj_1', attributes: photo }] });
     expect(calls[0]).toBe('/v1/participants/pt_m/uncaptioned-photographs?limit=1');
     expect(screen.getByRole('heading', { name: 'A photograph with no words' })).toBeTruthy();
-    // The date spelled out. A weekday alone — the design's "on Tuesday" —
-    // is unambiguous for about a week, and an uncaptioned photograph is
-    // exactly the thing that sits for months.
-    expect(screen.getByText(/You added it on 18 August 2026/)).toBeTruthy();
+    // The design's line and the design's date. 18 August 2026 is a
+    // Tuesday, which is also the day the design's own copy names.
+    expect(screen.getByText(/You added a photograph on Tuesday/)).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Add words to this photograph' }));
     expect(opened).toEqual(['obj_1']);
   });

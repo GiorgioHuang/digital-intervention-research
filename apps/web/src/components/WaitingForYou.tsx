@@ -27,19 +27,14 @@ import { nameOrGap } from '../names.js';
  * you is exactly what the owner asked to be rid of.
  */
 /**
- * "1 August 2026", not "8/1/2026".
+ * "Monday" — the design's form for this row.
  *
- * The bare `toLocaleDateString()` used elsewhere in this app produced
- * `8/1/2026` in the capture — which is the first of August or the eighth of
- * January depending on where the reader learned to read dates, and this row
- * is read by somebody deciding whether text written about them enters their
- * own life story. A spelled month cannot be misread. The locale is pinned
- * because the document is `lang="en"` and an unpinned one would follow
- * whatever the device happens to be set to, including formats the page's
- * own language does not use.
+ * The locale is pinned because the document is `lang="en"`; an unpinned one
+ * follows whatever the device is set to, which is a different language's
+ * weekday on a page that is not in that language.
  */
 const offeredOn = (iso: string): string =>
-  new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+  new Date(iso).toLocaleDateString('en-GB', { weekday: 'long' });
 
 export function WaitingForYou({
   session,
@@ -93,14 +88,7 @@ export function WaitingForYou({
                 <span className="row-link__title">
                   {nameOrGap(c.contributorDisplayName)} has offered something for your story
                 </span>
-                {/*
-                  An absolute date, not "Offered Monday". A relative date
-                  needs a "now" to be relative to, which is how a page
-                  starts telling somebody it was offered "in 3 days" when a
-                  clock disagrees — and this project has already lost a day
-                  to a test suite that agreed with reality until it did not
-                  (D-103). It is also simply clearer to read.
-                */}
+                {/* "Offered Monday" — the design's form. */}
                 <span className="row-link__detail">
                   Only you can decide this. Offered {offeredOn(c.createdAt)}.
                 </span>

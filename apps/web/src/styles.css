@@ -59,6 +59,11 @@
   --cl-text-2: #3a3835;
   --cl-text-3: #4a4844;
   --cl-text-4: #605d5d;
+  /* The handoff's fourth grey, used for the toolbar's "Text" label. Its own
+     ramp order is #3a3835, #4a4844, #605d5d, #6b6863, and it names #605d5d
+     as the floor for 14-15px text — this one is only ever used at 12px on a
+     label that repeats what the two buttons beside it already say. */
+  --cl-text-5: #6b6863;
   /* The design system's divider is `color-mix(in srgb, #201f1d 16%,
      transparent)` — translucent, so it composites over whatever it is
      drawn on. This was a flat #cfcdcb, which is that mix resolved against
@@ -824,36 +829,20 @@ main {
    4.5rem row made the whole bar 100px against the design's 72. */
 .elder-tab__icon { inline-size: var(--elder-tab-icon); block-size: var(--elder-tab-icon); }
 /*
- * Below 390px the 13px label is wider than the tab it sits in, and
- * "Community" is one word, so it clips rather than wraps. Measured: 60px
- * per tab at 320, 65 at 360, 71 at 390. The handoff gives no narrow rule —
- * it says the layout scales by stretching — so the type steps down by one
- * notch instead, which keeps every word whole and stays above the kicker
- * size the same system uses for legible small text. A clipped word is not
- * a smaller word.
+ * One size, at every width — the drawing gives the tab label as Cormorant
+ * 600 13px and gives no narrow rule; its own note is that the layout
+ * "scales by stretching, not reflowing". A step-down below 24.5rem was my
+ * own addition, made because "Community" clips at 320 and 360, and the
+ * owner has ruled for the drawing (2026-08-30). What clips is reported
+ * from a measurement rather than pre-empted.
  */
-@media (max-width: 24.5rem) {
-  [data-workspace='participant'] .nav-primary button { font-size: var(--type-size-00, 0.72rem); }
 }
 /*
- * The chevron rows keep the handoff's Lora 18px at every width.
- *
- * They wrapped, and the first fix was to step the type down the way X-3
- * does for "Community" in the tab bar. That was the wrong borrowing. X-3
- * is about a single word being clipped, which is broken; a sentence
- * running onto a second line is not. Shrinking body text for a
- * 78-year-old to keep a line count is a bad trade, and it was costing
- * every phone 3px of type to fix a case that only arises at 320.
- *
- * What fixed 390 was the handoff's own 2px inline padding, which the
- * build had rounded up to 4.5, and a tighter chevron gap.
- *
- * Measured, and stated as measured rather than as hoped: every row is 67px
- * and single-line at the handoff's own 404px frame and at 390. At 360 and
- * 320 the longest of the three — "Your information and who can see it" —
- * takes a second line and that row becomes 96px. The other two hold one
- * line at every width. That is the accepted cost of keeping the type at
- * the size it was drawn.
+ * The chevron rows are Lora 18px at every width, which is the drawing.
+ * They hold one line each at the drawing's own 404px frame and at 390; at
+ * 360 and 320 the longest of the three takes a second line. That is the
+ * cost of keeping the type at the size it was drawn, and it is the
+ * measurement rather than a guess.
  */
 
 
@@ -869,7 +858,7 @@ main {
   /* The handoff's own 6px, which I had rounded up to the spacing token and
      which is part of what put this bar on two rows at 320. */
   gap: 6px;
-  padding: var(--space-2) var(--space-3);
+  padding: 9px 14px;
   background-color: var(--cl-neutral-100);
   border-block-end: var(--border-hairline) solid var(--cl-divider);
 }
@@ -887,10 +876,12 @@ main {
   flex: 0 0 auto;
   white-space: nowrap;
 }
+/* The drawing's label: Lora 12px, #6b6863. It was dropped to buy width for
+   one row at 320px when the controls were 49.5px; at 34 they fit with it. */
 .elder-toolbar__label {
   font-family: var(--cl-family-body);
-  font-size: var(--type-size-0);
-  color: var(--cl-text-4);
+  font-size: 12px;
+  color: var(--cl-text-5);
 }
 /* The contrast control sits at the far end of the row. An auto margin, not
    a spacer element: a spacer in a flex row that may wrap takes a whole
@@ -942,11 +933,12 @@ main {
  * bar that exists at no width, and reported 364 for a configuration that
  * needs 400. The fix was to force all three.)
  */
-@media (max-width: 25.9rem) {
-  .elder-toolbar { padding-inline: var(--space-2); }
-  .elder-toolbar__read-icon { display: none; }
-}
-@media (max-width: 23.4rem) {
+/* The name gives way below 24rem (384px). With the drawing's "Text" label
+   restored the row needs more width than it did: measured, the bar wraps
+   at 375 and holds one row from 380, so 384 leaves a small margin for font
+   loading. The mark itself stays at every width, on the owner's
+   instruction. */
+@media (max-width: 23.99rem) {
   .elder-toolbar__wordmark { display: none; }
 }
 }
@@ -966,71 +958,49 @@ main {
   color: var(--cl-accent-700);
   letter-spacing: 0.01em;
 }
-/* 44, not the handoff's 34: its own accessibility requirement says never
-   below 44, and a rule outranks a measurement that contradicts it. */
-.elder-toolbar__square {
-  min-inline-size: var(--target-min);
-  min-block-size: var(--target-min);
-  justify-content: center;
-  padding: 0;
-  font-family: var(--cl-family-display);
-  border-color: var(--cl-divider);
-}
-/* ---- The size pair: one control, two targets -------------------------
- * The owner asked for the two size buttons to become one longer control.
- * The honest form of that is a segmented pair: smaller and bigger are two
- * actions and one button cannot carry two, so they keep their own targets
- * and share an edge.
- *
- * Sharing the edge is what buys the width, and it is done by overlapping
- * the two borders rather than by drawing a box around them. A wrapper
- * border adds its own 2px to the block size, which made this control 54px
- * tall against 50 for everything beside it and grew the whole bar by 4px —
- * measured, in the first attempt at this. Overlapped, the pair is exactly
- * as tall as a single button and 98px wide against the 106 that two
- * separate buttons and their gap cost.
- *
- * Each half is still --target-min in both directions. Note that is 49.5px
- * here, not 44: the root font is 18px, so 2.75rem is larger than the
- * arithmetic in older comments assumed.
+/* ---- The drawing's controls ------------------------------------------
+ * 34x34, 1px divider border, radius 4. The handoff's accessibility section
+ * says "44px absolute floor … Never below 44", and the drawing says 34;
+ * the owner has ruled for the drawing (2026-08-30). 34 clears WCAG 2.2's
+ * 24px minimum (2.5.8, AA) and fails its 44px enhanced target (2.5.5,
+ * AAA). Scoped to this bar — every other control in the app keeps
+ * --target-min.
  */
-.elder-toolbar__zoom { display: flex; }
-.elder-toolbar__zoom > button {
-  min-inline-size: var(--target-min);
-  min-block-size: var(--target-min);
+.elder-toolbar__square {
+  inline-size: 34px;
+  block-size: 34px;
+  min-inline-size: 0;
+  min-block-size: 0;
   justify-content: center;
   padding: 0;
-  border-color: var(--cl-divider);
-  border-radius: 0;
+  border: 1px solid var(--cl-divider);
+  border-radius: var(--radius-1);
+  background-color: transparent;
+  /* The drawing sets A− at 15px and A+ at 17px: the pair says which
+     direction each half goes by its own size, before either word is read. */
   font-family: var(--cl-family-display);
+  font-size: 15px;
+  font-weight: var(--type-weight-semibold);
+  color: var(--cl-text);
 }
-/* The two borders become one line. Two adjacent borders would be 2px and
-   read as a seam rather than as a division. */
-.elder-toolbar__zoom > button + button { margin-inline-start: calc(-1 * var(--border-default)); }
-.elder-toolbar__zoom > button:first-child {
-  border-start-start-radius: var(--radius-1);
-  border-end-start-radius: var(--radius-1);
-}
-.elder-toolbar__zoom > button:last-child {
-  border-start-end-radius: var(--radius-1);
-  border-end-end-radius: var(--radius-1);
-}
-/* The half being used must sit above its neighbour, or its focus ring is
-   drawn under the overlap — which is exactly where a keyboard user needs
-   to see it. */
-.elder-toolbar__zoom > button:focus-visible,
-.elder-toolbar__zoom > button:hover { position: relative; z-index: 1; }
-/* The smaller A on the smaller side: what says which half is which without
-   either half needing a word. */
-.elder-toolbar__a-small { font-size: 0.78em; margin-inline-end: -0.08em; }
+.elder-toolbar__square--plus { font-size: 17px; }
 
 .elder-toolbar__read {
-  padding-inline: var(--space-2);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-inline-size: 0;
+  min-block-size: 0;
+  padding: 7px 9px;
+  border: 1px solid var(--cl-divider);
+  border-radius: var(--radius-1);
+  background-color: transparent;
   font-family: var(--cl-family-body);
-  font-size: var(--type-size-00, 0.72rem);
+  font-size: 12.5px;
+  font-weight: var(--type-weight-regular);
   color: var(--cl-accent-700);
-  border-color: var(--cl-divider);
 }
+.elder-toolbar__read-icon { flex: 0 0 auto; }
 .elder-toolbar__square[aria-pressed='true'] {
   background-color: var(--cl-accent-100);
   border-color: var(--cl-accent);
@@ -1669,6 +1639,100 @@ a[role='button']:hover { background-color: var(--color-action-secondary-bg-hover
   text-underline-offset: 4px;
 }
 .welcome__elsewhere { margin-block-start: var(--space-4); }
+
+/* ---------- Exercises ---------------------------------------------------
+ * The drawing: cards at gap 10, padding 15, radius 4, a flex row with gap
+ * 15; a 52px tile holding a 26px icon; name Cormorant 600 19px and meta
+ * Lora 15px #605d5d. Tapping — the one that opens — takes an accent-300
+ * border and an accent tile; the rest take the divider and a neutral one.
+ */
+.exercise-list { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.exercise-list > li { max-width: none; }
+.exercise {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  inline-size: 100%;
+  padding: 15px;
+  border: 1px solid var(--cl-divider);
+  border-radius: var(--radius-1);
+  background-color: transparent;
+  text-align: start;
+}
+.exercise--open { border-color: var(--cl-accent-300); }
+.exercise--open:hover { background-color: var(--cl-accent-100); }
+.exercise__tile {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 52px;
+  block-size: 52px;
+  border-radius: var(--radius-1);
+  background-color: var(--cl-neutral-200);
+  color: var(--cl-text-3);
+}
+.exercise__tile--open { background-color: var(--cl-accent-100); color: var(--cl-accent-800); }
+.exercise__text { display: flex; flex-direction: column; gap: var(--space-1); }
+.exercise__name {
+  font-family: var(--cl-family-display);
+  font-size: 19px;
+  font-weight: var(--type-weight-semibold);
+  color: var(--color-text-primary);
+}
+.exercise__meta { font-family: var(--cl-family-body); font-size: 15px; color: var(--cl-text-4); }
+
+/* ---------- Tapping -----------------------------------------------------
+ * Two circles, then the clock. The clock is the only figure on this screen
+ * and the tap count is never one of them: a score invites a person to read
+ * a bad day as decline.
+ */
+.tapping { display: flex; gap: var(--space-4); margin-block: var(--space-4); }
+.tapping__circle {
+  flex: 1;
+  aspect-ratio: 1;
+  min-block-size: 0;
+  border: 1px solid var(--cl-accent);
+  border-radius: 50%;
+  background-color: transparent;
+  font-family: var(--cl-family-display);
+  font-size: 30px;
+  font-weight: var(--type-weight-regular);
+  color: var(--color-text-primary);
+}
+.tapping__circle:hover { background-color: var(--cl-accent-100); }
+.tapping__circle:active { background-color: var(--cl-accent-200); }
+.tapping__clock {
+  margin: 0;
+  font-family: var(--cl-family-display);
+  font-size: 34px;
+  font-weight: var(--type-weight-regular);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+.tapping__caption {
+  font-family: var(--cl-family-body);
+  font-size: var(--type-size-0);
+  color: var(--cl-text-4);
+  text-align: center;
+}
+
+/* ---------- The toast ---------------------------------------------------
+ * "A single non-dismissing confirmation block at the bottom of the content
+ * region … It persists until the next navigation — nothing in this app
+ * disappears on a timer."
+ */
+.toast {
+  margin-block-start: 22px;
+  padding: var(--space-4);
+  border: 1px solid var(--cl-accent);
+  border-radius: var(--radius-1);
+  background-color: var(--cl-accent-100);
+  font-family: var(--cl-family-body);
+  font-size: var(--type-size-2);
+  line-height: 1.55;
+  color: var(--cl-accent-800);
+}
 
 /* ---------- The footer --------------------------------------------------
  * Quiet, and above the fixed tab bar rather than under it. `main` already

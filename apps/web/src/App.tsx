@@ -4,6 +4,7 @@ import { currentSurface } from './surface.js';
 import { SupporterApp } from './SupporterApp.js';
 import { AccessTokenGate } from './components/AccessTokenGate.js';
 import { HelperScreen } from './components/elder/HelperScreen.js';
+import { Exercises, Tapping } from './components/elder/Exercises.js';
 import { SiteFooter } from './components/elder/SiteFooter.js';
 import { AccessibilityToolbar } from './components/elder/AccessibilityToolbar.js';
 import { HelperBanner } from './components/elder/HelperBanner.js';
@@ -58,6 +59,8 @@ type Screen =
   | 'data-copy'
   | 'review'
   | 'caption'
+  | 'exercises'
+  | 'tapping'
   | 'helper'
   | 'help';
 
@@ -116,6 +119,8 @@ export function App() {
   const [captioning, setCaptioning] = useState<UncaptionedPhotograph | null>(null);
   /** Whether Home has an unfinished thing on it. Decides the second line. */
   const [hasUnfinished, setHasUnfinished] = useState(false);
+  /** The design's toast: it persists until the next navigation. */
+  const [toast, setToast] = useState('');
   /*
    * The reading controls, from the handoff's global chrome. They live here
    * rather than in the toolbar so that the content region carries them and
@@ -534,7 +539,10 @@ export function App() {
               <button
                 aria-current={screen === d.key ? 'page' : undefined}
                 aria-label={d.fullLabel}
-                onClick={() => setScreen(d.key)}
+                onClick={() => {
+                  setToast('');
+                  setScreen(d.key);
+                }}
               >
                 <TabIcon name={d.icon} />
                 {d.label}
@@ -711,6 +719,10 @@ export function App() {
               <summary>Your part in the research</summary>
               <MyResearchPart session={session} headingLevel={3} />
             </details>
+            {/* The design's third row. */}
+            <button className="row-summary" onClick={() => setScreen('exercises')}>
+              Exercises you can try
+            </button>
             </div>
             {/*
               Help is the one thing that does not fold. It is duplicated by
@@ -758,6 +770,17 @@ export function App() {
             onDone={() => {
               setCaptioning(null);
               setScreen('home');
+            }}
+          />
+        )}
+        {screen === 'exercises' && (
+          <Exercises onHome={() => setScreen('home')} onTapping={() => setScreen('tapping')} />
+        )}
+        {screen === 'tapping' && (
+          <Tapping
+            onDone={(message) => {
+              setToast(message ?? '');
+              setScreen('exercises');
             }}
           />
         )}
@@ -863,6 +886,16 @@ export function App() {
               </p>
             </section>
           </section>
+        )}
+        {/*
+          The design's toast: one block at the foot of the content region
+          that "persists until the next navigation — nothing in this app
+          disappears on a timer".
+        */}
+        {toast !== '' && (
+          <p className="toast" role="status">
+            {toast}
+          </p>
         )}
         {/*
           Inside `main`, which already reserves the fixed tab bar's measured
