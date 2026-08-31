@@ -12,3 +12,6 @@ coverage/
 # fonts inlined as base64, and redistributing font binaries without their
 # licence files is not ours to do. Rebuild it with `node build.mjs`.
 design/canvas/plate.html
+
+# A script run without its output directory set writes here. Never a real path.
+undefined/
