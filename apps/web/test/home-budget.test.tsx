@@ -26,7 +26,16 @@ import { App } from '../src/App.js';
  * page doubling while every individual change looks reasonable.
  */
 const WORD_BUDGET = 140;
-const CONTROL_BUDGET = 5;
+/*
+ * Raised from 5 to 7 deliberately, on the owner's ruling that Home's rows
+ * navigate rather than fold (2026-08-31), which is what the live prototype
+ * does. A closed disclosure was one control; an always-visible chevron row
+ * is one control too, but there are now three of them on screen at once
+ * instead of three summaries. The words did not grow — the rows say the
+ * same thing they said closed — and that is the number this budget was
+ * really written to protect.
+ */
+const CONTROL_BUDGET = 7;
 
 const json = (body: unknown) => new Response(JSON.stringify(body), { status: 200 });
 
@@ -142,7 +151,9 @@ describe('what the home page asks of somebody who has just opened it', () => {
       screen.queryByRole('button', { name: 'Add this to my story' }),
       'the decision is back on Home',
     ).toBeNull();
-    expect(controls, 'a destination has escaped back onto the first screen').toBeLessThanOrEqual(3);
+    // Three rows, the help button, and the waiting row. Anything beyond
+    // that is a destination the prototype does not put here.
+    expect(controls, 'a destination has escaped back onto the first screen').toBeLessThanOrEqual(5);
   });
 
   /**

@@ -39,6 +39,15 @@ import { App } from '../src/App.js';
  * what is in the DOM, which is the opposite of the question here.
  */
 const BUDGETS: Record<string, { words: number; controls: number; note?: string }> = {
+  /**
+   * "Your information and who can see it" — the consent questions, then
+   * where somebody stands in the study and the way out, which is how the
+   * live prototype ends this screen. Larger than the old consent-only
+   * budget by exactly that addition, and raised deliberately here rather
+   * than discovered later.
+   */
+  information: { words: 520, controls: 22, note: 'consent, plus where you stand and the way out' },
+  exercises: { words: 120, controls: 3 },
   consent: {
     words: 400,
     controls: 16,
@@ -103,19 +112,25 @@ describe('what each participant screen asks of somebody arriving at it', () => {
     vi.unstubAllGlobals();
   });
 
-  /** Reached the way a participant reaches them, through the folds. */
-  const ROUTES: { screen: string; fold: string | null; button: string }[] = [
-    { screen: 'consent', fold: 'Your information and who can see it', button: 'Review or change my consent choices' },
-    { screen: 'access', fold: 'Your information and who can see it', button: 'See who has access to me' },
-    { screen: 'data-copy', fold: 'Your information and who can see it', button: 'Ask for a copy of my information' },
-    { screen: 'messages', fold: 'Things you can do any time', button: 'Write to someone you are connected with' },
-    { screen: 'life-story', fold: 'Things you can do any time', button: 'Write or read my life story' },
-    { screen: 'matching', fold: 'Things you can do any time', button: 'Meet new people (optional)' },
-    { screen: 'community', fold: 'Things you can do any time', button: 'Visit the community (optional)' },
-    { screen: 'help', fold: null, button: 'Get help or report a problem' },
+  /**
+   * Reached the way a participant reaches them.
+   *
+   * These used to go through disclosures on Home that opened in place. The
+   * owner ruled that Home's rows navigate instead (2026-08-31), which is
+   * what the live prototype does, so the route is now: a row on Home, or a
+   * row on Help, and then the screen. Where a screen sits behind another
+   * screen's row, both steps are listed.
+   */
+  const ROUTES: { screen: string; via: string[] }[] = [
+    { screen: 'information', via: ['Your information and who can see it'] },
+    { screen: 'access', via: ['Your information and who can see it', 'Who has access to you'] },
+    { screen: 'data-copy', via: ['Your information and who can see it', 'Ask for a copy of your information'] },
+    { screen: 'life-story', via: ['Things you can do any time'] },
+    { screen: 'exercises', via: ['Exercises you can try'] },
+    { screen: 'help', via: ['Get help or report a problem'] },
   ];
 
-  for (const { screen: name, fold, button } of ROUTES) {
+  for (const { screen: name, via } of ROUTES) {
     it(`${name} stays inside its budget`, async () => {
       await act(async () => {
         render(<App />);
@@ -126,20 +141,13 @@ describe('what each participant screen asks of somebody arriving at it', () => {
         fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
       });
 
-      if (fold !== null) {
-        const summary = [...document.querySelectorAll('main details > summary')].find(
-          (el) => el.textContent?.trim() === fold,
-        );
-        expect(summary, `the home page no longer has a "${fold}" disclosure`).toBeTruthy();
+      for (const step of via) {
+        const target = screen.queryByRole('button', { name: step });
+        expect(target, `"${step}" is no longer offered on the way to ${name}`).toBeTruthy();
         await act(async () => {
-          fireEvent.click(summary as HTMLElement);
+          fireEvent.click(target!);
         });
       }
-      const target = screen.queryByRole('button', { name: button });
-      expect(target, `"${button}" is no longer offered on the home page`).toBeTruthy();
-      await act(async () => {
-        fireEvent.click(target!);
-      });
 
       const budget = BUDGETS[name]!;
       const { words, controls } = measureVisible();

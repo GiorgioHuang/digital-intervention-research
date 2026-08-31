@@ -70,6 +70,7 @@ type Screen =
   | 'data-copy'
   | 'review'
   | 'caption'
+  | 'information'
   | 'exercises'
   | 'tapping'
   | 'helper'
@@ -739,53 +740,27 @@ export function App() {
               person rather than about the app.
             */}
             <RecentDecisions session={session} />
-            <div className="nav-rows">
-            <details>
-              <summary>Your information and who can see it</summary>
-              <ul>
-                <li>
-                  <button onClick={() => setScreen('consent')}>Review or change my consent choices</button>
-                </li>
-                <li>
-                  <button onClick={() => setScreen('access')}>See who has access to me</button>
-                </li>
-                <li>
-                  <button onClick={() => setScreen('data-copy')}>Ask for a copy of my information</button>
-                </li>
-              </ul>
-            </details>
-            <details>
-              <summary>Things you can do any time</summary>
-              <ul>
-                <li>
-                  <button onClick={() => setScreen('message')}>Write to someone you are connected with</button>
-                </li>
-                <li>
-                  <button onClick={() => setScreen('life-story')}>Write or read my life story</button>
-                </li>
-                <li>
-                  <button onClick={() => setScreen('matching')}>Meet new people (optional)</button>
-                </li>
-                <li>
-                  <button onClick={() => setScreen('community')}>Visit the community (optional)</button>
-                </li>
-              </ul>
-            </details>
             {/*
-              Where you stand, and the way out. Folded like the rest — it is
-              a thing to consult, not a thing to do — but the leaving path
-              stays inside it rather than moving somewhere less findable
-              (A1.4 made it reachable from here deliberately, after the
-              copy had promised it for weeks with no way to act on it).
+              Three rows, and every one of them goes somewhere.
+
+              They were `<details>` disclosures that opened in place, which
+              put the consent controls themselves on the front page — the
+              owner's instruction is that the consent entry does not live on
+              Home (2026-08-31), and in the live prototype each of these is
+              a chevron row that navigates. Folding was the right answer to
+              a different question (D-87, when eight buttons were on screen
+              at once); the answer here is that a row is a door.
             */}
-            <details>
-              <summary>Your part in the research</summary>
-              <MyResearchPart session={session} headingLevel={3} />
-            </details>
-            {/* The design's third row. */}
-            <button className="row-summary" onClick={() => setScreen('exercises')}>
-              Exercises you can try
-            </button>
+            <div className="nav-rows">
+              <button className="row-summary" onClick={() => setScreen('information')}>
+                Your information and who can see it
+              </button>
+              <button className="row-summary" onClick={() => setScreen('life-story')}>
+                Things you can do any time
+              </button>
+              <button className="row-summary" onClick={() => setScreen('exercises')}>
+                Exercises you can try
+              </button>
             </div>
             {/*
               Help is the one thing that does not fold. It is duplicated by
@@ -847,15 +822,47 @@ export function App() {
             }}
           />
         )}
+        {/*
+          "Your information and who can see it" — one screen, which is what
+          the row's own words promise.
+
+          The three things behind it were separate destinations inside a
+          disclosure on Home: the consent choices, who already has access,
+          and asking for a copy. They are one question asked three ways, and
+          somebody who opens a row called "your information and who can see
+          it" is owed all three rather than a menu that offers them one at a
+          time.
+        */}
+        {screen === 'information' && (
+          <>
+            <ConsentPanel session={session} assistedBy={helper} />
+            {/*
+              The prototype's own ending for this screen: where somebody
+              stands in the study, and the way out. It sits under the
+              consent questions because leaving is the largest consent
+              decision there is.
+            */}
+            <MyResearchPart session={session} headingLevel={2} />
+            {/*
+              Two rights this platform has and the prototype does not model.
+              Rows rather than panels: inlining them put 609 words on one
+              screen, which is the wall this project has spent a lot of
+              effort taking down.
+            */}
+            <div className="nav-rows">
+              <button className="row-summary" onClick={() => setScreen('access')}>
+                Who has access to you
+              </button>
+              <button className="row-summary" onClick={() => setScreen('data-copy')}>
+                Ask for a copy of your information
+              </button>
+            </div>
+          </>
+        )}
         {screen === 'consent' && <ConsentPanel session={session} assistedBy={helper} />}
         {screen === 'access' && (
           <>
             <WhoHasAccess session={session} />
-            {/*
-              Beside who already has access, because they are one question:
-              somebody looking at "who can see my things" is exactly the
-              person who wants to add or remove one.
-            */}
             <InviteSomeone session={session} />
           </>
         )}
@@ -865,7 +872,21 @@ export function App() {
         {screen === 'life-story' && <MyLifeStory session={session} />}
         {screen === 'data-copy' && <MyDataCopy session={session} />}
         {screen === 'matching' && <MatchingPanel session={session} />}
-        {screen === 'community' && <CommunityPanel session={session} />}
+        {screen === 'community' && (
+          <>
+            <CommunityPanel session={session} />
+            {/*
+              Meeting new people is optional and low-frequency, and it used
+              to hang off a disclosure on Home. The community is where
+              somebody already is when they want it.
+            */}
+            <div className="nav-rows">
+              <button className="row-summary" onClick={() => setScreen('matching')}>
+                Meet new people
+              </button>
+            </div>
+          </>
+        )}
         {screen === 'help' && (
           <section aria-labelledby="help-heading">
             <h1 id="help-heading">Help and safety</h1>
@@ -882,6 +903,7 @@ export function App() {
               safety panel, because somebody who has a person beside them
               is more likely to be here for that than for a report.
             */}
+            {/* The prototype's Help row. */}
             <div className="nav-rows">
               <button className="row-summary" onClick={() => setScreen('helper')}>
                 Someone is helping me use this

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { act } from 'react';
 import { App } from '../src/App.js';
 
@@ -46,73 +46,60 @@ describe('participant home', () => {
     expect(screen.getByText(/when it is done, it is done/)).toBeTruthy();
   });
 
-  /**
-   * A caveat this file has to carry, because it cannot test around it.
-   *
-   * jsdom does not implement `<details>`: everything inside a closed one is
-   * still visible to `getByRole`, so no assertion here can tell "folded but
-   * reachable" from "folded and unreachable". A test that merely finds the
-   * buttons would pass either way and prove nothing about what a browser
-   * shows.
-   *
-   * So these assert the *structure* that decides the browser's behaviour —
-   * a `<details>` with a `<summary>` naming it, and the buttons inside that
-   * same element — rather than visibility, which is not observable here.
-   */
-  const disclosure = (name: string): HTMLDetailsElement => {
-    const summary = [...document.querySelectorAll('main details > summary')].find(
-      (el) => el.textContent?.trim() === name,
-    );
-    expect(summary, `no <details> on the home page is named "${name}"`).toBeTruthy();
-    return summary!.parentElement as HTMLDetailsElement;
-  };
 
-  it('folds the groups away, and keeps the privacy three together inside one', async () => {
+  it('offers three rows, and each one goes somewhere', async () => {
     stubFetch();
     await act(async () => {
       render(<App />);
     });
     await signIn();
-
-    const privacy = disclosure('Your information and who can see it');
-    expect(privacy.hasAttribute('open'), 'the privacy group is open on arrival').toBe(false);
-    // Consent says what may be done, access says by whom, a copy is what
-    // you may take away — the three answer one question together, and
-    // folding them must not scatter them.
-    expect(within(privacy).getByRole('button', { name: 'Review or change my consent choices' })).toBeTruthy();
-    expect(within(privacy).getByRole('button', { name: 'See who has access to me' })).toBeTruthy();
-    expect(within(privacy).getByRole('button', { name: 'Ask for a copy of my information' })).toBeTruthy();
-
-    const anytime = disclosure('Things you can do any time');
-    expect(anytime.hasAttribute('open'), 'the any-time group is open on arrival').toBe(false);
-    expect(within(anytime).getByRole('button', { name: 'Write or read my life story' })).toBeTruthy();
-    // Optional things are named as optional where they are offered.
-    expect(within(anytime).getByRole('button', { name: 'Visit the community (optional)' })).toBeTruthy();
+    // The live prototype's rows, in its order. They were `<details>` that
+    // opened in place, which put the consent controls themselves on the
+    // front page; the owner ruled they navigate (2026-08-31).
+    for (const row of ['Your information and who can see it', 'Things you can do any time', 'Exercises you can try']) {
+      expect(screen.getByRole('button', { name: row }), `${row} is no longer on Home`).toBeTruthy();
+    }
+    expect(
+      document.querySelectorAll('main details').length,
+      'a disclosure is back on Home, which puts a screen’s controls on the front page',
+    ).toBe(0);
   });
 
   /**
-   * Folding is not removing. D-87 ruled this on the staff side and it holds
-   * harder here: an older participant who has been told a right exists must
-   * still be able to reach it, and "we tidied it away" is not an answer.
+   * Folding is not removing, and neither is moving. D-87 ruled this on the
+   * staff side and it holds harder here: an older participant who has been
+   * told a right exists must still be able to reach it, and "we tidied it
+   * away" is not an answer. Home stopped naming these when its rows became
+   * the prototype's three, so this walks to each one and proves it arrives.
    */
-  it('still offers every destination it offered before', async () => {
+  it('still reaches every destination it used to offer', async () => {
     stubFetch();
     await act(async () => {
       render(<App />);
     });
     await signIn();
-    for (const name of [
-      'Review or change my consent choices',
-      'See who has access to me',
-      'Ask for a copy of my information',
-      'Write to someone you are connected with',
-      'Write or read my life story',
-      'Meet new people (optional)',
-      'Visit the community (optional)',
-      'Get help or report a problem',
-    ]) {
-      expect(screen.getByRole('button', { name }), `${name} is no longer offered`).toBeTruthy();
-    }
+    const walk = async (steps: string[], heading: RegExp) => {
+      for (const step of steps) {
+        const b = screen.queryByRole('button', { name: step });
+        expect(b, `"${step}" is no longer offered`).toBeTruthy();
+        await act(async () => {
+          fireEvent.click(b!);
+        });
+      }
+      expect(
+        screen.getAllByRole('heading').some((h) => heading.test(h.textContent ?? '')),
+        `${steps.join(' → ')} did not arrive at ${heading}`,
+      ).toBe(true);
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Home' }));
+      });
+    };
+    await walk(['Your information and who can see it'], /information and who can see it|consent/i);
+    await walk(['Your information and who can see it', 'Who has access to you'], /access/i);
+    await walk(['Your information and who can see it', 'Ask for a copy of your information'], /copy/i);
+    await walk(['Things you can do any time'], /life story/i);
+    await walk(['Exercises you can try'], /Exercises you can try/);
+    await walk(['Get help or report a problem'], /help/i);
   });
 
   /**
@@ -127,17 +114,12 @@ describe('participant home', () => {
     });
     await signIn();
     const waiting = screen.getByRole('heading', { name: 'Waiting for you' });
-    // Named rather than "the first <details> in main": the assisted-mode
-    // disclosure sits above the h1 and would satisfy a positional test
-    // while proving nothing about the groups. The first version of this
-    // assertion did exactly that and passed for the wrong reason.
-    for (const name of [
-      'Your information and who can see it',
-      'Things you can do any time',
-      'Your part in the research',
-    ]) {
+    // Named rather than positional: a positional test would pass on
+    // whatever happened to be first and prove nothing about these rows.
+    for (const name of ['Your information and who can see it', 'Things you can do any time', 'Exercises you can try']) {
       expect(
-        waiting.compareDocumentPosition(disclosure(name)) & Node.DOCUMENT_POSITION_FOLLOWING,
+        waiting.compareDocumentPosition(screen.getByRole('button', { name })) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
         `"${name}" comes before what is waiting for you`,
       ).toBeTruthy();
     }
@@ -159,23 +141,26 @@ describe('participant home', () => {
     expect(help.closest('details'), 'help was folded away').toBeNull();
   });
 
-  it('every grouped action opens the screen it names', async () => {
+  it('every row opens the screen it names', async () => {
     stubFetch();
     await act(async () => {
       render(<App />);
     });
     await signIn();
-    for (const [button, heading] of [
-      ['See who has access to me', 'Who has access to me'],
-      ['Ask for a copy of my information', 'A copy of my information'],
-      ['Write or read my life story', 'My life story'],
+    for (const [steps, heading] of [
+      [['Your information and who can see it', 'Who has access to you'], 'Who has access to me'],
+      [['Your information and who can see it', 'Ask for a copy of your information'], 'A copy of my information'],
+      [['Things you can do any time'], 'My life story'],
+      [['Exercises you can try'], 'Exercises you can try'],
     ] as const) {
       await act(async () => {
         fireEvent.click(screen.getByRole('button', { name: 'Home' }));
       });
-      await act(async () => {
-        fireEvent.click(screen.getByRole('button', { name: button }));
-      });
+      for (const step of steps) {
+        await act(async () => {
+          fireEvent.click(screen.getByRole('button', { name: step }));
+        });
+      }
       expect(screen.getByRole('heading', { level: 1, name: heading })).toBeTruthy();
     }
   });
