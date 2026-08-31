@@ -1744,17 +1744,37 @@ a[role='button']:hover { background-color: var(--color-action-secondary-bg-hover
   font-size: var(--type-size-3);
 }
 /*
- * The way in is filled, not outlined.
+ * The way in carries the drawing's own tint.
  *
- * It had the gold border and the gold text the drawing gives it, and the
- * page's own near-white behind them — so against a near-white page the one
- * thing on the screen to press read as an outline rather than as a button.
- * The drawing fills it with the accent's own tint, which is the whole
- * difference between it and the code button beneath, and the reason the
- * eye lands on it first.
+ * Read off the prototype rather than matched by eye. Both the vendored
+ * artboards and the newer handoff give this button
+ * `background:transparent` with `style-hover="background:rgba(182,130,53,.12)"`
+ * — so the fill in the owner's screenshot is the drawing's HOVER state,
+ * captured with a cursor on the button, and the resting state in the
+ * drawing has no fill at all.
+ *
+ * The owner asked for the screenshot's appearance and for the drawing's
+ * colour, and this is both: the value is the drawing's, moved to the
+ * resting state. It is written as a mix of the accent token rather than
+ * as the literal the prototype uses, because DESIGN_SYSTEM §0.1 keeps
+ * colours in the token blocks — `--cl-accent` IS #b68235, so 12% of it is
+ * exactly `rgba(182,130,53,.12)` and nothing here reinterprets the brand.
+ *
+ * My own first attempt was `--cl-accent-200`, picked by looking at the
+ * screenshot. That is #ffe3bf, an opaque apricot; the drawing's value
+ * composites to about #ece5db over this page. Eyeballing a tint against a
+ * screenshot got the hue roughly right and the saturation badly wrong.
+ *
+ * Hover moves further rather than staying put: with the resting state
+ * holding what used to be the hover value, leaving hover there would make
+ * the one control on the screen stop answering the pointer. 18% is the
+ * drawing's own next step up — it uses it elsewhere.
  */
 .welcome .welcome__way-in button {
-  background-color: var(--cl-accent-200);
+  background-color: color-mix(in srgb, var(--cl-accent) 12%, transparent);
+}
+.welcome .welcome__way-in button:hover {
+  background-color: color-mix(in srgb, var(--cl-accent) 18%, transparent);
 }
 /* A button that is a link: no box, no weight, no competition with the way
    in. */
