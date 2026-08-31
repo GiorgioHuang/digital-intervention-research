@@ -29,6 +29,25 @@ export default tseslint.config(
     },
   },
   {
+    /*
+     * The contact relay runs on Cloudflare Workers, not on Node and not in
+     * a browser, so `Response` and `fetch` are its runtime's globals and
+     * eslint has no way to know that from the file alone. Declared rather
+     * than silenced with a disable comment: a comment would also hide the
+     * next genuinely undefined name in this file.
+     */
+    files: ['contact-worker/**/*.js'],
+    languageOptions: {
+      globals: {
+        Response: 'readonly',
+        Request: 'readonly',
+        fetch: 'readonly',
+        URL: 'readonly',
+        console: 'readonly',
+      },
+    },
+  },
+  {
     files: ['**/*.mjs', '**/*.cjs'],
     languageOptions: {
       globals: {

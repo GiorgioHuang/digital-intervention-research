@@ -60,11 +60,7 @@ export function AboutScreen({ onBack, backLabel }: { onBack: () => void; backLab
       </p>
       <ContactBox />
 
-      <p className="about__address">
-        {COPYRIGHT_HOLDER}
-        <br />
-        Dalhousie University, Halifax, Nova Scotia
-      </p>
+      <p className="about__address">{COPYRIGHT_HOLDER}</p>
     </section>
   );
 }

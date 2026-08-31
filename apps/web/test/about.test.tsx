@@ -100,7 +100,6 @@ describe('about this project', () => {
       'Everything you write is private until you decide otherwise',
       'Nothing is added to your story unless you accept it',
       'We never sell your information',
-      'Dalhousie University, Halifax, Nova Scotia',
     ]) {
       expect(text, `"${line}" is missing`).toContain(line);
     }
