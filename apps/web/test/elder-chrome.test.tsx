@@ -318,7 +318,9 @@ describe('the toolbar has one shape everywhere', () => {
    */
   it('is the drawing’s toolbar, control for control', async () => {
     await arrive();
-    expect(screen.getByText('Text'), 'the drawing’s Text label is gone again').toBeTruthy();
+    // No "Text" label: the older handoff had one before the size buttons,
+    // the current prototype does not, and the brand sits in its place.
+    expect(screen.queryByText('Text'), 'the retired Text label is back').toBeNull();
     // Two buttons, not a segmented pair: the drawing has them apart.
     expect(document.querySelectorAll('.elder-toolbar__zoom').length, 'the size pair is merged again').toBe(0);
     expect(screen.getByRole('button', { name: 'Make the text smaller' })).toBeTruthy();

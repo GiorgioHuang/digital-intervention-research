@@ -52,3 +52,31 @@ export function BrandMark() {
     </span>
   );
 }
+
+/**
+ * The brand as a block, centred, for the sign-in screen: the mark above the
+ * name rather than beside it. Read off the live prototype — the earlier
+ * written handoff had no brand on this screen at all.
+ */
+export function BrandBlock() {
+  return (
+    <span className="brand-block">
+      <svg
+        className="brand-block__mark"
+        viewBox="0 0 24 24"
+        width="40"
+        height="40"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        aria-hidden="true"
+        focusable="false"
+      >
+        <path d="M4 6v4a8 8 0 0 0 16 0V6" />
+        <circle cx="12" cy="12.4" r="2.3" fill="currentColor" stroke="none" />
+      </svg>
+      <span className="brand-block__word">icareu</span>
+    </span>
+  );
+}

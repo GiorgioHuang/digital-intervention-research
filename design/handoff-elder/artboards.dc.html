@@ -125,47 +125,132 @@
 </sc-if>
 
 <div style="display:flex;align-items:center;gap:6px;padding:9px 14px;border-bottom:1px solid var(--color-divider);background:var(--color-neutral-100)">
-<span style="font:400 12px Lora,serif;color:#6b6863">Text</span>
-<button type="button" onClick="{{ smaller }}" aria-label="Smaller text" style="width:34px;height:34px;background:transparent;border:1px solid var(--color-divider);border-radius:4px;font:600 15px var(--font-heading);color:var(--color-text);cursor:pointer" style-hover="background:rgba(32,31,29,.07)">A−</button>
-<button type="button" onClick="{{ larger }}" aria-label="Larger text" style="width:34px;height:34px;background:transparent;border:1px solid var(--color-divider);border-radius:4px;font:600 17px var(--font-heading);color:var(--color-text);cursor:pointer" style-hover="background:rgba(32,31,29,.07)">A+</button>
-<button type="button" onClick="{{ readAloud }}" style="display:flex;align-items:center;gap:5px;margin-left:4px;background:transparent;border:1px solid var(--color-divider);border-radius:4px;padding:7px 9px;font:400 12.5px Lora,serif;color:var(--color-accent-700);cursor:pointer" style-hover="background:rgba(182,130,53,.12)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M11 5 6 9H3v6h3l5 4V5z"/><path d="M16 9a4 4 0 0 1 0 6"/><path d="M19 6.5a8 8 0 0 1 0 11"/></svg>Read aloud</button>
-<button type="button" onClick="{{ toggleHc }}" aria-label="High contrast" style="width:34px;height:34px;margin-left:auto;background:transparent;border:1px solid var(--color-divider);border-radius:4px;color:var(--color-text);cursor:pointer;display:flex;align-items:center;justify-content:center" style-hover="background:rgba(32,31,29,.07)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 3v18a9 9 0 0 0 0-18z" fill="currentColor"/></svg></button>
-<button type="button" onClick="{{ toggleLang }}" style="background:transparent;border:1px solid var(--color-divider);border-radius:4px;padding:7px 9px;font:400 12.5px Lora,serif;color:var(--color-accent-700);cursor:pointer" style-hover="background:rgba(182,130,53,.12)">{{ langLabel }}</button>
+<span style="display:flex;align-items:center;gap:9px" role="img" aria-label="icareu">
+<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent)" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6v4a8 8 0 0 0 16 0V6"/><circle cx="12" cy="12.4" r="2.3" fill="var(--color-accent)" stroke="none"/></svg>
+<span style="font:600 20px/1 var(--font-heading);letter-spacing:.01em;color:var(--color-accent-800)">icareu</span>
+</span>
+<span style="display:flex;align-items:center;gap:6px;margin-left:auto">
+<span style="display:flex;height:34px;box-sizing:border-box;border:1px solid var(--color-divider);border-radius:var(--radius-sm);overflow:hidden">
+<button type="button" onClick="{{ smaller }}" aria-label="Smaller text" style="width:33px;background:transparent;border:0;border-right:1px solid var(--color-divider);font:600 15px var(--font-heading);color:var(--color-text);cursor:pointer" style-hover="background:rgba(32,31,29,.07)">A−</button>
+<button type="button" onClick="{{ larger }}" aria-label="Larger text" style="width:33px;background:transparent;border:0;font:600 17px var(--font-heading);color:var(--color-text);cursor:pointer" style-hover="background:rgba(32,31,29,.07)">A+</button>
+</span>
+<button type="button" onClick="{{ readAloud }}" style="display:flex;align-items:center;gap:5px;height:34px;box-sizing:border-box;background:transparent;border:1px solid var(--color-divider);border-radius:var(--radius-sm);padding:0 10px;font:400 12.5px Lora,serif;color:var(--color-accent-700);cursor:pointer" style-hover="background:rgba(182,130,53,.12)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M11 5 6 9H3v6h3l5 4V5z"/><path d="M16 9a4 4 0 0 1 0 6"/><path d="M19 6.5a8 8 0 0 1 0 11"/></svg>Read aloud</button>
+<button type="button" onClick="{{ toggleHc }}" aria-label="High contrast" style="width:34px;height:34px;box-sizing:border-box;background:transparent;border:1px solid var(--color-divider);border-radius:var(--radius-sm);color:var(--color-text);cursor:pointer;display:flex;align-items:center;justify-content:center" style-hover="background:rgba(32,31,29,.07)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 3v18a9 9 0 0 0 0-18z" fill="currentColor"/></svg></button>
+</span>
 </div>
 
 <div ref="{{ contentRef }}" style="{{ contentStyle }}">
 
 <sc-if value="{{ isWelcome }}" hint-placeholder-val="{{ false }}">
-<div style="display:flex;flex-direction:column;gap:20px">
-<span style="font:400 11px/1 Lora,serif;letter-spacing:.14em;text-transform:uppercase;color:var(--color-accent-700)">Canadian Elder Life Story Project</span>
-<h1 style="font:400 36px/1.1 var(--font-heading);margin:0">Your life, in your own words.</h1>
-<p style="font:400 18px/1.65 Lora,serif;margin:0">This is where you keep your own story. Nobody else can see it unless you say so, and nothing is added unless you accept it.</p>
+<div style="display:flex;flex-direction:column;gap:20px;min-height:100%">
+<span style="display:flex;flex-direction:column;align-items:center;gap:13px;padding:8px 0 4px" role="img" aria-label="icareu">
+<svg width="58" height="58" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent)" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M4 6v4a8 8 0 0 0 16 0V6"/><circle cx="12" cy="12.4" r="2.3" fill="var(--color-accent)" stroke="none"/></svg>
+<span style="font:600 34px/1 var(--font-heading);letter-spacing:.01em;color:var(--color-accent-800)">icareu</span>
+</span>
+<span style="align-self:center;font:400 11px/1 Lora,serif;letter-spacing:.14em;text-transform:uppercase;color:var(--color-accent-700);text-align:center">Canadian Elder Life Story Project</span>
 <hr style="height:1px;border:0;background:var(--color-divider);margin:4px 0">
-<button type="button" onClick="{{ goGoogle }}" style="display:flex;align-items:center;justify-content:center;gap:11px;width:100%;min-height:66px;background:transparent;border:1px solid var(--color-accent);border-radius:4px;font:600 19px var(--font-heading);color:var(--color-accent-700);cursor:pointer" style-hover="background:rgba(182,130,53,.12)">Continue with Google</button>
-<p style="font:400 15px/1.6 Lora,serif;color:#4a4844;margin:0">If you have a Google account, this saves you remembering another password. We ask Google only for your name and email address.</p>
+<h1 style="font:400 32px/1.14 var(--font-heading);margin:0">Your life, in your own words.</h1>
 <hr style="height:1px;border:0;background:var(--color-divider);margin:4px 0">
+<button type="button" onClick="{{ goGoogleSignin }}" style="display:flex;align-items:center;justify-content:center;width:100%;min-height:66px;background:transparent;border:1px solid var(--color-accent);border-radius:var(--radius-sm);font:600 19px var(--font-heading);color:var(--color-accent-700);cursor:pointer" style-hover="background:rgba(182,130,53,.12)">Continue with Google</button>
 <div>
 <label for="ap-code" style="display:block;font:400 15px Lora,serif;color:#4a4844;margin-bottom:7px">Or use the code from your letter</label>
-<input id="ap-code" type="text" placeholder="For example 4482" style="width:100%;min-height:58px;padding:12px 14px;font:400 20px Lora,serif;letter-spacing:.06em;background:transparent;border:1px solid var(--color-divider);border-radius:4px;color:var(--color-text)">
+<input id="ap-code" type="text" placeholder="For example 4482" style="width:100%;min-height:58px;padding:12px 14px;font:400 20px Lora,serif;letter-spacing:.06em;background:transparent;border:1px solid var(--color-divider);border-radius:var(--radius-sm);color:var(--color-text)">
 </div>
-<button type="button" onClick="{{ startOnboarding }}" style="display:flex;align-items:center;justify-content:center;width:100%;min-height:62px;background:transparent;border:1px solid var(--color-divider);border-radius:4px;font:600 19px var(--font-heading);color:var(--color-text);cursor:pointer" style-hover="background:rgba(32,31,29,.06)">Continue with my code</button>
-<button type="button" onClick="{{ goHelper }}" style="align-self:flex-start;background:transparent;border:0;padding:6px 0;font:400 17px Lora,serif;color:var(--color-accent-700);text-decoration:underline;text-underline-offset:4px;cursor:pointer">Someone is helping me use this</button>
+<button type="button" onClick="{{ signInWithCode }}" style="display:flex;align-items:center;justify-content:center;width:100%;min-height:62px;background:transparent;border:1px solid var(--color-divider);border-radius:var(--radius-sm);font:600 19px var(--font-heading);color:var(--color-text);cursor:pointer" style-hover="background:rgba(32,31,29,.06)">Continue with my code</button>
+<hr style="height:1px;border:0;background:var(--color-divider);margin:4px 0">
 <button type="button" onClick="{{ goHelp }}" style="align-self:flex-start;background:transparent;border:0;padding:6px 0;font:400 17px Lora,serif;color:var(--color-accent-700);text-decoration:underline;text-underline-offset:4px;cursor:pointer">I cannot sign in</button>
-<p style="font:400 14px/1.6 Lora,serif;color:#6b6863;margin:8px 0 0">There is no time limit on any screen. Nothing disappears while you read.</p>
+<div style="flex:1;min-height:16px"></div>
+<hr style="height:1px;border:0;background:var(--color-divider);margin:0">
+<p style="display:flex;align-items:center;justify-content:center;gap:5px;white-space:nowrap;font:400 12px/1.4 Lora,serif;color:#605d5d;margin:0">© 2026 Healthy Aging Intelligence Lab (HAIL)<span aria-hidden="true">·</span><button type="button" onClick="{{ goAbout }}" style="display:inline-flex;align-items:center;min-height:44px;background:transparent;border:0;padding:13px 4px;font:400 12px Lora,serif;color:var(--color-accent-700);text-decoration:underline;text-underline-offset:3px;cursor:pointer" style-hover="color:var(--color-accent-800)">about</button></p>
+</div>
+</sc-if>
+
+<sc-if value="{{ isAbout }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:20px">
+<button type="button" onClick="{{ goWelcome }}" style="align-self:flex-start;background:transparent;border:0;padding:4px 0;font:400 16px Lora,serif;color:var(--color-accent-700);cursor:pointer">‹ Back to sign in</button>
+<span style="display:flex;align-items:center;gap:10px" role="img" aria-label="icareu">
+<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent)" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 6v4a8 8 0 0 0 16 0V6"/><circle cx="12" cy="12.4" r="2.3" fill="var(--color-accent)" stroke="none"/></svg>
+<span style="font:600 23px/1 var(--font-heading);letter-spacing:.01em;color:var(--color-accent-800)">icareu</span>
+</span>
+<h1 style="font:400 32px/1.14 var(--font-heading);margin:0">About this project</h1>
+<p style="font:400 18px/1.7 Lora,serif;margin:0">icareu is a place for older people in Canada to write down their own life story, in their own words, and to read the stories of others who choose to share them.</p>
+<p style="font:400 18px/1.7 Lora,serif;margin:0">It is run by the Healthy Aging Intelligence Lab. Taking part is voluntary, and stopping does not affect any care or service you receive.</p>
+<hr style="height:1px;border:0;background:var(--color-divider);margin:0">
+<h2 style="font:600 22px/1.25 var(--font-heading);margin:0">How your story is treated</h2>
+<div style="display:flex;flex-direction:column;gap:10px">
+<span style="font:400 17px/1.6 Lora,serif;padding-left:18px;border-left:2px solid var(--color-accent-300)">Everything you write is private until you decide otherwise</span>
+<span style="font:400 17px/1.6 Lora,serif;padding-left:18px;border-left:2px solid var(--color-accent-300)">Nothing is added to your story unless you accept it</span>
+<span style="font:400 17px/1.6 Lora,serif;padding-left:18px;border-left:2px solid var(--color-neutral-400)">We never sell your information, and never contact you to sell anything</span>
+</div>
+<hr style="height:1px;border:0;background:var(--color-divider);margin:0">
+<h2 style="font:600 22px/1.25 var(--font-heading);margin:0">Get in touch</h2>
+<div style="display:flex;flex-direction:column;gap:6px;padding:20px;border:1px solid var(--color-accent);border-radius:var(--radius-sm)">
+<span style="font:400 12px/1 Lora,serif;letter-spacing:.1em;text-transform:uppercase;color:var(--color-accent-700)">Telephone, free of charge</span>
+<span style="font:400 30px/1.2 var(--font-heading);color:var(--color-accent-800);font-variant-numeric:tabular-nums">1 800 555 0142</span>
+<span style="font:400 15px/1.6 Lora,serif;color:#4a4844;margin-top:4px">Eight in the morning until eight at night, every day. A person answers.</span>
+</div>
+<p style="font:400 16px/1.65 Lora,serif;margin:0;color:#4a4844">Healthy Aging Intelligence Lab (HAIL)<br>Dalhousie University, Halifax, Nova Scotia</p>
+<hr style="height:1px;border:0;background:var(--color-divider);margin:0">
+<p style="font:400 13.5px/1.6 Lora,serif;color:#605d5d;margin:0">© 2026 Healthy Aging Intelligence Lab (HAIL)</p>
+</div>
+</sc-if>
+
+<sc-if value="{{ isRegister }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:20px">
+<button type="button" onClick="{{ goWelcome }}" style="align-self:flex-start;background:transparent;border:0;padding:4px 0;font:400 16px Lora,serif;color:var(--color-accent-700);cursor:pointer">‹ Back to sign in</button>
+<span style="display:flex;align-items:center;gap:10px" role="img" aria-label="icareu">
+<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent)" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 6v4a8 8 0 0 0 16 0V6"/><circle cx="12" cy="12.4" r="2.3" fill="var(--color-accent)" stroke="none"/></svg>
+<span style="font:600 23px/1 var(--font-heading);letter-spacing:.01em;color:var(--color-accent-800)">icareu</span>
+</span>
+<h1 style="font:400 34px/1.12 var(--font-heading);margin:0">Welcome. What should we call you?</h1>
+<span style="display:flex;align-items:center;gap:13px;padding:15px;border:1px solid var(--color-accent);border-radius:var(--radius-sm);background:var(--color-accent-100)">
+<span style="flex:none;display:flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:50%;background:var(--color-bg);font:400 20px var(--font-heading);color:var(--color-accent-800)">{{ regInitial }}</span>
+<span style="display:flex;flex-direction:column;gap:3px"><span style="font:600 17px/1.25 var(--font-heading);color:var(--color-accent-800)">Signed in with Google</span><span style="font:400 15px Lora,serif;color:var(--color-accent-800)">{{ regEmail }}</span></span>
+</span>
+<p style="font:400 17px/1.65 Lora,serif;margin:0;color:#4a4844">You have not used icareu before, so there are two or three things to fill in. Google gave us the name below — change it if it is not what you would like to be called.</p>
+
+<div style="display:flex;flex-direction:column;gap:16px">
+<div>
+<label for="ap-first" style="display:block;font:600 19px/1.25 var(--font-heading);margin-bottom:8px">Your first name</label>
+<span style="display:block;font:400 15px/1.55 Lora,serif;color:#605d5d;margin-bottom:9px">This is the name at the top of your screens, and the only name other people ever see.</span>
+<input id="ap-first" type="text" value="{{ regFirst }}" onChange="{{ setRegFirst }}" placeholder="Margaret" style="width:100%;min-height:62px;padding:12px 14px;font:400 22px Lora,serif;background:transparent;border:1px solid var(--color-accent);border-radius:var(--radius-sm);color:var(--color-text)">
+</div>
+<div>
+<label for="ap-last" style="display:block;font:600 19px/1.25 var(--font-heading);margin-bottom:8px">Your surname</label>
+<span style="display:block;font:400 15px/1.55 Lora,serif;color:#605d5d;margin-bottom:9px">Only the study office sees this. It is never shown in the community.</span>
+<input id="ap-last" type="text" value="{{ regLast }}" onChange="{{ setRegLast }}" placeholder="Fraser" style="width:100%;min-height:62px;padding:12px 14px;font:400 22px Lora,serif;background:transparent;border:1px solid var(--color-divider);border-radius:var(--radius-sm);color:var(--color-text)">
+</div>
+<div>
+<label for="ap-city" style="display:block;font:600 19px/1.25 var(--font-heading);margin-bottom:8px">Your city or town<span style="font:400 16px Lora,serif;color:#605d5d"> — if you like</span></label>
+<input id="ap-city" type="text" placeholder="Halifax" style="width:100%;min-height:62px;padding:12px 14px;font:400 22px Lora,serif;background:transparent;border:1px solid var(--color-divider);border-radius:var(--radius-sm);color:var(--color-text)">
+</div>
+</div>
+
+<hr style="height:1px;border:0;background:var(--color-divider);margin:0">
+<div style="display:flex;flex-direction:column;gap:9px">
+<span style="font:400 16px/1.55 Lora,serif;padding-left:18px;border-left:2px solid var(--color-accent-300)">Your story starts private, and stays that way until you decide otherwise</span>
+<span style="font:400 16px/1.55 Lora,serif;padding-left:18px;border-left:2px solid var(--color-neutral-400)">We never sell your information, and never contact you to sell anything</span>
+</div>
+<button type="button" onClick="{{ submitRegister }}" style="display:flex;align-items:center;justify-content:center;width:100%;min-height:66px;background:transparent;border:1px solid var(--color-accent);border-radius:var(--radius-sm);font:600 19px var(--font-heading);color:var(--color-accent-700);cursor:pointer" style-hover="background:rgba(182,130,53,.12)">Continue</button>
+<button type="button" onClick="{{ goHelp }}" style="align-self:flex-start;background:transparent;border:0;padding:6px 0;font:400 17px Lora,serif;color:var(--color-accent-700);text-decoration:underline;text-underline-offset:4px;cursor:pointer">I would rather do this on the telephone</button>
 </div>
 </sc-if>
 
 <sc-if value="{{ isGoogle }}" hint-placeholder-val="{{ false }}">
 <div style="display:flex;flex-direction:column;gap:20px">
 <button type="button" onClick="{{ goWelcome }}" style="align-self:flex-start;background:transparent;border:0;padding:4px 0;font:400 16px Lora,serif;color:var(--color-accent-700);cursor:pointer">‹ Back</button>
-<h1 style="font:400 30px/1.16 var(--font-heading);margin:0">Sign in with your Google account</h1>
-<p style="font:400 17px/1.65 Lora,serif;margin:0;color:#4a4844">You will be taken to Google to sign in. Choose the account you use for email.</p>
+<h1 style="font:400 30px/1.16 var(--font-heading);margin:0">Choose your Google account</h1>
+<p style="font:400 17px/1.65 Lora,serif;margin:0;color:#4a4844">Choose the account you use for email. If you have been here before we will take you straight in; if not, we will ask your name.</p>
 <div style="display:flex;flex-direction:column;gap:10px">
-<button type="button" onClick="{{ finishGoogle }}" style="display:flex;align-items:center;gap:14px;width:100%;text-align:left;background:transparent;border:1px solid var(--color-accent);border-radius:4px;padding:16px;cursor:pointer" style-hover="background:rgba(182,130,53,.08)">
+<button type="button" onClick="{{ googleReturning }}" style="display:flex;align-items:center;gap:14px;width:100%;text-align:left;background:transparent;border:1px solid var(--color-accent);border-radius:var(--radius-sm);padding:16px;cursor:pointer" style-hover="background:rgba(182,130,53,.08)">
 <span style="flex:none;display:flex;align-items:center;justify-content:center;width:48px;height:48px;border-radius:50%;background:var(--color-accent-100);font:400 21px var(--font-heading);color:var(--color-accent-800)">M</span>
 <span style="display:flex;flex-direction:column;gap:3px"><span style="font:600 18px/1.25 var(--font-heading);color:var(--color-text)">Margaret Fraser</span><span style="font:400 15px Lora,serif;color:#605d5d">m.fraser1948@gmail.com</span></span>
 </button>
-<button type="button" onClick="{{ finishGoogle }}" style="display:flex;align-items:center;gap:14px;width:100%;text-align:left;background:transparent;border:1px solid var(--color-divider);border-radius:4px;padding:16px;cursor:pointer" style-hover="background:rgba(32,31,29,.05)">
+<button type="button" onClick="{{ googleNew }}" style="display:flex;align-items:center;gap:14px;width:100%;text-align:left;background:transparent;border:1px solid var(--color-divider);border-radius:var(--radius-sm);padding:16px;cursor:pointer" style-hover="background:rgba(32,31,29,.05)">
+<span style="flex:none;display:flex;align-items:center;justify-content:center;width:48px;height:48px;border-radius:50%;border:1px solid var(--color-divider);font:400 21px var(--font-heading);color:#4a4844">W</span>
+<span style="display:flex;flex-direction:column;gap:3px"><span style="font:600 18px/1.25 var(--font-heading);color:var(--color-text)">Walter Fraser</span><span style="font:400 15px Lora,serif;color:#605d5d">w.fraser@gmail.com</span></span>
+</button>
+<button type="button" onClick="{{ googleNew }}" style="display:flex;align-items:center;gap:14px;width:100%;text-align:left;background:transparent;border:1px solid var(--color-divider);border-radius:var(--radius-sm);padding:16px;cursor:pointer" style-hover="background:rgba(32,31,29,.05)">
 <span style="flex:none;display:flex;align-items:center;justify-content:center;width:48px;height:48px;border-radius:50%;border:1px solid var(--color-divider);color:#4a4844"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg></span>
 <span style="font:600 18px/1.25 var(--font-heading);color:var(--color-text)">Use a different account</span>
 </button>
@@ -184,19 +269,10 @@
 <div style="display:flex;flex-direction:column;gap:20px">
 <span style="font:400 12px/1 Lora,serif;letter-spacing:.12em;text-transform:uppercase;color:var(--color-accent-700);font-variant-numeric:tabular-nums">{{ onbStepLabel }}</span>
 <div style="display:flex;gap:5px">
-<span style="{{ pip1 }}"></span><span style="{{ pip2 }}"></span><span style="{{ pip3 }}"></span>
+<span style="{{ pip1 }}"></span><span style="{{ pip2 }}"></span>
 </div>
 
 <sc-if value="{{ onb1 }}" hint-placeholder-val="{{ false }}">
-<div style="display:flex;flex-direction:column;gap:18px">
-<h1 style="font:400 32px/1.14 var(--font-heading);margin:0">What should we call you?</h1>
-<p style="font:400 17px/1.65 Lora,serif;margin:0;color:#4a4844">This is the name at the top of your own screens. Nobody else sees it unless you share something.</p>
-<input type="text" value="Margaret" style="width:100%;min-height:62px;padding:12px 14px;font:400 22px Lora,serif;background:transparent;border:1px solid var(--color-accent);border-radius:4px;color:var(--color-text)">
-<button type="button" onClick="{{ onbNext }}" style="width:100%;min-height:62px;background:transparent;border:1px solid var(--color-accent);border-radius:4px;font:600 19px var(--font-heading);color:var(--color-accent-700);cursor:pointer" style-hover="background:rgba(182,130,53,.12)">Next</button>
-</div>
-</sc-if>
-
-<sc-if value="{{ onb2 }}" hint-placeholder-val="{{ false }}">
 <div style="display:flex;flex-direction:column;gap:18px">
 <h1 style="font:400 32px/1.14 var(--font-heading);margin:0">Your story starts private</h1>
 <p style="font:400 17px/1.65 Lora,serif;margin:0;color:#4a4844">Only you can see what you put in. You can change this later, and sharing is always something you do on purpose, one piece at a time.</p>
@@ -210,7 +286,7 @@
 </div>
 </sc-if>
 
-<sc-if value="{{ onb3 }}" hint-placeholder-val="{{ false }}">
+<sc-if value="{{ onb2 }}" hint-placeholder-val="{{ false }}">
 <div style="display:flex;flex-direction:column;gap:18px">
 <h1 style="font:400 32px/1.14 var(--font-heading);margin:0">How would you like to read?</h1>
 <p style="font:400 17px/1.65 Lora,serif;margin:0;color:#4a4844">Pick whatever is comfortable. These buttons stay at the top of every screen, so you can change your mind any time.</p>
@@ -224,28 +300,15 @@
 </sc-if>
 
 <button type="button" onClick="{{ onbBack }}" style="align-self:flex-start;background:transparent;border:0;padding:6px 0;font:400 16px Lora,serif;color:var(--color-accent-700);cursor:pointer">‹ Go back a step</button>
-<p style="font:400 14px/1.6 Lora,serif;color:#6b6863;margin:0">Three short questions. Nothing here is final.</p>
+<p style="font:400 14px/1.6 Lora,serif;color:#6b6863;margin:0">Two short questions. Nothing here is final.</p>
 </div>
 </sc-if>
 
 <sc-if value="{{ isHome }}" hint-placeholder-val="{{ true }}">
-<sc-if value="{{ isFr }}" hint-placeholder-val="{{ false }}">
-<div style="display:flex;flex-direction:column;gap:18px">
-<h1 style="font:400 34px/1.12 var(--font-heading);margin:0">Bonjour, Margaret</h1>
-<p style="font:400 18px/1.65 Lora,serif;margin:0">Une seule chose vous attend aujourd'hui. Quand c'est fait, c'est fait.</p>
-<div style="border:1px solid var(--color-divider);border-radius:4px;padding:20px;display:flex;flex-direction:column;gap:14px;background:var(--color-neutral-100)">
-<span style="font:400 11px/1 Lora,serif;letter-spacing:.12em;text-transform:uppercase;color:var(--color-accent-700)">À terminer</span>
-<h2 style="font:600 25px/1.2 var(--font-heading);margin:0">Une photographie sans mots</h2>
-<p style="font:400 17px/1.6 Lora,serif;margin:0">Vous avez ajouté une photographie mardi. Personne ne sait encore qui s'y trouve.</p>
-<button type="button" onClick="{{ goCaption }}" style="display:flex;align-items:center;justify-content:center;width:100%;min-height:62px;background:transparent;border:1px solid var(--color-accent);border-radius:4px;font:600 18px var(--font-heading);color:var(--color-accent-700);cursor:pointer" style-hover="background:rgba(182,130,53,.12)">Ajouter des mots à cette photographie</button>
-</div>
-<p style="font:400 14px/1.6 Lora,serif;color:#6b6863;margin:0">La traduction complète en français est en cours. Appuyez sur EN pour revenir.</p>
-</div>
-</sc-if>
-<sc-if value="{{ isEn }}" hint-placeholder-val="{{ true }}">
+<sc-if value="{{ isHomeBody }}" hint-placeholder-val="{{ true }}">
 <div style="display:flex;flex-direction:column;gap:20px">
 <div>
-<h1 style="font:400 34px/1.12 var(--font-heading);margin:0 0 8px">Good morning, Margaret</h1>
+<h1 style="font:400 34px/1.12 var(--font-heading);margin:0 0 8px">Good morning, {{ name }}</h1>
 <p style="font:400 18px/1.65 Lora,serif;margin:0">One thing is unfinished. When it is done, it is done.</p>
 </div>
 
@@ -653,6 +716,7 @@
 <button type="button" onClick="{{ goHelper }}" style="display:flex;align-items:center;justify-content:space-between;gap:14px;width:100%;text-align:left;background:transparent;border:0;border-top:1px solid var(--color-divider);padding:19px 2px;font:400 18px/1.45 Lora,serif;color:var(--color-text);cursor:pointer" style-hover="background:rgba(32,31,29,.05)">Someone is helping me use this<span style="font-size:22px;color:var(--color-accent-700)">›</span></button>
 <button type="button" onClick="{{ noop }}" style="display:flex;align-items:center;justify-content:space-between;gap:14px;width:100%;text-align:left;background:transparent;border:0;border-top:1px solid var(--color-divider);padding:19px 2px;font:400 18px/1.45 Lora,serif;color:var(--color-text);cursor:pointer" style-hover="background:rgba(32,31,29,.05)">Ask someone to telephone me<span style="font-size:22px;color:var(--color-accent-700)">›</span></button>
 <button type="button" onClick="{{ noop }}" style="display:flex;align-items:center;justify-content:space-between;gap:14px;width:100%;text-align:left;background:transparent;border:0;border-top:1px solid var(--color-divider);padding:19px 2px;font:400 18px/1.45 Lora,serif;color:var(--color-text);cursor:pointer" style-hover="background:rgba(32,31,29,.05)">Report a problem or something upsetting<span style="font-size:22px;color:var(--color-accent-700)">›</span></button>
+<button type="button" onClick="{{ goAbout }}" style="display:flex;align-items:center;justify-content:space-between;gap:14px;width:100%;text-align:left;background:transparent;border:0;border-top:1px solid var(--color-divider);padding:19px 2px;font:400 18px/1.45 Lora,serif;color:var(--color-text);cursor:pointer" style-hover="background:rgba(32,31,29,.05)">About this project<span style="font-size:22px;color:var(--color-accent-700)">›</span></button>
 <button type="button" onClick="{{ goWelcome }}" style="display:flex;align-items:center;justify-content:space-between;gap:14px;width:100%;text-align:left;background:transparent;border:0;border-top:1px solid var(--color-divider);border-bottom:1px solid var(--color-divider);padding:19px 2px;font:400 18px/1.45 Lora,serif;color:var(--color-text);cursor:pointer" style-hover="background:rgba(32,31,29,.05)">Sign out of this device<span style="font-size:22px;color:var(--color-accent-700)">›</span></button>
 <button type="button" onClick="{{ goWelcome }}" style="align-self:flex-start;background:transparent;border:0;padding:8px 0;font:400 17px Lora,serif;color:var(--color-accent-700);text-decoration:underline;text-underline-offset:4px;cursor:pointer">See the sign-in screen</button>
 </div>
@@ -747,7 +811,7 @@
 </div>
 
 </div>
-<p style="margin:26px 0 0;font:400 13px/1.6 Lora,serif;color:#6b6863">Try next: “make <a href="#1a" style="color:var(--color-accent-700)">1a</a> open on the story like <a href="#1c" style="color:var(--color-accent-700)">1c</a>” · “translate the whole of <a href="#1a" style="color:var(--color-accent-700)">1a</a> into French” · “show the helper's view of the review screen”</p>
+<p style="margin:26px 0 0;font:400 13px/1.6 Lora,serif;color:#6b6863">Try next: “make <a href="#1a" style="color:var(--color-accent-700)">1a</a> open on the story like <a href="#1c" style="color:var(--color-accent-700)">1c</a>” · “put the icareu mark on the sign-in screen too” · “show the helper's view of the review screen”</p>
 </section>
 
 </x-dc>
@@ -755,7 +819,8 @@
 class Component extends DCLogic {
   state = {
     screen: 'home', mode: 'speak', rec: 'idle', elapsed: '0:00', secs: 0,
-    helperMode: false, lang: 'en', zoom: 1, hc: false,
+    helperMode: false, zoom: 1, hc: false,
+    regFirst: '', regLast: '', regEmail: '', signedUp: false,
     pending: true, toast: '', captionMode: '', taps: 0, tapSecs: 0, tapElapsed: '0:00', onbStep: 1,
     openPost: 0, likes: {}, myComments: {}, draft: '',
     confirmDelete: false, reportTarget: 'this story', reportReason: '', memPublic: false, memPhoto: false,
@@ -798,6 +863,12 @@ class Component extends DCLogic {
   ];
 
   plural(n, one, many) { return n + ' ' + (n === 1 ? one : many); }
+
+  // Who the app is talking to: the newly-registered name, else the returning participant.
+  displayName() {
+    const first = (this.state.regFirst || '').trim();
+    return this.state.signedUp && first ? first : 'Margaret';
+  }
 
   privStyle(on) {
     return {
@@ -843,7 +914,8 @@ class Component extends DCLogic {
   pipStyle(n) {
     return {
       flex: 1, height: '3px',
-      background: this.state.onbStep >= n ? 'var(--color-accent)' : 'var(--color-neutral-300)'
+      background: this.state.onbStep >= n ? 'var(--color-accent)' : 'var(--color-neutral-300)',
+      borderRadius: '2px'
     };
   }
 
@@ -913,16 +985,32 @@ class Component extends DCLogic {
       isMessages: s.screen === 'messages', isHelp: s.screen === 'help', isHelper: s.screen === 'helper',
       isExercises: s.screen === 'exercises', isTapping: s.screen === 'tapping',
       isGoogle: s.screen === 'google', isOnb: s.screen === 'onboarding',
-      signedIn: ['welcome', 'google', 'onboarding', 'report'].indexOf(s.screen) === -1,
-      onb1: s.onbStep === 1, onb2: s.onbStep === 2, onb3: s.onbStep === 3,
-      onbStepLabel: 'Step ' + s.onbStep + ' of 3',
-      pip1: this.pipStyle(1), pip2: this.pipStyle(2), pip3: this.pipStyle(3),
-      goGoogle: this.go('google'),
-      finishGoogle: () => this.setState({ screen: 'onboarding', onbStep: 1, toast: '' }),
-      startOnboarding: () => this.setState({ screen: 'onboarding', onbStep: 1, toast: '' }),
-      onbNext: () => this.setState(st => ({ onbStep: Math.min(3, st.onbStep + 1) })),
-      onbBack: () => this.setState(st => st.onbStep === 1 ? { screen: 'welcome' } : { onbStep: st.onbStep - 1 }),
-      finishOnboarding: () => this.setState({ screen: 'home', toast: 'Welcome, Margaret. Your story is private until you say otherwise.' }),
+      signedIn: ['welcome', 'register', 'google', 'onboarding', 'about', 'report'].indexOf(s.screen) === -1,
+      onb1: s.onbStep === 1, onb2: s.onbStep === 2,
+      onbStepLabel: 'Step ' + s.onbStep + ' of 2',
+      pip1: this.pipStyle(1), pip2: this.pipStyle(2),
+      isRegister: s.screen === 'register',
+      isAbout: s.screen === 'about', goAbout: this.go('about'),
+      regFirst: s.regFirst, regLast: s.regLast,
+      regEmail: s.regEmail, regInitial: (s.regFirst || 'W').charAt(0),
+      setRegFirst: (e) => this.setState({ regFirst: e.target.value }),
+      setRegLast: (e) => this.setState({ regLast: e.target.value }),
+      goGoogleSignin: () => this.setState({ screen: 'google', toast: '' }),
+      // Google tells us who they are; whether an account exists decides the rest.
+      googleReturning: () => this.setState({ screen: 'home', signedUp: false, toast: 'Welcome back, Margaret.' }),
+      googleNew: () => this.setState({ screen: 'register', regFirst: 'Walter', regLast: 'Fraser', regEmail: 'w.fraser@gmail.com', toast: '' }),
+      name: this.displayName(),
+      signInWithCode: () => this.setState({ screen: 'home', signedUp: false, toast: 'Welcome back, Margaret.' }),
+      submitRegister: () => {
+        if (!(s.regFirst || '').trim()) return this.say('Please put in a first name, or telephone us and we will do it for you.');
+        this.setState({ screen: 'onboarding', onbStep: 1, toast: '' });
+      },
+      onbNext: () => this.setState(st => ({ onbStep: Math.min(2, st.onbStep + 1) })),
+      onbBack: () => this.setState(st => st.onbStep === 1 ? { screen: 'register' } : { onbStep: st.onbStep - 1 }),
+      finishOnboarding: () => {
+        const first = (s.regFirst || '').trim() || 'Margaret';
+        this.setState({ screen: 'home', signedUp: true, toast: 'Welcome, ' + first + '. Your story is private until you say otherwise.' });
+      },
       goExercises: () => { this.stopTapClock(); this.setState({ screen: 'exercises', toast: '' }); },
       tapElapsed: s.tapElapsed,
       tap: () => this.setState(st => ({ taps: st.taps + 1 })),
@@ -982,8 +1070,7 @@ class Component extends DCLogic {
       larger: () => this.setState(st => ({ zoom: Math.min(1.4, +(st.zoom + 0.1).toFixed(2)) })),
       smaller: () => this.setState(st => ({ zoom: Math.max(0.9, +(st.zoom - 0.1).toFixed(2)) })),
       toggleHc: () => this.setState({ hc: !s.hc }),
-      toggleLang: () => this.setState({ lang: s.lang === 'en' ? 'fr' : 'en' }),
-      langLabel: s.lang === 'en' ? 'FR' : 'EN', isFr: s.lang === 'fr', isEn: s.lang === 'en',
+      isHomeBody: true,
       readAloud: this.readAloud, contentRef: this.contentRef,
       toast: s.toast,
 

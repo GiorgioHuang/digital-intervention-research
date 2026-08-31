@@ -6,6 +6,17 @@ import { AccessTokenGate } from './components/AccessTokenGate.js';
 import { HelperScreen } from './components/elder/HelperScreen.js';
 import { Exercises, Tapping } from './components/elder/Exercises.js';
 import { SiteFooter } from './components/elder/SiteFooter.js';
+import { BrandBlock } from './components/elder/BrandMark.js';
+
+/**
+ * What "I cannot sign in" says. The prototype links it to the help screen,
+ * which does not exist before sign-in — so it answers here, with the two
+ * things that actually get somebody in: the telephone, and the fact that a
+ * supporter uses the same button as everybody else.
+ */
+const CANNOT_SIGN_IN =
+  'Telephone 1 800 555 0142 — a person answers, eight in the morning until eight at night, every day. ' +
+  'If somebody invited you to help them, use the same Continue with Google button and the address they invited.';
 import { AccessibilityToolbar } from './components/elder/AccessibilityToolbar.js';
 import { HelperBanner } from './components/elder/HelperBanner.js';
 import { ReviewContribution } from './components/ReviewContribution.js';
@@ -322,17 +333,17 @@ export function App() {
           data-zoom={String(Math.round(zoom * 100))}
         >
           {/*
-            The design's opening, in its order: who this is, then what it
-            is for, then the way in. The kicker names the study before the
-            headline promises anything, because somebody who opened this by
-            mistake should be able to tell in one line.
+            The current prototype's opening, read off the live 1a screen
+            rather than off the older written spec: a centred brand block —
+            mark, name, then the study in small capitals — and then the
+            headline, left. The lede paragraph the earlier handoff had here
+            is gone from it.
           */}
-          <p className="kicker">Canadian Elder Life Story Project</p>
+          <div className="welcome__brand">
+            <BrandBlock />
+            <p className="kicker">Canadian Elder Life Story Project</p>
+          </div>
           <h1>Your life, in your own words.</h1>
-          <p className="welcome__lede">
-            This is where you keep your own story. Nobody else can see it unless you say so, and nothing is added
-            unless you accept it.
-          </p>
           <hr />
         {/*
           Neutral on purpose (§E.11): it says the clock ran out and nothing
@@ -452,10 +463,6 @@ export function App() {
                 line below it.
               */}
               <GoogleSignIn label="Continue with Google" description="" onError={setSignInProblem} />
-              <p className="welcome__note">
-                If you have a Google account, this saves you remembering another password. We ask Google only for your
-                name and email address.
-              </p>
             </div>
           )}
           {authMode === 'dev-header' && (
@@ -536,7 +543,21 @@ export function App() {
             different thing and is announced at the top of this screen when
             it happens rather than warned about here.
           */}
-          <p className="welcome__note">There is no time limit on any screen. Nothing disappears while you read.</p>
+          {/*
+            "I cannot sign in" goes to help. The live prototype also offers
+            "Or use the code from your letter" with a field and a Continue
+            button; that is not drawn here, because the platform has no code
+            to redeem — supporter invitations are matched on the email
+            address the person was invited at, through this same Google
+            button (B-20). A field that cannot let anybody in is the worst
+            possible thing to put on the screen somebody meets before they
+            can reach help.
+          */}
+          <p>
+            <button className="link-button" onClick={() => setSignInProblem(CANNOT_SIGN_IN)}>
+              I cannot sign in
+            </button>
+          </p>
           <SiteFooter year={copyrightYear(new Date())} />
         </main>
       </div>

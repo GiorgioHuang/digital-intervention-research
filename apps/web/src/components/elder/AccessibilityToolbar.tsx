@@ -5,8 +5,10 @@ import { BrandMark } from './BrandMark.js';
  * The toolbar that sits on every signed-in screen — the handoff's "Global
  * chrome" §2, built to the drawing.
  *
- * "Text" label, then A− and A+ as two 34×34 buttons, then Read aloud as an
- * icon with its label, then the contrast toggle. Text size and reading
+ * The brand, then A− and A+ as two 34×34 buttons, then Read aloud as an
+ * icon with its label, then the contrast toggle. The older handoff put a
+ * "Text" label before the size buttons; the current prototype has none, and
+ * the brand sits where it used to be. Text size and reading
  * aloud are the brief rather than a nicety: "Text-size control and
  * read-aloud on **every** screen".
  *
@@ -87,7 +89,6 @@ export function AccessibilityToolbar({
         is to stop asking a margin to do a layout's job.
       */}
       <div className="elder-toolbar__controls">
-        <span className="elder-toolbar__label">Text</span>
       <button
         type="button"
         className="elder-toolbar__square"

@@ -48,12 +48,16 @@ describe('the way in', () => {
 
   it('says what this is before it asks for anything', async () => {
     await arrive('google');
+    // The live prototype's opening: brand, name, study, headline. The
+    // earlier written handoff's lede paragraph and its "no time limit" line
+    // are both gone from it.
+    // Two: the one in the toolbar and the centred one on the screen
+    // itself. Both are the prototype's.
+    expect(screen.getAllByText('icareu').length, 'the brand block is gone').toBe(2);
+    expect(document.querySelector('.brand-block__mark'), 'the centred mark is gone').toBeTruthy();
     expect(screen.getByText('Canadian Elder Life Story Project')).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Your life, in your own words.' })).toBeTruthy();
-    expect(screen.getByText(/Nobody else can see it unless you say so/)).toBeTruthy();
-    // A promise this platform keeps, and worth making to somebody who
-    // reads slowly and has been rushed by software before.
-    expect(screen.getByText(/There is no time limit on any screen/)).toBeTruthy();
+    expect(screen.queryByText(/Nobody else can see it unless you say so/), 'the retired lede is back').toBeNull();
   });
 
   /**
