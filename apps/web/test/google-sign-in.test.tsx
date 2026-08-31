@@ -63,7 +63,10 @@ describe('which entrance a deployment shows', () => {
     await act(async () => {
       render(<App />);
     });
-    expect(screen.getByRole('button', { name: /sign in with google/i })).toBeTruthy();
+    // "Continue with Google", the design's label. The participant
+    // entrance is the one place it differs; the staff and supporter
+    // entrances keep GoogleSignIn's default "Sign in with Google".
+    expect(screen.getByRole('button', { name: /continue with google/i })).toBeTruthy();
     expect(screen.queryByLabelText(/account identifier/i)).toBeNull();
     expect(screen.queryByLabelText(/participant identifier/i)).toBeNull();
   });

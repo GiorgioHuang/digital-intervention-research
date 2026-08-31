@@ -76,7 +76,18 @@ export function AccessibilityToolbar({
     <div className="elder-toolbar">
       {/* The owner's, not the drawing's: the drawing has no mark here. */}
       <BrandMark />
-      <span className="elder-toolbar__label">Text</span>
+      {/*
+        The controls in one group, and the bar spaced between the two.
+        
+        The push used to be an `auto` margin on the brand. In a flex row
+        that is allowed to wrap, an auto main-axis margin absorbs the whole
+        line — so the brand took a line to itself and every control went
+        below it. That is the same trap a spacer element caused earlier in
+        this bar's life, arrived at from the other direction, and the fix
+        is to stop asking a margin to do a layout's job.
+      */}
+      <div className="elder-toolbar__controls">
+        <span className="elder-toolbar__label">Text</span>
       <button
         type="button"
         className="elder-toolbar__square"
@@ -123,7 +134,7 @@ export function AccessibilityToolbar({
       </button>
       <button
         type="button"
-        className="elder-toolbar__square elder-toolbar__push"
+        className="elder-toolbar__square"
         aria-pressed={highContrast}
         aria-label="Stronger black and white"
         onClick={() => onHighContrast(!highContrast)}
@@ -142,7 +153,8 @@ export function AccessibilityToolbar({
           <circle cx="12" cy="12" r="9" />
           <path d="M12 3v18a9 9 0 0 0 0-18z" fill="currentColor" />
         </svg>
-      </button>
+        </button>
+      </div>
     </div>
   );
 }

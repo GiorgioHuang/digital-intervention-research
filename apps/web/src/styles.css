@@ -836,7 +836,6 @@ main {
  * owner has ruled for the drawing (2026-08-30). What clips is reported
  * from a measurement rather than pre-empted.
  */
-}
 /*
  * The chevron rows are Lora 18px at every width, which is the drawing.
  * They hold one line each at the drawing's own 404px frame and at 390; at
@@ -858,6 +857,7 @@ main {
   /* The handoff's own 6px, which I had rounded up to the spacing token and
      which is part of what put this bar on two rows at 320. */
   gap: 6px;
+  justify-content: space-between;
   padding: 9px 14px;
   background-color: var(--cl-neutral-100);
   border-block-end: var(--border-hairline) solid var(--cl-divider);
@@ -902,12 +902,16 @@ main {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  /* The single auto margin in this row: everything after it is pushed to
-     the right as one group, at every width. There was a second auto on the
-     contrast button, which is why that button used to sit alone at the far
-     end with a gap between it and the three controls it belongs with —
-     two autos each take a share of the free space. */
-  margin-inline-end: auto;
+}
+/* The controls travel together and the bar spaces the two apart. An auto
+   margin did this and could not: in a wrapping flex row it absorbs the
+   whole line, so the brand took a line to itself and the controls all went
+   below it — visible the moment this bar appeared on a second screen. */
+.elder-toolbar__controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
 }
 /* Below the breakpoint the name goes and the mark stays. `display: none`
    rather than a clip or a zero width: a hidden-but-present item in a flex
@@ -940,7 +944,6 @@ main {
    instruction. */
 @media (max-width: 23.99rem) {
   .elder-toolbar__wordmark { display: none; }
-}
 }
 /* The mark's own colour, reached through the token rather than written
    again: --cl-accent IS #b68235, so nothing here reinterprets the brand. */

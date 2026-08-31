@@ -1,11 +1,10 @@
 /**
  * The footer, on the sign-in screen and under every signed-in page.
  *
- * **The holder is a placeholder and should be confirmed.** "icareu" is the
- * brand the owner supplied; the legal entity that actually holds copyright
- * in a research platform — a university, a hospital, a company — is not
- * something to infer from a logo file. It is one constant in one file so
- * that correcting it is a single edit.
+ * The holder is the Healthy Aging Intelligence Lab, given by the owner
+ * (2026-08-31) — it had been the brand name as a placeholder, because the
+ * entity that holds copyright in a research platform is not something to
+ * infer from a logo file.
  *
  * The year is a parameter, not a call to `new Date()` inside the render.
  * A footer that reads the clock is a small time bomb of exactly the kind
@@ -13,7 +12,7 @@
  * passes all year and fails on 1 January, on code nobody touched. The
  * boundaries are decided by the caller and tested at fixed instants.
  */
-export const COPYRIGHT_HOLDER = 'icareu';
+export const COPYRIGHT_HOLDER = 'Healthy Aging Intelligence Lab (HAIL)';
 
 export function SiteFooter({ year }: { year: number }) {
   return (

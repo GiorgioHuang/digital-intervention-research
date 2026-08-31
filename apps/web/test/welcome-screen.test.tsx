@@ -66,7 +66,7 @@ describe('the way in', () => {
    */
   it('offers one way in, and does not dress the other doors as it', async () => {
     await arrive('google');
-    const wayIn = screen.getByRole('button', { name: 'Sign in with Google' });
+    const wayIn = screen.getByRole('button', { name: 'Continue with Google' });
     expect(wayIn).toBeTruthy();
     for (const other of ['Supporter workspace', 'Staff workspace']) {
       const el = screen.queryByRole('button', { name: other });
@@ -86,8 +86,10 @@ describe('the way in', () => {
     // string or regex matcher looks for something no single node contains.
     const footer = document.querySelector('.site-footer');
     expect(footer, 'there is no footer').toBeTruthy();
-    expect(footer!.textContent).toMatch(/^© \d{4} icareu$/);
-    expect(COPYRIGHT_HOLDER, 'the holder changed; update this test with it').toBe('icareu');
+    expect(footer!.textContent).toMatch(/^© \d{4} Healthy Aging Intelligence Lab \(HAIL\)$/);
+    expect(COPYRIGHT_HOLDER, 'the holder changed; update this test with it').toBe(
+      'Healthy Aging Intelligence Lab (HAIL)',
+    );
     expect(copyrightYear(new Date('2031-02-01T00:00:00'))).toBe(2031);
     expect(copyrightYear(new Date('2026-12-31T23:00:00'))).toBe(2026);
   });

@@ -28,10 +28,19 @@ export function GoogleSignIn({
 
   return (
     <>
-      <p>
-        {description ??
-          'You will be taken to Google to sign in, then brought straight back here. This platform never sees your Google password.'}
-      </p>
+      {/*
+        An empty description removes the line entirely, which the
+        participant sign-in screen uses: the design puts one sentence of
+        its own AFTER the button instead. Everywhere else the default
+        stands, because being sent to a different-looking page unannounced
+        is what people are taught to be afraid of.
+      */}
+      {description !== '' && (
+        <p>
+          {description ??
+            'You will be taken to Google to sign in, then brought straight back here. This platform never sees your Google password.'}
+        </p>
+      )}
       {/*
         Signing in can CREATE an account, and the button has to say so.
         Somebody who has never been here before presses the same control as

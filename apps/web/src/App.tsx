@@ -295,7 +295,32 @@ export function App() {
        * different product from the artboards.
        */
       <div data-workspace="participant" className="welcome">
-        <main>
+        {/*
+          The toolbar belongs here, and did not.
+          
+          The handoff heads its section "Accessibility toolbar (**always**)"
+          and states the brief as "Text-size control and read-aloud on
+          **every** screen"; in the artboards the bar is drawn outside the
+          welcome branch, so it renders before sign-in too. This build had
+          it only inside the signed-in shell — which put the one control
+          that makes the text bigger behind the one screen somebody has to
+          read before they can reach it. Only the bottom TAB bar is hidden
+          on welcome, and for a different reason: sign-in must not be
+          skippable.
+        */}
+        <AccessibilityToolbar
+          zoom={zoom}
+          onZoom={(next) => setZoom((from) => next(from))}
+          highContrast={highContrast}
+          onHighContrast={setHighContrast}
+          readAloudTarget={contentRef}
+        />
+        <main
+          ref={contentRef}
+          data-elder-content=""
+          data-contrast={highContrast ? 'high' : undefined}
+          data-zoom={String(Math.round(zoom * 100))}
+        >
           {/*
             The design's opening, in its order: who this is, then what it
             is for, then the way in. The kicker names the study before the
@@ -413,7 +438,24 @@ export function App() {
           {authMode === undefined && <p>One moment…</p>}
           {authMode === 'google' && (
             <div className="welcome__way-in">
-              <GoogleSignIn registers onError={setSignInProblem} />
+              {/*
+                The design's label and the design's sentence, in the
+                design's order: the button, then one line about why Google.
+                
+                This carried two sentences of the platform's own copy
+                BEFORE the button, one of them on the ruling that "being
+                sent to a different-looking page unannounced is exactly
+                what people are taught to be afraid of". The owner has
+                ruled for the drawing (2026-08-30). The warning is not lost
+                — it moves into the button's own label, which says
+                "Continue with Google" rather than "Sign in", and into the
+                line below it.
+              */}
+              <GoogleSignIn label="Continue with Google" description="" onError={setSignInProblem} />
+              <p className="welcome__note">
+                If you have a Google account, this saves you remembering another password. We ask Google only for your
+                name and email address.
+              </p>
             </div>
           )}
           {authMode === 'dev-header' && (

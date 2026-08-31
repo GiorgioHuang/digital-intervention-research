@@ -291,9 +291,16 @@ describe('the toolbar has one shape everywhere', () => {
       '.elder-toolbar__brand { display: none',
     );
 
-    // One auto margin, not two — two each take a share of the free space,
-    // which is what left the contrast button alone at the far end.
-    expect(css, 'the controls no longer align right').toContain('margin-inline-end: auto');
+    // The bar spaces the brand and the controls apart, and the controls
+    // travel as one group. This was an auto margin on the brand, which in
+    // a wrapping flex row absorbs the whole line — so the brand took a line
+    // to itself and every control went below it. A margin cannot do a
+    // layout's job here.
+    expect(css, 'the controls no longer align right').toContain('justify-content: space-between');
+    expect(css, 'the controls are no longer one group').toContain('.elder-toolbar__controls {');
+    expect(css, 'the push is back to an auto margin, which wraps the bar').not.toContain(
+      '.elder-toolbar__push',
+    );
   });
 
   /**
