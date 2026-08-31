@@ -140,6 +140,28 @@ describe('the stylesheet', () => {
   });
 
   /**
+   * The brand is never underlined, in any state.
+   *
+   * It was underlined on hover, and that read as an underline stuck on:
+   * `:hover` holds after a click while the pointer stays where it is, and
+   * on a touch screen it holds until something else is tapped — so the
+   * name sat underlined after every press home. Checked across every rule
+   * that targets the brand rather than just the one that had it, because
+   * the next one to add it will be a different rule.
+   */
+  it('never underlines the brand, in any state', () => {
+    const offenders: string[] = [];
+    for (const m of withoutComments.matchAll(/([^{}]*\.elder-toolbar__brand[^{}]*)\{([^}]*)\}/g)) {
+      if (/text-decoration:\s*underline/.test(m[2] ?? '')) offenders.push((m[1] ?? '').trim());
+    }
+    expect(offenders, `the brand is underlined by: ${offenders.join(' | ')}`).toEqual([]);
+    // And the global `a { text-decoration: underline }` is still turned off
+    // on it — without this the anchor would be underlined at rest.
+    const rule = withoutComments.slice(withoutComments.indexOf('\n.elder-toolbar__brand {'));
+    expect(rule.slice(0, rule.indexOf('}'))).toContain('text-decoration: none;');
+  });
+
+  /**
    * The participant workspace says which colour scheme it is.
    *
    * Reported as a black tick box. It was not the tick box: the document

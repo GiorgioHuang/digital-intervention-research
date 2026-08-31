@@ -967,9 +967,21 @@ main {
   text-decoration: none;
   color: inherit;
 }
-.elder-toolbar__brand:hover .elder-toolbar__wordmark {
-  text-decoration: underline;
-  text-underline-offset: 3px;
+/*
+ * Hover shows itself with a tint, not an underline.
+ *
+ * It was an underline, and it read as one that had stuck: `:hover` holds
+ * after a click while the pointer stays where it is, and on a touch screen
+ * it holds until something else is tapped — so the name sat underlined
+ * after every press home. An underline on a wordmark also says "this is a
+ * phrase in a sentence", which it is not.
+ *
+ * The value is the drawing's own quiet hover, the one it uses on controls
+ * that are not the accent — written as a mix of the text token, because
+ * literal colours live in the token blocks (§0.1).
+ */
+.elder-toolbar__brand:hover {
+  background-color: color-mix(in srgb, var(--cl-text) 5%, transparent);
 }
 /* The controls travel together and the bar spaces the two apart. An auto
    margin did this and could not: in a wrapping flex row it absorbs the
