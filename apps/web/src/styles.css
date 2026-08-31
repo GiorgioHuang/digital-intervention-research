@@ -798,9 +798,31 @@ main {
 /* The handoff's 72px is the whole bar, not the row inside it: the generic
    nav padding turned a 72px tab into a 91px bar. The tab's own min-height
    carries the height now, and the safe-area inset still gets its room. */
+/*
+ * The bar's top edge is the drawing's own hairline, not the platform's
+ * default border.
+ *
+ * It read as a hard dark rule under every screen. The cause is a token the
+ * Classical remap does not cover: `.nav-primary` asks for
+ * `--border-default` / `--color-border-default`, and while this workspace
+ * remaps `--color-border-*subtle*` to the divider it leaves *default*
+ * pointing at the platform's #74817e — a colour picked for the staff
+ * workspace's 3.8:1 graphic-contrast floor. Composited on this bar that is
+ * 3.71:1 against a drawing that asks for 1.38:1, at 2px against 1px.
+ *
+ * Written here rather than by remapping --color-border-default across the
+ * workspace: that token is also the border on `select`, `fieldset` and
+ * `.scroll-x`, and quietly softening every form control is a larger change
+ * than the edge that was reported.
+ *
+ * The same hairline as `.elder-toolbar`, deliberately — the top and bottom
+ * edges of the participant chrome are one line, and the prototype draws
+ * them that way (`border-top:1px solid var(--color-divider)`).
+ */
 [data-workspace='participant'] .nav-primary {
   padding-block: 0 env(safe-area-inset-bottom, 0px);
   padding-inline: 0;
+  border-block-start: var(--border-hairline) solid var(--cl-divider);
 }
 [data-workspace='participant'] .nav-primary li { flex: 1 1 0; min-inline-size: 0; }
 [data-workspace='participant'] .nav-primary button {

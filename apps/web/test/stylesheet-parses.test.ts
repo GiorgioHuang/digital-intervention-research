@@ -71,4 +71,33 @@ describe('the stylesheet', () => {
       expect(css, `${selector.trim()} is gone`).toContain(selector);
     }
   });
+
+  /**
+   * The participant chrome draws its edges with the design's hairline, not
+   * the platform's default border.
+   *
+   * The bottom tab bar read as a hard dark rule under every screen. The
+   * cause was a gap in the Classical remap: `.nav-primary` asks for
+   * `--border-default` / `--color-border-default`, and this workspace
+   * remaps `--color-border-*subtle*` to the divider while leaving *default*
+   * pointing at #74817e — a colour chosen for the staff workspace's
+   * graphic-contrast floor. Measured on the bar's own ground that is
+   * 3.71:1 at 2px, against a drawing that asks for 1.38:1 at 1px, and it
+   * also made the bar 73px against the handoff's 72.
+   *
+   * Text, not computed style, and so worth being honest about what it can
+   * and cannot see: it proves the declaration is present, not that a
+   * browser applies it. A rule above it could still be shadowing it. It is
+   * here because the defect it guards was a *missing* declaration, which
+   * is exactly what reading the text does catch — the browser measurement
+   * that found it in the first place cannot run in this suite.
+   */
+  it('draws the tab bar’s top edge with the design’s hairline', () => {
+    const rule = css.slice(css.indexOf("[data-workspace='participant'] .nav-primary {"));
+    const body = rule.slice(0, rule.indexOf('}'));
+    expect(
+      body,
+      'the participant tab bar is back on the platform default border, which is twice as thick and ~2.7x the contrast the design draws',
+    ).toContain('border-block-start: var(--border-hairline) solid var(--cl-divider);');
+  });
 });
