@@ -46,6 +46,8 @@ import { completeRedirect, currentSession, detectAuthMode, signOut, type AuthMod
 import { GoogleSignIn } from './components/GoogleSignIn.js';
 import { endVisit, isSharedDevice, setSharedDevice } from './device-mode.js';
 import { applyPreferences, loadPreferences } from './preferences.js';
+import type { Screen } from './screens.js';
+import { pathForScreen, screenForPath } from './routes.js';
 
 /**
  * Task-oriented participant Home (Doc 20 §16): a short list of clear
@@ -60,23 +62,7 @@ import { applyPreferences, loadPreferences } from './preferences.js';
  * stopped being true, which is why it now describes the branch rather than
  * the moment.
  */
-type Screen =
-  | 'home'
-  | 'consent'
-  | 'access'
-  | 'message'
-  | 'matching'
-  | 'community'
-  | 'life-story'
-  | 'data-copy'
-  | 'review'
-  | 'caption'
-  | 'about'
-  | 'information'
-  | 'exercises'
-  | 'tapping'
-  | 'helper'
-  | 'help';
+
 
 /**
  * Four destinations, not five (design decision D-10). Measured at the
@@ -116,13 +102,37 @@ const PRIMARY_DESTINATIONS: { key: Screen; label: string; fullLabel: string; ico
 
 export function App() {
   const [session, setSession] = useState<Session | null>(null);
-  const [screen, setScreen] = useState<Screen>('home');
+  /*
+   * Whether the session is still being looked for.
+   *
+   * It starts true, and until it settles this renders neither the app nor
+   * the sign-in screen. `session` begins null and the restore is three
+   * network round trips (which entrance, is this a redirect back from
+   * Google, is there a session) — so every refresh, on every screen,
+   * showed a signed-in person the sign-in screen for as long as that took
+   * and then replaced it. Told "you are signed out" and then "no you are
+   * not", the reasonable thing to do is stop trusting the screen.
+   *
+   * The dev-header stub has nothing to restore, so it settles immediately
+   * and the sign-in screen appears at once, which is correct there.
+   */
+  const [restoring, setRestoring] = useState(true);
+  /*
+   * Which screen is showing — read from the address on the way in, and
+   * written back to it on every change, so that a refresh returns to the
+   * same place instead of to Home. See routes.ts.
+   */
+  const landed = screenForPath(typeof window === 'undefined' ? '/' : window.location.pathname);
+  const [screen, setScreen] = useState<Screen>(landed.screen);
   /*
    * Which waiting thing is open on the `review` screen. An id, not the
    * object: the screen reloads the list for itself, so it cannot show a
    * decision that has since been made somewhere else.
+   *
+   * Seeded from the address, which is why `review` is routable at all: it
+   * needs a string and the screen fetches the rest for itself.
    */
-  const [reviewing, setReviewing] = useState<string | null>(null);
+  const [reviewing, setReviewing] = useState<string | null>(landed.reviewing);
   /*
    * What to call this person. Null until it is known, and null is also the
    * settled answer where there is no profile — so Home greets without a
@@ -221,36 +231,93 @@ export function App() {
   useEffect(() => {
     let cancelled = false;
     void (async () => {
-      const detected = await detectAuthMode();
-      if (cancelled) return;
-      setAuthMode(detected);
-      if (detected !== 'google') return;
+      try {
+        const detected = await detectAuthMode();
+        if (cancelled) return;
+        setAuthMode(detected);
+        if (detected !== 'google') return;
 
-      const redirect = await completeRedirect();
-      if (cancelled) return;
-      if (redirect?.error !== undefined) setSignInProblem(redirect.error);
-      const found = redirect?.session ?? (await currentSession().catch(() => undefined));
-      if (cancelled || found === undefined) return;
-      // A staff account with no participant record is not a participant,
-      // and giving it an empty participant identifier would send every
-      // screen looking for a person who does not exist.
-      if (found.participantId === undefined) {
-        // Reached by somebody invited as a supporter rather than enrolled
-        // as a participant — they have an account and a relationship, but
-        // no participant record of their own, so there is no participant
-        // workspace to show them. Naming both other entrances beats a dead
-        // end that says only "no".
-        setSignInProblem(
-          'You are signed in, but this account does not have a participant workspace. If you were invited to support someone, use the supporter entrance; if you are staff, use the staff address.',
-        );
-        return;
+        const redirect = await completeRedirect();
+        if (cancelled) return;
+        if (redirect?.error !== undefined) setSignInProblem(redirect.error);
+        const found = redirect?.session ?? (await currentSession().catch(() => undefined));
+        if (cancelled || found === undefined) return;
+        // A staff account with no participant record is not a participant,
+        // and giving it an empty participant identifier would send every
+        // screen looking for a person who does not exist.
+        if (found.participantId === undefined) {
+          // Reached by somebody invited as a supporter rather than enrolled
+          // as a participant — they have an account and a relationship, but
+          // no participant record of their own, so there is no participant
+          // workspace to show them. Naming both other entrances beats a dead
+          // end that says only "no".
+          setSignInProblem(
+            'You are signed in, but this account does not have a participant workspace. If you were invited to support someone, use the supporter entrance; if you are staff, use the staff address.',
+          );
+          return;
+        }
+        setSession({ actorId: found.actorId, participantId: found.participantId });
+      } finally {
+        // In a `finally` rather than at each exit: this effect has six
+        // ways out — no Google, a redirect error, no session, a supporter
+        // with no participant record — and one of them left unset is a
+        // participant looking at a holding screen that never resolves.
+        if (!cancelled) setRestoring(false);
       }
-      setSession({ actorId: found.actorId, participantId: found.participantId });
     })();
     return () => {
       cancelled = true;
     };
   }, []);
+
+  /**
+   * The address follows the screen, and the screen follows the address.
+   *
+   * Two halves of one contract. The effect writes where the person is into
+   * the history, so a refresh has something to come back to; the listener
+   * answers the browser's own Back and Forward, which without it walked
+   * out of the app entirely — the first press left the site, because
+   * nothing had ever been pushed.
+   *
+   * `replaceState` for the first entry, `pushState` afterwards. Pushing on
+   * mount would put a duplicate of the landing page in the history and
+   * make Back a no-op on the very first press, which reads as a broken
+   * button rather than as a subtlety about history entries.
+   */
+  const pushedOnce = useRef(false);
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    // These addresses name participant screens. The staff and supporter
+    // workspaces keep their own place internally and have none here, so
+    // writing one while they are showing would put a participant address
+    // on a staff screen — an address that is wrong is worse than an
+    // address that has not moved, because a refresh would act on it.
+    if (mode !== 'participant') return;
+    const next = pathForScreen(screen, reviewing);
+    if (window.location.pathname === next) {
+      pushedOnce.current = true;
+      return;
+    }
+    // Query and fragment are carried across: the access-token link arrives
+    // as `?token=…` and dropping it on the first navigation would sign the
+    // person out of a gated deployment by moving between screens.
+    const url = next + window.location.search + window.location.hash;
+    if (pushedOnce.current) window.history.pushState(null, '', url);
+    else window.history.replaceState(null, '', url);
+    pushedOnce.current = true;
+  }, [screen, reviewing, mode]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const onPop = () => {
+      if (mode !== 'participant') return;
+      const at = screenForPath(window.location.pathname);
+      setScreen(at.screen);
+      setReviewing(at.reviewing);
+    };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, [mode]);
 
   /**
    * The name to greet with, fetched once a session exists.
@@ -303,6 +370,43 @@ export function App() {
   }
   if (mode === 'supporter') {
     return <SupporterApp onExit={() => setMode('participant')} />;
+  }
+
+  /*
+   * Neither screen, while the session is still being looked for.
+   *
+   * The chrome is the same one both destinations use, so nothing jumps
+   * when the answer arrives — what changes is the content region, which
+   * is empty apart from a line for anybody who cannot see that the page
+   * is busy. `role="status"` rather than an alert: this is the ordinary
+   * course of opening the app, not a problem.
+   *
+   * No spinner. A moving thing on the screen of somebody who has just
+   * pressed refresh says "something is wrong" more often than it says
+   * "wait", and this is normally over in a few hundred milliseconds.
+   */
+  if (restoring && session === null) {
+    return (
+      <div data-workspace="participant" className="welcome">
+        <AccessibilityToolbar
+          zoom={zoom}
+          onZoom={(next) => setZoom((from) => next(from))}
+          highContrast={highContrast}
+          onHighContrast={setHighContrast}
+          readAloudTarget={contentRef}
+        />
+        <main
+          ref={contentRef}
+          data-elder-content=""
+          data-contrast={highContrast ? 'high' : undefined}
+          data-zoom={String(Math.round(zoom * 100))}
+        >
+          <p role="status" className="welcome__note">
+            Just a moment.
+          </p>
+        </main>
+      </div>
+    );
   }
 
   if (session === null) {
