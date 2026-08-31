@@ -210,7 +210,7 @@ jobs:
           NUM=$(gcloud projects describe "$PROJECT" --format='value(projectNumber)' 2>/dev/null || true)
           [ -z "$NUM" ] && { echo "::warning::could not resolve project number; skipping secret IAM"; exit 0; }
           RUNTIME_SA="${NUM}-compute@developer.gserviceaccount.com"
-          for S in HADI_DATABASE_URL HADI_ACCESS_TOKEN HADI_SESSION_SECRET HADI_R2_ACCESS_KEY_ID HADI_R2_SECRET_ACCESS_KEY HADI_CONTACT_BOT_TOKEN HADI_CONTACT_CHAT_ID; do
+          for S in HADI_DATABASE_URL HADI_ACCESS_TOKEN HADI_SESSION_SECRET HADI_R2_ACCESS_KEY_ID HADI_R2_SECRET_ACCESS_KEY TELEGRAM_BOT_TOKEN TELEGRAM_CHAT_ID; do
             if gcloud secrets describe "$S" --project "$PROJECT" >/dev/null 2>&1; then
               gcloud secrets add-iam-policy-binding "$S" --project "$PROJECT" \
                 --member "serviceAccount:${RUNTIME_SA}" \
@@ -294,15 +294,23 @@ jobs:
           # which is the one outcome worse than saying plainly that there is
           # no way to send. With either missing the service reports
           # contact:false on /health and the screen says so.
+          #
+          # These two predate this workflow and are named for the transport
+          # rather than for the HADI_ set, so they are spelled out as they
+          # actually are in Secret Manager (owner, 2026-08-31). The name on
+          # the left of each `=` is the environment variable inside the
+          # container, and it stays CONTACT_*: it says what the value is for
+          # in this application, so a later move to email or anything else
+          # is a change to this line and to nothing in the code.
           CONTACT_PRESENT=true
-          for S in HADI_CONTACT_BOT_TOKEN HADI_CONTACT_CHAT_ID; do
+          for S in TELEGRAM_BOT_TOKEN TELEGRAM_CHAT_ID; do
             gcloud secrets describe "$S" --project "$PROJECT" >/dev/null 2>&1 || CONTACT_PRESENT=false
           done
           if [ "$CONTACT_PRESENT" = true ]; then
-            SECRETS="$SECRETS,CONTACT_BOT_TOKEN=HADI_CONTACT_BOT_TOKEN:latest,CONTACT_CHAT_ID=HADI_CONTACT_CHAT_ID:latest"
+            SECRETS="$SECRETS,CONTACT_BOT_TOKEN=TELEGRAM_BOT_TOKEN:latest,CONTACT_CHAT_ID=TELEGRAM_CHAT_ID:latest"
             echo "::notice::contact relay configured — the about screen can send a message."
           else
-            echo "::warning::HADI_CONTACT_BOT_TOKEN and/or HADI_CONTACT_CHAT_ID not found in Secret Manager — the about screen will say there is no way to send a message. If the values exist under different names, rename them or change this step."
+            echo "::warning::TELEGRAM_BOT_TOKEN and/or TELEGRAM_CHAT_ID not found in Secret Manager — the about screen will say there is no way to send a message."
           fi
           if [ "$AUTH_MODE" = google ]; then
             ENVVARS="$ENVVARS,GOOGLE_CLIENT_ID=${{ vars.GOOGLE_CLIENT_ID }}"
