@@ -1148,7 +1148,9 @@ main {
  * the ones this workspace had not remapped went on following the device.
  * `--color-story-surface` is #fcf8f2 in light and #211a12 in dark, so on a
  * dark phone the life-story card went near-black while the page around it
- * stayed cream, and the heading on it became unreadable.
+ * stayed cream, and the heading on it became unreadable. (That card is
+ * itself gone now — the drawing has no card there — but the token is still
+ * pinned, because the fault was never about one rule.)
  *
  * `color-scheme: light` below fixed the native controls; this fixes the
  * paint. Every token the dark block redefines is pinned here to its light
@@ -1904,6 +1906,38 @@ a[role='button']:hover { background-color: var(--color-action-secondary-bg-hover
 [data-workspace='participant'] .story-prompts > li + li {
   border-block-start: var(--border-hairline) solid var(--cl-divider);
 }
+/*
+ * The entries, and the screen they sit on.
+ *
+ * The drawing separates one memory from the next with a hairline and
+ * nothing else: no card, no fill, no coloured edge, and no panel around
+ * the lot. What was here instead — a cream `.zone-story` panel holding
+ * white `.card--story` cards with a sand bar — was right when Life Story
+ * was the one warm screen in an otherwise neutral product. The Classical
+ * handoff made the whole participant workspace warm, so the panel stopped
+ * marking anything out; it was a box around everything, with a box around
+ * each memory inside it. Both are deleted rather than restyled.
+ *
+ * `.story-screen` therefore carries no rule of its own. It is a name for
+ * the region, and the absence is the point.
+ */
+[data-workspace='participant'] .story-entry {
+  border-block-start: var(--border-hairline) solid var(--cl-divider);
+  padding-block: var(--space-4);
+}
+[data-workspace='participant'] .story-entry > h2 {
+  /* The drawing's 21px. */
+  font-size: 1.167rem;
+  margin-block: 0 var(--space-2);
+}
+/*
+ * The drawing sets the excerpt at 16px and the meta line at 13.5px, and
+ * neither is followed. Both are below the reading size this workspace is
+ * built on, and the text they would shrink is not decoration: the excerpt
+ * is the participant's own words, and our meta lines say where an entry
+ * came from and who can see it. A mock is a description of a layout, not
+ * a licence to set the sentences that matter smallest on the page (X-31).
+ */
 /* ---------- The message box on "Get in touch" ---------------------------
  * Fields at the reading size, not a compact form size. This is filled in
  * by somebody who may find a small control hard to hit and small type hard
@@ -2679,17 +2713,6 @@ main ul:not([class]) > li { max-width: var(--measure-default); }
    thing, that this one is certain. */
 .state--connection, .badge--connection { background-color: var(--color-action-secondary-bg-hover); color: var(--color-action-secondary-fg); border-inline-start-color: var(--color-action-primary-bg); }
 
-/* The Life Story area background: a cream warmer than the page, carrying
-   memories, quotations and photographs.
-   Background only, never foreground — sand is the warmest and lightest
-   colour in the system, and so the most tempting one to set text in. */
-.zone-story {
-  background-color: var(--color-story-surface);
-  border: var(--border-hairline) solid var(--color-story-border);
-  border-radius: var(--radius-3);
-  padding: var(--space-5);
-  margin-block: var(--space-5);
-}
 /* Participant cards: larger radii and more whitespace (owner: participants
    and Life Story warmer, the research workspace denser). Still inside the
    16px ceiling of §0.2. */
@@ -2734,12 +2757,11 @@ main:not([data-workspace='staff']) .card { border-radius: var(--radius-3); }
 
    **This must be written after `.card`.** The first version put it in §10
    (state presentation), i.e. **above** `.card`, so `.card`'s `border:`
-   shorthand overwrote all three left borders and the three kinds of card
+   shorthand overwrote all the left borders and the kinds of card
    looked identical in the screenshot — with the tests green throughout,
    because they assert that the class name is present and it always was.
    **Same property, later declaration wins**: the second time that bit in
    this round. */
-.card--story { border-inline-start: var(--border-emphasis) solid var(--color-story-border); }
 .card--community { border-inline-start: var(--border-emphasis) solid var(--color-community-border); }
 .card--matching { border-inline-start: var(--border-emphasis) solid var(--color-matching-border); }
 .card--draft { border-style: dashed; border-color: var(--color-border-default); }

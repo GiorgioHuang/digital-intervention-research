@@ -676,13 +676,23 @@ describe('the token architecture holds', () => {
     }
   });
 
-  it('keeps sand out of the research workspace as anything but an accent', () => {
-    /* The owner's split: participant and Life Story screens are warm, the
-       research workspace is teal and blue-grey with sand reserved for a
-       highlight. A staff screen that adopted the Life Story treatment
-       would not be wrong so much as misleading — warmth is how this
-       platform marks somebody's own memories, and a cohort table is not
-       that. */
+  it('keeps the participant warmth out of the research workspace', () => {
+    /* The owner's split: the participant screens are warm, the research
+       workspace is teal and blue-grey with sand reserved for a highlight.
+       A staff screen that adopted the participant treatment would not be
+       wrong so much as misleading — warmth is how this platform marks
+       somebody's own memories, and a cohort table is not that.
+
+       This used to scan for `zone-story` and `card--story`, and those two
+       names no longer exist anywhere: the drawing has no box around the
+       story screen and no card around a memory. A guard that searches for
+       a string nothing can contain passes for ever without looking at
+       anything, so it is pointed at the marks that do carry the warmth
+       now — the Classical custom properties and the story class names.
+       The list is asserted non-empty for the same reason. */
+    const WARM = /--cl-[a-z]|\bstory-(screen|entry|way-in|ways-in|summary|prompts)\b/;
+    expect('--cl-accent story-entry').toMatch(WARM);
+
     const staffFiles = readdirSync(resolve(process.cwd(), 'src'), {
       recursive: true,
       encoding: 'utf8',
@@ -691,9 +701,33 @@ describe('the token architecture holds', () => {
     const offenders: string[] = [];
     for (const file of staffFiles) {
       const text = readFileSync(resolve(process.cwd(), 'src', file), 'utf8');
-      if (/zone-story|card--story/.test(text)) offenders.push(file);
+      if (WARM.test(text)) offenders.push(file);
     }
-    expect(offenders, 'staff screens using the Life Story warmth').toEqual([]);
+    expect(offenders, 'staff screens using the participant warmth').toEqual([]);
+  });
+
+  it('gives the story screen and its entries no surface of their own', () => {
+    /* Reported as a box around everything (owner, 2026-08-31). The drawing
+       puts the story on the page ground and separates one memory from the
+       next with a hairline; a panel or a card is a second surface the
+       drawing does not have.
+
+       Written against the stylesheet rather than the markup because that
+       is where a box would come back from: the component test can only
+       see which class names are on the elements, and any rule in here
+       could give `.story-screen` a background tomorrow without changing a
+       single one of them. */
+    const storyRules = ALL_BLOCKS.filter((b) => /\.story-(screen|entry)\b/.test(b.selector));
+    expect(storyRules.length, 'no story rules found — has the selector been renamed?').toBeGreaterThan(0);
+    for (const { selector, body } of storyRules) {
+      expect(body, `${selector} paints a surface the drawing does not have`).not.toMatch(
+        /background(-color)?:\s*(?!transparent|none)/,
+      );
+      expect(body, `${selector} draws a box round the story`).not.toMatch(/border-radius:/);
+      /* `border:` in full is the box; `border-block-start:` is the
+         hairline between two memories, which is what the drawing uses. */
+      expect(body, `${selector} draws a box round the story`).not.toMatch(/(^|;)\s*border:/);
+    }
   });
 
   it('gives the dark theme a value for every colour the light theme defines', () => {

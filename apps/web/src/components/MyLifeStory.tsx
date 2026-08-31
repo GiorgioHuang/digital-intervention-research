@@ -235,12 +235,17 @@ export function MyLifeStory({ session }: { session: Session }) {
   };
 
   return (
-    /* The one screen the owner asked to feel warm rather than clinical:
-       a cream ground (Sand 50) instead of the neutral page, with each
-       entry a white card carrying a sand edge. The warmth is the room,
-       not the writing — see the note on `.zone-story` in styles.css for
-       why sand is never a foreground here. */
-    <section className="zone-story" aria-labelledby="life-story-heading">
+    /* No box. The drawing puts this screen straight onto the page ground
+       — a plain column, no panel, no border, no second surface.
+
+       It used to be a cream room (`.zone-story`) with white cards inside
+       it, and that was right when Life Story was the one warm screen in
+       an otherwise neutral product. The Classical handoff made the whole
+       participant workspace warm, so the panel stopped marking anything
+       out and became a box around everything, with the entries as boxes
+       inside it. What separates one memory from the next now is a
+       hairline, which is what the drawing uses. */
+    <section className="story-screen" aria-labelledby="life-story-heading">
       <h1 id="life-story-heading">Your life story</h1>
       {/*
         Both halves of this line are counted rather than asserted. The
@@ -365,7 +370,7 @@ export function MyLifeStory({ session }: { session: Session }) {
       )}
 
       {(items ?? []).map((item) => (
-        <article key={item.itemId} className="card card--story" aria-label={item.title}>
+        <article key={item.itemId} className="story-entry" aria-label={item.title}>
           <h2>{item.title}</h2>
           {item.contentText !== null && <blockquote>{item.contentText}</blockquote>}
           {/*

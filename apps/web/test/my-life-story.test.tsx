@@ -549,17 +549,27 @@ describe('a participant reading their own life story', () => {
   });
 
   /**
-   * Life Story is the one screen the owner asked to feel warm rather than
-   * clinical. The warmth is carried entirely by two class names, so it can
-   * be deleted by accident in a refactor that changes nothing else.
+   * The drawing puts this screen on the page ground: a plain column, with
+   * one memory separated from the next by a hairline. No panel around the
+   * lot, and no card around each.
+   *
+   * It was the opposite of that — a cream `.zone-story` panel full of
+   * white `.card--story` cards — which was right while Life Story was the
+   * one warm screen in a neutral product, and became a box around
+   * everything once the whole participant workspace went warm (owner,
+   * 2026-08-31: "我们有个框框住了所有内容"). This holds it there. Card is
+   * checked as a whole word: `.card--story` contains "card", so a
+   * substring test would have passed against the very markup it replaced.
    */
-  it('renders life story entries inside the warm zone, as cards with a sand edge', async () => {
+  it('draws the story on the page, not in a box, and its entries as rows', async () => {
     stubFetch({ data: [item()] });
     const { container } = render(<MyLifeStory session={session} />);
     await act(async () => {});
-    expect(container.querySelector('section.zone-story')).not.toBeNull();
+    expect(container.querySelector('section.story-screen')).not.toBeNull();
+    expect(container.querySelector('.zone-story'), 'the panel is back around the whole screen').toBeNull();
+
     const entry = screen.getByRole('article', { name: 'My garden years' });
-    expect(entry.className).toContain('card');
-    expect(entry.className).toContain('card--story');
+    expect(entry.className.split(/\s+/), 'the entry is a card again').not.toContain('card');
+    expect(entry.className.split(/\s+/)).toContain('story-entry');
   });
 });
