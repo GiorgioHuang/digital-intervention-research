@@ -26,9 +26,31 @@
  * costs 30. The wordmark, at 68px, is the part that still does not fit, and
  * it is also the part the mark already stands for.
  */
-export function BrandMark() {
+export function BrandMark({ onHome, homeLabel }: { onHome: () => void; homeLabel: string }) {
   return (
-    <span className="elder-toolbar__brand">
+    /*
+     * A real link, not a button.
+     *
+     * The brand goes to the start of the site from anywhere (owner,
+     * 2026-08-31), and the site has real addresses now — so this can be an
+     * `<a href="/">` and should be: right-click to copy, middle-click to
+     * open in a tab, and the address showing in the status bar are all
+     * things a link does and a button silently does not.
+     *
+     * A plain left click is handled here instead, so it routes without
+     * reloading the page. Modified clicks — a new tab, a new window, a
+     * download — are left to the browser, which is the whole reason for
+     * using a link in the first place.
+     */
+    <a
+      className="elder-toolbar__brand"
+      href="/"
+      onClick={(e) => {
+        if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+        e.preventDefault();
+        onHome();
+      }}
+    >
       {/*
         Decorative: the wordmark beside it already carries the name, and an
         alt text here would make a screen reader say "icareu" twice.
@@ -49,7 +71,23 @@ export function BrandMark() {
         <circle cx="12" cy="12.4" r="2.3" fill="currentColor" stroke="none" />
       </svg>
       <span className="elder-toolbar__wordmark">icareu</span>
-    </span>
+      {/*
+        Where it goes, for anyone who cannot see it.
+
+        The wordmark is `display: none` below 384px, and CSS-hidden text is
+        gone from the accessibility tree — so below that width the link
+        would otherwise be an unnamed icon. This is always present, which
+        also means the accessible name still contains the visible text
+        when the wordmark is showing (WCAG 2.5.3, Label in Name).
+
+        The word comes from the caller because the destination is not
+        always the same thing: `/` is Home once somebody is signed in and
+        the way in before that, and calling the sign-in screen "Home" to
+        somebody who cannot get in would be the wrong word at the worst
+        moment.
+      */}
+      <span className="visually-hidden">{homeLabel}</span>
+    </a>
   );
 }
 

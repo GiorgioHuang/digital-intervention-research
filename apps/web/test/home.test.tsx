@@ -167,6 +167,73 @@ describe('participant home', () => {
 });
 
 /**
+ * The brand goes back to the start, from anywhere.
+ *
+ * A link rather than a button, because the site has real addresses now:
+ * right-click to copy, middle-click for a new tab, and the destination
+ * showing in the status bar are all things a link does and a button
+ * silently does not. A plain click is handled in JavaScript so it routes
+ * without reloading; a modified click is left to the browser, which is the
+ * whole reason for using a link.
+ */
+describe('the brand in the toolbar', () => {
+  beforeEach(() => {
+    (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+    window.history.replaceState(null, '', '/');
+  });
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllGlobals();
+    window.history.replaceState(null, '', '/');
+  });
+
+  it('is a real link to the start of the site', async () => {
+    stubFetch();
+    await act(async () => {
+      render(<App />);
+    });
+    await signIn();
+    const brand = document.querySelector('.elder-toolbar__brand');
+    expect(brand?.tagName, 'the brand is not a link, so none of what a link does works').toBe('A');
+    expect(brand?.getAttribute('href')).toBe('/');
+  });
+
+  /**
+   * The wordmark is `display: none` below 384px and CSS-hidden text leaves
+   * the accessibility tree, so without a name of its own the link would be
+   * an unnamed icon on a narrow phone. The name still contains the visible
+   * text where the wordmark shows (WCAG 2.5.3, Label in Name).
+   */
+  it('says where it goes, even where the wordmark is hidden', async () => {
+    stubFetch();
+    await act(async () => {
+      render(<App />);
+    });
+    await signIn();
+    const brand = screen.getByRole('link', { name: /icareu/ });
+    expect(brand.textContent, 'the link does not say where it goes').toMatch(/Home/);
+  });
+
+  it('returns to Home from a screen that is not Home', async () => {
+    stubFetch();
+    await act(async () => {
+      render(<App />);
+    });
+    await signIn();
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Exercises you can try' }));
+    });
+    expect(window.location.pathname).toBe('/exercises');
+
+    await act(async () => {
+      fireEvent.click(document.querySelector('.elder-toolbar__brand')!);
+    });
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toMatch(/Good (morning|afternoon|evening)/);
+    expect(window.location.pathname, 'the screen changed but the address did not').toBe('/');
+  });
+});
+
+/**
  * Help and safety is for help and safety.
  *
  * Measured: the display-preferences block was 191 words and 15 controls,

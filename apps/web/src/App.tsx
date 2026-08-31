@@ -464,6 +464,15 @@ export function App() {
           highContrast={highContrast}
           onHighContrast={setHighContrast}
           readAloudTarget={contentRef}
+          /*
+            Signed out, `/` is the way in rather than Home — so the brand
+            comes back from the about screen to the sign-in screen, and is
+            called by the name of the thing it actually reaches. Telling
+            somebody who cannot get in that a control goes "Home" would be
+            the wrong word at the worst moment.
+          */
+          onHome={() => setAboutBeforeSignIn(false)}
+          homeLabel="Sign in"
         />
         <main
           ref={contentRef}
@@ -538,6 +547,15 @@ export function App() {
           highContrast={highContrast}
           onHighContrast={setHighContrast}
           readAloudTarget={contentRef}
+          /*
+            Signed out, `/` is the way in rather than Home — so the brand
+            comes back from the about screen to the sign-in screen, and is
+            called by the name of the thing it actually reaches. Telling
+            somebody who cannot get in that a control goes "Home" would be
+            the wrong word at the worst moment.
+          */
+          onHome={() => setAboutBeforeSignIn(false)}
+          homeLabel="Sign in"
         />
         <main
           ref={contentRef}
@@ -863,6 +881,11 @@ export function App() {
         highContrast={highContrast}
         onHighContrast={setHighContrast}
         readAloudTarget={contentRef}
+        onHome={() => {
+          setToast('');
+          setScreen('home');
+        }}
+        homeLabel="Home"
       />
       <main
         id="main-content"

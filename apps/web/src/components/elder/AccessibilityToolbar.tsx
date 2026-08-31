@@ -37,6 +37,8 @@ export function AccessibilityToolbar({
   highContrast,
   onHighContrast,
   readAloudTarget,
+  onHome,
+  homeLabel,
 }: {
   zoom: number;
   onZoom: (next: (from: number) => number) => void;
@@ -44,6 +46,10 @@ export function AccessibilityToolbar({
   onHighContrast: (next: boolean) => void;
   /** The region whose words are read. Nothing outside it is spoken. */
   readAloudTarget: React.RefObject<HTMLElement | null>;
+  /** Pressing the brand goes to the start of the site, from any screen. */
+  onHome: () => void;
+  /** What that destination is called here — it is not always "Home". */
+  homeLabel: string;
 }) {
   /*
    * Reading aloud speaks what is on the screen, at 0.9 — slower than the
@@ -77,7 +83,7 @@ export function AccessibilityToolbar({
   return (
     <div className="elder-toolbar">
       {/* The owner's, not the drawing's: the drawing has no mark here. */}
-      <BrandMark />
+      <BrandMark onHome={onHome} homeLabel={homeLabel} />
       {/*
         The controls in one group, and the bar spaced between the two.
         
