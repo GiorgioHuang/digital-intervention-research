@@ -149,7 +149,59 @@ jobs:
           DBURL=$(gcloud secrets versions access latest --secret=HADI_DATABASE_URL --project "${{ vars.GCP_PROJECT_ID }}")
           echo "::add-mask::$DBURL"
           pnpm install --frozen-lockfile
-          DATABASE_URL="$DBURL" pnpm migrate
+          # Migrate over the DIRECT endpoint, never the pooled one.
+          #
+          # node-pg-migrate takes `SELECT pg_try_advisory_lock(...)`, which
+          # is session-scoped: it is held until the session releases it or
+          # the session ends. A transaction pooler keeps the backend session
+          # alive after the client has gone, so a lock taken through the
+          # pooler is never released — and every later migration then gets
+          # `Another migration is already running` for ever, from a lock
+          # nothing is actually holding.
+          #
+          # That is what happened on 2026-08-31: deploy #194 failed three
+          # minutes after a successful deploy, and #195, run by hand with
+          # nothing else in flight, failed identically. The concurrency
+          # group had already stopped two deploys overlapping and was not
+          # the problem. My first reading of #194 was that the lock was
+          # transient and waiting would clear it; #195 disproved that.
+          #
+          # Neon names the pooled host `...-pooler.<region>...`, so the
+          # direct host is the same name without it. Nothing changes for a
+          # connection string that is already direct.
+          MIGRATE_URL="$DBURL"
+          case "$DBURL" in
+            *-pooler.*)
+              MIGRATE_URL=$(printf '%s' "$DBURL" | sed 's/-pooler\.\([^/]*\)/.\1/')
+              echo "::add-mask::$MIGRATE_URL"
+              echo "::notice::migrating over the direct endpoint — a session advisory lock through a pooler is never released."
+              ;;
+            *)
+              echo "::notice::connection string is already direct; migrating over it unchanged."
+              ;;
+          esac
+          # A bounded wait on top, for the honest case: another deploy really
+          # is mid-migration, or a leaked lock is still being recycled. It is
+          # deliberately narrow — any other migration failure exits at once,
+          # because a broken migration retried five times is a broken
+          # migration reported five times, and the third attempt of a
+          # half-applied migration is how a database reaches a state nobody
+          # drilled.
+          for attempt in 1 2 3 4 5; do
+            if DATABASE_URL="$MIGRATE_URL" pnpm migrate 2>&1 | tee /tmp/migrate.log; then
+              break
+            fi
+            if ! grep -q "Another migration is already running" /tmp/migrate.log; then
+              echo "::error::migration failed for a reason other than a held lock — see the log above."
+              exit 1
+            fi
+            if [ "$attempt" = "5" ]; then
+              echo "::error::the migration lock was still held after five attempts. If no other deploy is running, a session advisory lock has leaked onto a pooled backend: it clears when that backend is recycled, or with SELECT pg_terminate_backend(pid) FROM pg_locks WHERE locktype = 'advisory'."
+              exit 1
+            fi
+            echo "::notice::migration lock held; waiting $((attempt * 20))s and trying again (attempt $attempt of 5)."
+            sleep $((attempt * 20))
+          done
 
       - name: Ensure the runtime SA can read secrets
         if: steps.cfg.outputs.enabled == 'true'
