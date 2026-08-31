@@ -1642,6 +1642,13 @@ a[role='button']:hover { background-color: var(--color-action-secondary-bg-hover
   line-height: 1.6;
   color: var(--cl-text-3);
 }
+/* The attribution under a quoted line: present, and quieter than the words. */
+.welcome__holding-source {
+  display: block;
+  margin-block-start: var(--space-2);
+  font-size: var(--type-size-0);
+  color: var(--cl-text-4);
+}
 .welcome__note {
   font-size: var(--type-size-0);
   line-height: 1.6;

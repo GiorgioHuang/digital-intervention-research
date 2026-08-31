@@ -448,7 +448,18 @@ export function App() {
           */}
           <p role="status" className="welcome__holding">
             <span className="visually-hidden">Opening your pages.</span>
-            <span aria-hidden="true">{holding}</span>
+            <span aria-hidden="true">{holding.text}</span>
+            {/*
+              Attribution is part of the quotation, not decoration on it:
+              a line from somebody else's book shown without their name is
+              presented as ours. The platform's own sentences carry no
+              source and get no line here.
+            */}
+            {holding.source !== null && (
+              <span aria-hidden="true" className="welcome__holding-source">
+                {holding.source}
+              </span>
+            )}
           </p>
           {waitingLong && (
             <p className="welcome__note">

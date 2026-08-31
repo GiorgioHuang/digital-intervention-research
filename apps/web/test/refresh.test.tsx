@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { act } from 'react';
 import { App } from '../src/App.js';
-import { HOLDING_LINES } from '../src/holding.js';
+import { holdingLines } from '../src/holding.js';
 
 /**
  * What happens when somebody presses refresh.
@@ -126,7 +126,10 @@ describe('pressing refresh', () => {
     });
     const status = screen.getByRole('status');
     const shown = status.querySelector('[aria-hidden="true"]')?.textContent ?? '';
-    expect(HOLDING_LINES, `"${shown}" is not one of the sentences`).toContain(shown);
+    expect(
+      holdingLines().map((l) => l.text),
+      `"${shown}" is not one of the sentences`,
+    ).toContain(shown);
     expect(status.textContent, 'nothing tells a screen reader the page is working').toMatch(/Opening your pages/);
     await act(async () => {});
     await act(async () => {});
