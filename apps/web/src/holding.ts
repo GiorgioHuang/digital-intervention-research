@@ -45,11 +45,29 @@ export interface HoldingLine {
    */
   readonly source: string | null;
   /**
-   * Why it is out of copyright, in words: the author's death year for a
-   * Canadian public-domain claim, or the traditional/no-author basis.
-   * Required whenever `source` is given.
+   * Why it is out of copyright **in Canada**, in words: the author's death
+   * year, or the traditional/no-author basis. Required whenever `source`
+   * is given.
    */
   readonly publicDomainBecause?: string;
+  /**
+   * The same question for the **United States**, answered separately and
+   * required for every quotation.
+   *
+   * These are two different answers and this project has already met a
+   * case where they diverged: Anne of Ingleside is public domain in Canada
+   * and, its US term having been renewed, is under copyright there until
+   * 1 January 2035. Canada runs on the author's death; the United States,
+   * for anything published from 1930 to 1963, ran on whether the term was
+   * renewed. A work published before 1930 is clear there outright, which
+   * is the easy answer and the one every quotation below relies on.
+   *
+   * It is a required field rather than a note because "public domain" said
+   * without a country is the exact shape of the mistake — and this
+   * deployment is reachable from anywhere, so the Canadian answer is never
+   * the whole answer.
+   */
+  readonly unitedStatesBecause?: string;
   /**
    * Set only once the wording has been compared with the text itself, and
    * says against what. Unset means "not yet compared", and an entry that
@@ -122,51 +140,56 @@ export const HOLDING_LINES: readonly HoldingLine[] = [
     text: 'There is something in the autumn that is native to my blood.',
     source: 'Bliss Carman, “A Vagabond Song”',
     publicDomainBecause: 'Carman died in 1929; the poem was published in the 1890s, well before 1930',
+    unitedStatesBecause: 'published in the 1890s — before 1930, so public domain in the United States outright',
     wordingComparedWith: 'the text, by the owner (2026-08-31)',
   },
   {
     text: 'My heart is like a rhyme.',
     source: 'Bliss Carman, “A Vagabond Song”',
     publicDomainBecause: 'Carman died in 1929; the poem was published in the 1890s, well before 1930',
+    unitedStatesBecause: 'published in the 1890s — before 1930, so public domain in the United States outright',
     wordingComparedWith: 'the text, by the owner (2026-08-31)',
   },
   {
     text: 'His were songs so full of a wholesome laughter.',
     source: 'L. M. Montgomery, “The Poet”, The Watchman and Other Poems (1916)',
     publicDomainBecause: 'Montgomery died in 1942; published 1916, before 1930',
+    unitedStatesBecause: 'published 1916 — before 1930, so public domain in the United States outright',
     wordingComparedWith: 'the text, by the owner (2026-08-31)',
   },
   {
     text: 'The Arctic trails have their secret tales.',
     source: 'Robert W. Service, “The Cremation of Sam McGee” (1907)',
     publicDomainBecause: 'Service died in 1958; published 1907, before 1930',
+    unitedStatesBecause: 'published 1907 — before 1930, so public domain in the United States outright',
     wordingComparedWith: 'the text, by the owner (2026-08-31)',
   },
 ];
 
 /**
- * Held out, pending one check somebody with a library can make.
+ * Held out until 2035, or until somebody licenses them.
  *
  * The owner supplied four more lines from L. M. Montgomery's *Anne of
- * Ingleside* (1939). They are public domain in Canada — Montgomery died in
- * 1942 — and they are the warmest of the ten. They are not here because of
- * the United States, where a work published in 1939 kept its copyright
- * only if the term was renewed, and if it was it runs to 2034. This
- * deployment is reachable from anywhere, so "public domain at home" is not
- * the whole question.
+ * Ingleside* (1939). They are the warmest of the ten, and they are public
+ * domain in Canada — Montgomery died in 1942, so the work passed out of
+ * copyright here in 1993 under the old life + 50 term, before the 2022
+ * extension, which revived nothing.
  *
- * What would settle it: the US renewal record for Anne of Ingleside. If it
- * was not renewed the lines are clear everywhere and can go straight in;
- * if it was, the choice is the owner's — a single sentence quoted with
- * attribution is a strong fair-use case and is still not the same thing as
- * being cleared, which matters more for a university research platform
- * than it would for a personal site.
+ * They are not in the product because the United States is a separate
+ * question with a different answer. A 1939 work kept its US copyright if
+ * the term was renewed; this one's was, so it runs to **1 January 2035**
+ * (owner, 2026-08-31). This deployment is reachable from anywhere.
  *
- * One of the four also trips the "makes no claim" guard below, on the word
- * "always". That guard is about what the platform promises, not about what
- * a poet wrote, so it is scoped to the platform's own sentences — worth
- * knowing before those four are added, so the fix is not mistaken for the
- * guard being wrong.
+ * That is the finding, and it is why `unitedStatesBecause` above is a
+ * required field rather than a comment: the four lines looked cleared
+ * because they were cleared in the country the project is run from, and
+ * nothing in the code would have asked the second question. Now a
+ * quotation that has not answered it is withheld from the screen.
+ *
+ * The remaining routes are a licence from the rights holder, or the
+ * owner's own decision that a single attributed sentence is fair use —
+ * which is a strong argument and still not the same as being cleared.
+ * Neither is a code change; both are somebody's signature.
  */
 
 /**
@@ -177,7 +200,9 @@ export const HOLDING_LINES: readonly HoldingLine[] = [
  * half-done cannot reach a participant by simply being forgotten about.
  */
 export function holdingLines(all: readonly HoldingLine[] = HOLDING_LINES): readonly HoldingLine[] {
-  return all.filter((l) => l.source === null || l.wordingComparedWith !== undefined);
+  return all.filter(
+    (l) => l.source === null || (l.wordingComparedWith !== undefined && l.unitedStatesBecause !== undefined),
+  );
 }
 
 /**

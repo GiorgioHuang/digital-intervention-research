@@ -103,12 +103,43 @@ describe('the holding screen’s sentence', () => {
       text: 'A line somebody was fairly sure about.',
       source: 'Some Author, Some Book (1908)',
       publicDomainBecause: 'the author died in 1942',
+      unitedStatesBecause: 'published 1908, before 1930',
     };
     const shown = holdingLines([...HOLDING_LINES, unchecked]).map((l) => l.text);
     expect(shown, 'an unverified quotation would have been shown to a participant').not.toContain(unchecked.text);
 
-    const checked: HoldingLine = { ...unchecked, wordingComparedWith: 'the 1908 first edition, page 4' };
+    // Carries the US answer too, because the gate now needs both — the
+    // point of this test is the wording check, so everything else about
+    // the fixture has to be complete or it would pass for the wrong reason.
+    const checked: HoldingLine = {
+      ...unchecked,
+      wordingComparedWith: 'the 1908 first edition, page 4',
+      unitedStatesBecause: 'published 1908, before 1930',
+    };
     expect(holdingLines([...HOLDING_LINES, checked]).map((l) => l.text)).toContain(checked.text);
+  });
+
+  /**
+   * "Public domain" said without naming a country is the shape of the
+   * mistake, and this project met the case: four supplied lines were clear
+   * in Canada and, their US term having been renewed, under copyright in
+   * the United States until 2035. Nothing in the code would have asked the
+   * second question, and the deployment is reachable from anywhere.
+   */
+  it('withholds a quotation that has answered the copyright question for only one country', () => {
+    const canadaOnly: HoldingLine = {
+      text: 'A line cleared at home and nowhere else.',
+      source: 'Some Author, A Book (1939)',
+      publicDomainBecause: 'the author died in 1942',
+      wordingComparedWith: 'the first edition',
+    };
+    expect(
+      holdingLines([...HOLDING_LINES, canadaOnly]).map((l) => l.text),
+      'a line still in copyright in the United States would have been shown',
+    ).not.toContain(canadaOnly.text);
+
+    const both: HoldingLine = { ...canadaOnly, unitedStatesBecause: 'published 1907, before 1930' };
+    expect(holdingLines([...HOLDING_LINES, both]).map((l) => l.text)).toContain(both.text);
   });
 
   /**
@@ -122,7 +153,11 @@ describe('the holding screen’s sentence', () => {
       expect(line.source, `"${line.text}" is quoted with an empty source`).not.toBe('');
       expect(
         line.publicDomainBecause,
-        `"${line.text}" is quoted with no stated reason it is out of copyright`,
+        `"${line.text}" is quoted with no stated reason it is out of copyright in Canada`,
+      ).toBeTruthy();
+      expect(
+        line.unitedStatesBecause,
+        `"${line.text}" is quoted with no stated reason it is out of copyright in the United States`,
       ).toBeTruthy();
     }
   });
