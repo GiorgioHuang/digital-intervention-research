@@ -176,11 +176,18 @@ describe('the stylesheet', () => {
    * the scrollbars.
    */
   it('declares the colour scheme the participant workspace actually has', () => {
-    const rule = withoutComments.slice(withoutComments.indexOf("\n[data-workspace='participant'] {"));
-    const body = rule.slice(0, rule.indexOf('}'));
-    expect(body, 'native controls follow the device again, on a workspace that is light only').toContain(
-      'color-scheme: light;',
+    // Every block with this selector, not the first one: the workspace now
+    // has two — the pinned light palette and the Classical remap — and
+    // slicing to the first found the wrong one and failed on a working
+    // stylesheet.
+    const bodies = [...withoutComments.matchAll(/\[data-workspace='participant'\] \{([^}]*)\}/g)].map(
+      (m) => m[1] ?? '',
     );
+    expect(bodies.length, 'the participant token blocks are gone').toBeGreaterThan(0);
+    expect(
+      bodies.some((b) => b.includes('color-scheme: light;')),
+      'native controls follow the device again, on a workspace that is light only',
+    ).toBe(true);
   });
 
   /**

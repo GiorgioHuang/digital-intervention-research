@@ -334,6 +334,52 @@ for (const [themeName, tokens] of [
   });
 }
 
+/**
+ * The participant workspace is light, and cannot follow a dark device.
+ *
+ * It was reported twice from two directions — a black tick box, then a
+ * black card on the story screen — and both were the same fault. The
+ * Classical palette has no dark variant, but the platform's semantic
+ * tokens underneath it do, and every one this workspace had not pinned
+ * went on following the device. `--color-story-surface` is #fcf8f2 light
+ * and #211a12 dark, so a life-story card went near-black on a cream page
+ * and the heading on it became unreadable.
+ *
+ * The pin is a copy of the light values, and a copy drifts. This is what
+ * stops it: nothing the dark block touches may be left unpinned, and a
+ * pinned value must be the light one.
+ */
+describe('the participant workspace cannot follow the device', () => {
+  const participant = declarations((s) => s === "[data-workspace='participant']");
+
+  it('pins or remaps every token the dark theme redefines', () => {
+    const unpinned = Object.keys(darkOnly).filter((t) => !(t in participant));
+    expect(
+      unpinned,
+      `these still follow the device inside the participant workspace: ${unpinned.join(', ')}`,
+    ).toEqual([]);
+  });
+
+  /**
+   * A pinned value that has drifted from the light one is worse than no
+   * pin: the workspace would then be neither the platform's light theme
+   * nor anything anybody chose.
+   */
+  it('pins them to the light value, not to some third colour', () => {
+    const drifted: string[] = [];
+    for (const [token, value] of Object.entries(participant)) {
+      // Only the pinned ones. The Classical remap deliberately points a
+      // subset at --cl- values and those are not copies of anything.
+      if (!(token in darkOnly)) continue;
+      if (value.startsWith('var(--cl-')) continue;
+      if (light[token] !== undefined && value !== light[token]) {
+        drifted.push(`${token}: pinned ${value}, light ${light[token]}`);
+      }
+    }
+    expect(drifted, `pinned values have drifted from the light palette: ${drifted.join(' | ')}`).toEqual([]);
+  });
+});
+
 describe('the token architecture holds', () => {
   it('keeps every literal colour inside a token block', () => {
     /* DESIGN_SYSTEM.md §0.1: component rules may only reference semantic
@@ -345,7 +391,18 @@ describe('the token architecture holds', () => {
          selector is now `@media (…) :root`, so a startsWith check would
          have called it a component rule and reported all forty of its
          values as violations. */
-      const isTokenBlock = /(^|\s):root\b/.test(selector);
+      /* A block that declares nothing but custom properties is a token
+         block whoever it selects. §0.1 forbids a COMPONENT rule from
+         carrying a literal colour, and the test for that is what the
+         block does, not what it selects — the participant workspace pins
+         the platform's light values on itself so that its screens cannot
+         follow a dark device, and those are definitions, not decoration.
+         A component rule still fails: it declares real properties too, so
+         it is not all-custom, and a literal on one of them is caught. */
+      const declared = [...(body.matchAll(/(^|;|\{)\s*([\w-]+)\s*:/g))].map((m) => m[2]!);
+      const isTokenBlock =
+        /(^|\s):root\b/.test(selector) ||
+        (declared.length > 0 && declared.every((d) => d.startsWith('--')));
       if (isTokenBlock) continue;
       for (const line of body.split('\n')) {
         if (/#[0-9a-f]{3,8}\b/i.test(line) || /\brgb\(/i.test(line)) {
