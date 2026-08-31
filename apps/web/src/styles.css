@@ -685,8 +685,15 @@
   color-scheme: light dark;
   color: var(--color-text-primary);
   background-color: var(--color-surface-page);
-  /* A sticky header/footer must not cover an element reached by Tab (§D.5) */
-  scroll-padding-block: var(--space-8);
+  /*
+   * A sticky header/footer must not cover an element reached by Tab
+   * (§D.5, and WCAG 2.4.11). This was written before there was a sticky
+   * header, against a guessed constant; there is one now, so the top half
+   * is the bar's own measured height. At 200% the bar wraps to two rows
+   * and a fixed guess would leave a focused control half under it —
+   * silently, because focus would still have moved.
+   */
+  scroll-padding-block: var(--elder-toolbar-height, var(--space-8)) var(--space-8);
 }
 
 html,
@@ -883,6 +890,28 @@ main {
   padding: 9px 14px;
   background-color: var(--cl-neutral-100);
   border-block-end: var(--border-hairline) solid var(--cl-divider);
+  /*
+   * It stays put while the page scrolls (owner, 2026-08-31).
+   *
+   * This is the bar that makes the text bigger and reads the page aloud,
+   * and the handoff heads its section "Accessibility toolbar (always)".
+   * Scrolling it away meant that somebody who found the text too small
+   * partway down a screen had to scroll back to the top to do anything
+   * about it — the control furthest from the person needing it, exactly
+   * when they need it.
+   *
+   * Sticky rather than fixed: it stays in the flow, so nothing has to
+   * reserve space for it and no content can end up underneath it at the
+   * top of the page. `html, body { overflow-x: clip }` does not break
+   * this — one axis clipped with the other visible is not a scroll
+   * container.
+   *
+   * The background is already opaque, which is what makes it readable
+   * over whatever passes behind.
+   */
+  position: sticky;
+  inset-block-start: 0;
+  z-index: var(--layer-header);
 }
 /*
  * Nothing in this bar breaks inside itself.

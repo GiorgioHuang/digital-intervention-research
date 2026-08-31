@@ -108,6 +108,38 @@ describe('the stylesheet', () => {
   });
 
   /**
+   * The reading toolbar does not scroll away.
+   *
+   * It is the bar that makes the text bigger and reads the page aloud, and
+   * the handoff heads its section "Accessibility toolbar (always)".
+   * Scrolling it off put the control furthest from the person needing it
+   * at the moment they needed it. Verified in a browser by scrolling —
+   * this only checks the declaration is still there, which is what a
+   * revert would remove.
+   */
+  it('keeps the reading toolbar on screen while the page scrolls', () => {
+    // Comments stripped first. This rule's own comment contains
+    // `html, body { overflow-x: clip }`, and that brace ends the body
+    // early — the guard failed on the working stylesheet until it did.
+    const rule = withoutComments.slice(withoutComments.indexOf('\n.elder-toolbar {'));
+    const body = rule.slice(0, rule.indexOf('}'));
+    expect(body, 'the reading controls scroll away again').toContain('position: sticky;');
+    expect(body, 'sticky with no edge to stick to does nothing').toContain('inset-block-start: 0;');
+  });
+
+  /**
+   * A sticky header can cover the element Tab just moved focus to, and
+   * that failure is silent — focus really did move, only the seeing of it
+   * is lost (WCAG 2.4.11). The reservation has to be the bar's real
+   * height, which is not a constant: at 200% it wraps to two rows.
+   */
+  it('reserves the toolbar’s own height so focus is never hidden under it', () => {
+    expect(css, 'the scroll reservation is back on a guessed constant').toMatch(
+      /scroll-padding-block:\s*var\(--elder-toolbar-height/,
+    );
+  });
+
+  /**
    * The participant chrome draws its edges with the design's hairline, not
    * the platform's default border.
    *

@@ -301,6 +301,32 @@ export function App() {
   }, []);
 
   /**
+   * How tall the reading toolbar actually is.
+   *
+   * It is sticky, so an element reached by Tab can end up underneath it.
+   * `scroll-padding-block-start` fixes that only if it matches the real
+   * height, and the height is not a constant: at 200% zoom the bar wraps
+   * to two rows. Measured for the same reason the bottom bar is — a guess
+   * that is too small fails silently, because focus still moves and only
+   * the seeing of it is lost.
+   *
+   * Found by query rather than by ref: the toolbar renders in three
+   * shells, and threading a ref through all of them to reach the same
+   * element is more moving parts than the one thing this needs.
+   */
+  useEffect(() => {
+    if (typeof ResizeObserver === 'undefined') return;
+    const bar = document.querySelector('.elder-toolbar');
+    if (bar === null) return;
+    const apply = () =>
+      document.documentElement.style.setProperty('--elder-toolbar-height', `${(bar as HTMLElement).offsetHeight}px`);
+    apply();
+    const observer = new ResizeObserver(apply);
+    observer.observe(bar);
+    return () => observer.disconnect();
+  }, [session, mode, restoring]);
+
+  /**
    * Ten seconds, then a way out (§E.1).
    *
    * Cleared when the restore settles, so the ordinary case never arms
