@@ -1613,12 +1613,31 @@ a[role='button']:hover { background-color: var(--color-action-secondary-bg-hover
   background-color: var(--cl-bg);
 }
 .welcome main { padding-block: var(--elder-gutter-block) var(--space-8); }
+/*
+ * The headline holds one line, at every phone width.
+ *
+ * It was set at a fixed 41.6px and broke across two lines from 405px
+ * downwards — measured, not guessed: the string wants 468px there and the
+ * content column is 361. A smaller fixed size only moves the width at
+ * which it breaks, so the size is derived from the column instead. The
+ * string is 29 characters and measures about 11.25x the font size in this
+ * face, so the column minus a little slack decides the size: 348.8px at
+ * 405, inside 361, and it stays inside all the way down to 320.
+ *
+ * The cap is the drawing's own size at the frame it was drawn on. The
+ * floor is there so the sentence never becomes unreadable on a very narrow
+ * screen — below about 270px it would rather wrap than shrink further.
+ *
+ * It CAN still wrap, and that is deliberate: the reading controls enlarge
+ * this text, and a headline pinned to one line at 200% would be
+ * horizontal scrolling instead of reflow, which is the thing WCAG 1.4.10
+ * exists to prevent. One line is the resting state, not a promise held
+ * against the reader's own settings.
+ */
 .welcome h1 {
   margin-block: var(--space-2) 0;
-  /* The design's 36px against Home's 34: this is the one line somebody
-     reads before deciding whether they are in the right place. */
-  font-size: var(--type-size-6, 2.31rem);
-  line-height: 1.1;
+  font-size: clamp(1.15rem, calc(8.6vw - 4px), 1.722rem);
+  line-height: 1.15;
 }
 .welcome__lede {
   font-size: var(--type-size-2);
@@ -1723,6 +1742,19 @@ a[role='button']:hover { background-color: var(--color-action-secondary-bg-hover
   inline-size: 100%;
   min-block-size: calc(3.667rem * var(--density));
   font-size: var(--type-size-3);
+}
+/*
+ * The way in is filled, not outlined.
+ *
+ * It had the gold border and the gold text the drawing gives it, and the
+ * page's own near-white behind them — so against a near-white page the one
+ * thing on the screen to press read as an outline rather than as a button.
+ * The drawing fills it with the accent's own tint, which is the whole
+ * difference between it and the code button beneath, and the reason the
+ * eye lands on it first.
+ */
+.welcome .welcome__way-in button {
+  background-color: var(--cl-accent-200);
 }
 /* A button that is a link: no box, no weight, no competition with the way
    in. */

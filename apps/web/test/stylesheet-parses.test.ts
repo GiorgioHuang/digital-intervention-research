@@ -73,6 +73,24 @@ describe('the stylesheet', () => {
   });
 
   /**
+   * The sign-in headline is sized from the column, not fixed.
+   *
+   * At a fixed 41.6px it broke across two lines from 405px downwards — the
+   * string wants 468px and the column is 361 — and a smaller fixed size
+   * only moves the width at which it breaks. Measured in a browser at 320,
+   * 360, 390, 405, 430 and 768; that measurement cannot run in this suite,
+   * so what is guarded here is that the size still derives from the
+   * viewport at all. It catches a revert to a constant, which is what the
+   * defect was; it cannot tell you the constant inside the clamp is right.
+   */
+  it('sizes the sign-in headline from the width it has to fit', () => {
+    const rule = css.slice(css.indexOf('\n.welcome h1 {'));
+    const body = rule.slice(0, rule.indexOf('}'));
+    expect(body, 'the headline is back on a fixed size, which wraps below 407px').toMatch(/font-size:\s*clamp\(/);
+    expect(body, 'the size no longer tracks the width of the column').toContain('vw');
+  });
+
+  /**
    * The participant chrome draws its edges with the design's hairline, not
    * the platform's default border.
    *

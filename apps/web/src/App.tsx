@@ -528,6 +528,12 @@ export function App() {
             <BrandBlock />
             <p className="kicker">Canadian Elder Life Story Project</p>
           </div>
+          {/*
+            A rule above the headline as well as below it, which is how
+            the drawing frames it — the headline sits between two lines,
+            not under one.
+          */}
+          <hr />
           <h1>Your life, in your own words.</h1>
           <hr />
         {/*
