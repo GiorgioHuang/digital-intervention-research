@@ -84,6 +84,13 @@ const envSchema = z.object({
   // open — they carry no data. This is a compensating control, NOT
   // authentication; OIDC (ADR-104) remains required before any real use.
   ACCESS_TOKEN: z.string().min(16).optional(),
+  // The about screen's "Get in touch" relay. Both are needed or neither
+  // does anything: with either missing the endpoint answers
+  // 'not-configured' and the screen says plainly that there is no way to
+  // send a message, rather than accepting what somebody writes and
+  // dropping it.
+  CONTACT_BOT_TOKEN: z.string().min(1).optional(),
+  CONTACT_CHAT_ID: z.string().min(1).optional(),
   // When set, the API also serves the built web app from this directory
   // (single Cloud Run service serves UI + API from one origin).
   WEB_DIST_DIR: z.string().optional(),

@@ -49,15 +49,39 @@ export type AuthMode = 'google' | 'dev-header';
  * which is the honest reading of a server too old to say — that build had
  * no other mode.
  */
-export async function detectAuthMode(): Promise<AuthMode> {
+export interface ServerInfo {
+  authMode: AuthMode;
+  /** Whether this deployment can carry a message from the about screen. */
+  contact: boolean;
+}
+
+/**
+ * What the server says about itself, in one request.
+ *
+ * Both answers come from the side that knows. Configuring either of them a
+ * second time in the bundle is how a build-time flag and a runtime secret
+ * disagree for a week, and the person who finds out is the one whose
+ * message went nowhere.
+ *
+ * Unreachable is read as the stub with no relay: the safe direction, since
+ * it draws the local entrance and says plainly that nothing can be sent.
+ */
+export async function serverInfo(): Promise<ServerInfo> {
   try {
     const res = await fetch('/health');
-    if (!res.ok) return 'dev-header';
-    const body = (await res.json()) as { authMode?: unknown };
-    return body.authMode === 'google' ? 'google' : 'dev-header';
+    if (!res.ok) return { authMode: 'dev-header', contact: false };
+    const body = (await res.json()) as { authMode?: unknown; contact?: unknown };
+    return {
+      authMode: body.authMode === 'google' ? 'google' : 'dev-header',
+      contact: body.contact === true,
+    };
   } catch {
-    return 'dev-header';
+    return { authMode: 'dev-header', contact: false };
   }
+}
+
+export async function detectAuthMode(): Promise<AuthMode> {
+  return (await serverInfo()).authMode;
 }
 
 async function readJson<T>(res: Response): Promise<T> {

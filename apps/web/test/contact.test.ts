@@ -1,13 +1,14 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { MAX_FIELD, MAX_MESSAGE, checkContactMessage, sendContactMessage } from '../src/contact.js';
+import { CONTACT_PATH, MAX_FIELD, MAX_MESSAGE, checkContactMessage, sendContactMessage } from '../src/contact.js';
 
 /**
  * The message box that replaced the telephone number on "Get in touch".
  *
  * The shape is the owner's own contact relay: `{ name, contact, message }`
- * POSTed as JSON to a Worker that holds its own secrets. What is tested
- * here is the part that decides whether somebody's words leave the browser
- * intact, and what they are told when they do not.
+ * POSTed as JSON to something that holds its own secrets — here, this
+ * platform's own API, at a fixed same-origin path. What is tested is the
+ * part that decides whether somebody's words leave the browser intact, and
+ * what they are told when they do not.
  */
 const msg = (over: Partial<{ name: string; contact: string; message: string }> = {}) => ({
   name: '',
@@ -26,9 +27,9 @@ describe('sending a message to the study team', () => {
   });
 
   /**
-   * The relay truncates silently — `clean()` slices to 4000 and 200 and
-   * forwards whatever survived, with nothing to tell the person who wrote
-   * it that the end is missing. On a platform whose promise is that
+   * The relay this was adapted from truncates silently — it slices to
+   * 4000 and 200 and forwards whatever survived, with nothing to tell the
+   * person who wrote it that the end is missing. On a platform whose promise is that
    * somebody's words stay their words, a message delivered with the end
    * quietly removed is the wrong failure, so the browser refuses first.
    */
@@ -41,13 +42,14 @@ describe('sending a message to the study team', () => {
     expect(checkContactMessage(msg({ message: 'x'.repeat(MAX_MESSAGE) }))).toBeNull();
   });
 
-  it('sends the three fields the relay reads, as JSON', async () => {
-    const fetchMock = vi.fn(async () => new Response('{"ok":true}', { status: 200 }));
+  it('sends the three fields the relay reads, as JSON, to its own server', async () => {
+    const fetchMock = vi.fn(async () => new Response('{"ok":true,"canReply":true}', { status: 200 }));
     vi.stubGlobal('fetch', fetchMock);
-    const res = await sendContactMessage(msg({ name: '  Ann  ', contact: ' ann@example.test ' }), 'https://relay.test');
+    const res = await sendContactMessage(msg({ name: '  Ann  ', contact: ' ann@example.test ' }));
     expect(res).toEqual({ ok: true, canReply: true });
     const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
-    expect(url).toBe('https://relay.test');
+    // Same origin, and fixed. Nothing in the bundle can point it elsewhere.
+    expect(url).toBe(CONTACT_PATH);
     expect(init.method).toBe('POST');
     expect(JSON.parse(String(init.body))).toEqual({
       name: 'Ann',
@@ -63,17 +65,15 @@ describe('sending a message to the study team', () => {
    * whether a reply is even possible and the screen says which.
    */
   it('reports that no reply is possible when no address was given', async () => {
-    vi.stubGlobal('fetch', vi.fn(async () => new Response('{"ok":true}', { status: 200 })));
-    expect(await sendContactMessage(msg({ contact: '' }), 'https://relay.test')).toEqual({ ok: true, canReply: false });
-    expect(await sendContactMessage(msg({ contact: '   ' }), 'https://relay.test')).toEqual({
-      ok: true,
-      canReply: false,
-    });
+    // The server decides this, because the server is what will be read
+    // from; the browser only relays the answer to the screen.
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('{"ok":true,"canReply":false}', { status: 200 })));
+    expect(await sendContactMessage(msg({ contact: '' }))).toEqual({ ok: true, canReply: false });
   });
 
   it('reports a refusal from the relay as a failure, not a success', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response('{"ok":false}', { status: 502 })));
-    expect(await sendContactMessage(msg(), 'https://relay.test')).toEqual({ ok: false, reason: 'failed' });
+    expect(await sendContactMessage(msg())).toEqual({ ok: false, reason: 'failed' });
   });
 
   it('reports a network failure rather than throwing at the screen', async () => {
@@ -83,27 +83,33 @@ describe('sending a message to the study team', () => {
         throw new Error('offline');
       }),
     );
-    await expect(sendContactMessage(msg(), 'https://relay.test')).resolves.toEqual({ ok: false, reason: 'failed' });
+    await expect(sendContactMessage(msg())).resolves.toEqual({ ok: false, reason: 'failed' });
   });
 
   /**
-   * With no relay configured nothing may be posted anywhere. The failure
-   * mode this guards is a build that falls back to some default address
-   * and quietly sends participants' messages to it.
+   * "This deployment has no relay" and "it was not delivered" are
+   * different things to be told, and only one of them is worth pressing
+   * Send again for. The server says which in the body, and the distinction
+   * has to survive the trip — collapsing both into "failed" would invite
+   * somebody to retry into a server that can never send.
    */
-  it('sends nowhere at all when no relay is configured', async () => {
-    const fetchMock = vi.fn(async () => new Response('{}', { status: 200 }));
-    vi.stubGlobal('fetch', fetchMock);
-    expect(await sendContactMessage(msg(), '')).toEqual({ ok: false, reason: 'not-configured' });
-    expect(fetchMock, 'a message was posted somewhere with no endpoint configured').not.toHaveBeenCalled();
+  it('keeps a deployment with no relay apart from a delivery that failed', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('{"ok":false,"reason":"not-configured"}', { status: 200 })));
+    expect(await sendContactMessage(msg())).toEqual({ ok: false, reason: 'not-configured' });
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response('{"ok":false,"reason":"delivery-failed"}', { status: 200 })),
+    );
+    expect(await sendContactMessage(msg())).toEqual({ ok: false, reason: 'failed' });
   });
 
   /** A refusal must happen before anything leaves the browser. */
   it('does not post a message it has already refused', async () => {
     const fetchMock = vi.fn(async () => new Response('{}', { status: 200 }));
     vi.stubGlobal('fetch', fetchMock);
-    await sendContactMessage(msg({ message: '' }), 'https://relay.test');
-    await sendContactMessage(msg({ message: 'x'.repeat(MAX_MESSAGE + 1) }), 'https://relay.test');
+    await sendContactMessage(msg({ message: '' }));
+    await sendContactMessage(msg({ message: 'x'.repeat(MAX_MESSAGE + 1) }));
     expect(fetchMock).not.toHaveBeenCalled();
   });
 });

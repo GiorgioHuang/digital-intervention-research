@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { contactEndpoint, MAX_FIELD, MAX_MESSAGE, sendContactMessage } from '../../contact.js';
+import { MAX_FIELD, MAX_MESSAGE, sendContactMessage } from '../../contact.js';
 
 /**
  * "Get in touch" on the about screen — a box to write in, in place of the
@@ -21,8 +21,13 @@ import { contactEndpoint, MAX_FIELD, MAX_MESSAGE, sendContactMessage } from '../
  * footer of every screen including sign-in, and this box has to work there
  * — it is now the only way to reach a person for somebody who cannot get
  * in, which is exactly when a contact route matters most.
+ *
+ * `configured` is the server's own answer, from /health, rather than a
+ * build-time flag. A flag in the bundle and a secret on the server can
+ * disagree for a week, and the person who finds out is the one whose
+ * message went nowhere.
  */
-export function ContactBox({ endpoint = contactEndpoint() }: { endpoint?: string }) {
+export function ContactBox({ configured }: { configured: boolean }) {
   const [name, setName] = useState('');
   const [contact, setContact] = useState('');
   const [message, setMessage] = useState('');
@@ -31,7 +36,7 @@ export function ContactBox({ endpoint = contactEndpoint() }: { endpoint?: string
   const [status, setStatus] = useState<{ kind: 'ok' | 'problem'; text: string } | null>(null);
   const [sending, setSending] = useState(false);
 
-  if (endpoint === '') {
+  if (!configured) {
     /*
      * No relay configured. Saying so is the only honest thing: a form that
      * accepts a message and drops it would be worse than the fictional
@@ -58,7 +63,7 @@ export function ContactBox({ endpoint = contactEndpoint() }: { endpoint?: string
         if (website !== '') return; // a bot filled the hidden field
         setSending(true);
         setStatus(null);
-        void sendContactMessage({ name, contact, message }, endpoint).then((res) => {
+        void sendContactMessage({ name, contact, message }).then((res) => {
           setSending(false);
           if (res.ok) {
             setName('');
@@ -81,6 +86,8 @@ export function ContactBox({ endpoint = contactEndpoint() }: { endpoint?: string
                 ? 'There is nothing written yet. Write your message in the box, then press Send.'
                 : res.reason === 'too-long'
                   ? `That is longer than this box can send. Shorten it to ${String(MAX_MESSAGE)} characters and press Send again — what you wrote is still here.`
+                  : res.reason === 'not-configured'
+                  ? 'This site cannot send messages at the moment. Nothing was sent, and what you wrote is still here.'
                   : 'The message was not sent. What you wrote is still here, so you can press Send again in a moment.',
           });
         });

@@ -6,11 +6,16 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 
 const json = (body: unknown) => new Response(JSON.stringify(body), { status: 200 });
-const stub = (authMode = 'dev-header') =>
+/**
+ * `contact` is the server's own answer about whether it can carry a
+ * message, and it arrives on /health with the entrance. Defaulted off
+ * here, so a test that wants the box has to say so.
+ */
+const stub = (authMode = 'dev-header', contact = false) =>
   vi.stubGlobal(
     'fetch',
     vi.fn(async (path: string) => {
-      if (path === '/health') return json({ status: 'ok', authMode });
+      if (path === '/health') return json({ status: 'ok', authMode, contact });
       return json({ data: [], meta: {} });
     }),
   );
@@ -148,8 +153,7 @@ describe('about this project', () => {
    * for the people most likely to need it.
    */
   it('offers the message box to somebody who has not signed in', async () => {
-    vi.stubEnv('VITE_CONTACT_ENDPOINT', 'https://contact.test/relay');
-    stub();
+    stub('dev-header', true);
     await act(async () => {
       render(<App />);
     });
@@ -167,13 +171,12 @@ describe('about this project', () => {
    *
    * A form that accepts a message and drops it would be worse than the
    * fictional telephone number it replaced — that at least failed where
-   * the person could see it fail. This is the state of any build whose
-   * VITE_CONTACT_ENDPOINT is unset, which includes every local build, so
-   * it is not a hypothetical.
+   * the person could see it fail. This is the state of any deployment
+   * without the two relay secrets, which includes every local run, so it
+   * is not a hypothetical.
    */
   it('says plainly when there is no way to send a message at all', async () => {
-    vi.stubEnv('VITE_CONTACT_ENDPOINT', '');
-    stub();
+    stub('dev-header', false);
     await act(async () => {
       render(<App />);
     });

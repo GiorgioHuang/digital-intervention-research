@@ -1,45 +1,30 @@
 /**
  * Sending a message to the people who run the study.
  *
- * The shape is the owner's own contact relay, taken from the portfolio
- * (`cloudflare-worker/worker.js`): the browser POSTs `{ name, contact,
- * message }` as JSON to a Worker, and the Worker forwards it. Nothing about
- * the destination is known here, and nothing about it may be — the relay
- * holds its own secrets, and a token in a browser bundle is a token
- * published.
+ * The shape is the owner's own contact relay (`g-portfolio`): the browser
+ * POSTs `{ name, contact, message }` as JSON and something forwards it,
+ * holding its own secrets. What forwards it is this platform's own API,
+ * not a Cloudflare Worker as first built — the two values it needs are
+ * already in GCP Secret Manager, which a Worker cannot read, and a second
+ * copy of a credential exists only to drift from the first.
  *
- * The endpoint is configuration, not a literal. The portfolio can hardcode
- * its own address because it is one site; this bundle is deployed by a
- * workflow, and a hardcoded address would mean a fork, a local build or a
- * staging deployment all posting participants' messages to the production
- * relay.
- *
- * Read when it is needed rather than captured at module load: a `const`
- * would freeze the value the first time anything imported this file, which
- * makes the unconfigured case — the one where the about screen has no way
- * to reach anybody — impossible to exercise without reloading modules.
- * Configuration that can only be observed once is configuration nobody
- * tests.
- *
- * A `const` here would freeze the value the first time anything imported
- * this file, which makes the unconfigured case — the one where the about
- * screen has no way to reach anybody — impossible to exercise without
- * reloading modules. Configuration that can only be observed once is
- * configuration nobody tests.
+ * So the endpoint is same-origin and fixed. There is nothing to configure
+ * in the bundle and nothing that can point at the wrong relay: a fork, a
+ * local build and a staging deployment each talk to their own server.
+ * Whether that server can actually carry a message is the server's answer,
+ * asked once at startup — see `serverInfo`.
  */
-export function contactEndpoint(): string {
-  return (import.meta.env['VITE_CONTACT_ENDPOINT'] as string | undefined) ?? '';
-}
+export const CONTACT_PATH = '/contact';
 
 /**
- * The relay's own limits, enforced here as well.
+ * The limits, held here as well as on the server.
  *
- * `worker.js` silently truncates: `clean()` slices to 4000 and 200 and
- * sends what is left. On a platform whose promise is that somebody's words
- * stay their words, a message that arrives with the end quietly removed —
- * and no indication to the person who wrote it that anything was cut — is
- * the wrong failure. Held to the same numbers so the browser can say so
- * before anything is sent.
+ * The relay this was adapted from truncates silently — it slices to these
+ * numbers and forwards what survived. On a platform whose promise is that
+ * somebody's words stay their words, a message delivered with the end
+ * quietly removed, and nothing to tell the person who wrote it, is the
+ * wrong failure. Both ends refuse instead, at the same numbers, so a
+ * message either arrives whole or does not arrive.
  */
 export const MAX_MESSAGE = 4000;
 export const MAX_FIELD = 200;
@@ -80,18 +65,28 @@ export function checkContactMessage(m: ContactMessage): ContactRefused | null {
  * "we will get back to you" said to somebody who left no address is a
  * comfort with nothing behind it.
  */
-export async function sendContactMessage(m: ContactMessage, endpoint = contactEndpoint()): Promise<ContactResult> {
+export async function sendContactMessage(m: ContactMessage, endpoint = CONTACT_PATH): Promise<ContactResult> {
   const bad = checkContactMessage(m);
   if (bad !== null) return bad;
-  if (endpoint === '') return { ok: false, reason: 'not-configured' };
   try {
     const res = await fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: m.name.trim(), contact: m.contact.trim(), message: m.message.trim() }),
     });
-    if (!res.ok) return { ok: false, reason: 'failed' };
-    return { ok: true, canReply: m.contact.trim() !== '' };
+    /*
+     * The server answers 200 with an outcome in the body, so a refusal is
+     * read from the body rather than from the status. It says which:
+     * "this deployment has no relay" and "it was not delivered" are
+     * different things to be told, and only one of them is worth pressing
+     * Send again for.
+     */
+    const body = (await res.json().catch(() => null)) as
+      | { ok?: unknown; canReply?: unknown; reason?: unknown }
+      | null;
+    if (!res.ok || body === null) return { ok: false, reason: 'failed' };
+    if (body.ok === true) return { ok: true, canReply: body.canReply === true };
+    return { ok: false, reason: body.reason === 'not-configured' ? 'not-configured' : 'failed' };
   } catch {
     return { ok: false, reason: 'failed' };
   }

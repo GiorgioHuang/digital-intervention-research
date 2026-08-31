@@ -18,7 +18,15 @@ import { ContactBox } from './ContactBox.js';
  * and nothing on this screen now claims to.
  */
 
-export function AboutScreen({ onBack, backLabel }: { onBack: () => void; backLabel: string }) {
+export function AboutScreen({
+  onBack,
+  backLabel,
+  contactConfigured,
+}: {
+  onBack: () => void;
+  backLabel: string;
+  contactConfigured: boolean;
+}) {
   return (
     <section aria-labelledby="about-heading">
       <p>
@@ -58,7 +66,7 @@ export function AboutScreen({ onBack, backLabel }: { onBack: () => void; backLab
         Write to the people who run the study. Your message goes to them and to nobody else, and it is not part of your
         life story.
       </p>
-      <ContactBox />
+      <ContactBox configured={contactConfigured} />
 
       <p className="about__address">{COPYRIGHT_HOLDER}</p>
     </section>

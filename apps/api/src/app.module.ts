@@ -11,7 +11,9 @@ import { createKnowledgePlatformMcpClient, createKnowledgePlatformSimulator } fr
 import { createBlobStore } from '@platform/m16-integration';
 import { createBlockQuery } from '@platform/m18-community-social';
 import type { ApiConfig } from './config.js';
-import { AUTH_MODE, BLOB_STORE, HealthController, PG_POOL } from './health.controller.js';
+import { AUTH_MODE, BLOB_STORE, CONTACT_READY, HealthController, PG_POOL } from './health.controller.js';
+import { CONTACT_RELAY, ContactController } from './contact.controller.js';
+import type { ContactRelayConfig } from './contact-relay.js';
 import { API_DEPS, CommandController, type ApiDeps } from './controllers.js';
 import { StaffCommandController } from './staff-controllers.js';
 import { PlatformErrorFilter } from './error-filter.js';
@@ -122,9 +124,15 @@ export function buildAppModule(config: ApiConfig) {
         })()
       : undefined;
 
+  const contactRelay: ContactRelayConfig | undefined =
+    config.CONTACT_BOT_TOKEN !== undefined && config.CONTACT_CHAT_ID !== undefined
+      ? { botToken: config.CONTACT_BOT_TOKEN, chatId: config.CONTACT_CHAT_ID }
+      : undefined;
+
   @Module({
     controllers: [
       HealthController,
+      ContactController,
       CommandController,
       StaffCommandController,
       ...(google !== undefined ? [AuthController] : []),
@@ -133,6 +141,14 @@ export function buildAppModule(config: ApiConfig) {
       { provide: PG_POOL, useValue: pool },
       { provide: BLOB_STORE, useValue: blobs },
       { provide: AUTH_MODE, useValue: config.AUTH_MODE },
+      /*
+       * Both halves or neither. A token with no destination, or a
+       * destination with no token, is not a half-working relay — it is a
+       * screen that accepts somebody's message and cannot send it, which
+       * is the one outcome worse than saying there is no way to send.
+       */
+      { provide: CONTACT_RELAY, useValue: contactRelay },
+      { provide: CONTACT_READY, useValue: contactRelay !== undefined },
       { provide: API_DEPS, useValue: deps },
       { provide: APP_FILTER, useClass: PlatformErrorFilter },
       ...(google !== undefined ? [{ provide: AUTH_DEPS, useValue: google.authDeps }] : []),

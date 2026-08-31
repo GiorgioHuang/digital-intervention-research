@@ -5,6 +5,7 @@ import type { BlobStore } from '@platform/m16-integration';
 export const PG_POOL = 'PG_POOL';
 export const BLOB_STORE = 'BLOB_STORE';
 export const AUTH_MODE = 'AUTH_MODE';
+export const CONTACT_READY = 'CONTACT_READY';
 
 @Controller()
 export class HealthController {
@@ -12,6 +13,7 @@ export class HealthController {
     @Inject(PG_POOL) private readonly pool: Pool,
     @Inject(BLOB_STORE) private readonly blobs: BlobStore,
     @Inject(AUTH_MODE) private readonly authMode: string,
+    @Inject(CONTACT_READY) private readonly contactReady: boolean,
   ) {}
 
   /**
@@ -26,9 +28,21 @@ export class HealthController {
    * is a feature, because a deployment answering that is a deployment
    * where identity is whatever a header says.
    */
+  /*
+   * `contact` says whether this deployment can carry a message from the
+   * about screen. The web app asks so that it can say there is no way to
+   * send one, instead of drawing a box that drops what is written in it.
+   *
+   * Reported by the service rather than configured a second time in the
+   * bundle, which is the same reason `authMode` is here: a build-time flag
+   * and a runtime secret can disagree for a week before anybody notices,
+   * and the person who finds out is the one whose message went nowhere.
+   * It is a boolean and nothing more — never the token, never where it
+   * goes.
+   */
   @Get('health')
-  health(): { status: string; authMode: string } {
-    return { status: 'ok', authMode: this.authMode };
+  health(): { status: string; authMode: string; contact: boolean } {
+    return { status: 'ok', authMode: this.authMode, contact: this.contactReady };
   }
 
   /**

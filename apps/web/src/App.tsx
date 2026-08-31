@@ -43,7 +43,7 @@ import { SafetyPanel } from './components/SafetyPanel.js';
 import { SessionGuard } from './components/SessionGuard.js';
 import { SharedDeviceBar } from './components/SharedDeviceBar.js';
 import { api, PlatformApiError, type Session } from './api.js';
-import { completeRedirect, currentSession, detectAuthMode, signOut, type AuthMode } from './auth.js';
+import { completeRedirect, currentSession, serverInfo, signOut, type AuthMode } from './auth.js';
 import { GoogleSignIn } from './components/GoogleSignIn.js';
 import { endVisit, isSharedDevice, setSharedDevice } from './device-mode.js';
 import { applyPreferences, loadPreferences } from './preferences.js';
@@ -227,6 +227,14 @@ export function App() {
    * meantime rather than flashing up the wrong entrance and replacing it.
    */
   const [authMode, setAuthMode] = useState<AuthMode | undefined>(undefined);
+  /*
+   * Whether this deployment can carry a message from the about screen —
+   * the server's own answer, arriving with the entrance in the same
+   * request. False until it has answered, which is the safe direction: the
+   * screen says there is no way to send rather than offering a box a
+   * moment before it knows there is one.
+   */
+  const [contactConfigured, setContactConfigured] = useState(false);
   const navRef = useRef<HTMLElement | null>(null);
 
   /*
@@ -253,10 +261,11 @@ export function App() {
     let cancelled = false;
     void (async () => {
       try {
-        const detected = await detectAuthMode();
+        const info = await serverInfo();
         if (cancelled) return;
-        setAuthMode(detected);
-        if (detected !== 'google') return;
+        setAuthMode(info.authMode);
+        setContactConfigured(info.contact);
+        if (info.authMode !== 'google') return;
 
         const redirect = await completeRedirect();
         if (cancelled) return;
@@ -512,7 +521,11 @@ export function App() {
         >
           {aboutBeforeSignIn ? (
             <>
-              <AboutScreen onBack={() => setAboutBeforeSignIn(false)} backLabel="Back to sign in" />
+              <AboutScreen
+                onBack={() => setAboutBeforeSignIn(false)}
+                backLabel="Back to sign in"
+                contactConfigured={contactConfigured}
+              />
               <SiteFooter year={copyrightYear(new Date())} onAbout={() => setAboutBeforeSignIn(true)} />
             </>
           ) : (
@@ -1026,7 +1039,7 @@ export function App() {
           time.
         */}
         {screen === 'about' && (
-          <AboutScreen onBack={() => setScreen('home')} backLabel="Back to Home" />
+          <AboutScreen onBack={() => setScreen('home')} backLabel="Back to Home" contactConfigured={contactConfigured} />
         )}
         {screen === 'information' && (
           <>
