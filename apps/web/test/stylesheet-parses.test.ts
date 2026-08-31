@@ -140,6 +140,28 @@ describe('the stylesheet', () => {
   });
 
   /**
+   * The participant workspace says which colour scheme it is.
+   *
+   * Reported as a black tick box. It was not the tick box: the document
+   * declares `color-scheme: light dark`, and the Classical palette has no
+   * dark variant — every --cl- token is defined exactly once. So on a
+   * device set to dark, the page painted itself light from its own tokens
+   * while the browser painted the native controls dark. Measured at
+   * #3b3b3b on a #f3f2f2 page; #ffffff after.
+   *
+   * It reached every native control, not just the one that was noticed —
+   * the text fields, the message box on the about screen, the selects and
+   * the scrollbars.
+   */
+  it('declares the colour scheme the participant workspace actually has', () => {
+    const rule = withoutComments.slice(withoutComments.indexOf("\n[data-workspace='participant'] {"));
+    const body = rule.slice(0, rule.indexOf('}'));
+    expect(body, 'native controls follow the device again, on a workspace that is light only').toContain(
+      'color-scheme: light;',
+    );
+  });
+
+  /**
    * The participant chrome draws its edges with the design's hairline, not
    * the platform's default border.
    *

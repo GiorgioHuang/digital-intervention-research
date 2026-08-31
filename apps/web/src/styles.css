@@ -1172,6 +1172,47 @@ main {
   background-color: var(--cl-bg);
   color: var(--cl-text);
   font-family: var(--cl-family-body);
+
+  /*
+   * This workspace is light, so its native controls are too.
+   *
+   * Reported as a black tick box (owner, 2026-08-31). It is not the tick
+   * box: `color-scheme: light dark` is declared for the whole document,
+   * and the Classical palette has no dark variant at all — every --cl-
+   * token is defined once. So on a device set to dark the page painted
+   * itself light from its own tokens while the browser painted the
+   * controls dark from the document's declaration. Measured: the
+   * unchecked box came out #3b3b3b on a #f3f2f2 page.
+   *
+   * The checkbox is where it shows first and it is not where it stops —
+   * the same mismatch reaches the text fields, the message box on the
+   * about screen, the selects and the scrollbars. Declaring the scheme
+   * this workspace actually has fixes them together, and is the honest
+   * statement: there is no dark Classical ramp to opt into.
+   */
+  color-scheme: light;
+
+  /*
+   * The accent for anything the browser tints itself — a range, a
+   * progress bar. The tick boxes need their own rule below, because the
+   * platform sets `accent-color` on the element and a declaration on the
+   * element beats one inherited from an ancestor however far up it is.
+   */
+  accent-color: var(--cl-accent);
+}
+
+/*
+ * A ticked box takes the accent, not the accent's text shade.
+ *
+ * The platform sets `accent-color: var(--color-action-primary-bg)` on
+ * every checkbox and radio, and this workspace remaps that token to
+ * --cl-accent-700 — the shade chosen for WORDS on this ground, which is
+ * why it is so dark. Filled into a box it measured #4c330a, near enough
+ * to black to be reported as black. The drawing fills a checked control
+ * with --color-accent, and --cl-accent is that same value.
+ */
+[data-workspace='participant'] :is(input[type='checkbox'], input[type='radio']) {
+  accent-color: var(--cl-accent);
 }
 
 /* Headings and controls are the display face; body copy is not. */
