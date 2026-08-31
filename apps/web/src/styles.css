@@ -1742,6 +1742,19 @@ a[role='button']:hover { background-color: var(--color-action-secondary-bg-hover
   inline-size: 100%;
   min-block-size: calc(3.667rem * var(--density));
   font-size: var(--type-size-3);
+  /*
+   * Centred, which the drawing says and the platform's own button style
+   * did not: buttons here are `inline-flex` with `justify-content:
+   * flex-start`, which is right for a button sized to its label and wrong
+   * for one stretched to the full column. Measured at 405px, the label sat
+   * 20px from the left edge with 130px of space after it — 110px off
+   * centre inside its own box.
+   *
+   * The prototype's declaration is `display:flex;align-items:center;
+   * justify-content:center` on a full-width button, so this is the
+   * drawing's own value rather than a preference.
+   */
+  justify-content: center;
 }
 /*
  * The way in carries the drawing's own tint.

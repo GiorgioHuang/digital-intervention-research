@@ -91,6 +91,23 @@ describe('the stylesheet', () => {
   });
 
   /**
+   * The label sits in the middle of the button it is in.
+   *
+   * The platform's buttons are `inline-flex` with `justify-content:
+   * flex-start`, which is right for a button sized to its label and wrong
+   * for one stretched across the column: measured at 405px, "Continue with
+   * Google" sat 20px from the left edge with 130px of space after it. The
+   * prototype's own declaration centres it.
+   */
+  it('centres the label in the full-width buttons on the sign-in screen', () => {
+    const rule = css.slice(css.indexOf("\n.welcome form button[type='submit'],"));
+    const body = rule.slice(0, rule.indexOf('}'));
+    expect(body, 'the sign-in buttons are back on the platform default, which starts the label at the left').toContain(
+      'justify-content: center;',
+    );
+  });
+
+  /**
    * The participant chrome draws its edges with the design's hairline, not
    * the platform's default border.
    *
