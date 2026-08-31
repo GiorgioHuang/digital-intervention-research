@@ -38,8 +38,6 @@ export const HOLDING_LINES: readonly string[] = [
   // loading screen where nobody would check it, the one thing this
   // platform is careful never to promise anywhere else.
   'Any choice you make here can be withdrawn later.',
-  // Voluntary participation, stated on the about screen in the same words.
-  'Taking part is voluntary, and stopping changes nothing about your care.',
   // The life-story item is authored by the participant; a supporter's
   // account of a memory is a separate, attributed contribution.
   'Your story stays in your own words.',
