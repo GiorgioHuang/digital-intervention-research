@@ -2,8 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { act } from 'react';
 import { App } from '../src/App.js';
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { readFileSync, readdirSync } from 'node:fs';
+import { join, resolve } from 'node:path';
 import { HELPLINE_PLACEHOLDER } from '../src/components/elder/AboutScreen.js';
 
 const json = (body: unknown) => new Response(JSON.stringify(body), { status: 200 });
@@ -141,8 +141,35 @@ describe('about this project', () => {
     // the point of the comment, so comments are stripped before counting —
     // what must not happen is a second literal in the code, which would be
     // missed when the real number arrives.
-    const src = readFileSync(resolve(process.cwd(), 'src/components/elder/AboutScreen.tsx'), 'utf8');
-    const code = src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
-    expect(code.split(HELPLINE_PLACEHOLDER).length - 1, 'the number is written more than once').toBe(1);
+    //
+    // **This used to read only AboutScreen.tsx**, which is the one file a
+    // second copy cannot be in. It said, in its own comment, that it was
+    // what stopped the number being copied into a second screen — and
+    // `App.tsx` had already copied it into the "I cannot sign in" message,
+    // where it sat unseen. A guard that reads a single file cannot answer
+    // a question about every file, and this one was written as though it
+    // could. It now walks the whole source tree.
+    const root = resolve(process.cwd(), 'src');
+    const files: string[] = [];
+    const walk = (dir: string) => {
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        const full = join(dir, entry.name);
+        if (entry.isDirectory()) walk(full);
+        else if (/\.(ts|tsx)$/.test(entry.name)) files.push(full);
+      }
+    };
+    walk(root);
+    const where: string[] = [];
+    for (const file of files) {
+      const code = readFileSync(file, 'utf8')
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+        .replace(/\/\/[^\n]*/g, '');
+      for (let i = 0; i < code.split(HELPLINE_PLACEHOLDER).length - 1; i += 1) {
+        where.push(file.slice(root.length + 1));
+      }
+    }
+    expect(where, `the number is written in more than one place: ${where.join(', ')}`).toEqual([
+      'components/elder/AboutScreen.tsx',
+    ]);
   });
 });

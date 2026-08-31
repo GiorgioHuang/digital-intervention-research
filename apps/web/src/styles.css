@@ -1625,6 +1625,23 @@ a[role='button']:hover { background-color: var(--color-action-secondary-bg-hover
   line-height: 1.65;
 }
 /* The quiet lines: the environment note and the no-time-limit promise. */
+/*
+ * The sentence on the holding screen.
+ *
+ * Body face, not the display face: it is a thing to read, not a heading,
+ * and it is the only text on the page while the session is found. Set at
+ * the reading size rather than smaller — a line worth putting there is a
+ * line worth being able to read, and this audience is exactly the one that
+ * a quiet grey 13px would fail.
+ */
+.welcome__holding {
+  margin-block-start: var(--space-6);
+  max-inline-size: 34ch;
+  font-family: var(--cl-family-body);
+  font-size: var(--type-size-2);
+  line-height: 1.6;
+  color: var(--cl-text-3);
+}
 .welcome__note {
   font-size: var(--type-size-0);
   line-height: 1.6;

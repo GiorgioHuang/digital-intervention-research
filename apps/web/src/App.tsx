@@ -6,7 +6,7 @@ import { AccessTokenGate } from './components/AccessTokenGate.js';
 import { HelperScreen } from './components/elder/HelperScreen.js';
 import { Exercises, Tapping } from './components/elder/Exercises.js';
 import { SiteFooter } from './components/elder/SiteFooter.js';
-import { AboutScreen } from './components/elder/AboutScreen.js';
+import { AboutScreen, HELPLINE_PLACEHOLDER } from './components/elder/AboutScreen.js';
 import { BrandBlock } from './components/elder/BrandMark.js';
 
 /**
@@ -16,7 +16,7 @@ import { BrandBlock } from './components/elder/BrandMark.js';
  * supporter uses the same button as everybody else.
  */
 const CANNOT_SIGN_IN =
-  'Telephone 1 800 555 0142 — a person answers, eight in the morning until eight at night, every day. ' +
+  `Telephone ${HELPLINE_PLACEHOLDER} — a person answers, eight in the morning until eight at night, every day. ` +
   'If somebody invited you to help them, use the same Continue with Google button and the address they invited.';
 import { AccessibilityToolbar } from './components/elder/AccessibilityToolbar.js';
 import { HelperBanner } from './components/elder/HelperBanner.js';
@@ -48,6 +48,7 @@ import { endVisit, isSharedDevice, setSharedDevice } from './device-mode.js';
 import { applyPreferences, loadPreferences } from './preferences.js';
 import type { Screen } from './screens.js';
 import { pathForScreen, screenForPath } from './routes.js';
+import { holdingLine } from './holding.js';
 
 /**
  * Task-oriented participant Home (Doc 20 §16): a short list of clear
@@ -117,6 +118,25 @@ export function App() {
    * and the sign-in screen appears at once, which is correct there.
    */
   const [restoring, setRestoring] = useState(true);
+  /*
+   * The sentence on the holding screen, chosen once when the app opens.
+   *
+   * In the initialiser rather than in the body: picked during render it
+   * would change on every re-render, so the one screen built to be calm
+   * would be the one thing on it that moved. The randomness lives here and
+   * the choosing lives in holding.ts, which is a total function over a
+   * number and therefore testable at fixed inputs.
+   */
+  const [holding] = useState(() => holdingLine(Math.random()));
+  /*
+   * Whether the wait has gone on long enough to need a way out.
+   *
+   * §E.1 requires a route to recovery at ten seconds, and the holding
+   * screen I added did not have one — so a session lookup that never
+   * answered left somebody on a quiet page for ever, which is a worse
+   * failure than the flash it replaced.
+   */
+  const [waitingLong, setWaitingLong] = useState(false);
   /*
    * Which screen is showing — read from the address on the way in, and
    * written back to it on every change, so that a refresh returns to the
@@ -271,6 +291,20 @@ export function App() {
   }, []);
 
   /**
+   * Ten seconds, then a way out (§E.1).
+   *
+   * Cleared when the restore settles, so the ordinary case never arms
+   * anything visible. It is a fixed delay rather than a retry: retrying by
+   * itself would loop silently, and the person watching would have no more
+   * idea what was happening than before.
+   */
+  useEffect(() => {
+    if (!restoring) return;
+    const id = setTimeout(() => setWaitingLong(true), 10_000);
+    return () => clearTimeout(id);
+  }, [restoring]);
+
+  /**
    * The address follows the screen, and the screen follows the address.
    *
    * Two halves of one contract. The effect writes where the person is into
@@ -401,9 +435,27 @@ export function App() {
           data-contrast={highContrast ? 'high' : undefined}
           data-zoom={String(Math.round(zoom * 100))}
         >
-          <p role="status" className="welcome__note">
-            Just a moment.
+          {/*
+            The loading fact and the sentence are two different things, and
+            separating them is the point.
+
+            `role="status"` announces the region politely, and what it must
+            announce is that the page is working — a screen reader that read
+            out only "We never sell your information" would tell somebody
+            who cannot see the page a true thing and not the one they
+            needed. So the state is stated, for assistive technology, and
+            the sentence is what is on the screen.
+          */}
+          <p role="status" className="welcome__holding">
+            <span className="visually-hidden">Opening your pages.</span>
+            <span aria-hidden="true">{holding}</span>
           </p>
+          {waitingLong && (
+            <p className="welcome__note">
+              This is taking longer than usual. Nothing is wrong with your account, and nothing you have written is
+              affected. Close this page and open it again.
+            </p>
+          )}
         </main>
       </div>
     );

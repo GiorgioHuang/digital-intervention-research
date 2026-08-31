@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { act } from 'react';
 import { App } from '../src/App.js';
+import { HOLDING_LINES } from '../src/holding.js';
 
 /**
  * What happens when somebody presses refresh.
@@ -106,6 +107,68 @@ describe('pressing refresh', () => {
     });
     await act(async () => {});
     expect(signInShowing(), 'the holding screen never resolved for a signed-out visitor').toBe(true);
+  });
+
+  /**
+   * The holding screen says something worth reading, and still says that
+   * the page is working.
+   *
+   * Those are two different jobs and they are done by two elements. A
+   * screen reader that announced only "We never sell your information"
+   * would tell somebody who cannot see the page a true thing and not the
+   * one they needed — so the state is stated for assistive technology and
+   * the sentence is what is on the screen.
+   */
+  it('shows one of the sentences while it looks for the session', async () => {
+    vi.stubGlobal('fetch', googleFetch(true));
+    act(() => {
+      render(<App />);
+    });
+    const status = screen.getByRole('status');
+    const shown = status.querySelector('[aria-hidden="true"]')?.textContent ?? '';
+    expect(HOLDING_LINES, `"${shown}" is not one of the sentences`).toContain(shown);
+    expect(status.textContent, 'nothing tells a screen reader the page is working').toMatch(/Opening your pages/);
+    await act(async () => {});
+    await act(async () => {});
+  });
+
+  /**
+   * §E.1 requires a route to recovery at ten seconds. The holding screen
+   * did not have one, so a session lookup that never answered left
+   * somebody on a quiet page for ever — a worse failure than the flash it
+   * replaced, because nothing arrives to correct it.
+   */
+  it('offers a way out when the wait goes on', async () => {
+    vi.useFakeTimers();
+    // A session that never comes back: the case the timer exists for.
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (path: string) => {
+        if (path === '/health') {
+          return new Response(JSON.stringify({ status: 'ok', authMode: 'google' }), { status: 200 });
+        }
+        if (path === '/v1/auth/session') return new Promise<Response>(() => undefined);
+        return new Response(JSON.stringify({ data: [], meta: {} }), { status: 200 });
+      }),
+    );
+    try {
+      await act(async () => {
+        render(<App />);
+      });
+      await act(async () => {});
+      expect(screen.queryByText(/taking longer than usual/), 'the way out was offered immediately').toBeNull();
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(10_000);
+      });
+      const out = screen.getByText(/taking longer than usual/);
+      // Clause 2, do not blame; clause 3, say whether the work was saved;
+      // clause 1, end on something the person can do.
+      expect(out.textContent).toMatch(/Nothing is wrong with your account/);
+      expect(out.textContent).toMatch(/nothing you have written is affected/i);
+      expect(out.textContent).toMatch(/Close this page and open it again\.$/);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   /** Defect 2, from the address inward. */
