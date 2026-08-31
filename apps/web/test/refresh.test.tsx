@@ -182,7 +182,7 @@ describe('pressing refresh', () => {
       render(<App />);
     });
     await act(async () => {});
-    expect(screen.getByRole('heading', { level: 1, name: 'My life story' })).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 1, name: 'Your life story' })).toBeTruthy();
   });
 
   /** Defect 2, from the screen outward — the half that makes refresh work. */

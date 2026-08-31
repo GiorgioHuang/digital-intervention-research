@@ -142,7 +142,7 @@ describe('a participant reading their own life story', () => {
     });
     expect(screen.getByText('You have not written anything yet')).toBeTruthy();
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Write something new' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Write a memory' }));
     });
     await act(async () => {
       fireEvent.change(screen.getByLabelText('What is it about?'), { target: { value: 'Sunday walks' } });
@@ -159,13 +159,85 @@ describe('a participant reading their own life story', () => {
     expect(posts[1]?.body['sourceType']).toBe('ParticipantAuthored');
   });
 
+  /**
+   * Speaking is drawn and is not built — there is no audio upload, no
+   * storage against an item and no transcription provider (B-2).
+   *
+   * So it is shown and it is NOT a control. A button that cannot do the
+   * thing it names is the failure this project keeps refusing, and a
+   * disabled button is not better: it still reads as something that ought
+   * to work today and leaves the person wondering what they did wrong.
+   */
+  it('shows speaking as coming, and does not offer it as a control', async () => {
+    stubFetch({ data: [], meta: { archiveId: 'ar_1' } });
+    await act(async () => {
+      render(<MyLifeStory session={session} />);
+    });
+    expect(screen.getByText('Speak a memory'), 'the drawing shows this and it has gone').toBeTruthy();
+    expect(
+      screen.queryByRole('button', { name: /Speak a memory/ }),
+      'speaking is offered as a control, and nothing behind it can record anything',
+    ).toBeNull();
+    expect(screen.getByText('Not ready yet.')).toBeTruthy();
+  });
+
+  /**
+   * The drawing states "Only you can see them" flatly. It is true of a
+   * story that is all private and false the moment one piece is shared,
+   * and this is a claim about who can read somebody's memories.
+   */
+  it('does not say only you can see them over a shared entry', async () => {
+    stubFetch({
+      data: [item(), item({ itemId: 'li_2', title: 'The move', visibility: 'Community' })],
+      meta: { archiveId: 'ar_1' },
+    });
+    await act(async () => {
+      render(<MyLifeStory session={session} />);
+    });
+    const line = screen.getByText(/pieces so far/).textContent ?? '';
+    expect(line).toMatch(/Two pieces so far/);
+    expect(line, 'a shared entry is on the page and it still says only you').not.toMatch(/only you/i);
+  });
+
+  /**
+   * Choosing a question writes it into the title, which is the only record
+   * of the question there is — nothing stores which prompt was answered.
+   * It must not throw away words already typed, for the same reason
+   * closing without saving must not.
+   */
+  it('opens the writing box with the question as its title, keeping anything written', async () => {
+    stubFetch({ data: [], meta: { archiveId: 'ar_1' } });
+    await act(async () => {
+      render(<MyLifeStory session={session} />);
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Write a memory' }));
+    });
+    await act(async () => {
+      fireEvent.change(screen.getByLabelText('In your own words'), { target: { value: 'Already typed.' } });
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Choose a question to answer' }));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'What did you cook for people?' }));
+    });
+    expect((screen.getByLabelText('What is it about?') as HTMLInputElement).value).toBe(
+      'What did you cook for people?',
+    );
+    expect(
+      (screen.getByLabelText('In your own words') as HTMLTextAreaElement).value,
+      'choosing a question threw away what was already written',
+    ).toBe('Already typed.');
+  });
+
   it('closing the writing area without saving does not throw the words away', async () => {
     stubFetch({ data: [], meta: { archiveId: 'ar_1' } });
     await act(async () => {
       render(<MyLifeStory session={session} />);
     });
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Write something new' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Write a memory' }));
     });
     await act(async () => {
       fireEvent.change(screen.getByLabelText('In your own words'), { target: { value: 'Half a thought.' } });
@@ -174,7 +246,7 @@ describe('a participant reading their own life story', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Close without saving' }));
     });
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Write something new' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Write a memory' }));
     });
     expect((screen.getByLabelText('In your own words') as HTMLTextAreaElement).value).toBe('Half a thought.');
   });

@@ -1767,6 +1767,73 @@ a[role='button']:hover { background-color: var(--color-action-secondary-bg-hover
   font-size: var(--type-size-0);
   color: var(--cl-text-4);
 }
+/* ---------- Your life story ---------------------------------------------
+ * The drawing's two ways in: side by side, equal, and tall enough to be an
+ * easy target — 96px, which is its figure and well past --target-min.
+ * `flex: 1` on both so neither reads as the lesser choice.
+ */
+[data-workspace='participant'] .story-summary {
+  margin-block: var(--space-2) var(--space-5);
+  font-size: var(--type-size-2);
+  color: var(--cl-text-4);
+}
+[data-workspace='participant'] .story-ways-in {
+  display: flex;
+  gap: var(--space-3);
+  margin-block-end: var(--space-4);
+}
+[data-workspace='participant'] .story-way-in {
+  flex: 1 1 0;
+  min-inline-size: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-block-size: calc(5.333rem * var(--density));
+  padding: var(--space-3);
+  border: var(--border-hairline) solid var(--cl-accent);
+  border-radius: var(--radius-2);
+  background-color: transparent;
+  color: var(--cl-accent-700);
+  text-align: center;
+}
+[data-workspace='participant'] .story-way-in svg {
+  inline-size: 26px;
+  block-size: 26px;
+}
+[data-workspace='participant'] .story-way-in__label {
+  font-family: var(--cl-family-display);
+  /* The drawing's 17px, not the reading size: these two sit side by side
+     in half a column each, and at 18px the label wrapped to two lines and
+     took the button from the drawn 96px to 146. */
+  font-size: 0.944rem;
+  font-weight: var(--type-weight-semibold);
+  line-height: 1.2;
+}
+/*
+ * Drawn, and not a control. It carries the divider rather than the accent
+ * so that it does not invite a press, and it says why in its own words —
+ * the same treatment as the exercises that are not built. A disabled
+ * button would have been the other option and is worse: it still reads as
+ * a thing that ought to work today.
+ */
+[data-workspace='participant'] .story-way-in--not-ready {
+  border-color: var(--cl-divider);
+  color: var(--cl-text-4);
+}
+[data-workspace='participant'] .story-way-in__note {
+  font-size: var(--type-size-0);
+  color: var(--cl-text-4);
+}
+[data-workspace='participant'] .story-prompts {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+[data-workspace='participant'] .story-prompts > li + li {
+  border-block-start: var(--border-hairline) solid var(--cl-divider);
+}
 /* ---------- The message box on "Get in touch" ---------------------------
  * Fields at the reading size, not a compact form size. This is filled in
  * by somebody who may find a small control hard to hit and small type hard

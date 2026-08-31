@@ -150,7 +150,7 @@ describe('participant home', () => {
     for (const [steps, heading] of [
       [['Your information and who can see it', 'Who has access to you'], 'Who has access to me'],
       [['Your information and who can see it', 'Ask for a copy of your information'], 'A copy of my information'],
-      [['Things you can do any time'], 'My life story'],
+      [['Things you can do any time'], 'Your life story'],
       [['Exercises you can try'], 'Exercises you can try'],
     ] as const) {
       await act(async () => {

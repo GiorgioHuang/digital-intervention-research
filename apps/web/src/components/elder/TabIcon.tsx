@@ -14,6 +14,10 @@ const PATHS: Record<string, string> = {
   'book-open': 'M12 7v14M3 5h5a4 4 0 0 1 4 3 4 4 0 0 1 4-3h5v13h-5a4 4 0 0 0-4 2 4 4 0 0 0-4-2H3Z',
   users: 'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8',
   mail: 'M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2ZM2 7l10 6 10-6',
+  // Lucide's microphone and pencil, on the same 24x24 grid at stroke 2 as
+  // the tab icons, so the two ways into the story sit with the rest.
+  mic: 'M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3ZM19 10v2a7 7 0 0 1-14 0v-2M12 19v3',
+  pen: 'M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z',
   'help-circle': 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01',
 };
 

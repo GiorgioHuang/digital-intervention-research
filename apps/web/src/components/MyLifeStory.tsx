@@ -2,6 +2,25 @@ import { useEffect, useState } from 'react';
 import { api, type AttachedFile, type MyLifeStoryItem, type Session } from '../api.js';
 import { presentError, type PresentedError } from '../errors.js';
 import { EmptyState, ErrorState, LoadingState } from './StateBlock.js';
+import { TabIcon } from './elder/TabIcon.js';
+import { piecesSoFar, whoCanSee } from '../story-summary.js';
+
+/**
+ * The six questions the drawing offers, in its order.
+ *
+ * Copy, not data: nothing records which question a memory answered, so
+ * choosing one opens the writing box with the question as the title. That
+ * is the whole of what it does, and it is worth saying because a list of
+ * prompts looks like it ought to be doing more.
+ */
+const STORY_PROMPTS = [
+  'Where did you live when you were ten?',
+  'Who taught you something you still use?',
+  'What was your first paid work?',
+  'Tell me about a winter you remember.',
+  'Who in your family should be remembered?',
+  'What did you cook for people?',
+] as const;
 
 /**
  * The participant's own life story.
@@ -49,6 +68,8 @@ export function MyLifeStory({ session }: { session: Session }) {
   const [loadError, setLoadError] = useState<PresentedError | null>(null);
   const [actionError, setActionError] = useState<PresentedError | null>(null);
   const [writing, setWriting] = useState(false);
+  /** Whether the six questions are showing. They are copy, not stored. */
+  const [prompting, setPrompting] = useState(false);
   const [draft, setDraft] = useState({ title: '', text: '' });
   const [confirming, setConfirming] = useState<MyLifeStoryItem | null>(null);
   /**
@@ -220,10 +241,87 @@ export function MyLifeStory({ session }: { session: Session }) {
        not the writing — see the note on `.zone-story` in styles.css for
        why sand is never a foreground here. */
     <section className="zone-story" aria-labelledby="life-story-heading">
-      <h1 id="life-story-heading">My life story</h1>
-      <p>
-        This is yours. Everything you write here starts private, and stays private until you choose otherwise.
+      <h1 id="life-story-heading">Your life story</h1>
+      {/*
+        Both halves of this line are counted rather than asserted. The
+        drawing says "Only you can see them" flatly; it is true of a story
+        that is all private and false the moment one piece is shared, and
+        a screen that says "only you" over something somebody else can
+        read is worse than saying nothing at all.
+      */}
+      <p className="story-summary">
+        {piecesSoFar(items?.length ?? 0)} {whoCanSee((items ?? []).map((i) => i.visibility))}
       </p>
+
+      {/*
+        The drawing's two ways in, side by side and the same size.
+
+        Speaking is drawn and is not built: there is no audio upload, no
+        storage against an item and no transcription provider (B-2). It is
+        shown because the drawing shows it and because somebody should be
+        able to see that it is coming, but it is NOT a control — a button
+        that cannot do the thing it names is the failure this project
+        keeps refusing. Same shape as the exercises that are not ready.
+      */}
+      <div className="story-ways-in">
+        <div className="story-way-in story-way-in--not-ready">
+          <TabIcon name="mic" />
+          <span className="story-way-in__label">Speak a memory</span>
+          <span className="story-way-in__note">Not ready yet.</span>
+        </div>
+        <button
+          className="story-way-in"
+          onClick={() => {
+            // Deliberately does not reset the draft. "Close without
+            // saving" keeps what was typed, so re-opening has to keep it
+            // too — clearing here would make the safe way out destructive
+            // one step later, which is the same defect at a distance.
+            setPrompting(false);
+            setWriting(true);
+          }}
+        >
+          <TabIcon name="pen" />
+          <span className="story-way-in__label">Write a memory</span>
+        </button>
+      </div>
+
+      <p>
+        <button
+          className="row-summary"
+          aria-expanded={prompting}
+          onClick={() => {
+            setWriting(false);
+            setPrompting((v) => !v);
+          }}
+        >
+          Choose a question to answer
+        </button>
+      </p>
+
+      {prompting && (
+        <ul className="story-prompts">
+          {STORY_PROMPTS.map((q) => (
+            <li key={q}>
+              <button
+                className="row-summary"
+                onClick={() => {
+                  // The question becomes the title, which is the only
+                  // record of it there is — nothing stores the prompt.
+                  // The text is left alone for the same reason as above:
+                  // choosing a question is not a request to throw away
+                  // whatever was already written.
+                  setPrompting(false);
+                  setDraft((d) => ({ ...d, title: q }));
+                  setWriting(true);
+                }}
+              >
+                {q}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      <hr />
 
       {items === null && loadError === null && <LoadingState label="Loading your life story…" />}
       {loadError !== null && <ErrorState error={loadError} />}
@@ -235,15 +333,9 @@ export function MyLifeStory({ session }: { session: Session }) {
         />
       )}
 
-      {items !== null && !writing && (
-        <p>
-          <button onClick={() => setWriting(true)}>Write something new</button>
-        </p>
-      )}
-
       {writing && (
         <div>
-          <h2>Write something new</h2>
+          <h2>{draft.title === '' ? 'Write a memory' : draft.title}</h2>
           <p>
             <label htmlFor="ls-title">What is it about?</label>{' '}
             <input id="ls-title" value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} />
