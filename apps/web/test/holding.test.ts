@@ -143,7 +143,12 @@ describe('the holding screen’s sentence', () => {
    * invites a promise the code does not keep.
    */
   it('makes no claim the about screen does not also make', () => {
-    for (const { text: line } of HOLDING_LINES) {
+    // The platform's own sentences only. A quoted line is somebody else's
+    // words with their name under it, not a promise this platform is
+    // making — a poet writing "I always feel adventurous" is not the
+    // platform guaranteeing anything, and reading it as one would either
+    // reject good quotations or teach whoever hit it to weaken the guard.
+    for (const { text: line } of HOLDING_LINES.filter((l) => l.source === null)) {
       expect(line, `"${line}" guarantees something`).not.toMatch(/guarantee|always|100%|completely safe|never fails/i);
     }
   });

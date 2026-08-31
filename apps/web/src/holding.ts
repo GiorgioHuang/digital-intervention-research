@@ -96,26 +96,78 @@ export const HOLDING_LINES: readonly HoldingLine[] = [
     source: null,
   },
   // ---------------------------------------------------------------------
-  // Quoted lines go here.
+  // Quoted lines, supplied by the owner (2026-08-31).
   //
-  // The owner chose public-domain Canadian writing that this generation
-  // read at school (2026-08-31). Montgomery (d. 1942), Leacock (d. 1944),
-  // Service (d. 1958) and Johnson (d. 1913) are all out of copyright in
-  // Canada, and — published before 1930 — in the United States too.
+  // `wordingComparedWith` records who compared the words with the text and
+  // says so plainly, because this workspace still cannot reach Project
+  // Gutenberg, Wikisource, Standard Ebooks or the Internet Archive. It is
+  // the owner's verification, not mine, and the field says which so that
+  // the next person to read it knows what was and was not done.
   //
-  // None are here yet, and the reason is recorded rather than left as an
-  // absence somebody fills in from memory later: this workspace cannot
-  // reach Project Gutenberg, Wikisource, Standard Ebooks or the Internet
-  // Archive, so no wording could be compared with a text. Writing them
-  // from recall would have put an unverified quotation under a named
-  // author into the product, which is the thing the rules above exist to
-  // prevent.
+  // Every author here was already public domain in Canada under the old
+  // life + 50 term before the 2022 extension, so the extension did not
+  // revive anything: Carman (d. 1929) from 1980, Montgomery (d. 1942) from
+  // 1993, Service (d. 1958) from 2009.
   //
-  // To add one: paste the line exactly as printed, give `source` and
-  // `publicDomainBecause`, and set `wordingComparedWith` to the edition
-  // or page it was compared against.
+  // The United States is a separate question and it is the one that
+  // decided this list, because the deployment is reachable from anywhere.
+  // A work published before 1930 is public domain there outright; a work
+  // published from 1930 on depended on renewal and can still be in
+  // copyright. Everything below is pre-1930 publication and clear in both
+  // countries. The four lines from Anne of Ingleside (1939) are not, and
+  // are held out until somebody checks the US renewal record — see the
+  // note after this list.
   // ---------------------------------------------------------------------
+  {
+    text: 'There is something in the autumn that is native to my blood.',
+    source: 'Bliss Carman, “A Vagabond Song”',
+    publicDomainBecause: 'Carman died in 1929; the poem was published in the 1890s, well before 1930',
+    wordingComparedWith: 'the text, by the owner (2026-08-31)',
+  },
+  {
+    text: 'My heart is like a rhyme.',
+    source: 'Bliss Carman, “A Vagabond Song”',
+    publicDomainBecause: 'Carman died in 1929; the poem was published in the 1890s, well before 1930',
+    wordingComparedWith: 'the text, by the owner (2026-08-31)',
+  },
+  {
+    text: 'His were songs so full of a wholesome laughter.',
+    source: 'L. M. Montgomery, “The Poet”, The Watchman and Other Poems (1916)',
+    publicDomainBecause: 'Montgomery died in 1942; published 1916, before 1930',
+    wordingComparedWith: 'the text, by the owner (2026-08-31)',
+  },
+  {
+    text: 'The Arctic trails have their secret tales.',
+    source: 'Robert W. Service, “The Cremation of Sam McGee” (1907)',
+    publicDomainBecause: 'Service died in 1958; published 1907, before 1930',
+    wordingComparedWith: 'the text, by the owner (2026-08-31)',
+  },
 ];
+
+/**
+ * Held out, pending one check somebody with a library can make.
+ *
+ * The owner supplied four more lines from L. M. Montgomery's *Anne of
+ * Ingleside* (1939). They are public domain in Canada — Montgomery died in
+ * 1942 — and they are the warmest of the ten. They are not here because of
+ * the United States, where a work published in 1939 kept its copyright
+ * only if the term was renewed, and if it was it runs to 2034. This
+ * deployment is reachable from anywhere, so "public domain at home" is not
+ * the whole question.
+ *
+ * What would settle it: the US renewal record for Anne of Ingleside. If it
+ * was not renewed the lines are clear everywhere and can go straight in;
+ * if it was, the choice is the owner's — a single sentence quoted with
+ * attribution is a strong fair-use case and is still not the same thing as
+ * being cleared, which matters more for a university research platform
+ * than it would for a personal site.
+ *
+ * One of the four also trips the "makes no claim" guard below, on the word
+ * "always". That guard is about what the platform promises, not about what
+ * a poet wrote, so it is scoped to the platform's own sentences — worth
+ * knowing before those four are added, so the fix is not mistaken for the
+ * guard being wrong.
+ */
 
 /**
  * The lines that may actually be shown.
