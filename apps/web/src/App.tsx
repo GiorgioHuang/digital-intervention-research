@@ -6,6 +6,7 @@ import { AccessTokenGate } from './components/AccessTokenGate.js';
 import { HelperScreen } from './components/elder/HelperScreen.js';
 import { Exercises, Tapping } from './components/elder/Exercises.js';
 import { SiteFooter } from './components/elder/SiteFooter.js';
+import { AboutScreen } from './components/elder/AboutScreen.js';
 import { BrandBlock } from './components/elder/BrandMark.js';
 
 /**
@@ -70,6 +71,7 @@ type Screen =
   | 'data-copy'
   | 'review'
   | 'caption'
+  | 'about'
   | 'information'
   | 'exercises'
   | 'tapping'
@@ -133,6 +135,13 @@ export function App() {
   const [hasUnfinished, setHasUnfinished] = useState(false);
   /** The design's toast: it persists until the next navigation. */
   const [toast, setToast] = useState('');
+  /*
+   * About is reachable from the footer, which is on the sign-in screen too
+   * — and that screen returns before `screen` is ever consulted. So it has
+   * its own flag rather than a route, and the two paths use the same
+   * component with different words on the way back.
+   */
+  const [aboutBeforeSignIn, setAboutBeforeSignIn] = useState(false);
   /*
    * The reading controls, from the handoff's global chrome. They live here
    * rather than in the toolbar so that the content region carries them and
@@ -333,6 +342,13 @@ export function App() {
           data-contrast={highContrast ? 'high' : undefined}
           data-zoom={String(Math.round(zoom * 100))}
         >
+          {aboutBeforeSignIn ? (
+            <>
+              <AboutScreen onBack={() => setAboutBeforeSignIn(false)} backLabel="Back to sign in" />
+              <SiteFooter year={copyrightYear(new Date())} onAbout={() => setAboutBeforeSignIn(true)} />
+            </>
+          ) : (
+            <>
           {/*
             The current prototype's opening, read off the live 1a screen
             rather than off the older written spec: a centred brand block —
@@ -559,7 +575,9 @@ export function App() {
               I cannot sign in
             </button>
           </p>
-          <SiteFooter year={copyrightYear(new Date())} />
+          <SiteFooter year={copyrightYear(new Date())} onAbout={() => setAboutBeforeSignIn(true)} />
+            </>
+          )}
         </main>
       </div>
     );
@@ -833,6 +851,9 @@ export function App() {
           it" is owed all three rather than a menu that offers them one at a
           time.
         */}
+        {screen === 'about' && (
+          <AboutScreen onBack={() => setScreen('home')} backLabel="Back to Home" />
+        )}
         {screen === 'information' && (
           <>
             <ConsentPanel session={session} assistedBy={helper} />
@@ -907,6 +928,9 @@ export function App() {
             <div className="nav-rows">
               <button className="row-summary" onClick={() => setScreen('helper')}>
                 Someone is helping me use this
+              </button>
+              <button className="row-summary" onClick={() => setScreen('about')}>
+                About this project
               </button>
             </div>
             <SafetyPanel session={session} />
@@ -987,7 +1011,13 @@ export function App() {
           height at its foot — so the footer scrolls with the page and the
           bar never covers it.
         */}
-        <SiteFooter year={copyrightYear(new Date())} />
+        <SiteFooter
+          year={copyrightYear(new Date())}
+          onAbout={() => {
+            setToast('');
+            setScreen('about');
+          }}
+        />
       </main>
     </div>
   );

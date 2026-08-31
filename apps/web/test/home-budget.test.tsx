@@ -35,7 +35,7 @@ const WORD_BUDGET = 140;
  * same thing they said closed — and that is the number this budget was
  * really written to protect.
  */
-const CONTROL_BUDGET = 7;
+const CONTROL_BUDGET = 8;
 
 const json = (body: unknown) => new Response(JSON.stringify(body), { status: 200 });
 
@@ -153,7 +153,10 @@ describe('what the home page asks of somebody who has just opened it', () => {
     ).toBeNull();
     // Three rows, the help button, and the waiting row. Anything beyond
     // that is a destination the prototype does not put here.
-    expect(controls, 'a destination has escaped back onto the first screen').toBeLessThanOrEqual(5);
+    // Three rows, the help button, the waiting row, and the footer's
+    // about link. Anything beyond that is a destination the prototype does
+    // not put here.
+    expect(controls, 'a destination has escaped back onto the first screen').toBeLessThanOrEqual(6);
   });
 
   /**

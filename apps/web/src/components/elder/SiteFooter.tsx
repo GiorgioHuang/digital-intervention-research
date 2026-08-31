@@ -14,19 +14,24 @@
  */
 export const COPYRIGHT_HOLDER = 'Healthy Aging Intelligence Lab (HAIL)';
 
-export function SiteFooter({ year }: { year: number }) {
+export function SiteFooter({ year, onAbout }: { year: number; onAbout: () => void }) {
   return (
     <footer className="site-footer">
       {/*
-        A copyright line and nothing else. A footer is where links go to be
+        The copyright line and one link, which is what the prototype's
+        footer carries. One is the limit: a footer is where links go to be
         forgotten, and on a screen built for somebody who finds a page of
-        options hard, adding a row of small print underneath the thing they
-        came to do would undo the work of the page above it. Anything that
-        deserves reading deserves a place on Help, which is one tap away
-        from everywhere.
+        options hard, a row of small print under the thing they came to do
+        would undo the work of the page above it. About earns its place
+        because it is where the telephone number is, and because somebody
+        deciding whether to trust this with their life story is owed a
+        plain answer about who runs it, from every screen.
       */}
       <p>
-        © {year} {COPYRIGHT_HOLDER}
+        © {year} {COPYRIGHT_HOLDER} ·{' '}
+        <button type="button" className="link-button link-button--small" onClick={onAbout}>
+          about
+        </button>
       </p>
     </footer>
   );

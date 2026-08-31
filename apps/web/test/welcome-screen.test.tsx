@@ -90,7 +90,8 @@ describe('the way in', () => {
     // string or regex matcher looks for something no single node contains.
     const footer = document.querySelector('.site-footer');
     expect(footer, 'there is no footer').toBeTruthy();
-    expect(footer!.textContent).toMatch(/^© \d{4} Healthy Aging Intelligence Lab \(HAIL\)$/);
+    // The copyright line and one link, which is the prototype's footer.
+    expect(footer!.textContent).toMatch(/^© \d{4} Healthy Aging Intelligence Lab \(HAIL\) · about$/);
     expect(COPYRIGHT_HOLDER, 'the holder changed; update this test with it').toBe(
       'Healthy Aging Intelligence Lab (HAIL)',
     );
