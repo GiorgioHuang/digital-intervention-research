@@ -4,7 +4,6 @@ import { act } from 'react';
 import { App } from '../src/App.js';
 import { readFileSync, readdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { HELPLINE_PLACEHOLDER } from '../src/components/elder/AboutScreen.js';
 
 const json = (body: unknown) => new Response(JSON.stringify(body), { status: 200 });
 const stub = (authMode = 'dev-header') =>
@@ -39,6 +38,7 @@ describe('about this project', () => {
   afterEach(() => {
     cleanup();
     vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
   });
 
   /**
@@ -107,48 +107,15 @@ describe('about this project', () => {
   });
 
   /**
-   * The telephone is dialled, not read out.
+   * The telephone number is gone, and nothing is left behind.
    *
-   * On the device most of these people are holding, a number that is only
-   * text has to be copied out by hand — by somebody who may be ringing
-   * because they cannot manage the screen in front of them.
+   * It was in the 555-01xx range reserved for fiction — the number a
+   * person in difficulty would ring, reaching nobody (B-22). The owner
+   * replaced it with a message box. A number left in one screen after
+   * being removed from another is the failure this whole file has already
+   * met once, so the check is the same shape: walk the tree, not one file.
    */
-  it('makes the telephone number pressable', async () => {
-    stub();
-    await act(async () => {
-      render(<App />);
-    });
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'about' }));
-    });
-    const link = screen.getByRole('link', { name: HELPLINE_PLACEHOLDER });
-    expect(link.getAttribute('href')).toBe(`tel:${HELPLINE_PLACEHOLDER.replace(/\s/g, '')}`);
-  });
-
-  /**
-   * **The number is fiction, and this is the one place it is written.**
-   *
-   * 555-01xx is the range reserved so that no real line is dialled by
-   * accident. The consequence here is specific: this is the number a person
-   * in difficulty rings, on a screen built for somebody who may have no
-   * other way to ask for help. Keeping it to a single named constant is
-   * what stops it being copied into a second screen and then found in only
-   * one of them. B-22.
-   */
-  it('keeps the placeholder helpline in exactly one place', () => {
-    expect(HELPLINE_PLACEHOLDER, 'the helpline changed; is it real yet?').toBe('1 800 555 0142');
-    // Written once as a value. The comment above it names it too, which is
-    // the point of the comment, so comments are stripped before counting —
-    // what must not happen is a second literal in the code, which would be
-    // missed when the real number arrives.
-    //
-    // **This used to read only AboutScreen.tsx**, which is the one file a
-    // second copy cannot be in. It said, in its own comment, that it was
-    // what stopped the number being copied into a second screen — and
-    // `App.tsx` had already copied it into the "I cannot sign in" message,
-    // where it sat unseen. A guard that reads a single file cannot answer
-    // a question about every file, and this one was written as though it
-    // could. It now walks the whole source tree.
+  it('leaves no fictional telephone number anywhere in the source', () => {
     const root = resolve(process.cwd(), 'src');
     const files: string[] = [];
     const walk = (dir: string) => {
@@ -164,12 +131,57 @@ describe('about this project', () => {
       const code = readFileSync(file, 'utf8')
         .replace(/\/\*[\s\S]*?\*\//g, '')
         .replace(/\/\/[^\n]*/g, '');
-      for (let i = 0; i < code.split(HELPLINE_PLACEHOLDER).length - 1; i += 1) {
-        where.push(file.slice(root.length + 1));
-      }
+      // The whole reserved range, not just the one number that was here:
+      // the next placeholder somebody reaches for will be a different
+      // 555-01xx, and it would rings nowhere just the same.
+      if (/\b555[\s-]?01\d\d\b/.test(code)) where.push(file.slice(root.length + 1));
     }
-    expect(where, `the number is written in more than one place: ${where.join(', ')}`).toEqual([
-      'components/elder/AboutScreen.tsx',
-    ]);
+    expect(where, `a fiction-range telephone number is still in: ${where.join(', ')}`).toEqual([]);
+  });
+
+  /**
+   * The box works signed out, and that is the point of it.
+   *
+   * About is reached from the footer of every screen, sign-in included,
+   * and with the telephone gone this is the only way to reach a person for
+   * somebody who cannot get in — which is exactly when a contact route
+   * matters most. A form that only existed behind sign-in would be missing
+   * for the people most likely to need it.
+   */
+  it('offers the message box to somebody who has not signed in', async () => {
+    vi.stubEnv('VITE_CONTACT_ENDPOINT', 'https://contact.test/relay');
+    stub();
+    await act(async () => {
+      render(<App />);
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'about' }));
+    });
+    expect(screen.getByRole('heading', { name: 'About this project' })).toBeTruthy();
+    expect(screen.getByLabelText('Your message')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Send message' })).toBeTruthy();
+  });
+
+  /**
+   * With no relay configured there is no way to reach anybody from this
+   * screen, and the screen has to say so.
+   *
+   * A form that accepts a message and drops it would be worse than the
+   * fictional telephone number it replaced — that at least failed where
+   * the person could see it fail. This is the state of any build whose
+   * VITE_CONTACT_ENDPOINT is unset, which includes every local build, so
+   * it is not a hypothetical.
+   */
+  it('says plainly when there is no way to send a message at all', async () => {
+    vi.stubEnv('VITE_CONTACT_ENDPOINT', '');
+    stub();
+    await act(async () => {
+      render(<App />);
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'about' }));
+    });
+    expect(screen.queryByRole('button', { name: 'Send message' }), 'a form that goes nowhere is on screen').toBeNull();
+    expect(screen.getByText(/no way to send a message from this copy of the site/)).toBeTruthy();
   });
 });

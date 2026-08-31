@@ -1,19 +1,22 @@
 import { BrandBlock } from './BrandMark.js';
 import { COPYRIGHT_HOLDER } from './SiteFooter.js';
+import { ContactBox } from './ContactBox.js';
 
 /**
  * "About this project" — the prototype's about screen, reached from the
  * footer on every screen and from Help.
  *
- * **The telephone number is a placeholder and must not reach a
- * participant.** 1 800 555 0142 is in the 555-01xx range, which is
- * reserved for fiction precisely so that nobody's real line is dialled by
- * accident — and the consequence here is specific: this is the number a
- * person in difficulty rings, on a screen built for somebody who may have
- * no other way to ask for help. It is one constant, named so that nothing
- * else can quietly copy it, and it is recorded as a gap (B-22).
+ * "Get in touch" is a box to write in. It was a telephone number in the
+ * 555-01xx range, which is reserved for fiction so that no real line is
+ * dialled by accident — so the number a person in difficulty would ring
+ * reached nobody. The owner replaced it with a message relay of the same
+ * shape as their own (2026-08-31), which closes B-22.
+ *
+ * What was lost with the number is worth naming rather than glossing: the
+ * card said a person answers between eight in the morning and eight at
+ * night, every day. Nothing answers a written message at a stated time,
+ * and nothing on this screen now claims to.
  */
-export const HELPLINE_PLACEHOLDER = '1 800 555 0142';
 
 export function AboutScreen({ onBack, backLabel }: { onBack: () => void; backLabel: string }) {
   return (
@@ -51,20 +54,11 @@ export function AboutScreen({ onBack, backLabel }: { onBack: () => void; backLab
       </ul>
 
       <h2>Get in touch</h2>
-      <div className="phone-card">
-        <p className="kicker">Telephone, free of charge</p>
-        {/*
-          A real link, not text: on the device most of these people are
-          holding, a number that cannot be pressed is a number that has to
-          be copied out by hand.
-        */}
-        <p className="phone-card__number">
-          <a href={`tel:${HELPLINE_PLACEHOLDER.replace(/\s/g, '')}`}>{HELPLINE_PLACEHOLDER}</a>
-        </p>
-        <p className="phone-card__hours">
-          Eight in the morning until eight at night, every day. A person answers.
-        </p>
-      </div>
+      <p>
+        Write to the people who run the study. Your message goes to them and to nobody else, and it is not part of your
+        life story.
+      </p>
+      <ContactBox />
 
       <p className="about__address">
         {COPYRIGHT_HOLDER}

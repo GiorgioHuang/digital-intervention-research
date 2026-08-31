@@ -259,12 +259,32 @@ jobs:
           # Cloud Build the source and takes no --build-arg. Unset means
           # one address with every door — the split is a deployment
           # choice, not a code change.
+          #
+          # Built up rather than overwritten. This used to be a single `>`
+          # for STAFF_HOSTS, so a second setting written the same way would
+          # have silently dropped the first — the kind of break that shows
+          # up as a workspace on the wrong address rather than as an error.
+          rm -f apps/web/.env.production
           if [ -n "${{ vars.STAFF_HOSTS }}" ]; then
-            echo "VITE_STAFF_HOSTS=${{ vars.STAFF_HOSTS }}" > apps/web/.env.production
+            echo "VITE_STAFF_HOSTS=${{ vars.STAFF_HOSTS }}" >> apps/web/.env.production
             echo "::notice::staff workspace served on the configured STAFF_HOSTS (withheld from public logs)."
           else
-            rm -f apps/web/.env.production
             echo "::notice::STAFF_HOSTS not set — one address serves every workspace, with the staff and supporter doors on the participant sign-in screen."
+          fi
+          # Where "Get in touch" on the about screen posts to. A Variable
+          # rather than a secret: it is an address the browser calls, so it
+          # is in the bundle either way and nothing about it is private.
+          # What is private lives in the relay — see the owner's own
+          # cloudflare-worker, which holds its token as a Worker secret.
+          #
+          # Unset is a real state, not a broken one: the about screen then
+          # says there is no way to send a message rather than offering a
+          # box that drops what is written in it.
+          if [ -n "${{ vars.CONTACT_ENDPOINT }}" ]; then
+            echo "VITE_CONTACT_ENDPOINT=${{ vars.CONTACT_ENDPOINT }}" >> apps/web/.env.production
+            echo "::notice::contact relay configured — the about screen offers a message box."
+          else
+            echo "::warning::CONTACT_ENDPOINT not set — the about screen has no way to reach anybody, and the telephone number it replaced is gone. Set the repository Variable to the relay's URL."
           fi
           gcloud run deploy "${{ vars.CLOUD_RUN_SERVICE || 'hadi-platform' }}" \
             --source . \

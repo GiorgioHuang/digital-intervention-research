@@ -6,7 +6,7 @@ import { AccessTokenGate } from './components/AccessTokenGate.js';
 import { HelperScreen } from './components/elder/HelperScreen.js';
 import { Exercises, Tapping } from './components/elder/Exercises.js';
 import { SiteFooter } from './components/elder/SiteFooter.js';
-import { AboutScreen, HELPLINE_PLACEHOLDER } from './components/elder/AboutScreen.js';
+import { AboutScreen } from './components/elder/AboutScreen.js';
 import { BrandBlock } from './components/elder/BrandMark.js';
 
 /**
@@ -16,8 +16,9 @@ import { BrandBlock } from './components/elder/BrandMark.js';
  * supporter uses the same button as everybody else.
  */
 const CANNOT_SIGN_IN =
-  `Telephone ${HELPLINE_PLACEHOLDER} — a person answers, eight in the morning until eight at night, every day. ` +
-  'If somebody invited you to help them, use the same Continue with Google button and the address they invited.';
+  'Open “about” at the foot of this page and write a message — it reaches the people who run the study, and it works ' +
+  'without signing in. If somebody invited you to help them, use the same Continue with Google button and the address ' +
+  'they invited.';
 import { AccessibilityToolbar } from './components/elder/AccessibilityToolbar.js';
 import { HelperBanner } from './components/elder/HelperBanner.js';
 import { ReviewContribution } from './components/ReviewContribution.js';

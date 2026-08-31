@@ -1649,6 +1649,56 @@ a[role='button']:hover { background-color: var(--color-action-secondary-bg-hover
   font-size: var(--type-size-0);
   color: var(--cl-text-4);
 }
+/* ---------- The message box on "Get in touch" ---------------------------
+ * Fields at the reading size, not a compact form size. This is filled in
+ * by somebody who may find a small control hard to hit and small type hard
+ * to read, and it is the only way left to reach a person from this screen.
+ */
+[data-workspace='participant'] .contact-box p {
+  margin-block: 0 var(--space-4);
+}
+[data-workspace='participant'] .contact-box label {
+  display: block;
+  margin-block-end: var(--space-1);
+  font-family: var(--cl-family-display);
+  font-size: var(--type-size-2);
+}
+[data-workspace='participant'] .contact-box .field-note {
+  display: block;
+  margin-block-end: var(--space-2);
+  font-size: var(--type-size-0);
+  line-height: 1.5;
+  color: var(--cl-text-4);
+}
+[data-workspace='participant'] .contact-box :is(input, textarea) {
+  inline-size: 100%;
+  min-block-size: var(--target-min);
+  padding: var(--space-2) var(--space-3);
+  border: var(--border-hairline) solid var(--cl-divider);
+  border-radius: var(--radius-2);
+  background-color: var(--cl-neutral-100);
+  font-family: var(--cl-family-body);
+  font-size: var(--type-size-2);
+  color: var(--cl-text);
+}
+[data-workspace='participant'] .contact-box textarea {
+  min-block-size: 9rem;
+  line-height: 1.6;
+  resize: vertical;
+}
+[data-workspace='participant'] .contact-box :is(input, textarea):focus-visible {
+  border-color: var(--cl-accent);
+}
+[data-workspace='participant'] .contact-box__status {
+  margin-block-start: var(--space-4);
+  padding: var(--space-3);
+  border-inline-start: 3px solid var(--cl-divider);
+  font-size: var(--type-size-1);
+  line-height: 1.6;
+}
+[data-workspace='participant'] .contact-box__status.is-ok {
+  border-inline-start-color: var(--cl-accent);
+}
 .welcome__note {
   font-size: var(--type-size-0);
   line-height: 1.6;
