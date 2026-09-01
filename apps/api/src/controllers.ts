@@ -56,6 +56,7 @@ import {
   createItem,
   findArchiveForContribution,
   getMyLifeStory,
+  getSharedLifeStory,
   listContributionsAwaitingReview,
   listMyContributions,
   proposeContribution,
@@ -105,7 +106,11 @@ export interface ApiDeps {
   /** Account display names (M01), for screens that would otherwise print an identifier at a person. */
   accountNames: AccountNameQueryPort;
   /** Participant display names (M02), for the same reason on the supporter side. */
-  participantNames: { findDisplayNames(participantIds: string[]): Promise<Map<string, string>> };
+  participantNames: {
+    findDisplayNames(participantIds: string[]): Promise<Map<string, string>>;
+    /** Who the signed-in actor is as a participant, or undefined for a supporter. */
+    findParticipantIdByAccount(userAccountId: string): Promise<string | undefined>;
+  };
   m01: M01Deps;
   m02: M02Deps;
   m03: M03Deps;
@@ -1002,6 +1007,35 @@ export class CommandController {
    * staff-readable resource, and sharing it with anyone else runs through
    * visibility and access grants rather than through this route.
    */
+  /**
+   * Somebody else's life story, as far as they have shared it.
+   *
+   * The read that did not exist. `life-story.view-own` is `ownerOnly` and
+   * was the only way in, so every visibility a participant chose was
+   * recorded, audited and read by nothing (B-30) — a control that did
+   * nothing, on the feature this project is for.
+   *
+   * The viewer is taken from the session and never from the request: a
+   * route that let a caller say who they were would be asking the
+   * attacker to fill in the security check.
+   */
+  @Get('participants/:participantId/life-story/shared')
+  async sharedLifeStory(@Req() req: Request, @Param('participantId') participantId: string) {
+    const ctx = requireActor(req);
+    const viewerActorId = ctx.actor?.id ?? '';
+    const viewerParticipantId =
+      (await this.deps.participantNames.findParticipantIdByAccount(viewerActorId)) ?? null;
+    const story = await getSharedLifeStory(this.deps.m17, ctx, {
+      ownerParticipantId: participantId,
+      viewerActorId,
+      viewerParticipantId,
+    });
+    return {
+      data: story.items.map((i) => ({ type: 'SharedLifeStoryItem', id: i.itemId, attributes: i })),
+      meta: { ownerParticipantId: story.ownerParticipantId },
+    };
+  }
+
   @Get('participants/:participantId/life-story')
   async myLifeStory(@Req() req: Request, @Param('participantId') participantId: string) {
     const ctx = requireActor(req);

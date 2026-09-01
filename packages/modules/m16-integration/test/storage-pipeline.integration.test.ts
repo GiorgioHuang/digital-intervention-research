@@ -332,6 +332,101 @@ describe.skipIf(!dbAvailable)('object-storage quarantine pipeline (integration)'
   });
 
   /**
+   * A photograph follows the memory it is on.
+   *
+   * The owner's decision (2026-09-01, B-30): one scope per memory,
+   * governing the words and the pictures together. M16 cannot answer
+   * "may this person see this memory" and must not learn how — so it
+   * asks, through a port, and these exercise the port rather than
+   * assuming it.
+   *
+   * The port here stands in for the one the API wires to M17. What is
+   * tested is that M16 asks it, believes a yes, believes a no, and never
+   * asks at all when nothing is wired.
+   */
+  describe('a photograph on a shared memory', () => {
+    const withPort = (answer: boolean | ((input: { owningResourceId: string }) => boolean)): StorageDeps => ({
+      ...storage,
+      mayReadOwningResource: async (_ctx, input) =>
+        typeof answer === 'function' ? answer(input) : answer,
+    });
+
+    const attached = async (owningResourceId: string) => {
+      const objectId = await upload(PNG_BYTES, 'image/png');
+      await scanPendingObjects(storage, sysCtx());
+      await releaseObject(storage, ctx(patAcc), cfg, {
+        objectId, owningResourceType: 'LifeStoryItem', owningResourceId: await entry(owningResourceId),
+      });
+      return objectId;
+    };
+
+    it('hands the photograph to somebody the memory was shared with', async () => {
+      const objectId = await attached('lsi_shared_yes');
+      const content = await readObject(withPort(true), ctx(otherAcc), { objectId });
+      expect(content.contentType).toBe('image/png');
+      const listed = await listObjectsForResource(withPort(true), ctx(otherAcc), {
+        ownerParticipantId: patId, owningResourceType: 'LifeStoryItem', owningResourceId: 'lsi_shared_yes',
+      });
+      expect(listed.map((a) => a.objectId)).toEqual([objectId]);
+    });
+
+    /**
+     * And refuses when the memory says no — which is the answer for a
+     * private memory, a withdrawn one, and anybody with no standing.
+     * Told as "not there", because the object's existence is protected.
+     */
+    it('refuses when the memory it is on was not shared with them', async () => {
+      const objectId = await attached('lsi_shared_no');
+      await expect(readObject(withPort(false), ctx(otherAcc), { objectId })).rejects.toMatchObject({
+        code: 'RESOURCE_NOT_FOUND',
+      });
+      await expect(
+        listObjectsForResource(withPort(false), ctx(otherAcc), {
+          ownerParticipantId: patId, owningResourceType: 'LifeStoryItem', owningResourceId: 'lsi_shared_no',
+        }),
+      ).rejects.toMatchObject({ code: 'RESOURCE_NOT_FOUND' });
+    });
+
+    /**
+     * With no port wired, nothing is shared. A deployment that forgets to
+     * wire it shares no photographs at all, rather than every photograph
+     * — the safe direction for that mistake.
+     */
+    it('shares nothing at all when no port is wired', async () => {
+      const objectId = await attached('lsi_shared_unwired');
+      await expect(readObject(storage, ctx(otherAcc), { objectId })).rejects.toMatchObject({
+        code: 'RESOURCE_NOT_FOUND',
+      });
+    });
+
+    /** And the owner never depends on the port to reach their own file. */
+    it('gives the owner their own photograph whatever the port says', async () => {
+      const objectId = await attached('lsi_shared_owner');
+      expect((await readObject(withPort(false), ctx(patAcc), { objectId })).inline).toBe(true);
+    });
+
+    /**
+     * The port is asked about the memory the file is actually on. A port
+     * that answered for one memory while the file belonged to another
+     * would share the wrong photographs, and nothing else here would
+     * notice.
+     */
+    it('asks about the memory this file is attached to, and no other', async () => {
+      const objectId = await attached('lsi_shared_which');
+      const asked: string[] = [];
+      const deps: StorageDeps = {
+        ...storage,
+        mayReadOwningResource: async (_ctx, input) => {
+          asked.push(input.owningResourceId);
+          return true;
+        },
+      };
+      await readObject(deps, ctx(otherAcc), { objectId });
+      expect(asked).toEqual(['lsi_shared_which']);
+    });
+  });
+
+  /**
    * Somebody else asking is told the object is not there — not that they
    * may not have it.
    *

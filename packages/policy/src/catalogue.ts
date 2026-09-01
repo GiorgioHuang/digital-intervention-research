@@ -109,6 +109,7 @@ export const POLICY_V1: PolicyConfiguration = {
     ],
     Participant: [
       'life-story.view-shared',
+      'object.view-shared',
       // Participant self-service actions are owner-permitted on own resources.
       'participant.view-own',
       'participant.update-own',
@@ -149,11 +150,13 @@ export const POLICY_V1: PolicyConfiguration = {
       'object.assign',
       'object.caption',
       'object.view-own',
+      'object.view-shared',
       'object.delete-own',
     ],
     Supporter: [
       'participant.view-shared',
       'life-story.view-shared',
+      'object.view-shared',
       'life-story.contribute',
       // Writing to the participant they support — only ever effective when
       // the relationship itself carries `relationship.message`, which the
@@ -250,6 +253,20 @@ export const POLICY_V1: PolicyConfiguration = {
      * about what somebody did.
      */
     'object.view-own': { ownerPermitted: true, ownerOnly: true },
+    /**
+     * A photograph on a memory somebody shared with you.
+     *
+     * The owner's decision (2026-09-01, B-30): a photograph follows its
+     * entry's scope rather than carrying one of its own, so this action
+     * never decides anything by itself. It grants the attempt; whether
+     * this viewer may read the OWNING resource is asked separately,
+     * through a port, because M16 knows nothing about life stories and
+     * must not learn.
+     *
+     * Not `ownerOnly` — that is the point — and held by the same two
+     * roles as `life-story.view-shared` and no staff role.
+     */
+    'object.view-shared': { ownerPermitted: true },
     /*
      * Writing the words that go with a photograph. Its own action rather
      * than `object.upload` reused, for the reason stated just above about

@@ -11,7 +11,7 @@
  */
 import type { Pool } from '@platform/database';
 import type { Clock } from '@platform/kernel';
-import { NO_STANDING, type ViewerStanding } from './standing.js';
+import { NO_STANDING, sharedWithOthers, type ViewerStanding } from './standing.js';
 
 export interface StandingDeps {
   pool: Pool;
@@ -113,4 +113,46 @@ export async function standingOf(
      */
     isPlatformMember: true,
   };
+}
+
+
+/**
+ * May this viewer read one particular memory?
+ *
+ * The question M16 has to ask and cannot answer. A photograph follows the
+ * memory it is attached to (owner's decision, 2026-09-01, B-30), so
+ * "may this person see this photograph" is "may this person see this
+ * memory" — and the answer belongs here, with the rest of the life
+ * story's rules, rather than in the storage layer where nobody would
+ * think to look for it.
+ *
+ * A memory that is not there is not readable, rather than an error: the
+ * caller is deciding whether to hand over bytes, and "no" is the useful
+ * answer to every uncertainty on that path.
+ */
+export async function mayReadLifeStoryItem(
+  deps: StandingDeps,
+  input: {
+    itemId: string;
+    ownerParticipantId: string;
+    viewerActorId: string;
+    viewerParticipantId: string | null;
+  },
+): Promise<boolean> {
+  const res = await deps.pool.query(
+    `SELECT i.item_state, i.visibility
+       FROM life_story.items i
+       JOIN life_story.archives a ON a.id = i.archive_id
+      WHERE i.id = $1 AND a.participant_id = $2`,
+    [input.itemId, input.ownerParticipantId],
+  );
+  const row = res.rows[0] as { item_state: string; visibility: string } | undefined;
+  if (row === undefined) return false;
+
+  const standing = await standingOf(deps, {
+    viewerActorId: input.viewerActorId,
+    viewerParticipantId: input.viewerParticipantId,
+    ownerParticipantId: input.ownerParticipantId,
+  });
+  return sharedWithOthers(row.item_state, row.visibility, standing);
 }

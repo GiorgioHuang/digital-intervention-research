@@ -27,6 +27,7 @@ export {
   SCAN_ERROR_MARKER,
   type StorageConfig,
   type StorageDeps,
+  type OwningResourceReadCheck,
   type StoredObjectStatus,
   type AttachedObject,
   type UncaptionedPhotograph,

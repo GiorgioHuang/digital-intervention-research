@@ -4,6 +4,7 @@ import { SystemClock } from '@platform/kernel';
 import { createPool } from '@platform/database';
 import { POLICY_V1 } from '@platform/policy';
 import { createAccountNameQuery, createRoleAssignmentQuery } from '@platform/m01-identity-org';
+import { mayReadLifeStoryItem } from '@platform/m17-life-story';
 import { createParticipantQuery } from '@platform/m02-participant';
 import { createPermissionService } from '@platform/m03-consent-permission';
 import { createProtocolVersionQuery } from '@platform/m04-research-design';
@@ -81,7 +82,39 @@ export function buildAppModule(config: ApiConfig) {
     m13: moduleDeps,
     m14: moduleDeps,
     m15: moduleDeps,
-    m16storage: { ...moduleDeps, blobs },
+    /*
+     * The port that lets a photograph follow the memory it is on.
+     *
+     * M16 knows nothing about life stories and must not learn — a module
+     * that reads `life_story.items` to decide who may see a file has put
+     * the life story's rules in the storage layer, where the next reader
+     * of those rules will not look. So the question is asked here, at the
+     * boundary where the two modules already meet, and answered by M17.
+     *
+     * Every uncertainty answers no: an owning type this does not know, an
+     * actor it cannot resolve, a memory that is not there. It is deciding
+     * whether to hand over somebody's photograph.
+     */
+    m16storage: {
+      ...moduleDeps,
+      blobs,
+      mayReadOwningResource: async (ctx, input) => {
+        if (input.owningResourceType !== 'LifeStoryItem') return false;
+        const viewerActorId = ctx.actor?.id;
+        if (viewerActorId === undefined) return false;
+        const viewerParticipantId =
+          (await createParticipantQuery(pool).findParticipantIdByAccount(viewerActorId)) ?? null;
+        return mayReadLifeStoryItem(
+          { pool, clock },
+          {
+            itemId: input.owningResourceId,
+            ownerParticipantId: input.ownerParticipantId,
+            viewerActorId,
+            viewerParticipantId,
+          },
+        );
+      },
+    },
     m17: moduleDeps,
     m18: { ...moduleDeps, participants: createParticipantQuery(pool) },
   };

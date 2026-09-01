@@ -19,10 +19,32 @@ export type PermissionCheck = (
   },
 ) => Promise<PolicyDecisionResult>;
 
+/**
+ * Whether this viewer may read the record a file is attached to.
+ *
+ * A photograph follows its entry's scope rather than carrying one of its
+ * own (owner's decision, 2026-09-01, B-30), so the question "may this
+ * person see this photograph" is really "may this person see the memory
+ * it is on" — and M16 cannot answer that. It knows nothing about life
+ * stories and must not learn: a module that reads `life_story.items` to
+ * decide who may see a file has put the life story's rules in the
+ * storage layer, where the next reader of those rules will not look.
+ *
+ * So it is asked. Optional, and its absence means owner-only: a
+ * deployment that wires no port shares nothing, which is the safe
+ * direction for the failure where somebody forgets to wire it.
+ */
+export type OwningResourceReadCheck = (
+  ctx: RequestContext,
+  input: { owningResourceType: string; owningResourceId: string; ownerParticipantId: string },
+) => Promise<boolean>;
+
 export interface StorageDeps {
   pool: Pool;
   clock: Clock;
   checkPermission: PermissionCheck;
+  /** See OwningResourceReadCheck. Absent means owner-only. */
+  mayReadOwningResource?: OwningResourceReadCheck;
   /**
    * Where the bytes go. Until this existed the pipeline wrote them into
    * a Postgres column with no way to put them anywhere else — see
@@ -433,6 +455,47 @@ export async function getObjectStatus(
   };
 }
 
+/**
+ * May this actor read files attached to this record?
+ *
+ * Two questions in order, and both must say yes for a non-owner. First
+ * the permission engine, which decides whether this actor may attempt it
+ * at all; then the owning record, which decides whether this particular
+ * viewer was shared this particular thing. Neither is sufficient alone —
+ * the role grants the attempt and never the content.
+ *
+ * `object.view-own` is tried first and, when it allows, nothing else is
+ * asked: that is the owner reading their own file, which is what it has
+ * always meant.
+ */
+async function mayReadAttachments(
+  deps: StorageDeps,
+  ctx: RequestContext,
+  input: { owningResourceType: string; owningResourceId: string; ownerParticipantId: string; objectId: string },
+): Promise<{ allowed: boolean; policyVersion: string }> {
+  const resource = {
+    type: 'StoredObject',
+    id: input.objectId,
+    state: 'Available',
+    protectedExistence: true,
+    ownerParticipantId: input.ownerParticipantId,
+  };
+  const own = await deps.checkPermission(ctx, { action: 'object.view-own', resource });
+  if (own.outcome === 'Allow') return { allowed: true, policyVersion: own.policyVersion };
+
+  // Not the owner. Only a wired port can open this, and only then if the
+  // owning record says this viewer was shared it.
+  if (deps.mayReadOwningResource === undefined) return { allowed: false, policyVersion: own.policyVersion };
+  const shared = await deps.checkPermission(ctx, { action: 'object.view-shared', resource });
+  if (shared.outcome !== 'Allow') return { allowed: false, policyVersion: shared.policyVersion };
+  const permitted = await deps.mayReadOwningResource(ctx, {
+    owningResourceType: input.owningResourceType,
+    owningResourceId: input.owningResourceId,
+    ownerParticipantId: input.ownerParticipantId,
+  });
+  return { allowed: permitted, policyVersion: shared.policyVersion };
+}
+
 export interface AttachedObject {
   objectId: string;
   declaredContentType: string;
@@ -469,17 +532,23 @@ export async function listObjectsForResource(
   ctx: RequestContext,
   input: { ownerParticipantId: string; owningResourceType: string; owningResourceId: string },
 ): Promise<AttachedObject[]> {
-  const decision = await deps.checkPermission(ctx, {
-    action: 'object.view-own',
-    resource: {
-      type: 'StoredObject',
-      id: `${input.owningResourceType}:${input.owningResourceId}`,
-      state: 'Available',
-      protectedExistence: true,
-      ownerParticipantId: input.ownerParticipantId,
-    },
+  /*
+   * The owner, or somebody the owning record says may read it. Owner-only
+   * until now, on the reasoning that sharing with a supporter did not
+   * exist on this platform at all (D-39) — which was true of the code and
+   * is no longer the design (B-30).
+   */
+  const may = await mayReadAttachments(deps, ctx, {
+    owningResourceType: input.owningResourceType,
+    owningResourceId: input.owningResourceId,
+    ownerParticipantId: input.ownerParticipantId,
+    objectId: `${input.owningResourceType}:${input.owningResourceId}`,
   });
-  assertAllowed(decision, false);
+  if (!may.allowed) {
+    // Existence is protected: a refusal must not confirm that this
+    // record has files on it, or that it exists.
+    throw new PlatformError('RESOURCE_NOT_FOUND', 'Object not found');
+  }
   const res = await deps.pool.query(
     `SELECT id, declared_content_type, declared_size_bytes, object_state, data_classification, created_at
        FROM storage_ops.stored_objects
@@ -584,25 +653,34 @@ export async function readObject(
   input: { objectId: string },
 ): Promise<ObjectContent> {
   const res = await deps.pool.query(
-    `SELECT object_state, owner_participant_id, declared_content_type
+    `SELECT object_state, owner_participant_id, declared_content_type,
+            owning_resource_type, owning_resource_id
        FROM storage_ops.stored_objects WHERE id = $1`,
     [input.objectId],
   );
   const row = res.rows[0] as
-    | { object_state: string; owner_participant_id: string; declared_content_type: string }
+    | {
+        object_state: string;
+        owner_participant_id: string;
+        declared_content_type: string;
+        owning_resource_type: string | null;
+        owning_resource_id: string | null;
+      }
     | undefined;
   if (row === undefined) throw new PlatformError('RESOURCE_NOT_FOUND', 'Object not found');
-  const decision = await deps.checkPermission(ctx, {
-    action: 'object.view-own',
-    resource: {
-      type: 'StoredObject',
-      id: input.objectId,
-      state: row.object_state,
-      protectedExistence: true,
-      ownerParticipantId: row.owner_participant_id,
-    },
+  /*
+   * A photograph follows the memory it is on. An object that is attached
+   * to nothing has no record to inherit a scope from, so it stays
+   * owner-only — `mayReadAttachments` is given no owning resource and the
+   * port cannot be asked about one.
+   */
+  const may = await mayReadAttachments(deps, ctx, {
+    owningResourceType: row.owning_resource_type ?? '',
+    owningResourceId: row.owning_resource_id ?? '',
+    ownerParticipantId: row.owner_participant_id,
+    objectId: input.objectId,
   });
-  assertAllowed(decision, false);
+  if (!may.allowed) throw new PlatformError('RESOURCE_NOT_FOUND', 'Object not found');
   if (row.object_state !== 'Available') {
     throw new PlatformError('ATTACHMENT_NOT_READY', 'That file has not finished being checked');
   }

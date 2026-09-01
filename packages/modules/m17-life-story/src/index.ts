@@ -24,4 +24,4 @@ export {
   type SharedLifeStoryItem,
 } from './application/queries.js';
 export { mayRead, sharedWithOthers, NO_STANDING, type ViewerStanding } from './application/standing.js';
-export { standingOf, type StandingDeps } from './application/standing-query.js';
+export { standingOf, mayReadLifeStoryItem, type StandingDeps } from './application/standing-query.js';
