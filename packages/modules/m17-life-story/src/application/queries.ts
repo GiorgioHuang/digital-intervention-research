@@ -1,6 +1,8 @@
 import type { RequestContext } from '@platform/kernel';
 import { assertAllowed } from '@platform/policy';
 import type { M17Deps } from './commands.js';
+import { sharedWithOthers } from './standing.js';
+import { standingOf, type StandingDeps } from './standing-query.js';
 
 export interface MyContribution {
   contributionId: string;
@@ -257,4 +259,104 @@ export async function listContributionsAwaitingReview(
     contributorActorId: r.contributor_actor_id as string,
     createdAt: (r.created_at as Date).toISOString(),
   }));
+}
+
+
+/**
+ * One memory as somebody else sees it.
+ *
+ * Narrower than the owner's own view, and the omissions are the point. A
+ * reader is not shown which scope the memory carries — that a daughter
+ * can read it does not entitle her to know whether her mother also shared
+ * it with the community — nor how many times it was rewritten, which is
+ * the author's own working and nobody else's.
+ *
+ * What is kept is provenance. Whether a drafting tool wrote the words,
+ * and whether the participant has confirmed them as their own, travel
+ * with the memory: a reader who cannot tell a model's draft from their
+ * mother's words has been told something false about their mother
+ * (ADR-024).
+ */
+export interface SharedLifeStoryItem {
+  itemId: string;
+  title: string;
+  contentText: string | null;
+  sourceType: string | null;
+  testimonyState: string | null;
+  updatedAt: string;
+}
+
+export interface SharedLifeStory {
+  ownerParticipantId: string;
+  items: SharedLifeStoryItem[];
+}
+
+/**
+ * Somebody else's life story, as far as they have shared it.
+ *
+ * The read path that did not exist. Until this, `getMyLifeStory` was the
+ * only query on a life story and `life-story.view-own` is `ownerOnly`, so
+ * every visibility a participant chose was recorded, audited and read by
+ * nothing (B-30) — a control that did nothing, on the feature the whole
+ * project is for.
+ *
+ * The permission grants the attempt; it never grants the content. Which
+ * memories come back is decided one at a time by the owner's own choice
+ * against the viewer's standing, so a role can reach this query and still
+ * be told nothing. An owner asking for their own story through here gets
+ * the same answer as everybody else and should use `getMyLifeStory`,
+ * which is theirs.
+ */
+export async function getSharedLifeStory(
+  deps: M17Deps & StandingDeps,
+  ctx: RequestContext,
+  input: { ownerParticipantId: string; viewerActorId: string; viewerParticipantId: string | null },
+): Promise<SharedLifeStory> {
+  const decision = await deps.checkPermission(ctx, {
+    action: 'life-story.view-shared',
+    resource: {
+      type: 'LifeStoryArchive',
+      id: 'shared',
+      state: 'Any',
+      protectedExistence: true,
+      ownerParticipantId: input.ownerParticipantId,
+    },
+  });
+  assertAllowed(decision, false);
+
+  const standing = await standingOf(deps, {
+    viewerActorId: input.viewerActorId,
+    viewerParticipantId: input.viewerParticipantId,
+    ownerParticipantId: input.ownerParticipantId,
+  });
+
+  const res = await deps.pool.query(
+    `SELECT i.id, i.title, i.item_state, i.visibility, i.updated_at,
+            v.content_text, v.source_type, v.testimony_state
+       FROM life_story.items i
+       JOIN life_story.archives a ON a.id = i.archive_id
+       LEFT JOIN life_story.item_versions v ON v.id = i.current_version_id
+      WHERE a.participant_id = $1
+      ORDER BY i.updated_at DESC`,
+    [input.ownerParticipantId],
+  );
+
+  /*
+   * Filtered here rather than in the SQL. The rule that decides who may
+   * read somebody's life is worth having in one place, exhaustively
+   * tested without a database, rather than spread across a WHERE clause
+   * that has to be re-read every time a scope is added.
+   */
+  const items = res.rows
+    .filter((r) => sharedWithOthers(r.item_state as string, r.visibility as string, standing))
+    .map((r) => ({
+      itemId: r.id as string,
+      title: r.title as string,
+      contentText: (r.content_text as string | null) ?? null,
+      sourceType: (r.source_type as string | null) ?? null,
+      testimonyState: (r.testimony_state as string | null) ?? null,
+      updatedAt: (r.updated_at as Date).toISOString(),
+    }));
+
+  return { ownerParticipantId: input.ownerParticipantId, items };
 }

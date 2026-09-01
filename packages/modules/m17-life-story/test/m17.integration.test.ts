@@ -26,6 +26,7 @@ import {
   createItem,
   findArchiveForContribution,
   getMyLifeStory,
+  getSharedLifeStory,
   listContributionsAwaitingReview,
   proposeContribution,
   reviewContribution,
@@ -409,9 +410,16 @@ describe.skipIf(!dbAvailable)('M17 Life Story (integration)', () => {
   });
 
   it('withdrawal resets visibility to Private, revokes grants, emits event; history preserved', async () => {
+    /*
+     * A unique id per run. This was the literal 'ag_1', which made the
+     * test pass exactly once against any given database and then fail on
+     * a duplicate primary key — so the suite was green only because
+     * something reset the database between runs, and running this file
+     * twice reported a defect that was not there.
+     */
     await pool.query(
-      `INSERT INTO life_story.access_grants (id, item_id, grantee_actor_id) VALUES ('ag_1', $1, $2)`,
-      [itemId, supporterId],
+      `INSERT INTO life_story.access_grants (id, item_id, grantee_actor_id) VALUES ($3, $1, $2)`,
+      [itemId, supporterId, `ag_${String(Date.now())}`],
     );
     await withdrawItem(m17, ctx(participantAccountId), { itemId, confirmed: true });
 
@@ -442,6 +450,272 @@ describe.skipIf(!dbAvailable)('M17 Life Story (integration)', () => {
     expect(item?.itemState).toBe('Withdrawn');
     expect(item?.visibility).toBe('Private');
     expect(item?.contentText).not.toBeNull();
+  });
+
+  /**
+   * Reading somebody else's story — the path that did not exist.
+   *
+   * `life-story.view-own` is `ownerOnly` and was the only way in, so every
+   * visibility a participant chose was recorded, audited and read by
+   * nothing (B-30). These are written mostly from the refusing side: a
+   * wrong "no" here is a disappointment, and a wrong "yes" hands somebody's
+   * memories to a person they did not choose.
+   */
+  describe('what a supporter can read', () => {
+    let forSupporters: string, forCommunity: string, stillPrivate: string, notConfirmed: string;
+
+    const shareable = async (title: string, visibility: string) => {
+      const { itemId: id, versionId } = await createItem(m17, ctx(participantAccountId), {
+        archiveId,
+        title,
+        contentText: `The words of ${title}.`,
+        sourceType: 'ParticipantAuthored',
+      });
+      // Confirming is what makes an item Active, and only an Active item
+      // is ever shared — a memory its author has not confirmed as their
+      // own words stays a draft and reaches nobody.
+      await confirmTestimony(m17, ctx(participantAccountId), { itemId: id, versionId, confirmed: true });
+      if (visibility !== 'Private') {
+        await changeVisibility(m17, ctx(participantAccountId), { itemId: id, visibility: visibility as never, confirmed: true });
+      }
+      return id;
+    };
+
+    const read = (viewer: string, viewerParticipantId: string | null = null) =>
+      getSharedLifeStory(m17, ctx(viewer), {
+        ownerParticipantId: participantId,
+        viewerActorId: viewer,
+        viewerParticipantId,
+      });
+
+    beforeAll(async () => {
+      forSupporters = await shareable('For my family', 'My Supporters');
+      forCommunity = await shareable('For the community', 'Community');
+      stillPrivate = await shareable('Just for me', 'Private');
+      const draft = await createItem(m17, ctx(participantAccountId), {
+        archiveId, title: 'Not finished', contentText: 'Half a thought.', sourceType: 'ParticipantAuthored',
+      });
+      notConfirmed = draft.itemId;
+      await changeVisibility(m17, ctx(participantAccountId), {
+        itemId: notConfirmed, visibility: 'My Supporters' as never, confirmed: true,
+      });
+    }, 30_000);
+
+    it('gives a supporter the memories shared with supporters', async () => {
+      const story = await read(supporterId);
+      expect(story.items.map((i) => i.itemId)).toContain(forSupporters);
+      expect(story.items.find((i) => i.itemId === forSupporters)?.contentText).toBe('The words of For my family.');
+    });
+
+    /** The one that must never move. */
+    it('never gives a supporter a private memory', async () => {
+      const story = await read(supporterId);
+      expect(story.items.map((i) => i.itemId), 'a private memory reached a supporter').not.toContain(stillPrivate);
+    });
+
+    /**
+     * Standing is not a ladder. A supporter is "closer" than the
+     * community in an everyday sense, and the participant did not say
+     * that — they said who this memory is for.
+     */
+    it('does not give a supporter what was shared with the community', async () => {
+      const story = await read(supporterId);
+      expect(story.items.map((i) => i.itemId), 'a supporter read a community memory').not.toContain(forCommunity);
+    });
+
+    /**
+     * A memory whose author has not confirmed it as their own words is a
+     * draft, whatever scope it carries. Sharing it would put words in
+     * somebody's mouth that they have not stood behind.
+     */
+    it('shares nothing the participant has not confirmed, whatever it is marked', async () => {
+      const story = await read(supporterId);
+      expect(story.items.map((i) => i.itemId), 'an unconfirmed draft was shared').not.toContain(notConfirmed);
+    });
+
+    /**
+     * A life story is not staff-readable, and it did not become so by
+     * becoming shareable with a daughter. The coordinator holds no
+     * `life-story.view-shared` at all, so they are refused before any
+     * standing is computed — and told the archive is not there rather
+     * than that they may not have it, because its existence is protected.
+     */
+    it('refuses a research coordinator outright, without confirming the story exists', async () => {
+      await expect(read(coordinatorId)).rejects.toMatchObject({ code: 'RESOURCE_NOT_FOUND' });
+    });
+
+    /**
+     * The claim this whole design rests on: the permission grants the
+     * ATTEMPT and never the content.
+     *
+     * Another participant holds `life-story.view-shared` through the
+     * Participant role, exactly as the supporter does. They reach the
+     * query, and they are no relation — so what comes back is nothing.
+     * If standing were ever skipped, or the role treated as sufficient,
+     * this is the test that fails.
+     */
+    it('lets an unrelated participant reach the query and gives them nothing', async () => {
+      const { userAccountId: strangerAccount } = await createUserAccount(
+        m01,
+        createRequestContext({ actor: { type: 'user', id: adminId }, organisationId: orgId }),
+        { displayName: 'Stranger' },
+      );
+      await assignRole(
+        m01,
+        createRequestContext({ actor: { type: 'user', id: adminId }, organisationId: orgId }),
+        { userAccountId: strangerAccount, role: 'Participant', confirmed: true },
+      );
+      const { participantId: strangerParticipant } = await registerParticipant(
+        m02,
+        createRequestContext({ actor: { type: 'user', id: coordinatorId }, organisationId: orgId }),
+        { displayName: 'Sandy S.', userAccountId: strangerAccount },
+      );
+
+      const story = await read(strangerAccount, strangerParticipant);
+      expect(story.items, 'an unrelated participant read somebody else’s life story').toEqual([]);
+    }, 30_000);
+
+    /**
+     * Withdrawal takes a memory back from everybody. The screen promises
+     * its owner that a withdrawn entry is "private now, and still here
+     * for you to read", and that is only true if it actually leaves the
+     * people who could reach it.
+     */
+    it('takes a withdrawn memory back from a supporter', async () => {
+      expect((await read(supporterId)).items.map((i) => i.itemId)).toContain(forSupporters);
+      await withdrawItem(m17, ctx(participantAccountId), { itemId: forSupporters, confirmed: true });
+      expect(
+        (await read(supporterId)).items.map((i) => i.itemId),
+        'a withdrawn memory was still readable by a supporter',
+      ).not.toContain(forSupporters);
+      // And its owner still has it.
+      const mine = await getMyLifeStory(m17, ctx(participantAccountId), participantId);
+      expect(mine.items.find((i) => i.itemId === forSupporters)?.contentText).not.toBeNull();
+    });
+
+    /**
+     * Only an approved relationship, and this was not tested until a
+     * mutation showed it: loosening the query to "any state but
+     * Rejected" left every test green.
+     *
+     * The table holds Proposed, PendingVerification, Restricted,
+     * Suspended, Expired, Revoked and Rejected as well as Active, and not
+     * one of them is somebody the participant has said may read their
+     * life. A proposal nobody accepted is the worst of them — it would
+     * mean anyone who can propose a relationship can read a life story by
+     * proposing one.
+     */
+    it('grants nothing on a relationship the participant has not approved', async () => {
+      const item = await shareable('For approved family only', 'My Supporters');
+      const setState = (state: string) =>
+        pool.query(
+          `UPDATE consent_permission.relationships SET relationship_state = $2
+            WHERE participant_id = $1 AND related_actor_id = $3`,
+          [participantId, state, supporterId],
+        );
+
+      for (const state of [
+        'Proposed', 'PendingVerification', 'Restricted', 'Suspended', 'Expired', 'Revoked', 'Rejected',
+      ]) {
+        await setState(state);
+        const story = await read(supporterId);
+        expect(
+          story.items.map((i) => i.itemId),
+          `a ${state} relationship let a supporter read a life story`,
+        ).not.toContain(item);
+      }
+
+      await setState('Active');
+      expect((await read(supporterId)).items.map((i) => i.itemId)).toContain(item);
+    }, 30_000);
+
+    /**
+     * A row that says both things at once.
+     *
+     * `revoked_at IS NULL` sits alongside the state check as
+     * defence-in-depth, and a mutation showed nothing exercised it: the
+     * revoke command sets the state as well, so the state check alone
+     * kept every test green. The case it exists for is a row that is
+     * revoked and still reads Active — from a partial write, a repair by
+     * hand, or a future path that sets one and forgets the other. When a
+     * record disagrees with itself about whether somebody may read a life
+     * story, the answer is no.
+     */
+    it('refuses a relationship marked revoked even if its state still says Active', async () => {
+      const item = await shareable('For family, until revoked', 'My Supporters');
+      await pool.query(
+        `UPDATE consent_permission.relationships SET revoked_at = $2, relationship_state = 'Active'
+          WHERE participant_id = $1 AND related_actor_id = $3`,
+        [participantId, '2026-07-15T00:00:00Z', supporterId],
+      );
+      expect(
+        (await read(supporterId)).items.map((i) => i.itemId),
+        'a revoked relationship read a life story because its state still said Active',
+      ).not.toContain(item);
+
+      await pool.query(
+        `UPDATE consent_permission.relationships SET revoked_at = NULL
+          WHERE participant_id = $1 AND related_actor_id = $2`,
+        [participantId, supporterId],
+      );
+      expect((await read(supporterId)).items.map((i) => i.itemId)).toContain(item);
+    }, 30_000);
+
+    /**
+     * And an expired relationship stops granting the moment it expires,
+     * without waiting for anything to notice.
+     *
+     * `relationship_state` is moved to Expired by a scheduled sweep, and
+     * the deployment runs neither the scheduler nor the worker (B-29) —
+     * so in the deployed environment an expired relationship reads
+     * 'Active' for ever. Even with the sweep running there is a window
+     * between expiry and the next pass, and reading somebody's life story
+     * is not a thing to do in that window.
+     */
+    it('stops granting the moment a relationship expires, without waiting for a sweep', async () => {
+      const item = await shareable('For family, for now', 'My Supporters');
+      const setExpiry = (at: string | null) =>
+        pool.query(
+          `UPDATE consent_permission.relationships SET expires_at = $2
+            WHERE participant_id = $1 AND related_actor_id = $3`,
+          [participantId, at, supporterId],
+        );
+
+      // Still 'Active' in the column, and already past.
+      await setExpiry('2026-07-01T00:00:00Z');
+      const rows = await pool.query(
+        `SELECT relationship_state FROM consent_permission.relationships
+          WHERE participant_id = $1 AND related_actor_id = $2`,
+        [participantId, supporterId],
+      );
+      expect(rows.rows[0].relationship_state, 'the fixture stopped testing what it was for').toBe('Active');
+
+      expect(
+        (await read(supporterId)).items.map((i) => i.itemId),
+        'an expired relationship still read a life story',
+      ).not.toContain(item);
+
+      await setExpiry(null);
+      expect((await read(supporterId)).items.map((i) => i.itemId)).toContain(item);
+    }, 30_000);
+
+    /**
+     * What a reader is not told. Which scope a memory carries is the
+     * author's business — that a daughter can read it does not entitle
+     * her to know whether her mother also shared it with the community —
+     * and neither is how many times it was rewritten.
+     */
+    it('does not hand the reader the author’s own working', async () => {
+      // Its own memory: the test above withdraws the shared one, and a
+      // shape assertion over an empty list asserts nothing.
+      await shareable('Something to look at', 'My Supporters');
+      const story = await read(supporterId);
+      const any = story.items[0];
+      expect(any, 'no memory came back to check the shape of').toBeDefined();
+      expect(Object.keys(any!).sort()).toEqual(
+        ['contentText', 'itemId', 'sourceType', 'testimonyState', 'title', 'updatedAt'].sort(),
+      );
+    });
   });
 });
 

@@ -108,6 +108,7 @@ export const POLICY_V1: PolicyConfiguration = {
       'triage-queue.view',
     ],
     Participant: [
+      'life-story.view-shared',
       // Participant self-service actions are owner-permitted on own resources.
       'participant.view-own',
       'participant.update-own',
@@ -120,6 +121,7 @@ export const POLICY_V1: PolicyConfiguration = {
       'enrolment.view-own',
       'enrolment.withdraw',
       'life-story.view-own',
+      'life-story.view-shared',
       'life-story.create',
       'life-story.edit',
       'life-story.confirm-testimony',
@@ -151,6 +153,7 @@ export const POLICY_V1: PolicyConfiguration = {
     ],
     Supporter: [
       'participant.view-shared',
+      'life-story.view-shared',
       'life-story.contribute',
       // Writing to the participant they support — only ever effective when
       // the relationship itself carries `relationship.message`, which the
@@ -392,6 +395,25 @@ export const POLICY_V1: PolicyConfiguration = {
      * goes through visibility and access grants, not through this action.
      */
     'life-story.view-own': { ownerPermitted: true, ownerOnly: true },
+    /**
+     * Reading what somebody else chose to share with you.
+     *
+     * Deliberately NOT `ownerOnly` — that is the whole of what it is for,
+     * and until it existed a life story could be read by its author and
+     * nobody else, which made every sharing choice on the platform a
+     * control that did nothing (B-30).
+     *
+     * This grants the ATTEMPT and never the content. Which memories come
+     * back is decided per item by the owner's own visibility choice
+     * against the viewer's standing (`sharedWithOthers` in M17), the way
+     * the object listing already resolves a permission and then filters
+     * rows. A role reaching this action learns nothing it was not shared.
+     *
+     * Held by Participant and Supporter, and by no staff role: a life
+     * story is not staff-readable, and it is not becoming so by being
+     * shareable with a daughter.
+     */
+    'life-story.view-shared': { ownerPermitted: true },
     'life-story.create': { ownerPermitted: true, ownerOnly: true },
     'life-story.edit': { ownerPermitted: true, ownerOnly: true },
     'life-story.confirm-testimony': { ownerPermitted: true, ownerOnly: true, confirmationRequired: true },
