@@ -31,6 +31,7 @@ const PATHS: Readonly<Record<Exclude<Screen, 'review' | 'caption'>, string>> = {
   access: '/who-has-access',
   'data-copy': '/copy-of-my-information',
   'life-story': '/my-story',
+  'shared-stories': '/shared-with-me',
   community: '/community',
   message: '/messages',
   matching: '/meet-people',

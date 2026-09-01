@@ -325,6 +325,28 @@ export interface StoredObjectStatus {
   rejectionReason: string | null;
 }
 
+export interface SupportedPerson {
+  relationshipId: string;
+  participantId: string;
+  participantDisplayName: string | null;
+  relationshipType: string | null;
+  relationshipState: string;
+}
+
+/**
+ * A memory as somebody else sees it. Narrower than the owner's own view:
+ * no visibility, and no version history — which scope a memory carries,
+ * and how many times it was rewritten, are the author's business.
+ */
+export interface SharedStoryItem {
+  itemId: string;
+  title: string;
+  contentText: string | null;
+  sourceType: string | null;
+  testimonyState: string | null;
+  updatedAt: string;
+}
+
 export interface AttachedFile {
   objectId: string;
   declaredContentType: string;
@@ -540,6 +562,23 @@ export const api = {
       `/v1/participants/${s.participantId}/objects?owningResourceType=LifeStoryItem&owningResourceId=${encodeURIComponent(itemId)}`,
     ),
   readFileContent: (s: Session, objectId: string) => readBlob(s, `/v1/objects/${objectId}/content`),
+  /**
+   * Who may see a memory. Confirmation-tier in the policy, so `confirmed`
+   * is always true here — the screen says what each choice means before
+   * it is made, because this is a decision about who reads somebody's
+   * life and not a toggle.
+   */
+  setLifeStoryVisibility: (s: Session, itemId: string, visibility: string) =>
+    post(s, `/v1/life-story/items/${itemId}/visibility`, { visibility, confirmed: true }),
+  /** The people this supporter supports. A supporter has no participantId. */
+  listPeopleISupport: (s: Session) =>
+    get<{ data: { id: string; attributes: SupportedPerson }[] }>(s, '/v1/relationships/mine'),
+  /** Somebody else's life story, as far as they have shared it with you. */
+  sharedLifeStory: (s: Session, participantId: string) =>
+    get<{ data: { id: string; attributes: SharedStoryItem }[]; meta: { ownerParticipantId: string } }>(
+      s,
+      `/v1/participants/${participantId}/life-story/shared`,
+    ),
   /**
    * What became of a file after it was sent.
    *

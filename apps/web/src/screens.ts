@@ -13,6 +13,7 @@ export type Screen =
   | 'matching'
   | 'community'
   | 'life-story'
+  | 'shared-stories'
   | 'data-copy'
   | 'review'
   | 'caption'

@@ -14,6 +14,7 @@ import { EmptyState, ErrorState, LoadingState } from './StateBlock.js';
 import { TabIcon } from './elder/TabIcon.js';
 import { piecesSoFar, whoCanSee } from '../story-summary.js';
 import { excerptOf, isShowableImage, metaLine } from '../story-entry.js';
+import { VISIBILITY_CHOICES, visibilityLabel } from '../visibility.js';
 
 /**
  * The six questions the drawing offers, in its order.
@@ -84,8 +85,21 @@ const VISIBILITY_WORDING: Record<string, string> = {
   'Platform Public': 'You have chosen to share this with anyone using this platform.',
 };
 
-const SHARING_NOT_BUILT =
-  'Nothing on this platform can show your story to another person yet, so nobody has seen it. Your choice is on the record.';
+/**
+ * True as of the reading path being built.
+ *
+ * This used to say nothing on the platform could show a story to another
+ * person, which was so and is not any more: a supporter can open what was
+ * shared with supporters. What is still true is that the other scopes
+ * have no screen behind them yet — a connection or a community member has
+ * nowhere to read one — so the sentence says which is which rather than
+ * covering both with one reassurance.
+ */
+const SHARING_REACHABLE: Record<string, string> = {
+  'My Supporters': 'The people who help you can open this from their own account.',
+};
+const SHARING_NO_SCREEN_YET =
+  'There is not yet a screen where they can read it, so nobody has opened it. Your choice is on the record and holds when there is.';
 
 const STATE_NOTE: Record<string, string> = {
   Draft: 'Still a draft.',
@@ -181,6 +195,26 @@ export function MyLifeStory({ session }: { session: Session }) {
    * after the first day would be a worse screen than a cluttered one.
    */
   const [adding, setAdding] = useState<string | null>(null);
+  /**
+   * Which memory's scope is being chosen.
+   *
+   * There was no control at all: `changeVisibility` had a command and a
+   * route, and nothing in the app called either, so every memory was
+   * Private for ever and every sentence about who could see it described
+   * a choice nobody could make (B-30).
+   */
+  const [choosingScope, setChoosingScope] = useState<string | null>(null);
+  /**
+   * A widening waiting to be confirmed by a person.
+   *
+   * `life-story.change-visibility` is confirmation-tier, and a client that
+   * sends `confirmed: true` because somebody tapped a list has confirmed
+   * on their behalf. The direction decides: letting more people read a
+   * memory is confirmed, and taking it back to Private happens at once —
+   * the same rule the platform already applies to resuming access versus
+   * pausing it, where stopping something needs no ceremony.
+   */
+  const [confirmingScope, setConfirmingScope] = useState<{ item: MyLifeStoryItem; visibility: string } | null>(null);
   /**
    * Photographs, as pictures.
    *
@@ -458,6 +492,23 @@ export function MyLifeStory({ session }: { session: Session }) {
       setWriting(false);
       setDraft({ title: '', text: '' });
       setAnnouncement('Saved. Only you can see it — nothing is shared until you choose to share it.');
+      await load();
+    } catch (err) {
+      setActionError(presentError(err));
+    }
+  };
+
+  const setScope = async (item: MyLifeStoryItem, visibility: string) => {
+    try {
+      await api.setLifeStoryVisibility(session, item.itemId, visibility);
+      setActionError(null);
+      setChoosingScope(null);
+      setConfirmingScope(null);
+      say(
+        visibility === 'Private'
+          ? 'Only you can see this now.'
+          : `Saved. ${visibilityLabel(visibility)} can see this now.`,
+      );
       await load();
     } catch (err) {
       setActionError(presentError(err));
@@ -856,6 +907,11 @@ export function MyLifeStory({ session }: { session: Session }) {
                       </button>
                     )}
                   {canChange && (
+                    <button className="story-action" onClick={() => setChoosingScope(item.itemId)}>
+                      Who can see this
+                    </button>
+                  )}
+                  {canChange && (
                     <button className="story-action" onClick={() => setWithdrawing(item)}>
                       Take this out of my story
                     </button>
@@ -921,6 +977,62 @@ export function MyLifeStory({ session }: { session: Session }) {
                     You withdrew this entry, so nothing more can be added to it. What is already here stays, and you
                     can still remove any of it.
                   </p>
+                )}
+
+                {choosingScope === item.itemId && (
+                  <div className="story-scope">
+                    <h3>Who can see &ldquo;{item.title}&rdquo;?</h3>
+                    <p className="story-note">
+                      It is <strong>{visibilityLabel(item.visibility)}</strong> at the moment. Changing this changes
+                      who can open it from now on; it does not tell anybody, and you can change it again whenever you
+                      like.
+                    </p>
+                    <ul className="story-prompts list-plain">
+                      {VISIBILITY_CHOICES.map((choice) => (
+                        <li key={choice.value}>
+                          <button
+                            disabled={choice.value === item.visibility}
+                            onClick={() =>
+                              choice.value === 'Private'
+                                ? void setScope(item, choice.value)
+                                : setConfirmingScope({ item, visibility: choice.value })
+                            }
+                          >
+                            <span className="story-scope__label">{choice.label}</span>
+                            <span className="story-scope__meaning">{choice.meaning}</span>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                    <p>
+                      <button className="story-action" onClick={() => setChoosingScope(null)}>
+                        Leave it as it is
+                      </button>
+                    </p>
+                  </div>
+                )}
+
+                {confirmingScope?.item.itemId === item.itemId && (
+                  <div role="alertdialog" aria-labelledby={`scope-${item.itemId}`} className="story-ask-first">
+                    <h3 id={`scope-${item.itemId}`}>
+                      Let {visibilityLabel(confirmingScope.visibility).toLowerCase()} read &ldquo;{item.title}&rdquo;?
+                    </h3>
+                    <p>
+                      They will be able to open it, and the photographs on it, from their own account. You can change
+                      this back at any time, and doing so takes it away from them again.
+                    </p>
+                    <p>
+                      Nobody is told. It simply becomes something they can open if they look.
+                    </p>
+                    <p>
+                      <button className="story-action" onClick={() => void setScope(item, confirmingScope.visibility)}>
+                        Yes, let them read it
+                      </button>{' '}
+                      <button className="story-action" onClick={() => setConfirmingScope(null)}>
+                        Not now
+                      </button>
+                    </p>
+                  </div>
                 )}
 
                 {revising?.itemId === item.itemId && (
@@ -1049,7 +1161,9 @@ export function MyLifeStory({ session }: { session: Session }) {
                     </p>
                   )}
                   <p>{VISIBILITY_WORDING[item.visibility] ?? item.visibility}</p>
-                  {item.visibility !== 'Private' && <p>{SHARING_NOT_BUILT}</p>}
+                  {item.visibility !== 'Private' && (
+                    <p>{SHARING_REACHABLE[item.visibility] ?? SHARING_NO_SCREEN_YET}</p>
+                  )}
                   {STATE_NOTE[item.itemState] !== undefined && <p>{STATE_NOTE[item.itemState]}</p>}
                   {item.versionCount > 1 && (
                     <p>

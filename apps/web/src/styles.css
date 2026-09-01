@@ -2201,6 +2201,52 @@ a[role='button']:hover { background-color: var(--color-action-secondary-bg-hover
   background-color: color-mix(in srgb, var(--cl-accent) 6%, transparent);
   line-height: 1.5;
 }
+/* Choosing who a memory is for: each option says what it means, before
+   it is chosen, at the reading size. This is a decision about who reads
+   somebody's life, not a setting. */
+[data-workspace='participant'] .story-scope {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: var(--border-hairline) solid var(--cl-text-4);
+  border-radius: var(--radius-2);
+}
+[data-workspace='participant'] .story-scope h3 {
+  margin: 0;
+}
+[data-workspace='participant'] .story-scope p {
+  margin: 0;
+}
+[data-workspace='participant'] .story-scope button {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+  inline-size: 100%;
+  min-block-size: var(--target-min);
+  padding: var(--space-3) 2px;
+  border: 0;
+  border-radius: 0;
+  background-color: transparent;
+  text-align: start;
+  color: var(--cl-text);
+}
+[data-workspace='participant'] .story-scope button:disabled {
+  color: var(--cl-text-4);
+}
+[data-workspace='participant'] .story-scope button:hover:not(:disabled) {
+  background-color: color-mix(in srgb, var(--cl-text) 5%, transparent);
+}
+[data-workspace='participant'] .story-scope__label {
+  font-family: var(--cl-family-display);
+  font-weight: var(--type-weight-semibold);
+}
+[data-workspace='participant'] .story-scope__meaning {
+  font-size: var(--type-size-1);
+  color: var(--cl-text-4);
+  line-height: 1.45;
+}
 [data-workspace='participant'] .story-note {
   color: var(--cl-text-4);
   line-height: 1.45;

@@ -273,7 +273,100 @@ describe('a participant reading their own life story', () => {
     const said = document.body.textContent ?? '';
     expect(said, 'the entry claims other people can see it').not.toMatch(/People in your community can see this/);
     expect(said).toMatch(/You have chosen to share this with your community/);
-    expect(said, 'nothing says the sharing has not happened').toMatch(/nobody has seen it/i);
+    expect(said, 'nothing says the sharing has not happened').toMatch(/not yet a screen where they can read it/i);
+  });
+
+  /**
+   * And a scope that DOES have a reader says so, rather than being
+   * covered by the same reassurance.
+   *
+   * A supporter can now open what was shared with supporters, so telling
+   * their participant that nobody can read it would be the same defect
+   * running the other way — under-claiming instead of over-claiming, and
+   * just as untrue.
+   */
+  it('says a memory shared with supporters can actually be opened by them', async () => {
+    stubFetch({ data: [item({ visibility: 'My Supporters' })], meta: { archiveId: 'ar_1' } });
+    await act(async () => {
+      render(<MyLifeStory session={session} />);
+    });
+    await openMemory();
+    const said = document.body.textContent ?? '';
+    expect(said).toMatch(/can open this from their own account/i);
+    expect(said, 'a scope with a reader was reported as unreachable').not.toMatch(/not yet a screen/i);
+  });
+
+  /**
+   * The control that did not exist. `changeVisibility` had a command and
+   * a route and nothing in the app called either, so every memory was
+   * Private for ever and every sentence about who could see it described
+   * a choice nobody could make (B-30).
+   */
+  it('lets a participant choose who a memory is for', async () => {
+    const calls = stubFetch({ data: [item()], meta: { archiveId: 'ar_1' } });
+    await act(async () => {
+      render(<MyLifeStory session={session} />);
+    });
+    await openMemory();
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Who can see this' }));
+    });
+
+    // What each choice means, said before it is made.
+    expect(screen.getByText(/family and friends you have approved as supporters/i)).toBeTruthy();
+    // And the scope with nobody behind it is not offered (B-31).
+    expect(screen.queryByText(/People I chose/), 'a scope with nobody behind it was offered').toBeNull();
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /The people who help me/ }));
+    });
+
+    /*
+     * Nothing has been sent yet. Widening who can read a memory is
+     * confirmation-tier, and a client that sends `confirmed: true`
+     * because somebody tapped a list has confirmed on their behalf.
+     */
+    expect(calls.some((c) => /\/visibility$/.test(c.path)), 'the change was sent before anyone confirmed it').toBe(
+      false,
+    );
+    const asked = screen.getByRole('alertdialog');
+    expect(asked.textContent).toMatch(/open it, and the photographs on it, from their own account/i);
+    expect(asked.textContent, 'nothing says it can be taken back').toMatch(/change this back at any time/i);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Yes, let them read it' }));
+    });
+    const sent = calls.find((c) => /\/visibility$/.test(c.path));
+    expect(sent?.body, 'the choice never reached the server').toMatchObject({
+      visibility: 'My Supporters',
+      // A decision about who reads somebody's life, not a toggle.
+      confirmed: true,
+    });
+  });
+
+  /**
+   * And narrowing needs no ceremony.
+   *
+   * The same rule the platform already applies to access: resuming it is
+   * confirmed, pausing it is not. Making somebody ask twice before they
+   * can take a memory back would put a hesitation exactly where there
+   * should be none.
+   */
+  it('takes a memory back to private without asking twice', async () => {
+    const calls = stubFetch({ data: [item({ visibility: 'Community' })], meta: { archiveId: 'ar_1' } });
+    await act(async () => {
+      render(<MyLifeStory session={session} />);
+    });
+    await openMemory();
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Who can see this' }));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Only me/ }));
+    });
+
+    expect(screen.queryByRole('alertdialog'), 'taking a memory back made somebody confirm it').toBeNull();
+    expect(calls.find((c) => /\/visibility$/.test(c.path))?.body).toMatchObject({ visibility: 'Private' });
   });
 
   /**

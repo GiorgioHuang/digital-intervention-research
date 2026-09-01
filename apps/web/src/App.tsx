@@ -35,6 +35,7 @@ import { MatchingPanel } from './components/MatchingPanel.js';
 import { MessagesScreen } from './components/MessagesScreen.js';
 import { MyDataCopy } from './components/MyDataCopy.js';
 import { MyLifeStory } from './components/MyLifeStory.js';
+import { StoriesSharedWithMe } from './components/StoriesSharedWithMe.js';
 import { MyResearchPart } from './components/MyResearchPart.js';
 import { WhoHasAccess } from './components/WhoHasAccess.js';
 import { InviteSomeone } from './components/InviteSomeone.js';
@@ -1052,6 +1053,7 @@ export function App() {
           everybody who has nobody sitting with them — the single largest
           difference between the built Home and the design.
         */}
+        {screen === 'shared-stories' && <StoriesSharedWithMe session={session} />}
         {screen === 'helper' && (
           <HelperScreen helper={helper} onChange={setHelper} onDone={() => setScreen('help')} />
         )}
@@ -1164,6 +1166,16 @@ export function App() {
             <div className="nav-rows">
               <button className="row-summary" onClick={() => setScreen('helper')}>
                 Someone is helping me use this
+              </button>
+              {/*
+                A supporter's way in. There is no supporter workspace on
+                this platform — somebody helping a participant signs in to
+                the same screens — so this sits on Help beside the row
+                about being helped, which is the least wrong place for it
+                and not the right one (X-39).
+              */}
+              <button className="row-summary" onClick={() => setScreen('shared-stories')}>
+                Stories shared with me
               </button>
               <button className="row-summary" onClick={() => setScreen('about')}>
                 About this project

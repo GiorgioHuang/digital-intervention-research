@@ -136,6 +136,15 @@ describe('the confirmation tier is confirmed by a person, not by the api client'
       'components/MyDataCopy.tsx → requestMyExport',
       'components/MyLifeStory.tsx → confirmTestimony',
       'components/MyLifeStory.tsx → removeFile',
+      /*
+       * Letting more people read a memory. Confirmed by a person on a
+       * panel that says who will be able to open it and that it can be
+       * taken back — not by the client because somebody tapped a list.
+       * Going back to Private does NOT come through here and should not:
+       * narrowing who can read something is the direction that needs no
+       * ceremony, the same rule as pausing access below.
+       */
+      'components/MyLifeStory.tsx → setLifeStoryVisibility',
       'components/MyLifeStory.tsx → withdrawLifeStoryItem',
       'components/MyResearchPart.tsx → withdrawFromStudy',
       'components/SafetyEvents.tsx → moveSafetyEvent',
