@@ -290,18 +290,24 @@ export function MyLifeStory({ session }: { session: Session }) {
         </button>
       </div>
 
-      <p>
-        <button
-          className="row-summary"
-          aria-expanded={prompting}
-          onClick={() => {
-            setWriting(false);
-            setPrompting((v) => !v);
-          }}
-        >
-          Choose a question to answer
-        </button>
-      </p>
+      {/*
+        Full width, as the drawing draws it, and quieter than the two ways
+        in above — it is the third way, not the first. It was neither:
+        `row-summary` is styled only inside `.nav-rows`, so on this button
+        the class named nothing and it fell through to the default action
+        button, coming out 242px wide in a 361px column and louder than
+        the two it sits under.
+      */}
+      <button
+        className="story-ask"
+        aria-expanded={prompting}
+        onClick={() => {
+          setWriting(false);
+          setPrompting((v) => !v);
+        }}
+      >
+        Choose a question to answer
+      </button>
 
       {prompting && (
         <ul className="story-prompts">
@@ -326,8 +332,15 @@ export function MyLifeStory({ session }: { session: Session }) {
           ))}
         </ul>
       )}
-      <hr />
 
+      {/*
+        No rule here. The drawing has one, and following it drew two lines
+        11px apart: every entry already carries a hairline above it, so
+        the rule fell just above the first entry's own. The drawing could
+        afford it because a photograph card sits in the gap. With nothing
+        written yet it was worse — a line separating one thing from
+        nothing at all.
+      */}
       {items === null && loadError === null && <LoadingState label="Loading your life story…" />}
       {loadError !== null && <ErrorState error={loadError} />}
 

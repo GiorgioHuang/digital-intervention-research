@@ -571,5 +571,22 @@ describe('a participant reading their own life story', () => {
     const entry = screen.getByRole('article', { name: 'My garden years' });
     expect(entry.className.split(/\s+/), 'the entry is a card again').not.toContain('card');
     expect(entry.className.split(/\s+/)).toContain('story-entry');
+
+    /* And only one line between the ways in and the first memory. There
+       were two, 11px apart: a rule the drawing has, sitting just above
+       the hairline every entry already carries. Reported 2026-09-01. The
+       separators on this screen are the entries' own, so any <hr> here
+       is the doubled one coming back. */
+    expect(container.querySelector('hr'), 'the doubled rule is back above the first entry').toBeNull();
+  });
+
+  it('draws no rule under the ways in when nothing has been written', async () => {
+    /* The empty story is where the doubled rule was worst: with no entry
+       beneath it, it separated one thing from nothing at all. */
+    stubFetch({ data: [] });
+    const { container } = render(<MyLifeStory session={session} />);
+    await act(async () => {});
+    expect(screen.getByText(/You have not written anything yet/)).toBeTruthy();
+    expect(container.querySelector('hr'), 'a rule separating the ways in from nothing').toBeNull();
   });
 });

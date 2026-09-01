@@ -706,6 +706,37 @@ describe('the token architecture holds', () => {
     expect(offenders, 'staff screens using the participant warmth').toEqual([]);
   });
 
+  it('draws the third way in full width, and every question as a row', () => {
+    /* Reported against the drawing (owner, 2026-09-01): the button should
+       be the width of the column. It was 242px of 361, because
+       `row-summary` is styled only inside `.nav-rows` — on this button
+       the class named nothing and it fell through to the default action
+       button. The six questions it opens had the same fault, which is why
+       both are pinned here: a class that styles nothing looks exactly
+       like a class that styles something.
+
+       Width is asserted rather than the class name for that very reason.
+       `inline-size` is what the browser was measured doing (361/361); a
+       test for `className === 'story-ask'` would have passed throughout
+       the defect. */
+    const ask = ALL_BLOCKS.find((b) => b.selector === "[data-workspace='participant'] .story-ask");
+    expect(ask, 'the ask button has no rule of its own again').toBeTruthy();
+    expect(ask!.body, 'the third way in is not the width of the column').toMatch(/inline-size:\s*100%/);
+    expect(ask!.body, 'its label is not centred').toMatch(/justify-content:\s*center/);
+    /* Quieter than the two accent cards above it, as drawn — but not in
+       the drawing's own --color-divider, which composites to 1.38:1 and
+       is below the 3:1 WCAG 1.4.11 wants for the boundary of a control
+       (X-34). Neutral, and readable. */
+    expect(ask!.body, 'the third way in is drawn as loud as the two above it').not.toMatch(
+      /border:[^;]*--cl-accent/,
+    );
+    expect(ask!.body).toMatch(/border:[^;]*--cl-text-4/);
+
+    const prompts = ALL_BLOCKS.find((b) => b.selector === "[data-workspace='participant'] .story-prompts button");
+    expect(prompts, 'the questions have no rule, so they are action buttons again').toBeTruthy();
+    expect(prompts!.body, 'the questions are boxes, not rows').toMatch(/border:\s*0/);
+  });
+
   it('gives the story screen and its entries no surface of their own', () => {
     /* Reported as a box around everything (owner, 2026-08-31). The drawing
        puts the story on the page ground and separates one memory from the

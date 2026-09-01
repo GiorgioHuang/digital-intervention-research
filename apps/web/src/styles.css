@@ -1898,6 +1898,34 @@ a[role='button']:hover { background-color: var(--color-action-secondary-bg-hover
   font-size: var(--type-size-0);
   color: var(--cl-text-4);
 }
+/*
+ * The third way in: full width and 58px, as drawn, and deliberately
+ * quieter than the two accent cards above it.
+ *
+ * The drawing gives it `1px solid var(--color-divider)`. That is not
+ * followed: composited over the page ground the divider is #d1d0d0, which
+ * is 1.38:1, and this is a control — WCAG 1.4.11 wants 3:1 for the
+ * boundary of one. It is drawn in --cl-text-4 instead: neutral rather than
+ * gold, so the hierarchy the drawing wanted survives, at 5.83:1 (X-34).
+ */
+[data-workspace='participant'] .story-ask {
+  display: flex;
+  inline-size: 100%;
+  align-items: center;
+  justify-content: center;
+  min-block-size: calc(3.222rem * var(--density));
+  margin-block-end: var(--space-5);
+  padding: var(--space-3);
+  border: var(--border-hairline) solid var(--cl-text-4);
+  border-radius: var(--radius-2);
+  background-color: transparent;
+  font-family: var(--cl-family-display);
+  font-weight: var(--type-weight-semibold);
+  color: var(--cl-text);
+}
+[data-workspace='participant'] .story-ask:hover {
+  background-color: color-mix(in srgb, var(--cl-text) 6%, transparent);
+}
 [data-workspace='participant'] .story-prompts {
   margin: 0;
   padding: 0;
@@ -1905,6 +1933,33 @@ a[role='button']:hover { background-color: var(--color-action-secondary-bg-hover
 }
 [data-workspace='participant'] .story-prompts > li + li {
   border-block-start: var(--border-hairline) solid var(--cl-divider);
+}
+/*
+ * The questions are rows, not six gold buttons.
+ *
+ * The hairline above was written for rows and never appeared: each button
+ * carried the default action border, so the list came out as six boxes
+ * shouting louder than the two ways in at the top of the screen and the
+ * separator was hidden behind them. Same fault as the ask button below
+ * which opens this list — a class name that styled nothing.
+ */
+[data-workspace='participant'] .story-prompts button {
+  display: flex;
+  inline-size: 100%;
+  align-items: center;
+  justify-content: flex-start;
+  min-block-size: var(--target-min);
+  padding: var(--space-3) 2px;
+  border: 0;
+  border-radius: 0;
+  background-color: transparent;
+  font-family: var(--cl-family-body);
+  font-weight: var(--type-weight-regular);
+  text-align: start;
+  color: var(--cl-text);
+}
+[data-workspace='participant'] .story-prompts button:hover {
+  background-color: color-mix(in srgb, var(--cl-text) 5%, transparent);
 }
 /*
  * The entries, and the screen they sit on.
