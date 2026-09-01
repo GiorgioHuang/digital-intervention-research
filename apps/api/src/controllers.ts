@@ -1,5 +1,5 @@
-import { Body, Controller, Get, Inject, Param, Post, Query, Req } from '@nestjs/common';
-import type { Request } from 'express';
+import { Body, Controller, Get, Inject, Param, Post, Query, Req, Res, StreamableFile } from '@nestjs/common';
+import type { Request, Response } from 'express';
 import { PlatformError, type Clock } from '@platform/kernel';
 import type { Pool } from '@platform/database';
 import {
@@ -39,6 +39,7 @@ import {
   DEFAULT_STORAGE_CONFIG,
   getObjectStatus,
   listObjectsForResource,
+  readObject,
   listUncaptionedPhotographs,
   captionObject,
   type UncaptionedPhotograph,
@@ -558,6 +559,44 @@ export class CommandController {
    * one, or a tidy-up that deletes whichever looked like the copy. There
    * is now one, and a test that fails if a second appears.
    */
+  /**
+   * The bytes of one of your own photographs.
+   *
+   * Everything else about a file existed and this did not, so a
+   * photograph attached to a life-story entry could only ever be
+   * described — "image/jpeg · 412 KB · added Tuesday" — on the one screen
+   * whose whole subject is somebody's own life (B-27).
+   *
+   * Three things are deliberate about how it is served.
+   *
+   * The content type comes from the bytes, never from what the upload
+   * declared, and only a real JPEG or PNG is served as an image; anything
+   * else is an opaque download. With `nosniff` alongside it, a file that
+   * claims to be a photograph and is markup cannot be talked into running
+   * on this origin.
+   *
+   * `no-store`, because this is Sensitive-Personal data: a photograph
+   * from somebody's life should not be left in a disk cache on a machine
+   * they may share.
+   *
+   * And it is a GET that is not the SPA shell, so `/v1` already keeps it
+   * out of the fallback — no change to NON_SPA_PREFIXES is needed.
+   */
+  @Get('objects/:objectId/content')
+  async readObjectContent(
+    @Req() req: Request,
+    @Param('objectId') objectId: string,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<StreamableFile> {
+    const ctx = requireActor(req);
+    const file = await readObject(this.deps.m16storage, ctx, { objectId });
+    res.setHeader('Content-Type', file.contentType);
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Content-Disposition', file.inline ? 'inline' : 'attachment');
+    res.setHeader('Cache-Control', 'private, no-store');
+    return new StreamableFile(file.bytes);
+  }
+
   @Get('participants/:participantId/objects')
   async listObjectsForResource(
     @Req() req: Request,

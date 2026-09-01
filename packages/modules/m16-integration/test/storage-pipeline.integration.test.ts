@@ -23,6 +23,7 @@ import {
   getObjectStatus,
   initiateUpload,
   listObjectsForResource,
+  readObject,
   releaseObject,
   SCAN_ERROR_MARKER,
   scanPendingObjects,
@@ -265,6 +266,112 @@ describe.skipIf(!dbAvailable)('object-storage quarantine pipeline (integration)'
         attachTo: { owningResourceType: 'SomethingUnmapped', owningResourceId: 'x_1' },
       }),
     ).rejects.toMatchObject({ code: 'UNSUPPORTED_CAPABILITY' });
+  });
+
+  /**
+   * Reading a photograph back.
+   *
+   * Every other part of the pipeline existed and this did not, so a
+   * photograph could be uploaded, scanned, released and listed, and never
+   * looked at (B-27).
+   */
+  const PNG_BYTES = Buffer.concat([
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    Buffer.from('not really the rest of a png, but the signature is what is read'),
+  ]);
+
+  it('hands a photograph back to the person whose photograph it is', async () => {
+    const objectId = await upload(PNG_BYTES, 'image/png');
+    await scanPendingObjects(storage, sysCtx());
+    await releaseObject(storage, ctx(patAcc), cfg, {
+      objectId, owningResourceType: 'LifeStoryItem', owningResourceId: await entry('lsi_read_png'),
+    });
+
+    const content = await readObject(storage, ctx(patAcc), { objectId });
+    expect(content.bytes.equals(PNG_BYTES), 'the bytes came back changed').toBe(true);
+    expect(content.contentType).toBe('image/png');
+    expect(content.inline).toBe(true);
+  });
+
+  /**
+   * The security case, end to end rather than only over the sniffer.
+   *
+   * The upload declares image/png and the bytes are a page of markup. The
+   * declaration is kept on the record — it is part of what somebody
+   * claimed — and it is not what gets served: the answer is an opaque
+   * download, so a browser is never told this is a picture and never
+   * offered the chance to run it on this origin.
+   */
+  it('will not serve a file as an image because the upload said so', async () => {
+    const markup = Buffer.from('<html><script>alert(document.cookie)</script></html>');
+    const objectId = await upload(markup, 'image/png');
+    await scanPendingObjects(storage, sysCtx());
+    await releaseObject(storage, ctx(patAcc), cfg, {
+      objectId, owningResourceType: 'LifeStoryItem', owningResourceId: await entry('lsi_read_liar'),
+    });
+
+    const content = await readObject(storage, ctx(patAcc), { objectId });
+    expect(content.contentType, 'a page of markup was about to be served as an image').toBe('application/octet-stream');
+    expect(content.inline).toBe(false);
+    // Still recorded as what was claimed — the record of the claim is not
+    // rewritten just because the claim was false.
+    expect(content.declaredContentType).toBe('image/png');
+  });
+
+  /**
+   * Quarantine means quarantine. A file that has been received but not
+   * yet checked must not be readable — handing back bytes the platform
+   * has not finished inspecting is the one thing quarantine exists to
+   * prevent, and "it is mine" is not an argument against it.
+   */
+  it('refuses a file that has not finished being checked', async () => {
+    const objectId = await upload(PNG_BYTES, 'image/png');
+    await expect(readObject(storage, ctx(patAcc), { objectId })).rejects.toMatchObject({
+      code: 'ATTACHMENT_NOT_READY',
+    });
+  });
+
+  /**
+   * Somebody else asking is told the object is not there — not that they
+   * may not have it.
+   *
+   * That is the point, and it caught this test out first: the object is
+   * `protectedExistence`, so a refusal that said "permission denied"
+   * would confirm to a stranger that a particular photograph exists on a
+   * particular participant's record. The code is asserted rather than
+   * merely "it threw", because the difference between the two answers is
+   * the whole of what protected existence buys.
+   */
+  it('tells somebody else it is not there, rather than that they may not have it', async () => {
+    const objectId = await upload(PNG_BYTES, 'image/png');
+    await scanPendingObjects(storage, sysCtx());
+    await releaseObject(storage, ctx(patAcc), cfg, {
+      objectId, owningResourceType: 'LifeStoryItem', owningResourceId: await entry('lsi_read_other'),
+    });
+    await expect(readObject(storage, ctx(otherAcc), { objectId })).rejects.toMatchObject({
+      code: 'RESOURCE_NOT_FOUND',
+    });
+    // And the owner still gets it, so the refusal above is about who is
+    // asking and not about the object being unreadable to everyone.
+    expect((await readObject(storage, ctx(patAcc), { objectId })).inline).toBe(true);
+  });
+
+  /**
+   * A record pointing at bytes that are not there. The upload path writes
+   * the bytes first so that this cannot happen from here, but a store can
+   * lose an object for its own reasons, and the honest answer is that the
+   * file is gone rather than an empty picture.
+   */
+  it('says the file is gone rather than returning nothing at all', async () => {
+    const objectId = await upload(PNG_BYTES, 'image/png');
+    await scanPendingObjects(storage, sysCtx());
+    await releaseObject(storage, ctx(patAcc), cfg, {
+      objectId, owningResourceType: 'LifeStoryItem', owningResourceId: await entry('lsi_read_lost'),
+    });
+    await storage.blobs.delete(objectId);
+    await expect(readObject(storage, ctx(patAcc), { objectId })).rejects.toMatchObject({
+      code: 'RESOURCE_NOT_FOUND',
+    });
   });
 
   it('a record can be asked what is attached to it, and only its owner may ask', async () => {

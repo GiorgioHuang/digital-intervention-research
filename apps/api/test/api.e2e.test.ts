@@ -544,6 +544,50 @@ describe.skipIf(!dbAvailable)('HTTP API (e2e)', () => {
     const listed = (await attached.json()) as { data: { id: string }[] };
     expect(listed.data.map((o) => o.id)).toEqual([objectId]);
 
+    /*
+     * And reading the bytes back — the last part of the pipeline that did
+     * not exist, so a photograph on a life-story entry could only ever be
+     * described rather than looked at (B-27).
+     *
+     * The content declared at upload was image/png and the bytes are the
+     * words "a family photo", which makes this object exactly the case
+     * the route is careful about. It must come back as an opaque
+     * download, with nosniff, so that a browser is never told this is a
+     * picture and never given the chance to decide for itself what to run.
+     */
+    const bytes = await call(`/v1/objects/${objectId}/content`, patAcc);
+    expect(bytes.status).toBe(200);
+    expect(bytes.headers.get('content-type'), 'a file was served as the type it claimed to be').toMatch(
+      /application\/octet-stream/,
+    );
+    expect(bytes.headers.get('x-content-type-options')).toBe('nosniff');
+    expect(bytes.headers.get('content-disposition')).toBe('attachment');
+    // Sensitive-Personal: not left in a disk cache on a shared machine.
+    expect(bytes.headers.get('cache-control')).toMatch(/no-store/);
+    expect(Buffer.from(await bytes.arrayBuffer()).toString()).toBe('a family photo');
+
+    // A stranger asking for the bytes is told it is not there, which is
+    // the answer that does not confirm it exists.
+    expect((await call(`/v1/objects/${objectId}/content`, strangerAcc)).status).toBe(404);
+
+    /* A real PNG takes the other path: served as an image, inline. */
+    const png = Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), Buffer.from('body')]);
+    const pngInit = await call('/v1/objects', patAcc, {
+      ownerParticipantId: patId, declaredContentType: 'image/png', declaredSizeBytes: png.byteLength,
+    });
+    const pngId = ((await pngInit.json()) as { data: { id: string } }).data.id;
+    await call(`/v1/objects/${pngId}/content`, patAcc, { contentBase64: png.toString('base64') });
+    await scanPendingObjects(
+      { pool, clock, blobs: createPostgresBlobStore(pool), checkPermission: () => { throw new Error('sweeps hold no authority'); } },
+      createRequestContext({ actor: { type: 'service-account', id: 'sa_scheduler' }, purposeCode: 'platform-maintenance' }),
+    );
+    await call(`/v1/objects/${pngId}/release`, patAcc, {
+      owningResourceType: 'LifeStoryItem', owningResourceId: 'lsi_e2e',
+    });
+    const shown = await call(`/v1/objects/${pngId}/content`, patAcc);
+    expect(shown.headers.get('content-type')).toMatch(/image\/png/);
+    expect(shown.headers.get('content-disposition')).toBe('inline');
+
     // Which record is being asked about is required, not guessed at.
     expect((await call(`/v1/participants/${patId}/objects`, patAcc)).status).toBe(400);
 

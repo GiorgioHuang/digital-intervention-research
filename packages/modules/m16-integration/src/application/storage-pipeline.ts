@@ -519,6 +519,110 @@ export async function listObjectsForResource(
  * a failure after the commit leaves bytes nothing points at, and the
  * other order would leave a record pointing at bytes that are gone.
  */
+/**
+ * What a photograph actually looks like, read from the bytes.
+ *
+ * The declared content type is whatever the uploading client said, and
+ * it is kept because it is part of the record of what somebody claimed.
+ * It is not what this serves: the two magic numbers below are checked
+ * against the stored bytes, and only a file that really is the image it
+ * claims to be is handed back as an image. Anything else is served as
+ * an opaque download.
+ *
+ * The reason is narrow and worth stating. These bytes come from a person
+ * and go back to a browser on this platform's own origin. A file that
+ * declares itself an image and is markup would, served inline and
+ * believed, run as this site — which is stored cross-site scripting with
+ * the participant's own photograph as the vector. Sniffing is what makes
+ * the declaration unable to lie.
+ */
+const IMAGE_SIGNATURES: ReadonlyArray<{ contentType: string; magic: readonly number[] }> = [
+  { contentType: 'image/jpeg', magic: [0xff, 0xd8, 0xff] },
+  { contentType: 'image/png', magic: [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a] },
+];
+
+/** The image this really is, or null for anything else. */
+export function sniffImageType(bytes: Buffer): string | null {
+  for (const { contentType, magic } of IMAGE_SIGNATURES) {
+    if (bytes.length < magic.length) continue;
+    if (magic.every((b, i) => bytes[i] === b)) return contentType;
+  }
+  return null;
+}
+
+export interface ObjectContent {
+  bytes: Buffer;
+  /** What the browser is told, derived from the bytes and never from the upload. */
+  contentType: string;
+  /** True only for a file that really is one of the images above. */
+  inline: boolean;
+  declaredContentType: string;
+}
+
+/**
+ * The bytes of somebody's own photograph.
+ *
+ * Every part of the upload path existed — initiate, complete, scan,
+ * release, list, delete — and nothing could read a file back. So a
+ * participant could add a photograph to a memory and the screen could
+ * only ever say "image/jpeg · 412 KB · added Tuesday": a filing card
+ * where the picture should be. On a screen whose whole subject is
+ * somebody's own life that is close to the worst place for it, and it is
+ * why the life story showed a list of facts about photographs rather
+ * than photographs (B-27).
+ *
+ * Owner-scoped through the same `object.view-own` the listing uses, so
+ * this adds a way to read a file and no new right to read one.
+ *
+ * Available only. A file still in quarantine has not cleared checking,
+ * and handing back bytes this platform has not finished inspecting is
+ * exactly what quarantine exists to prevent.
+ */
+export async function readObject(
+  deps: StorageDeps,
+  ctx: RequestContext,
+  input: { objectId: string },
+): Promise<ObjectContent> {
+  const res = await deps.pool.query(
+    `SELECT object_state, owner_participant_id, declared_content_type
+       FROM storage_ops.stored_objects WHERE id = $1`,
+    [input.objectId],
+  );
+  const row = res.rows[0] as
+    | { object_state: string; owner_participant_id: string; declared_content_type: string }
+    | undefined;
+  if (row === undefined) throw new PlatformError('RESOURCE_NOT_FOUND', 'Object not found');
+  const decision = await deps.checkPermission(ctx, {
+    action: 'object.view-own',
+    resource: {
+      type: 'StoredObject',
+      id: input.objectId,
+      state: row.object_state,
+      protectedExistence: true,
+      ownerParticipantId: row.owner_participant_id,
+    },
+  });
+  assertAllowed(decision, false);
+  if (row.object_state !== 'Available') {
+    throw new PlatformError('ATTACHMENT_NOT_READY', 'That file has not finished being checked');
+  }
+  const bytes = await deps.blobs.get(input.objectId);
+  /*
+   * A record pointing at bytes that are not there. completeUpload writes
+   * the bytes before the record precisely so this cannot happen, but a
+   * store can lose an object for reasons of its own, and the honest
+   * answer is that the file is gone — not an empty image.
+   */
+  if (bytes === null) throw new PlatformError('RESOURCE_NOT_FOUND', 'The file itself is no longer in storage');
+  const sniffed = sniffImageType(bytes);
+  return {
+    bytes,
+    contentType: sniffed ?? 'application/octet-stream',
+    inline: sniffed !== null,
+    declaredContentType: row.declared_content_type,
+  };
+}
+
 export async function deleteObject(
   deps: StorageDeps,
   ctx: RequestContext,

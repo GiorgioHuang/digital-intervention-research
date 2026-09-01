@@ -1980,10 +1980,203 @@ a[role='button']:hover { background-color: var(--color-action-secondary-bg-hover
   border-block-start: var(--border-hairline) solid var(--cl-divider);
   padding-block: var(--space-4);
 }
-[data-workspace='participant'] .story-entry > h2 {
-  /* The drawing's 21px. */
+[data-workspace='participant'] .story-entry__heading {
+  /* The drawing's 21px, carried by the heading that wraps the control. */
   font-size: 1.167rem;
-  margin-block: 0 var(--space-2);
+  margin: 0;
+}
+/*
+ * The row. A whole memory folded to three lines, opened by pressing it.
+ *
+ * It is a real button so that a keyboard reaches it and a screen reader
+ * is told it expands, and it is stripped back to a row because the
+ * default action button would put an accent box round every memory —
+ * which is the thing the last two changes to this screen removed.
+ */
+[data-workspace='participant'] .story-entry__open {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+  inline-size: 100%;
+  padding: 2px;
+  border: 0;
+  border-radius: 0;
+  background-color: transparent;
+  text-align: start;
+  color: inherit;
+  font: inherit;
+}
+[data-workspace='participant'] .story-entry__open:hover {
+  background-color: color-mix(in srgb, var(--cl-text) 4%, transparent);
+}
+[data-workspace='participant'] .story-entry__title {
+  font-family: var(--cl-family-display);
+  font-weight: var(--type-weight-semibold);
+  line-height: 1.25;
+}
+/*
+ * The first words of the memory, on the row.
+ *
+ * At the reading size, not the drawing's 16px: this is the participant's
+ * own writing, and it is the one line on a folded entry that tells them
+ * which memory this is (X-31).
+ */
+[data-workspace='participant'] .story-entry__excerpt {
+  font-family: var(--cl-family-body);
+  font-size: var(--type-size-1);
+  font-weight: var(--type-weight-regular);
+  line-height: 1.5;
+  color: var(--cl-text-3);
+}
+[data-workspace='participant'] .story-entry__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--cl-family-body);
+  font-size: var(--type-size-0);
+  font-weight: var(--type-weight-regular);
+  color: var(--cl-text-4);
+  font-variant-numeric: tabular-nums;
+}
+/*
+ * The provenance marker, on a folded row.
+ *
+ * `.state--ai` is a block with a tint behind it, which is right in the
+ * notes and far too heavy on a quiet three-line row — it made the row
+ * half as tall again as its neighbours and became the loudest thing in
+ * the list. Compact here, and still a marked label rather than plain
+ * text: the distinction has to survive a glance (Doc 19 §10).
+ */
+[data-workspace='participant'] .story-entry__meta .state--ai {
+  margin: 0;
+  padding: 0 var(--space-2);
+  font-size: var(--type-size-0);
+}
+[data-workspace='participant'] .story-entry__flag {
+  border-inline-start: var(--border-emphasis) solid var(--cl-text-4);
+  padding-inline-start: var(--space-2);
+}
+[data-workspace='participant'] .story-entry__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin-block-start: var(--space-4);
+}
+/*
+ * The memory itself — the subject of the screen, and set as it.
+ *
+ * Larger and darker than everything around it. The hierarchy is made by
+ * raising these words rather than by shrinking the platform's sentences
+ * below them: the notes are somebody's privacy and provenance, and this
+ * workspace does not have a size below its reading size to put them at.
+ */
+[data-workspace='participant'] .story-entry__words {
+  margin: 0;
+  padding-inline-start: var(--space-4);
+  border-inline-start: var(--border-emphasis) solid var(--cl-accent);
+  font-family: var(--cl-family-body);
+  font-size: var(--type-size-2);
+  line-height: 1.6;
+  color: var(--cl-text);
+}
+/*
+ * What the platform knows about the memory, kept apart from it. Quieter
+ * by weight and colour, and last — never smaller than the workspace
+ * reads at.
+ */
+[data-workspace='participant'] .story-entry__notes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-block-start: var(--space-3);
+  border-block-start: var(--border-hairline) solid var(--cl-divider);
+  color: var(--cl-text-4);
+}
+[data-workspace='participant'] .story-entry__notes p {
+  margin: 0;
+  line-height: 1.45;
+}
+/* Photographs: the picture, not a description of it. */
+[data-workspace='participant'] .story-photographs {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin: 0;
+}
+[data-workspace='participant'] .story-photograph__image {
+  display: block;
+  inline-size: 100%;
+  block-size: auto;
+  border-radius: var(--radius-2);
+}
+[data-workspace='participant'] .story-photograph__unshown {
+  margin: 0 0 var(--space-2);
+  color: var(--cl-text-4);
+}
+[data-workspace='participant'] .story-photograph__actions {
+  display: flex;
+  justify-content: flex-end;
+  margin: var(--space-2) 0 0;
+}
+/*
+ * The things that can be done, below the words and to the right.
+ *
+ * Compact, and quiet: none of these is the point of the screen. The
+ * labels are not shortened to match — "Confirm this is in my own words"
+ * says what it does and "Confirm" does not, and WCAG 2.5.3 wants the
+ * visible label to be the accessible one.
+ */
+[data-workspace='participant'] .story-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+/*
+ * Equal widths, so a stack is a block and not a staircase.
+ *
+ * Right-aligned buttons of five different widths came out as a ragged
+ * diagonal — each label is a full line at 405px, and none of them is
+ * being shortened to fit: "Confirm this is in my own words" says what it
+ * does and "Confirm" does not (WCAG 2.5.3, and X-36). A basis with room
+ * to grow lets them share a line where there is space and fill it
+ * evenly where there is not.
+ */
+[data-workspace='participant'] .story-actions > .story-action {
+  flex: 1 1 13rem;
+}
+[data-workspace='participant'] .story-action {
+  min-block-size: var(--target-min);
+  padding: var(--space-2) var(--space-3);
+  border: var(--border-hairline) solid var(--cl-text-4);
+  border-radius: var(--radius-2);
+  background-color: transparent;
+  font-family: var(--cl-family-body);
+  font-size: var(--type-size-1);
+  font-weight: var(--type-weight-regular);
+  color: var(--cl-text-2);
+}
+[data-workspace='participant'] .story-action:hover:not(:disabled) {
+  background-color: color-mix(in srgb, var(--cl-text) 6%, transparent);
+}
+[data-workspace='participant'] :is(.story-upload, .story-revise, .story-ask-first) {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+[data-workspace='participant'] :is(.story-upload, .story-revise, .story-ask-first) p {
+  margin: 0;
+}
+[data-workspace='participant'] .story-ask-first {
+  padding: var(--space-4);
+  border: var(--border-hairline) solid var(--cl-text-4);
+  border-radius: var(--radius-2);
+}
+[data-workspace='participant'] .story-note {
+  color: var(--cl-text-4);
+  line-height: 1.45;
 }
 /*
  * The drawing sets the excerpt at 16px and the meta line at 13.5px, and

@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { api, type AttachedFile, type MyLifeStoryItem, type Session } from '../api.js';
 import { presentError, type PresentedError } from '../errors.js';
 import { EmptyState, ErrorState, LoadingState } from './StateBlock.js';
 import { TabIcon } from './elder/TabIcon.js';
 import { piecesSoFar, whoCanSee } from '../story-summary.js';
+import { excerptOf, isShowableImage, metaLine } from '../story-entry.js';
 
 /**
  * The six questions the drawing offers, in its order.
@@ -109,6 +110,51 @@ export function MyLifeStory({ session }: { session: Session }) {
    * nothing made that reachable until the screen above existed.
    */
   const [removing, setRemoving] = useState<{ itemId: string; objectId: string } | null>(null);
+  /**
+   * Which memories are open.
+   *
+   * Each entry is a row that opens, so a story of forty pieces is a list
+   * somebody can read rather than forty columns of platform sentences
+   * they have to scroll past (X-32, decided by the owner 2026-09-01).
+   *
+   * A set, not one at a time: comparing two memories is an ordinary thing
+   * to want to do, and closing somebody's place in one to look at another
+   * is the kind of small rudeness that adds up.
+   *
+   * Nothing is cleared on close. `revising` in particular survives, so a
+   * half-written correction is still there on reopening — closing a
+   * drawer is not a request to throw away what is in it.
+   */
+  const [open, setOpen] = useState<ReadonlySet<string>>(new Set());
+  /**
+   * Whose upload box is showing.
+   *
+   * An entry with no photographs shows no empty file input. Adding one is
+   * a button in the actions row that reveals the box — folded, not
+   * removed (D-87), because a life story that could never gain a picture
+   * after the first day would be a worse screen than a cluttered one.
+   */
+  const [adding, setAdding] = useState<string | null>(null);
+  /**
+   * Photographs, as pictures.
+   *
+   * The bytes cannot be an `<img src>`: this platform authenticates with
+   * headers and a browser sends none when it fetches an image. So each
+   * file is fetched like any other request and kept here as an object
+   * URL, which also keeps a Sensitive-Personal photograph out of the
+   * address bar. The ref is the same map, for revoking on unmount — a
+   * cleanup that read the state would capture whatever it held on the
+   * render it was created in, and leak every URL made after that.
+   */
+  const [pictures, setPictures] = useState<Record<string, { url: string; type: string }>>({});
+  const picturesRef = useRef<Record<string, { url: string; type: string }>>({});
+  picturesRef.current = pictures;
+  useEffect(
+    () => () => {
+      for (const p of Object.values(picturesRef.current)) URL.revokeObjectURL(p.url);
+    },
+    [],
+  );
 
   const load = async () => {
     try {
@@ -128,10 +174,64 @@ export function MyLifeStory({ session }: { session: Session }) {
   const loadFiles = async (itemId: string) => {
     try {
       const res = await api.listLifeStoryItemFiles(session, itemId);
-      setFiles((f) => ({ ...f, [itemId]: res.data.map((d) => d.attributes) }));
+      const attached = res.data.map((d) => d.attributes);
+      setFiles((f) => ({ ...f, [itemId]: attached }));
+      await Promise.all(attached.map((f) => loadPicture(f)));
     } catch (err) {
       setActionError(presentError(err));
     }
+  };
+
+  /**
+   * One photograph, as a photograph.
+   *
+   * A failure here is deliberately quiet. The entry and its words are on
+   * the screen already, and turning "one picture would not load" into the
+   * screen's error state would push somebody's own memory aside to report
+   * a thumbnail — so the file falls back to being described instead, and
+   * the entry stays readable.
+   */
+  const loadPicture = async (file: AttachedFile) => {
+    if (picturesRef.current[file.objectId] !== undefined) return;
+    try {
+      const blob = await api.readFileContent(session, file.objectId);
+      const url = URL.createObjectURL(blob);
+      setPictures((p) => {
+        // Two opens racing for the same file: keep the first and revoke
+        // this one, rather than leaking the URL that lost.
+        if (p[file.objectId] !== undefined) {
+          URL.revokeObjectURL(url);
+          return p;
+        }
+        return { ...p, [file.objectId]: { url, type: blob.type } };
+      });
+    } catch {
+      /* Described rather than shown; see above. */
+    }
+  };
+
+  /**
+   * Opening a memory loads its photographs — there is no second click.
+   *
+   * They were behind a "Show photographs on this entry" button, which is
+   * one press too many for the thing the screen is most for; the listing
+   * stays per-entry rather than per-page so that a story of forty pieces
+   * does not fetch forty times to draw a list of rows.
+   */
+  const toggle = (itemId: string) => {
+    const opening = !open.has(itemId);
+    setOpen((was) => {
+      const next = new Set(was);
+      if (opening) next.add(itemId);
+      else next.delete(itemId);
+      return next;
+    });
+    /*
+     * Outside the updater, deliberately. React may call an updater more
+     * than once for a single press — StrictMode does it on purpose — and
+     * a fetch started in there would be started twice.
+     */
+    if (opening && files[itemId] === undefined) void loadFiles(itemId);
   };
 
   /*
@@ -150,6 +250,17 @@ export function MyLifeStory({ session }: { session: Session }) {
       await api.removeFile(session, objectId);
       setActionError(null);
       setAnnouncement('The photograph is gone. Your entry is unchanged.');
+      // The bytes are still in this tab until the URL is revoked, which
+      // for a photograph somebody has just asked to be rid of is the
+      // wrong place to be relaxed about.
+      setPictures((p) => {
+        const held = p[objectId];
+        if (held === undefined) return p;
+        URL.revokeObjectURL(held.url);
+        const rest = { ...p };
+        delete rest[objectId];
+        return rest;
+      });
       await loadFiles(itemId);
     } catch (err) {
       setActionError(presentError(err));
@@ -382,222 +493,325 @@ export function MyLifeStory({ session }: { session: Session }) {
         </div>
       )}
 
-      {(items ?? []).map((item) => (
-        <article key={item.itemId} className="story-entry" aria-label={item.title}>
-          <h2>{item.title}</h2>
-          {item.contentText !== null && <blockquote>{item.contentText}</blockquote>}
-          {/*
-            Where the words came from. A drafting tool's suggestion is
-            marked; everything else is stated in plain text and left
-            unmarked.
-            Marking only the machine is the point. The AI family is a
-            LABEL, never a fill: an entry the participant wrote must not
-            end up looking quieter on their own page than one a model
-            produced (Doc 19 §10). The words still carry it — the marker
-            only makes the distinction survivable at a glance.
-          */}
-          <p className={item.sourceType === 'AIDraft' ? 'state state--ai' : undefined}>
-            {SOURCE_WORDING[item.sourceType ?? ''] ?? 'Where this came from is not recorded.'}
-          </p>
-          <p>
-            {item.testimonyState === 'ParticipantTestimony'
-              ? 'You have confirmed this is in your own words.'
-              : 'You have not confirmed this as your own words.'}
-          </p>
-          {item.supersedesConfirmedVersion && (
-            <p>
-              An earlier version of this was confirmed as your own words. This one has not been — changing the text
-              does not carry that confirmation forward, because it would then say you confirmed something you never
-              read.
-            </p>
-          )}
-          <p>{VISIBILITY_WORDING[item.visibility] ?? item.visibility}</p>
-          {STATE_NOTE[item.itemState] !== undefined && <p>{STATE_NOTE[item.itemState]}</p>}
-          {item.versionCount > 1 && (
-            <p>
-              This has been written {item.versionCount} times. Nothing you wrote before was overwritten — earlier
-              versions are kept.
-            </p>
-          )}
-
-          {/*
-            Photographs. Only files that have cleared checking are listed
-            — anything else has not been accepted yet, and showing it
-            would say the entry holds something it does not.
-          */}
-          {/*
-            Shown on a withdrawn entry too, and this matters. The screen
-            tells its owner a withdrawn entry is kept for them to read —
-            hiding its photographs would take them away without saying
-            so, and the remove control lives in here, so hiding it would
-            put the pictures beyond reach again for exactly the people
-            who had decided they wanted the entry private. What is not
-            offered is adding: a withdrawn entry refuses every other
-            change, and the server refuses this one too.
-          */}
-          <div>
-              <h3>Photographs on this entry</h3>
-              {files[item.itemId] === undefined ? (
-                <p>
-                  <button onClick={() => void loadFiles(item.itemId)}>Show photographs on this entry</button>
-                </p>
-              ) : files[item.itemId]!.length === 0 ? (
-                <p>Nothing has been added to this entry yet.</p>
-              ) : (
-                <ul>
-                  {files[item.itemId]!.map((f) => (
-                    <li key={f.objectId}>
-                      {f.declaredContentType} · {Math.max(1, Math.round(f.declaredSizeBytes / 1024))} KB · added{' '}
-                      {new Date(f.createdAt).toLocaleDateString()}{' '}
-                      <button onClick={() => setRemoving({ itemId: item.itemId, objectId: f.objectId })}>
-                        Remove this photograph
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              {item.itemState === 'Withdrawn' ? (
-                <p>You withdrew this entry, so nothing more can be added to it. What is already here stays, and you can still remove any of it.</p>
-              ) : (
-                <p>
-                  <label htmlFor={`file-${item.itemId}`}>Add a photograph to this entry</label>{' '}
-                  <input
-                    id={`file-${item.itemId}`}
-                    type="file"
-                    disabled={uploading !== null}
-                    onChange={(e) => {
-                      const chosen = e.target.files?.[0];
-                      if (chosen !== undefined) void attach(item.itemId, chosen);
-                    }}
-                  />
-                </p>
-              )}
-              {/*
-                What this platform can and cannot say about a file. The
-                checker recognises a test string, not real malware
-                (ADR-126), so "checked" is as far as the wording may go.
-              */}
-              <p>
-                <small>
-                  A file you add is kept privately and is checked before it appears here. Nobody else can see it —
-                  this platform has no way to share a photograph with anyone, not even a supporter.
-                </small>
-              </p>
-          </div>
-          {/*
-            Not offered on a withdrawn item: the command refuses it, and a
-            control that cannot work is the same defect as one that does
-            nothing.
-          */}
-          {item.itemState !== 'Withdrawn' && item.contentText !== null && revising === null && (
-            <p>
-              <button onClick={() => setRevising({ itemId: item.itemId, text: item.contentText ?? '' })}>
-                Change what this says
+      {(items ?? []).map((item) => {
+        const isOpen = open.has(item.itemId);
+        const body = `entry-${item.itemId}`;
+        const shown = files[item.itemId] ?? [];
+        const canChange = item.itemState !== 'Withdrawn' && revising === null;
+        return (
+          <article key={item.itemId} className="story-entry" aria-label={item.title}>
+            {/*
+              The row. A button rather than a clickable div, so that it is
+              reachable by keyboard, announced as expandable, and opened
+              by Enter and Space without any of that being reimplemented.
+              The heading wraps the button rather than the other way round
+              — a heading inside a control is not a heading a screen
+              reader can navigate by.
+            */}
+            <h2 className="story-entry__heading">
+              <button
+                className="story-entry__open"
+                aria-expanded={isOpen}
+                aria-controls={body}
+                onClick={() => toggle(item.itemId)}
+              >
+                <span className="story-entry__title">{item.title}</span>
+                {!isOpen && excerptOf(item.contentText) !== '' && (
+                  <span className="story-entry__excerpt">{excerptOf(item.contentText)}</span>
+                )}
+                <span className="story-entry__meta">
+                  {metaLine(item)}
+                  {/*
+                    Folded, but never folded away. A drafting tool's
+                    suggestion is marked on the row itself: the provenance
+                    distinction is the whole point of ADR-024, and a row
+                    that hid it until somebody opened the entry would blur
+                    exactly what it exists to keep clear (Doc 19 §10).
+                  */}
+                  {item.sourceType === 'AIDraft' && <span className="state state--ai">A drafting tool wrote this</span>}
+                  {item.itemState === 'Withdrawn' && <span className="story-entry__flag">Taken out of your story</span>}
+                </span>
               </button>
-            </p>
-          )}
+            </h2>
 
-          {revising?.itemId === item.itemId && (
-            <div>
-              <p>
-                <label htmlFor={`revise-${item.itemId}`}>Your words</label>
-              </p>
-              <textarea
-                id={`revise-${item.itemId}`}
-                rows={6}
-                value={revising.text}
-                onChange={(e) => setRevising({ itemId: item.itemId, text: e.target.value })}
-              />
-              <p>Nothing you wrote before is overwritten. The earlier version is kept and you can still read it.</p>
-              {/*
-                Said here rather than after the fact: confirming applied to
-                the exact words that were confirmed, so changing them
-                leaves the new text unconfirmed. The participant is about
-                to undo something they did deliberately.
-              */}
-              {item.testimonyState === 'ParticipantTestimony' && (
-                <p role="note">
-                  <strong>You confirmed these words as your own.</strong> That confirmation belongs to the words you
-                  confirmed, not to this entry, so the new text will not be confirmed until you say so again. What you
-                  confirmed before stays on the record as it was.
-                </p>
-              )}
-              <p>
-                <button
-                  disabled={revising.text.trim() === '' || revising.text === item.contentText}
-                  onClick={() => void revise(item)}
-                >
-                  Save this version
-                </button>{' '}
-                <button onClick={() => setRevising(null)}>Leave it as it was</button>
-              </p>
-            </div>
-          )}
+            {isOpen && (
+              <div id={body} className="story-entry__body">
+                {/*
+                  The memory itself: the largest, darkest thing here, and
+                  first. Everything below it is this platform talking
+                  about somebody's words, which is a different kind of
+                  text and is set as one.
+                */}
+                {item.contentText !== null && <blockquote className="story-entry__words">{item.contentText}</blockquote>}
 
-          {item.itemState !== 'Withdrawn' && revising === null && (
-            <p>
-              <button onClick={() => setWithdrawing(item)}>Take this out of my story</button>
-            </p>
-          )}
+                {/*
+                  Photographs, shown rather than described, and shown on
+                  opening — there is no second press. Only files that have
+                  cleared checking are listed; anything else has not been
+                  accepted yet, and showing it would say the entry holds
+                  something it does not.
 
-          {withdrawing?.itemId === item.itemId && (
-            <div role="alertdialog" aria-labelledby={`withdraw-${item.itemId}`}>
-              <h3 id={`withdraw-${item.itemId}`}>Take &ldquo;{item.title}&rdquo; out of your story?</h3>
-              {/*
-                What it does and, just as importantly, what it does not.
-                "Withdraw" reads to many people as "delete", and somebody
-                who wanted it gone would otherwise think it was.
-              */}
-              <p>
-                It becomes private, and anyone you had shared it with can no longer reach it. <strong>It is not
-                deleted.</strong> You can still read it here, and every version you wrote is kept.
-              </p>
-              <p>
-                You will not be able to change it afterwards, and it cannot be put back into the story from this
-                screen.
-              </p>
-              {item.testimonyState === 'ParticipantTestimony' && (
-                <p>
-                  You confirmed this as your own words. That confirmation stays on the record — withdrawing does not
-                  unsay it.
-                </p>
-              )}
-              <p>
-                <button onClick={() => void withdraw(item)}>Yes, take it out</button>{' '}
-                <button onClick={() => setWithdrawing(null)}>Leave it as it is</button>
-              </p>
-            </div>
-          )}
+                  Kept on a withdrawn entry too. The screen tells its
+                  owner a withdrawn entry is kept for them to read, and
+                  hiding its photographs would take them away without
+                  saying so — the remove control lives here, so hiding it
+                  would also put them beyond reach for exactly the people
+                  who decided they wanted the entry private. What is not
+                  offered is adding: the server refuses that, so the
+                  screen does not offer it.
+                */}
+                {shown.length > 0 && (
+                  <ul className="story-photographs list-plain">
+                    {shown.map((f) => {
+                      const picture = pictures[f.objectId];
+                      return (
+                        <li key={f.objectId} className="story-photograph">
+                          {picture !== undefined && isShowableImage(picture.type) ? (
+                            <img
+                              className="story-photograph__image"
+                              src={picture.url}
+                              alt={`A photograph on ${item.title}. Nothing here describes what is in it.`}
+                            />
+                          ) : (
+                            /*
+                              Either it has not arrived, or the server
+                              would not call it an image — which happens
+                              when a file's bytes are not what the upload
+                              said they were. Described honestly rather
+                              than drawn as a broken picture.
+                            */
+                            <p className="story-photograph__unshown">
+                              {picture === undefined
+                                ? 'This photograph has not loaded.'
+                                : 'This file is not a photograph this page can show.'}{' '}
+                              {f.declaredContentType} · {Math.max(1, Math.round(f.declaredSizeBytes / 1024))} KB
+                            </p>
+                          )}
+                          <p className="story-photograph__actions">
+                            <button
+                              className="story-action"
+                              onClick={() => setRemoving({ itemId: item.itemId, objectId: f.objectId })}
+                            >
+                              Remove this photograph
+                            </button>
+                          </p>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
 
-          {item.testimonyState !== 'ParticipantTestimony' &&
-            item.currentVersionId !== null &&
-            item.itemState !== 'Withdrawn' && (
-              <p>
-                <button onClick={() => setConfirming(item)}>Confirm this is in my own words</button>
-              </p>
+                {/*
+                  What can be done, as a compact row under the words
+                  rather than a column of paragraphs between them. No
+                  empty upload box: with nothing attached there is nothing
+                  to show, and adding is one of these buttons.
+                */}
+                <div className="story-actions">
+                  {canChange && item.contentText !== null && (
+                    <button
+                      className="story-action"
+                      onClick={() => setRevising({ itemId: item.itemId, text: item.contentText ?? '' })}
+                    >
+                      Change what this says
+                    </button>
+                  )}
+                  {item.itemState !== 'Withdrawn' && adding !== item.itemId && (
+                    <button className="story-action" onClick={() => setAdding(item.itemId)}>
+                      Add a photograph
+                    </button>
+                  )}
+                  {item.testimonyState !== 'ParticipantTestimony' &&
+                    item.currentVersionId !== null &&
+                    item.itemState !== 'Withdrawn' && (
+                      <button className="story-action" onClick={() => setConfirming(item)}>
+                        Confirm this is in my own words
+                      </button>
+                    )}
+                  {canChange && (
+                    <button className="story-action" onClick={() => setWithdrawing(item)}>
+                      Take this out of my story
+                    </button>
+                  )}
+                </div>
+
+                {adding === item.itemId && item.itemState !== 'Withdrawn' && (
+                  <div className="story-upload">
+                    <p>
+                      <label htmlFor={`file-${item.itemId}`}>Add a photograph to this entry</label>{' '}
+                      <input
+                        id={`file-${item.itemId}`}
+                        type="file"
+                        disabled={uploading !== null}
+                        onChange={(e) => {
+                          const chosen = e.target.files?.[0];
+                          if (chosen !== undefined) void attach(item.itemId, chosen);
+                        }}
+                      />
+                    </p>
+                    {/*
+                      What this platform can and cannot say about a file.
+                      The checker recognises a test string, not real
+                      malware (ADR-126), so "checked" is as far as the
+                      wording may go.
+                    */}
+                    <p className="story-note">
+                      A file you add is kept privately and is checked before it appears here. Nobody else can see it —
+                      this platform has no way to share a photograph with anyone, not even a supporter.
+                    </p>
+                    <p>
+                      <button className="story-action" onClick={() => setAdding(null)}>
+                        Not now
+                      </button>
+                    </p>
+                  </div>
+                )}
+                {item.itemState === 'Withdrawn' && shown.length > 0 && (
+                  <p className="story-note">
+                    You withdrew this entry, so nothing more can be added to it. What is already here stays, and you
+                    can still remove any of it.
+                  </p>
+                )}
+
+                {revising?.itemId === item.itemId && (
+                  <div className="story-revise">
+                    <p>
+                      <label htmlFor={`revise-${item.itemId}`}>Your words</label>
+                    </p>
+                    <textarea
+                      id={`revise-${item.itemId}`}
+                      rows={6}
+                      value={revising.text}
+                      onChange={(e) => setRevising({ itemId: item.itemId, text: e.target.value })}
+                    />
+                    <p className="story-note">
+                      Nothing you wrote before is overwritten. The earlier version is kept and you can still read it.
+                    </p>
+                    {/*
+                      Said here rather than after the fact: confirming
+                      applied to the exact words that were confirmed, so
+                      changing them leaves the new text unconfirmed. The
+                      participant is about to undo something they did
+                      deliberately.
+                    */}
+                    {item.testimonyState === 'ParticipantTestimony' && (
+                      <p role="note" className="story-note">
+                        <strong>You confirmed these words as your own.</strong> That confirmation belongs to the words
+                        you confirmed, not to this entry, so the new text will not be confirmed until you say so again.
+                        What you confirmed before stays on the record as it was.
+                      </p>
+                    )}
+                    <p>
+                      <button
+                        className="story-action"
+                        disabled={revising.text.trim() === '' || revising.text === item.contentText}
+                        onClick={() => void revise(item)}
+                      >
+                        Save this version
+                      </button>{' '}
+                      <button className="story-action" onClick={() => setRevising(null)}>
+                        Leave it as it was
+                      </button>
+                    </p>
+                  </div>
+                )}
+
+                {withdrawing?.itemId === item.itemId && (
+                  <div role="alertdialog" aria-labelledby={`withdraw-${item.itemId}`} className="story-ask-first">
+                    <h3 id={`withdraw-${item.itemId}`}>Take &ldquo;{item.title}&rdquo; out of your story?</h3>
+                    {/*
+                      What it does and, just as importantly, what it does
+                      not. "Withdraw" reads to many people as "delete",
+                      and somebody who wanted it gone would otherwise
+                      think it was.
+                    */}
+                    <p>
+                      It becomes private, and anyone you had shared it with can no longer reach it. <strong>It is not
+                      deleted.</strong> You can still read it here, and every version you wrote is kept.
+                    </p>
+                    <p>
+                      You will not be able to change it afterwards, and it cannot be put back into the story from this
+                      screen.
+                    </p>
+                    {item.testimonyState === 'ParticipantTestimony' && (
+                      <p>
+                        You confirmed this as your own words. That confirmation stays on the record — withdrawing does
+                        not unsay it.
+                      </p>
+                    )}
+                    <p>
+                      <button className="story-action" onClick={() => void withdraw(item)}>
+                        Yes, take it out
+                      </button>{' '}
+                      <button className="story-action" onClick={() => setWithdrawing(null)}>
+                        Leave it as it is
+                      </button>
+                    </p>
+                  </div>
+                )}
+
+                {confirming?.itemId === item.itemId && (
+                  <div role="alertdialog" aria-labelledby={`confirm-${item.itemId}`} className="story-ask-first">
+                    <h3 id={`confirm-${item.itemId}`}>Confirm this is in your own words?</h3>
+                    <p>
+                      This applies to exactly the words above, and to no other version. If you change the text
+                      afterwards, the new text is not confirmed until you say so again.
+                    </p>
+                    {item.sourceType !== 'ParticipantAuthored' && (
+                      <p>
+                        These words were not written by you. Confirming says you stand behind them as your own; the
+                        record still keeps who wrote them.
+                      </p>
+                    )}
+                    <p>
+                      <button className="story-action" onClick={() => void confirm(item)}>
+                        Yes, these are my words
+                      </button>{' '}
+                      <button className="story-action" onClick={() => setConfirming(null)}>
+                        Not now
+                      </button>
+                    </p>
+                  </div>
+                )}
+
+                {/*
+                  What this platform knows about the entry, kept apart
+                  from the entry. These are the platform's sentences, not
+                  the participant's, and they are set quieter and last so
+                  that the words above are unmistakably the subject —
+                  quieter by weight and colour, never by dropping below
+                  the size this workspace is readable at.
+                */}
+                <div className="story-entry__notes">
+                  <p className={item.sourceType === 'AIDraft' ? 'state state--ai' : undefined}>
+                    {SOURCE_WORDING[item.sourceType ?? ''] ?? 'Where this came from is not recorded.'}
+                  </p>
+                  <p>
+                    {item.testimonyState === 'ParticipantTestimony'
+                      ? 'You have confirmed this is in your own words.'
+                      : 'You have not confirmed this as your own words.'}
+                  </p>
+                  {item.supersedesConfirmedVersion && (
+                    <p>
+                      An earlier version of this was confirmed as your own words. This one has not been — changing the
+                      text does not carry that confirmation forward, because it would then say you confirmed something
+                      you never read.
+                    </p>
+                  )}
+                  <p>{VISIBILITY_WORDING[item.visibility] ?? item.visibility}</p>
+                  {STATE_NOTE[item.itemState] !== undefined && <p>{STATE_NOTE[item.itemState]}</p>}
+                  {item.versionCount > 1 && (
+                    <p>
+                      This has been written {item.versionCount} times. Nothing you wrote before was overwritten —
+                      earlier versions are kept.
+                    </p>
+                  )}
+                </div>
+              </div>
             )}
-
-          {confirming?.itemId === item.itemId && (
-            <div role="alertdialog" aria-labelledby={`confirm-${item.itemId}`}>
-              <h3 id={`confirm-${item.itemId}`}>Confirm this is in your own words?</h3>
-              <p>
-                This applies to exactly the words above, and to no other version. If you change the text afterwards,
-                the new text is not confirmed until you say so again.
-              </p>
-              {item.sourceType !== 'ParticipantAuthored' && (
-                <p>
-                  These words were not written by you. Confirming says you stand behind them as your own; the record
-                  still keeps who wrote them.
-                </p>
-              )}
-              <p>
-                <button onClick={() => void confirm(item)}>Yes, these are my words</button>{' '}
-                <button onClick={() => setConfirming(null)}>Not now</button>
-              </p>
-            </div>
-          )}
-        </article>
-      ))}
+          </article>
+        );
+      })}
 
       {actionError !== null && <ErrorState error={actionError} />}
       {removing !== null && (

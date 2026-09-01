@@ -57,6 +57,22 @@ function stubWithFiles(files: unknown[], only?: unknown) {
         method,
         body: method === 'GET' ? {} : (JSON.parse(init!.body as string) as Record<string, unknown>),
       });
+      // Before the listing branch: '/v1/objects/obj_1/content' contains
+      // '/objects' too, and answering it with the listing JSON would hand
+      // the screen a Blob of the wrong thing.
+      if (method === 'GET' && /\/objects\/[^/]+\/content$/.test(path)) {
+        /*
+         * The header, explicitly. The route sets Content-Type from what
+         * it sniffed out of the bytes, and a Blob handed to Response does
+         * not carry its own type through here — the first version of this
+         * stub relied on it and the picture came back as text/plain, so
+         * the screen honestly declined to show it.
+         */
+        return new Response(new Blob([new Uint8Array([1, 2, 3])]), {
+          status: 200,
+          headers: { 'content-type': 'image/jpeg' },
+        });
+      }
       if (method === 'GET' && path.includes('/objects')) {
         return new Response(JSON.stringify({ data: files }), { status: 200 });
       }
@@ -67,6 +83,25 @@ function stubWithFiles(files: unknown[], only?: unknown) {
     }),
   );
   return calls;
+}
+
+/**
+ * Open a folded memory.
+ *
+ * Every entry is a row that opens now, so a test that wants what is
+ * inside one has to make the same press a person makes. The tests below
+ * that assert an ABSENCE need this most: with everything folded away, a
+ * check for "no Change button on a withdrawn entry" passes whether the
+ * rule holds or not.
+ */
+async function openMemory(title = 'My garden years') {
+  const row = screen
+    .getAllByRole('button', { expanded: false })
+    .find((b) => (b.textContent ?? '').includes(title));
+  if (row === undefined) throw new Error(`no folded memory titled "${title}"`);
+  await act(async () => {
+    fireEvent.click(row);
+  });
 }
 
 /**
@@ -91,6 +126,7 @@ describe('a participant reading their own life story', () => {
     await act(async () => {
       render(<MyLifeStory session={session} />);
     });
+    await openMemory();
     expect(calls[0]?.path).toBe('/v1/participants/pt_a/life-story');
     expect(screen.getByText(/I grew roses/)).toBeTruthy();
     expect(screen.getByText('You wrote this.')).toBeTruthy();
@@ -106,6 +142,7 @@ describe('a participant reading their own life story', () => {
     await act(async () => {
       render(<MyLifeStory session={session} />);
     });
+    await openMemory('The soup');
     expect(screen.getByText(/offered it\. It is their account/)).toBeTruthy();
   });
 
@@ -114,6 +151,7 @@ describe('a participant reading their own life story', () => {
     await act(async () => {
       render(<MyLifeStory session={session} />);
     });
+    await openMemory();
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Confirm this is in my own words' }));
     });
@@ -132,6 +170,7 @@ describe('a participant reading their own life story', () => {
     await act(async () => {
       render(<MyLifeStory session={session} />);
     });
+    await openMemory();
     expect(screen.getByText(/An earlier version of this was confirmed/)).toBeTruthy();
   });
 
@@ -265,6 +304,7 @@ describe('a participant reading their own life story', () => {
     await act(async () => {
       render(<MyLifeStory session={session} />);
     });
+    await openMemory();
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Change what this says' }));
     });
@@ -299,6 +339,7 @@ describe('a participant reading their own life story', () => {
     await act(async () => {
       render(<MyLifeStory session={session} />);
     });
+    await openMemory();
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Change what this says' }));
     });
@@ -315,6 +356,7 @@ describe('a participant reading their own life story', () => {
     await act(async () => {
       render(<MyLifeStory session={session} />);
     });
+    await openMemory();
     expect(screen.queryByRole('button', { name: 'Change what this says' })).toBeNull();
   });
 
@@ -333,6 +375,7 @@ describe('a participant reading their own life story', () => {
     await act(async () => {
       render(<MyLifeStory session={session} />);
     });
+    await openMemory();
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Take this out of my story' }));
     });
@@ -357,6 +400,7 @@ describe('a participant reading their own life story', () => {
     await act(async () => {
       render(<MyLifeStory session={session} />);
     });
+    await openMemory();
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Take this out of my story' }));
     });
@@ -368,6 +412,7 @@ describe('a participant reading their own life story', () => {
     await act(async () => {
       render(<MyLifeStory session={session} />);
     });
+    await openMemory();
     expect(screen.queryByRole('button', { name: 'Take this out of my story' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Change what this says' })).toBeNull();
     // And the entry is still readable by its author, as the screen says.
@@ -393,6 +438,13 @@ describe('a participant reading their own life story', () => {
     const calls = stubWithFiles([]);
     await act(async () => {
       render(<MyLifeStory session={session} />);
+    });
+    await openMemory();
+    // No empty upload box sits on an entry with nothing attached; the
+    // box is asked for.
+    expect(screen.queryByLabelText('Add a photograph to this entry')).toBeNull();
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Add a photograph' }));
     });
     const input = screen.getAllByLabelText('Add a photograph to this entry')[0]!;
     const file = new File([new Uint8Array([1, 2, 3])], 'gran.jpg', { type: 'image/jpeg' });
@@ -423,16 +475,29 @@ describe('a participant reading their own life story', () => {
     expect(said).toMatch(/no way to share a photograph with anyone/i);
   });
 
-  /** Only files that cleared checking are listed; nothing else is shown as held. */
-  it('lists nothing for an entry with no accepted files, and says so', async () => {
+  /**
+   * An entry with no photographs shows nothing about photographs.
+   *
+   * It used to show a heading, a sentence saying there was nothing, and
+   * an empty file input — three pieces of furniture around an absence,
+   * on every entry, pushing the memory itself off the screen (owner,
+   * 2026-09-01). Only files that cleared checking are ever listed, so
+   * "nothing here" is the honest state and it is drawn as nothing.
+   *
+   * The half that matters: adding is still reachable. Folding a control
+   * away is not removing it (D-87), and a life story that could never
+   * gain a picture after the first day would be the worse screen.
+   */
+  it('shows no photograph furniture on an entry that has none, and still lets one be added', async () => {
     stubWithFiles([]);
     await act(async () => {
       render(<MyLifeStory session={session} />);
     });
-    await act(async () => {
-      fireEvent.click(screen.getAllByRole('button', { name: 'Show photographs on this entry' })[0]!);
-    });
-    expect(screen.getByText(/Nothing has been added to this entry yet/i)).toBeTruthy();
+    await openMemory();
+    expect(screen.queryByText(/Nothing has been added to this entry yet/i)).toBeNull();
+    expect(screen.queryByText(/Photographs on this entry/i)).toBeNull();
+    expect(screen.queryByLabelText('Add a photograph to this entry'), 'an empty upload box').toBeNull();
+    expect(screen.getByRole('button', { name: 'Add a photograph' })).toBeTruthy();
   });
 
   /**
@@ -452,9 +517,7 @@ describe('a participant reading their own life story', () => {
     await act(async () => {
       render(<MyLifeStory session={session} />);
     });
-    await act(async () => {
-      fireEvent.click(screen.getAllByRole('button', { name: 'Show photographs on this entry' })[0]!);
-    });
+    await openMemory();
     fireEvent.click(screen.getAllByRole('button', { name: 'Remove this photograph' })[0]!);
 
     // Nothing is destroyed on the first click.
@@ -482,9 +545,7 @@ describe('a participant reading their own life story', () => {
     await act(async () => {
       render(<MyLifeStory session={session} />);
     });
-    await act(async () => {
-      fireEvent.click(screen.getAllByRole('button', { name: 'Show photographs on this entry' })[0]!);
-    });
+    await openMemory();
     fireEvent.click(screen.getAllByRole('button', { name: 'Remove this photograph' })[0]!);
     fireEvent.click(screen.getByRole('button', { name: 'Keep it' }));
     expect(screen.queryByRole('alertdialog')).toBeNull();
@@ -514,13 +575,12 @@ describe('a participant reading their own life story', () => {
     await act(async () => {
       render(<MyLifeStory session={session} />);
     });
-    await act(async () => {
-      fireEvent.click(screen.getAllByRole('button', { name: 'Show photographs on this entry' })[0]!);
-    });
+    await openMemory();
     expect(screen.getAllByRole('button', { name: 'Remove this photograph' }).length).toBeGreaterThan(0);
     // Adding is not offered, because a withdrawn entry refuses every
     // other change and the server refuses this one too.
     expect(screen.queryByLabelText('Add a photograph to this entry')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Add a photograph' }), 'adding was offered on a withdrawn entry').toBeNull();
     expect(screen.getByText(/nothing more can be added to it/i)).toBeTruthy();
     expect(screen.getByText(/you can still remove any of it/i)).toBeTruthy();
   });
@@ -541,11 +601,209 @@ describe('a participant reading their own life story', () => {
     await act(async () => {
       render(<MyLifeStory session={session} />);
     });
+
+    /*
+     * Folded, the distinction must still be there. This is the failure
+     * the fold introduced: with an entry closed, the sentence saying a
+     * machine wrote it is inside the part nobody has opened, so a row
+     * would present a model's draft and the participant's own writing
+     * identically. Exactly one row carries the marker, and it is the
+     * drafted one — a screen that labels both has labelled neither.
+     */
+    const rows = screen.getAllByRole('button', { expanded: false });
+    const marked = rows.filter((r) => /a drafting tool wrote this/i.test(r.textContent ?? ''));
+    expect(marked.length, 'the fold hid which entry a drafting tool wrote').toBe(1);
+
+    for (const row of rows) {
+      await act(async () => {
+        fireEvent.click(row);
+      });
+    }
     const drafted = screen.getByText(/a drafting tool suggested this/i);
     expect(drafted.className).toContain('state--ai');
     const own = screen.getByText(/^you wrote this\.$/i);
     expect(own.className).not.toContain('state--ai');
     expect(own.className).toBe('');
+  });
+
+  /**
+   * A memory is a row until somebody opens it.
+   *
+   * The screen used to draw every entry in full: the words, then where
+   * they came from, whether they were confirmed, who could see them, its
+   * photographs and its controls — a column per memory, so a story of
+   * twelve was a page nobody could scan (owner, 2026-09-01, X-32).
+   *
+   * A real button, so the fold is reachable by keyboard and announced as
+   * a fold. `aria-expanded` is asserted on both sides: a control that
+   * says "collapsed" while open is worse than one that says nothing,
+   * because a screen reader then describes the opposite of the screen.
+   */
+  it('folds a memory into a row, and opens it when pressed', async () => {
+    stubFetch({ data: [item()] });
+    await act(async () => {
+      render(<MyLifeStory session={session} />);
+    });
+
+    const row = screen.getByRole('button', { name: /My garden years/ });
+    expect(row.getAttribute('aria-expanded')).toBe('false');
+    /*
+     * The opened memory is absent, and enough of it is on the row to be
+     * worth reading. Asserted on the element rather than the text: this
+     * fixture is shorter than the excerpt allowance, so it appears on the
+     * row in full and a text search cannot tell open from closed.
+     */
+    expect(document.querySelector('.story-entry__words')).toBeNull();
+    expect(row.textContent).toMatch(/I grew roses/);
+    // And who can see it, without opening anything.
+    expect(row.textContent).toMatch(/Only you/);
+
+    await act(async () => {
+      fireEvent.click(row);
+    });
+    expect(screen.getByRole('button', { name: /My garden years/ }).getAttribute('aria-expanded')).toBe('true');
+    expect(document.querySelector('.story-entry__words')?.textContent).toBe(
+      'I grew roses along the whole south wall.',
+    );
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /My garden years/ }));
+    });
+    expect(document.querySelector('.story-entry__words')).toBeNull();
+  });
+
+  /**
+   * The words are the subject, and the platform's sentences are not.
+   *
+   * Everything in an entry was one undifferentiated column of paragraphs,
+   * so "You have not confirmed this as your own words." sat in the same
+   * type as the memory it was about. This asserts the separation
+   * structurally — the participant's writing in one element, everything
+   * this platform has to say about it in another — because that is what
+   * the stylesheet hangs the hierarchy on.
+   */
+  it('keeps the memory apart from what the platform says about it', async () => {
+    stubFetch({ data: [item()] });
+    const { container } = render(<MyLifeStory session={session} />);
+    await act(async () => {});
+    await openMemory();
+
+    const words = container.querySelector('.story-entry__words');
+    expect(words?.textContent).toBe('I grew roses along the whole south wall.');
+
+    const notes = container.querySelector('.story-entry__notes');
+    expect(notes, 'the platform’s sentences have nowhere of their own').not.toBeNull();
+    expect(notes!.textContent).toMatch(/You wrote this/);
+    expect(notes!.textContent).toMatch(/Only you can see this/);
+    // And the memory is not inside the quiet band with them.
+    expect(notes!.contains(words!), 'the memory was filed among the notes about it').toBe(false);
+  });
+
+  /**
+   * A photograph, shown as a photograph.
+   *
+   * Nothing on this platform could read a stored file back: every part of
+   * the upload pipeline existed except that one, so a picture on a memory
+   * could only ever be described — "image/jpeg · 2 KB · added Friday" —
+   * on the screen whose whole subject is somebody's own life (B-27).
+   */
+  it('shows a photograph rather than describing one, without a second press', async () => {
+    stubWithFiles([
+      { id: 'obj_1', attributes: {
+        objectId: 'obj_1', declaredContentType: 'image/jpeg', declaredSizeBytes: 2048,
+        objectState: 'Available', dataClassification: 'Sensitive-Personal', createdAt: '2026-08-07T00:00:00Z',
+      } },
+    ]);
+    const { container } = render(<MyLifeStory session={session} />);
+    await act(async () => {});
+    await openMemory();
+    await act(async () => {});
+
+    const picture = container.querySelector('img.story-photograph__image');
+    expect(picture, 'the photograph is still only being described').not.toBeNull();
+    expect(picture!.getAttribute('src')).toMatch(/^blob:/);
+    /*
+     * Nothing here knows what is in the picture, and the alt text says
+     * so rather than inventing a description — "A photograph" told to
+     * somebody who cannot see it is honest; "Roses on a wall" would be
+     * this screen making something up about their life.
+     */
+    expect(picture!.getAttribute('alt')).toMatch(/Nothing here describes what is in it/);
+  });
+
+  /**
+   * The server refuses to call a file an image when its bytes are not
+   * one. This screen must not overrule that: putting such a file in an
+   * <img> is how a page ends up asking a browser to interpret bytes the
+   * platform deliberately declined to vouch for.
+   */
+  it('will not put a file the server would not call an image into an img tag', async () => {
+    const calls: { path: string }[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (path: string, init?: RequestInit) => {
+        calls.push({ path });
+        if ((init?.method ?? 'GET') !== 'GET') {
+          return new Response(JSON.stringify({ data: { id: 'x' } }), { status: 201 });
+        }
+        if (/\/objects\/[^/]+\/content$/.test(path)) {
+          // What the route serves for a file whose bytes are not the
+          // image it claimed to be.
+          return new Response(new Blob([new Uint8Array([60, 104, 116])]), {
+            status: 200,
+            headers: { 'content-type': 'application/octet-stream' },
+          });
+        }
+        if (path.includes('/objects')) {
+          return new Response(
+            JSON.stringify({ data: [{ id: 'obj_1', attributes: {
+              objectId: 'obj_1', declaredContentType: 'image/png', declaredSizeBytes: 3,
+              objectState: 'Available', dataClassification: 'Sensitive-Personal', createdAt: '2026-08-07T00:00:00Z',
+            } }] }),
+            { status: 200 },
+          );
+        }
+        return new Response(JSON.stringify({ data: [item()], meta: { archiveId: 'ar_1' } }), { status: 200 });
+      }),
+    );
+    const { container } = render(<MyLifeStory session={session} />);
+    await act(async () => {});
+    await openMemory();
+    await act(async () => {});
+
+    expect(container.querySelector('img.story-photograph__image'), 'a file that is not an image was drawn as one').toBeNull();
+    expect(screen.getByText(/not a photograph this page can show/i)).toBeTruthy();
+    // And it is still removable, which is the whole point of showing it.
+    expect(screen.getByRole('button', { name: 'Remove this photograph' })).toBeTruthy();
+  });
+
+  /**
+   * Closing a memory is not a request to throw away a half-written
+   * correction. The same rule as the writing box, one fold later — a
+   * control offered as the safe way out must not be the destructive one.
+   */
+  it('keeps a half-written correction when the memory is folded away', async () => {
+    stubFetch({ data: [item()] });
+    await act(async () => {
+      render(<MyLifeStory session={session} />);
+    });
+    await openMemory();
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Change what this says' }));
+    });
+    const box = screen.getByLabelText('Your words');
+    await act(async () => {
+      fireEvent.change(box, { target: { value: 'I grew roses, and dahlias too.' } });
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /My garden years/ }));
+    });
+    await openMemory();
+    expect(
+      (screen.getByLabelText('Your words') as HTMLTextAreaElement).value,
+      'the correction was thrown away by closing the memory',
+    ).toBe('I grew roses, and dahlias too.');
   });
 
   /**

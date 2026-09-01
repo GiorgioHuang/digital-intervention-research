@@ -132,6 +132,35 @@ async function post<T>(session: Session, path: string, body: object): Promise<T>
   return json;
 }
 
+/**
+ * A file's bytes, rather than a description of them.
+ *
+ * Not an `<img src>`, and it cannot be one: this platform authenticates
+ * with headers, and a browser sends none of them when it fetches an
+ * image. So the bytes are fetched like any other request and handed to
+ * the screen as a Blob for it to make an object URL from — which also
+ * keeps a Sensitive-Personal photograph out of the address bar and out
+ * of anything that logs URLs.
+ *
+ * The error body is JSON like everywhere else, so a refusal still
+ * arrives as a PlatformError and not as a broken picture.
+ */
+async function readBlob(session: Session, path: string): Promise<Blob> {
+  const res = await fetch(path, {
+    headers: { 'x-actor-id': session.actorId, ...platformClientHeader(), ...accessTokenHeader() },
+  });
+  if (!res.ok) {
+    let json: { error?: ApiError } = {};
+    try {
+      json = (await res.json()) as { error?: ApiError };
+    } catch {
+      // A body that is not JSON is still a failure; raiseApiError says so.
+    }
+    raiseApiError(json, res.status);
+  }
+  return res.blob();
+}
+
 async function get<T>(session: Session, path: string): Promise<T> {
   const res = await fetch(path, {
     headers: { 'x-actor-id': session.actorId, ...platformClientHeader(), ...accessTokenHeader() },
@@ -454,6 +483,7 @@ export const api = {
       s,
       `/v1/participants/${s.participantId}/objects?owningResourceType=LifeStoryItem&owningResourceId=${encodeURIComponent(itemId)}`,
     ),
+  readFileContent: (s: Session, objectId: string) => readBlob(s, `/v1/objects/${objectId}/content`),
   confirmTestimony: (s: Session, itemId: string, versionId: string) =>
     post(s, `/v1/life-story/items/${itemId}/confirm-testimony`, { versionId, confirmed: true }),
   listContributionsAwaitingReview: (s: Session) =>

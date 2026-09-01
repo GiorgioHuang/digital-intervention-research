@@ -19,3 +19,21 @@ import { beforeEach } from 'vitest';
 beforeEach(() => {
   window.history.replaceState(null, '', '/');
 });
+
+/**
+ * jsdom implements neither of these; every browser implements both.
+ *
+ * The life story turns a photograph's bytes into an object URL, so
+ * without them `createObjectURL` throws, the component's own catch treats
+ * it as "this picture would not load", and the fallback is drawn instead.
+ * Every test would still pass — and none would ever have shown a
+ * photograph. Stubbing them is what makes the difference visible.
+ */
+if (typeof URL.createObjectURL !== 'function') {
+  let made = 0;
+  URL.createObjectURL = () => {
+    made += 1;
+    return `blob:test/${String(made)}`;
+  };
+  URL.revokeObjectURL = () => undefined;
+}
