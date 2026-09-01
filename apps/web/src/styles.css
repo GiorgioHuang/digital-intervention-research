@@ -2111,6 +2111,22 @@ a[role='button']:hover { background-color: var(--color-action-secondary-bg-hover
   block-size: auto;
   border-radius: var(--radius-2);
 }
+/*
+ * The photograph just sent: shown at full size like any other, and
+ * marked, because it is not on the entry until it has cleared checking.
+ * The mark is a border and a sentence rather than a tint over the
+ * picture — dimming somebody's photograph to indicate a state would be
+ * altering the one thing on this screen that is theirs.
+ */
+[data-workspace='participant'] .story-photograph--pending {
+  padding: var(--space-3);
+  border: var(--border-hairline) dashed var(--cl-accent);
+  border-radius: var(--radius-2);
+}
+[data-workspace='participant'] .story-photograph__state {
+  margin: var(--space-3) 0 0;
+  line-height: 1.5;
+}
 [data-workspace='participant'] .story-photograph__unshown {
   margin: 0 0 var(--space-2);
   color: var(--cl-text-4);

@@ -315,6 +315,16 @@ export interface MyProfile {
   displayName: string;
 }
 
+export interface StoredObjectStatus {
+  objectId: string;
+  objectState: string;
+  scanOutcome: string | null;
+  declaredContentType: string;
+  dataClassification: string | null;
+  owningResourceType: string | null;
+  rejectionReason: string | null;
+}
+
 export interface AttachedFile {
   objectId: string;
   declaredContentType: string;
@@ -530,6 +540,16 @@ export const api = {
       `/v1/participants/${s.participantId}/objects?owningResourceType=LifeStoryItem&owningResourceId=${encodeURIComponent(itemId)}`,
     ),
   readFileContent: (s: Session, objectId: string) => readBlob(s, `/v1/objects/${objectId}/content`),
+  /**
+   * What became of a file after it was sent.
+   *
+   * The attachment listing shows only files that have cleared checking,
+   * which is right — but it means a file still being checked, and a file
+   * that was refused, look exactly like a file nobody ever sent. This is
+   * the one call that can tell them apart, and it existed with no caller.
+   */
+  objectStatus: (s: Session, objectId: string) =>
+    get<{ data: { attributes: StoredObjectStatus } }>(s, `/v1/objects/${objectId}`),
   confirmTestimony: (s: Session, itemId: string, versionId: string) =>
     post(s, `/v1/life-story/items/${itemId}/confirm-testimony`, { versionId, confirmed: true }),
   listContributionsAwaitingReview: (s: Session) =>

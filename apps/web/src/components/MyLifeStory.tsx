@@ -105,6 +105,20 @@ export function MyLifeStory({ session }: { session: Session }) {
    */
   const [withdrawing, setWithdrawing] = useState<MyLifeStoryItem | null>(null);
   const [announcement, setAnnouncement] = useState('');
+  /**
+   * Whether the announcement is already on the screen somewhere else.
+   *
+   * The live region has to carry every outcome, because somebody using a
+   * screen reader gets nothing from a photograph appearing. But when the
+   * same words are already shown in place — on the photograph itself —
+   * printing them again at the foot of the entry is the very line the
+   * picture was meant to replace. So it is announced and not repeated.
+   */
+  const [announcementShownInPlace, setAnnouncementShownInPlace] = useState(false);
+  const say = (words: string, shownInPlace = false) => {
+    setAnnouncement(words);
+    setAnnouncementShownInPlace(shownInPlace);
+  };
   /*
    * Photographs on an entry. Loaded per entry rather than with the list,
    * because a listing that always fetched them would make every visit
@@ -155,6 +169,36 @@ export function MyLifeStory({ session }: { session: Session }) {
    * cleanup that read the state would capture whatever it held on the
    * render it was created in, and leak every URL made after that.
    */
+  /**
+   * The photograph somebody has just sent, on the screen where they sent
+   * it.
+   *
+   * It used to be a sentence at the very bottom of the entry — under the
+   * words, the actions and the platform's notes — saying the file had
+   * been received. Easy to miss, and nothing to look at (owner,
+   * 2026-09-01). The browser still holds the file, so the picture can be
+   * shown at once, in the place photographs go, carrying its real state.
+   *
+   * It is not pretending to be attached. A file goes into quarantine and
+   * only appears on the entry when it has cleared checking, so this shows
+   * what was sent and what is happening to it — and, when it is refused,
+   * says so, which nothing did before: a rejected file was
+   * indistinguishable from one nobody ever sent.
+   */
+  const [pending, setPending] = useState<
+    Record<string, { objectId: string; url: string; state: string; checking: boolean }>
+  >({});
+  const pendingRef = useRef<Record<string, { objectId: string; url: string; state: string; checking: boolean }>>({});
+  pendingRef.current = pending;
+  /** Cleared on unmount, so a poll in flight stops asking. */
+  const onScreen = useRef(true);
+  useEffect(() => {
+    onScreen.current = true;
+    return () => {
+      onScreen.current = false;
+      for (const p of Object.values(pendingRef.current)) URL.revokeObjectURL(p.url);
+    };
+  }, []);
   const [pictures, setPictures] = useState<Record<string, { url: string; type: string }>>({});
   const picturesRef = useRef<Record<string, { url: string; type: string }>>({});
   picturesRef.current = pictures;
@@ -309,17 +353,72 @@ export function MyLifeStory({ session }: { session: Session }) {
     }
     setUploading(itemId);
     try {
-      await api.attachToLifeStoryItem(session, itemId, file);
+      const objectId = await api.attachToLifeStoryItem(session, itemId, file);
       setActionError(null);
-      setAnnouncement(
-        'Your file has been received and is being checked. It is not on this entry yet — look again in a few minutes.',
-      );
-      await loadFiles(itemId);
+      // Shown where photographs go, from the file the browser still has.
+      const url = URL.createObjectURL(file);
+      setPending((p) => {
+        const had = p[itemId];
+        if (had !== undefined) URL.revokeObjectURL(had.url);
+        return { ...p, [itemId]: { objectId, url, state: 'Quarantined', checking: true } };
+      });
+      setAdding(null);
+      // Said as well as shown: somebody using a screen reader gets no
+      // benefit from a picture appearing.
+      say('Your photograph has been received and is being checked. It is not on this entry yet.', true);
+      void watchUpload(itemId, objectId);
     } catch (err) {
       setActionError(presentError(err));
     } finally {
       setUploading(null);
     }
+  };
+
+  /**
+   * What happened to it, asked rather than assumed.
+   *
+   * The old sentence promised "look again in a few minutes", which is a
+   * cadence this screen cannot keep on its own — checking is a scheduled
+   * sweep, and how long it takes is not this screen's to promise (B-29).
+   * So it asks: a few times, backing off, and then it stops and offers a
+   * button rather than polling somebody's connection for ever.
+   */
+  const checkUpload = async (itemId: string, objectId: string): Promise<string | null> => {
+    try {
+      const { objectState } = (await api.objectStatus(session, objectId)).data.attributes;
+      if (!onScreen.current) return null;
+      setPending((p) => (p[itemId]?.objectId === objectId ? { ...p, [itemId]: { ...p[itemId]!, state: objectState } } : p));
+      if (objectState === 'Available') {
+        setPending((p) => {
+          const had = p[itemId];
+          if (had === undefined || had.objectId !== objectId) return p;
+          URL.revokeObjectURL(had.url);
+          const rest = { ...p };
+          delete rest[itemId];
+          return rest;
+        });
+        say('Your photograph has been checked and is on this entry now.', true);
+        await loadFiles(itemId);
+      }
+      return objectState;
+    } catch {
+      /* Asked again on the next attempt; a failed question is not news. */
+      return null;
+    }
+  };
+
+  const WAITS = [1500, 3000, 6000, 12000];
+  const watchUpload = async (itemId: string, objectId: string) => {
+    const first = await checkUpload(itemId, objectId);
+    if (first === 'Available' || first === 'Rejected') return;
+    for (const wait of WAITS) {
+      await new Promise((r) => setTimeout(r, wait));
+      if (!onScreen.current) return;
+      const state = await checkUpload(itemId, objectId);
+      if (state === 'Available' || state === 'Rejected') return;
+    }
+    // Stopped asking, and says so rather than spinning silently.
+    setPending((p) => (p[itemId]?.objectId === objectId ? { ...p, [itemId]: { ...p[itemId]!, checking: false } } : p));
   };
 
   const save = async () => {
@@ -599,6 +698,72 @@ export function MyLifeStory({ session }: { session: Session }) {
                   offered is adding: the server refuses that, so the
                   screen does not offer it.
                 */}
+                {/*
+                  The photograph just sent, in the place photographs go
+                  and at the size they are shown — not a sentence at the
+                  bottom of the entry, under everything else.
+
+                  It says what it is: a file in quarantine is not on the
+                  entry, and drawing it exactly like an attached one would
+                  say the entry holds something it does not.
+                */}
+                {pending[item.itemId] !== undefined && (
+                  <div className="story-photograph story-photograph--pending">
+                    <img
+                      className="story-photograph__image"
+                      src={pending[item.itemId]!.url}
+                      alt="The photograph you have just sent. Nothing here describes what is in it."
+                    />
+                    {pending[item.itemId]!.state === 'Rejected' ? (
+                      /*
+                        Nothing said this before: the listing shows only
+                        files that cleared checking, so a refused file
+                        looked exactly like one nobody ever sent.
+
+                        Why it was refused is deliberately not repeated.
+                        The record's reason can read "malware detected"
+                        and this platform's checker recognises a test
+                        string, not real malware (ADR-126) — passing that
+                        on would be telling somebody their own photograph
+                        carried a virus on evidence the platform does not
+                        have.
+                      */
+                      <p className="story-photograph__state">
+                        <strong>This photograph was not accepted.</strong> It is not on your entry and nothing else
+                        has changed. You can try a different one, or ask the research team from Help and safety.
+                      </p>
+                    ) : pending[item.itemId]!.checking ? (
+                      <p className="story-photograph__state">
+                        <strong>Received, and being checked.</strong> It is not on your entry yet. This page is
+                        watching for it.
+                      </p>
+                    ) : (
+                      <p className="story-photograph__state">
+                        <strong>Received, and still being checked.</strong> It is not on your entry yet, and nothing
+                        you have written is affected. Checking runs on its own schedule, so this can take a while.{' '}
+                        <button
+                          className="story-action"
+                          onClick={() => void checkUpload(item.itemId, pending[item.itemId]!.objectId)}
+                        >
+                          Check now
+                        </button>
+                      </p>
+                    )}
+                    {/*
+                      Carried here from the upload box, which closes as
+                      soon as the file is sent. A test caught it leaving
+                      with the box: this is the moment somebody is most
+                      likely to wonder who can see the photograph they
+                      have just handed over, and it is the moment the
+                      answer disappeared from the screen.
+                    */}
+                    <p className="story-note">
+                      Nobody else can see it — this platform has no way to share a photograph with anyone, not even a
+                      supporter.
+                    </p>
+                  </div>
+                )}
+
                 {shown.length > 0 && (
                   <ul className="story-photographs list-plain">
                     {shown.map((f) => {
@@ -898,7 +1063,7 @@ export function MyLifeStory({ session }: { session: Session }) {
           </p>
         </div>
       )}
-      <p aria-live="polite" role="status">
+      <p aria-live="polite" role="status" className={announcementShownInPlace ? 'visually-hidden' : undefined}>
         {announcement}
       </p>
     </section>

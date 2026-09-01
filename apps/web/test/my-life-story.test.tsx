@@ -46,7 +46,7 @@ function stubFetch(body: unknown) {
  * so a single canned body cannot serve both — a stub that returned the
  * life story for every GET would make the file list look populated.
  */
-function stubWithFiles(files: unknown[], only?: unknown) {
+function stubWithFiles(files: unknown[], only?: unknown, objectState?: string) {
   const calls: { path: string; method: string; body: Record<string, unknown> }[] = [];
   vi.stubGlobal(
     'fetch',
@@ -72,6 +72,12 @@ function stubWithFiles(files: unknown[], only?: unknown) {
           status: 200,
           headers: { 'content-type': 'image/jpeg' },
         });
+      }
+      if (method === 'GET' && /\/v1\/objects\/[^/]+$/.test(path)) {
+        return new Response(
+          JSON.stringify({ data: { attributes: { objectId: 'obj_1', objectState: objectState ?? 'Quarantined', scanOutcome: null, declaredContentType: 'image/jpeg', dataClassification: null, owningResourceType: null, rejectionReason: null } } }),
+          { status: 200 },
+        );
       }
       if (method === 'GET' && path.includes('/objects')) {
         return new Response(JSON.stringify({ data: files }), { status: 200 });
@@ -473,6 +479,131 @@ describe('a participant reading their own life story', () => {
     // The two claims the platform cannot keep.
     expect(said).not.toMatch(/virus|malware|scanned for/i);
     expect(said).toMatch(/no way to share a photograph with anyone/i);
+  });
+
+  /**
+   * The photograph appears where photographs go, at once.
+   *
+   * It used to be a sentence at the very bottom of the entry — under the
+   * words, the actions and the platform's notes — saying the file had
+   * been received. Easy to miss, and nothing to look at (owner,
+   * 2026-09-01). The browser still holds the file, so there is no reason
+   * to show nothing while the platform checks it.
+   */
+  it('shows the photograph as soon as it is sent, not a line of text at the bottom', async () => {
+    stubWithFiles([]);
+    const { container } = render(<MyLifeStory session={session} />);
+    await act(async () => {});
+    await openMemory();
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Add a photograph' }));
+    });
+
+    const bytes = new Uint8Array([1, 2, 3]);
+    const photo = new File([bytes], 'gran.jpg', { type: 'image/jpeg' });
+    Object.defineProperty(photo, 'arrayBuffer', { value: async () => bytes.buffer });
+    await act(async () => {
+      fireEvent.change(screen.getByLabelText('Add a photograph to this entry'), { target: { files: [photo] } });
+    });
+    await act(async () => {});
+
+    const sent = container.querySelector('.story-photograph--pending img');
+    expect(sent, 'the photograph was not shown after it was sent').not.toBeNull();
+    expect(sent!.getAttribute('src')).toMatch(/^blob:/);
+
+    /*
+     * And it does not claim to be on the entry. A file goes into
+     * quarantine first; drawing it exactly like an attached photograph
+     * would say the entry holds something it does not.
+     */
+    const block = container.querySelector('.story-photograph--pending')!;
+    expect(block.textContent).toMatch(/being checked/i);
+    expect(block.textContent).toMatch(/not on your entry yet/i);
+    /*
+     * The privacy sentence comes with it. It lives in the upload box,
+     * which closes on success — and this is the moment somebody is most
+     * likely to wonder who can now see the photograph they just handed
+     * over.
+     */
+    expect(block.textContent).toMatch(/no way to share a photograph with anyone/i);
+
+    /*
+     * And the words are not printed twice. The live region still carries
+     * them — somebody using a screen reader gets nothing from a picture
+     * appearing — but it is taken out of the visual layout, because
+     * repeating them at the foot of the entry is the very line this
+     * replaced.
+     */
+    const status = container.querySelector('[role="status"]')!;
+    expect(status.textContent, 'the outcome is no longer announced at all').toMatch(/being checked/i);
+    expect(status.className, 'the line at the bottom of the entry is back as well').toContain('visually-hidden');
+  });
+
+  /**
+   * A refused file said nothing at all before.
+   *
+   * The attachment listing shows only files that cleared checking, so a
+   * rejected photograph looked exactly like one nobody ever sent — the
+   * person waited for something that was never coming.
+   *
+   * What is NOT said is why. The record's reason can read "malware
+   * detected", and this platform's checker recognises a test string
+   * rather than real malware (ADR-126); repeating it would tell somebody
+   * their own photograph carried a virus on evidence the platform does
+   * not have.
+   */
+  it('says when a photograph was refused, without claiming it had a virus', async () => {
+    stubWithFiles([], undefined, 'Rejected');
+    render(<MyLifeStory session={session} />);
+    await act(async () => {});
+    await openMemory();
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Add a photograph' }));
+    });
+    const bytes = new Uint8Array([1, 2, 3]);
+    const photo = new File([bytes], 'gran.jpg', { type: 'image/jpeg' });
+    Object.defineProperty(photo, 'arrayBuffer', { value: async () => bytes.buffer });
+    await act(async () => {
+      fireEvent.change(screen.getByLabelText('Add a photograph to this entry'), { target: { files: [photo] } });
+    });
+    await act(async () => {});
+
+    const said = document.body.textContent ?? '';
+    expect(said, 'a refused photograph was never reported').toMatch(/was not accepted/i);
+    expect(said, 'nothing was said about the entry surviving it').toMatch(/nothing else has changed/i);
+    expect(said, 'the platform claimed something its checker cannot establish').not.toMatch(/virus|malware/i);
+  });
+
+  /**
+   * And when it clears, it stops being a preview and becomes the
+   * photograph on the entry — with no press from anybody.
+   */
+  it('turns the preview into the entry’s photograph once it has been checked', async () => {
+    const attached = [
+      { id: 'obj_1', attributes: {
+        objectId: 'obj_1', declaredContentType: 'image/jpeg', declaredSizeBytes: 3,
+        objectState: 'Available', dataClassification: 'Sensitive-Personal', createdAt: '2026-08-07T00:00:00Z',
+      } },
+    ];
+    stubWithFiles(attached, undefined, 'Available');
+    const { container } = render(<MyLifeStory session={session} />);
+    await act(async () => {});
+    await openMemory();
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Add a photograph' }));
+    });
+    const bytes = new Uint8Array([1, 2, 3]);
+    const photo = new File([bytes], 'gran.jpg', { type: 'image/jpeg' });
+    Object.defineProperty(photo, 'arrayBuffer', { value: async () => bytes.buffer });
+    await act(async () => {
+      fireEvent.change(screen.getByLabelText('Add a photograph to this entry'), { target: { files: [photo] } });
+    });
+    await act(async () => {});
+    await act(async () => {});
+
+    expect(container.querySelector('.story-photograph--pending'), 'it is still marked as waiting').toBeNull();
+    expect(container.querySelector('img.story-photograph__image'), 'the photograph left with the preview').not.toBeNull();
+    expect(document.body.textContent).toMatch(/checked and is on this entry now/i);
   });
 
   /**
