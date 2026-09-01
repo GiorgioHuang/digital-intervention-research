@@ -127,6 +127,20 @@ export function raiseApiError(json: { error?: ApiError }, status: number): never
 export const MAX_FILE_MB = 10;
 export const MAX_FILE_BYTES = MAX_FILE_MB * 1024 * 1024;
 
+/**
+ * What the photograph control accepts, and the words the screen says it
+ * in.
+ *
+ * The platform's own list is wider — it also takes MP3, PDF and plain
+ * text — and this is deliberately narrower: the control is labelled "Add
+ * a photograph", and naming the wider list here would describe something
+ * this screen is not for. Held to being a subset of what the gate really
+ * accepts by `apps/api/test/body-limits.test.ts`, so the screen can never
+ * come to name a format the server refuses.
+ */
+export const PHOTOGRAPH_TYPES = ['image/jpeg', 'image/png'] as const;
+export const PHOTOGRAPH_TYPE_WORDS = 'JPEG or PNG';
+
 async function post<T>(session: Session, path: string, body: object): Promise<T> {
   const res = await fetch(path, {
     method: 'POST',

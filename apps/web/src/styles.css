@@ -2174,6 +2174,17 @@ a[role='button']:hover { background-color: var(--color-action-secondary-bg-hover
   border: var(--border-hairline) solid var(--cl-text-4);
   border-radius: var(--radius-2);
 }
+/*
+ * What will go through, before anything is chosen. Kept at the reading
+ * size and set apart from the surrounding notes, because somebody is
+ * meant to read it *first* rather than come back to it after a refusal.
+ */
+[data-workspace='participant'] .story-upload__accepts {
+  padding: var(--space-3);
+  border-inline-start: var(--border-emphasis) solid var(--cl-accent);
+  background-color: color-mix(in srgb, var(--cl-accent) 6%, transparent);
+  line-height: 1.5;
+}
 [data-workspace='participant'] .story-note {
   color: var(--cl-text-4);
   line-height: 1.45;

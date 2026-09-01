@@ -1,5 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
-import { api, MAX_FILE_BYTES, MAX_FILE_MB, type AttachedFile, type MyLifeStoryItem, type Session } from '../api.js';
+import {
+  api,
+  MAX_FILE_BYTES,
+  MAX_FILE_MB,
+  PHOTOGRAPH_TYPES,
+  PHOTOGRAPH_TYPE_WORDS,
+  type AttachedFile,
+  type MyLifeStoryItem,
+  type Session,
+} from '../api.js';
 import { presentError, type PresentedError } from '../errors.js';
 import { EmptyState, ErrorState, LoadingState } from './StateBlock.js';
 import { TabIcon } from './elder/TabIcon.js';
@@ -283,6 +292,18 @@ export function MyLifeStory({ session }: { session: Session }) {
     if (file.size > MAX_FILE_BYTES) {
       setAnnouncement(
         `That photograph is about ${String(Math.round(file.size / 1024 / 1024))} MB, and the largest this platform can take is ${String(MAX_FILE_MB)} MB. Nothing was sent. A smaller copy, or a photograph of the photograph, will go through.`,
+      );
+      return;
+    }
+    /*
+     * And the format, named. The server refuses this too, but its
+     * refusal arrives through `presentError` as prepared wording that
+     * does not say which formats would have worked — which is the one
+     * thing somebody standing in front of this needs to know.
+     */
+    if (!(PHOTOGRAPH_TYPES as readonly string[]).includes(file.type)) {
+      setAnnouncement(
+        `That file is ${file.type === '' ? 'in a format this platform could not identify' : file.type}, and this platform can take ${PHOTOGRAPH_TYPE_WORDS} photographs. Nothing was sent.`,
       );
       return;
     }
@@ -655,11 +676,34 @@ export function MyLifeStory({ session }: { session: Session }) {
 
                 {adding === item.itemId && item.itemState !== 'Withdrawn' && (
                   <div className="story-upload">
+                    {/*
+                      What will go through, said before the file is
+                      chosen rather than after it is refused. Both
+                      numbers were only ever enforced: somebody picked a
+                      photograph, waited, and was told no by a screen
+                      that had never said what yes looked like.
+                    */}
+                    <p className="story-upload__accepts">
+                      <strong>
+                        {PHOTOGRAPH_TYPE_WORDS}, up to {MAX_FILE_MB} MB.
+                      </strong>{' '}
+                      Some phones save photographs in another format, which this platform cannot take yet. If yours
+                      will not go through, that is why — it is nothing you have done wrong, and whoever helps you with
+                      your phone can save a copy in one of these.
+                    </p>
                     <p>
                       <label htmlFor={`file-${item.itemId}`}>Add a photograph to this entry</label>{' '}
                       <input
                         id={`file-${item.itemId}`}
                         type="file"
+                        /*
+                          A hint to the file picker, not a gate — most
+                          pickers let somebody choose anything anyway, and
+                          the server is what actually refuses. It saves a
+                          person from scrolling past files that were never
+                          going to work.
+                        */
+                        accept={PHOTOGRAPH_TYPES.join(',')}
                         disabled={uploading !== null}
                         onChange={(e) => {
                           const chosen = e.target.files?.[0];

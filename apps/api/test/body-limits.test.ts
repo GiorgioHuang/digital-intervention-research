@@ -67,4 +67,31 @@ describe('the body a photograph arrives in', () => {
     const web = await import('../../web/src/api.js');
     expect(web.MAX_FILE_BYTES).toBe(DEFAULT_STORAGE_CONFIG.maxSizeBytes);
   });
+
+  /**
+   * The screen now names the formats it takes, so those names have to be
+   * ones the gate really accepts. A screen that promises a format the
+   * server refuses is worse than one that promises nothing: somebody
+   * follows the instruction, converts their photograph, and is refused
+   * anyway.
+   *
+   * A subset, not the whole list — the control is labelled "Add a
+   * photograph" and the platform also takes MP3, PDF and plain text.
+   */
+  it('never names a format the gate would refuse', async () => {
+    const web = await import('../../web/src/api.js');
+    expect(web.PHOTOGRAPH_TYPES.length).toBeGreaterThan(0);
+    for (const type of web.PHOTOGRAPH_TYPES) {
+      expect(
+        DEFAULT_STORAGE_CONFIG.allowedContentTypes,
+        `the screen offers ${type} and the server refuses it`,
+      ).toContain(type);
+    }
+    // And the words match the list, so the sentence cannot drift from
+    // what the control actually accepts.
+    for (const type of web.PHOTOGRAPH_TYPES) {
+      const name = type.replace('image/', '').toUpperCase();
+      expect(web.PHOTOGRAPH_TYPE_WORDS.toUpperCase(), `${type} is accepted but not named`).toContain(name);
+    }
+  });
 });

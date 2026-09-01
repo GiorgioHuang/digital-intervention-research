@@ -476,6 +476,75 @@ describe('a participant reading their own life story', () => {
   });
 
   /**
+   * What will go through, said before anything is chosen.
+   *
+   * Both limits were only ever enforced. Somebody picked a photograph,
+   * waited while it uploaded, and was refused by a screen that had never
+   * said what would have worked — and until the body-size defect was
+   * fixed they were not even told that much (owner, 2026-09-01).
+   */
+  it('says which photographs it takes, and how large, before one is chosen', async () => {
+    stubWithFiles([]);
+    await act(async () => {
+      render(<MyLifeStory session={session} />);
+    });
+    await openMemory();
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Add a photograph' }));
+    });
+
+    /*
+     * Queried so that hiding the sentence fails.
+     *
+     * The first version of this read `textContent` off the surrounding
+     * block, and `textContent` returns hidden text as readily as visible
+     * text — so marking the sentence `hidden` left the test green, which
+     * is the whole defect back with the guard still passing. `ignore`
+     * takes it out of consideration the way the screen would.
+     */
+    const visible = { ignore: '[hidden], [hidden] *, script, style' };
+    expect(
+      screen.getByText(/JPEG or PNG, up to 10 MB/, visible),
+      'the screen does not say which photographs it takes, or how large',
+    ).toBeTruthy();
+    // The picker is pointed at the same formats the sentence names.
+    expect(screen.getByLabelText('Add a photograph to this entry').getAttribute('accept')).toBe(
+      'image/jpeg,image/png',
+    );
+  });
+
+  /**
+   * And a format that will not work is refused by name.
+   *
+   * The server refuses it too, but its refusal reaches the screen through
+   * `presentError` as prepared wording that never says which formats
+   * would have worked — the one thing somebody standing in front of this
+   * needs. A phone on its default setting produces HEIC, so this is the
+   * refusal most likely to be met (B-28).
+   */
+  it('names the formats when the one chosen will not work', async () => {
+    const calls = stubWithFiles([]);
+    await act(async () => {
+      render(<MyLifeStory session={session} />);
+    });
+    await openMemory();
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Add a photograph' }));
+    });
+
+    const heic = new File([new Uint8Array([1, 2, 3])], 'IMG_0042.HEIC', { type: 'image/heic' });
+    Object.defineProperty(heic, 'arrayBuffer', { value: async () => new Uint8Array([1, 2, 3]).buffer });
+    await act(async () => {
+      fireEvent.change(screen.getByLabelText('Add a photograph to this entry'), { target: { files: [heic] } });
+    });
+
+    expect(calls.some((c) => c.path === '/v1/objects'), 'it was uploaded before the format was checked').toBe(false);
+    const said = document.body.textContent ?? '';
+    expect(said).toMatch(/image\/heic/);
+    expect(said, 'refused without saying what would have worked').toMatch(/JPEG or PNG/);
+  });
+
+  /**
    * A file too large to accept is refused at once, and in a sentence.
    *
    * The size is known the moment somebody chooses the file. Reading a
