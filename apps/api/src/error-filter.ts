@@ -37,6 +37,32 @@ export class PlatformErrorFilter implements ExceptionFilter {
       });
       return;
     }
+    /*
+     * A body larger than the parser accepts.
+     *
+     * body-parser raises this before any handler runs, so it is not an
+     * HttpException and used to fall through to INTERNAL_ERROR — which
+     * the participant reads as "we do not know whether it took effect",
+     * over a photograph that certainly did not upload. It is a refusal,
+     * it is knowable, and it is now said as one.
+     */
+    if (
+      typeof exception === 'object' &&
+      exception !== null &&
+      (exception as { type?: string }).type === 'entity.too.large'
+    ) {
+      res.status(413).json({
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'That file is larger than this platform accepts',
+          details: [],
+          requestId,
+          traceId,
+          retryable: false,
+        },
+      });
+      return;
+    }
     // An unexpected failure that leaves no trace server-side cannot be
     // diagnosed later: the client is told INTERNAL_ERROR by design (Doc 14
     // §61 — no internals leak), so the stack has to be recorded here or it

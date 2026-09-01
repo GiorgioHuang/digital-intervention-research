@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import pg from 'pg';
 import type { INestApplication } from '@nestjs/common';
-import { NestFactory } from '@nestjs/core';
+import { createApiApp } from '../src/app-factory.js';
 import { FixedClock, createRequestContext } from '@platform/kernel';
 import { createPool, migrate } from '@platform/database';
 import { POLICY_V1 } from '@platform/policy';
@@ -94,13 +94,16 @@ describe.skipIf(!dbAvailable)('HTTP API (e2e)', () => {
       relationshipId, expectedVersion: 1, confirmed: true,
     });
 
-    app = await NestFactory.create(
-      buildAppModule({
-        DATABASE_URL, API_PORT: 0, LOG_LEVEL: 'error', AUTH_MODE: 'dev-header',
-        KNOWLEDGE_PLATFORM_MODE: 'simulator',
-      }),
-      { logger: false },
-    );
+    /*
+     * The same factory the process uses. It used to be a bare
+     * `NestFactory.create` here, which is how the body-size limit went
+     * untested: a change to `main.ts` would have altered what the
+     * deployment ran and nothing this suite exercised.
+     */
+    app = await createApiApp({
+      DATABASE_URL, API_PORT: 0, LOG_LEVEL: 'error', AUTH_MODE: 'dev-header',
+      KNOWLEDGE_PLATFORM_MODE: 'simulator',
+    } as Parameters<typeof createApiApp>[0]);
     await app.listen(0);
     baseUrl = await app.getUrl();
   }, 60_000);
@@ -488,6 +491,64 @@ describe.skipIf(!dbAvailable)('HTTP API (e2e)', () => {
     expect(seeded?.attributes.contributionState).toBe('Proposed');
     // Participants do not hold the supporter contribution list permission.
     expect((await call('/v1/life-story/contributions/mine', strangerAcc)).status).toBe(403);
+  });
+
+  /**
+   * A photograph the size a photograph actually is.
+   *
+   * This is the test that was missing. Every upload test on this platform
+   * sent the string "a family photo" — fourteen bytes — so nothing ever
+   * pushed a body past express.json's unconfigured 100kB default, and the
+   * one route whose whole purpose is to carry a file could not carry one.
+   * A participant choosing any real photograph got a bare INTERNAL_ERROR,
+   * which the screen presents as "we do not know whether it took effect"
+   * (owner, 2026-09-01).
+   *
+   * A megabyte and a half is small for a phone camera and fifteen times
+   * the limit that was in force, so it fails loudly if the allowance ever
+   * goes back to a default.
+   */
+  it('carries a photograph of the size a photograph really is', async () => {
+    const photo = Buffer.concat([
+      Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x08]),
+      Buffer.alloc(1_500_000, 7),
+    ]);
+    const init = await call('/v1/objects', patAcc, {
+      ownerParticipantId: patId, declaredContentType: 'image/png', declaredSizeBytes: photo.byteLength,
+    });
+    expect(init.status).toBe(201);
+    const objectId = ((await init.json()) as { data: { id: string } }).data.id;
+
+    const uploaded = await call(`/v1/objects/${objectId}/content`, patAcc, {
+      contentBase64: photo.toString('base64'),
+    });
+    expect(uploaded.status, `a ${String(photo.byteLength)}-byte photograph was refused by the transport`).toBe(201);
+    expect(((await uploaded.json()) as { data: { meta: { state: string } } }).data.meta.state).toBe('Quarantined');
+
+    /*
+     * And a body past the allowance is refused in words rather than as an
+     * unexplained failure. body-parser raises before any handler runs, so
+     * this used to reach the participant as INTERNAL_ERROR — "we do not
+     * know whether it took effect" over something that certainly did not.
+     */
+    const tooBig = await call(`/v1/objects/${objectId}/content`, patAcc, {
+      contentBase64: 'A'.repeat(20 * 1024 * 1024),
+    });
+    expect(tooBig.status).toBe(413);
+    const refusal = (await tooBig.json()) as { error: { code: string; message: string } };
+    expect(refusal.error.code, 'an oversized file failed without saying why').toBe('VALIDATION_ERROR');
+    expect(refusal.error.message).toMatch(/larger than this platform accepts/);
+
+    /*
+     * The allowance belongs to this route alone. Every other route keeps
+     * the small one, so raising it here did not hand a multi-megabyte
+     * buffer to the rest of the platform.
+     */
+    const elsewhere = await call('/v1/objects', patAcc, {
+      ownerParticipantId: patId, declaredContentType: 'image/png', declaredSizeBytes: 10,
+      padding: 'A'.repeat(1024 * 1024),
+    });
+    expect(elsewhere.status, 'a megabyte of padding was accepted on a route that carries no file').toBe(413);
   });
 
   it('object upload over HTTP stays quarantined until scan + assignment; strangers see nothing', async () => {
@@ -1180,14 +1241,11 @@ describe.skipIf(!dbAvailable)('HTTP API (e2e)', () => {
 
   it('ACCESS_TOKEN gate: /v1 requires the token, /health stays open (cloud perimeter)', async () => {
     const token = 'e2e-access-token-0123456789abcdef';
-    const gated = await NestFactory.create(
-      buildAppModule({
-        DATABASE_URL, API_PORT: 0, LOG_LEVEL: 'error', AUTH_MODE: 'dev-header',
-        KNOWLEDGE_PLATFORM_MODE: 'simulator',
-        ACCESS_TOKEN: token,
-      }),
-      { logger: false },
-    );
+    const gated = await createApiApp({
+      DATABASE_URL, API_PORT: 0, LOG_LEVEL: 'error', AUTH_MODE: 'dev-header',
+      KNOWLEDGE_PLATFORM_MODE: 'simulator',
+      ACCESS_TOKEN: token,
+    } as Parameters<typeof createApiApp>[0]);
     try {
       await gated.listen(0);
       const gatedUrl = await gated.getUrl();

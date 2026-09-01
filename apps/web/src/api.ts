@@ -116,6 +116,17 @@ export function raiseApiError(json: { error?: ApiError }, status: number): never
   throw new PlatformApiError(error, status);
 }
 
+/**
+ * The largest file this platform accepts, held on the browser's side too.
+ *
+ * The same number as `DEFAULT_STORAGE_CONFIG.maxSizeBytes` in M16. The web
+ * app never imports a module package (Doc 15), so it is written again
+ * here rather than shared; `apps/api/test/body-limits.test.ts` is what
+ * stops the two drifting.
+ */
+export const MAX_FILE_MB = 10;
+export const MAX_FILE_BYTES = MAX_FILE_MB * 1024 * 1024;
+
 async function post<T>(session: Session, path: string, body: object): Promise<T> {
   const res = await fetch(path, {
     method: 'POST',
@@ -430,6 +441,27 @@ export const api = {
    * it is.
    */
   attachToLifeStoryItem: async (s: Session, itemId: string, file: File) => {
+    /*
+     * Asked before the file is read, not after it is sent.
+     *
+     * The size is known the moment somebody chooses the file, and reading
+     * a large one into memory, turning it into base64 and posting it in
+     * order to be told no is a slow way to say something that could have
+     * been said at once — on a phone, on a connection that may be poor.
+     * The server refuses at the same numbers, so this is a kindness and
+     * not the check.
+     */
+    if (file.size > MAX_FILE_BYTES) {
+      throw new PlatformApiError(
+        {
+          code: 'VALIDATION_ERROR',
+          message: `That photograph is ${String(Math.round(file.size / 1024 / 1024))} MB, and the largest this platform can take is ${String(MAX_FILE_MB)} MB.`,
+          requestId: 'local',
+          retryable: false,
+        },
+        400,
+      );
+    }
     const bytes = new Uint8Array(await file.arrayBuffer());
     const started = await post<{ data: { id: string } }>(s, '/v1/objects', {
       ownerParticipantId: s.participantId,

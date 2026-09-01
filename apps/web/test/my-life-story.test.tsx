@@ -476,6 +476,74 @@ describe('a participant reading their own life story', () => {
   });
 
   /**
+   * A file too large to accept is refused at once, and in a sentence.
+   *
+   * The size is known the moment somebody chooses the file. Reading a
+   * large one into memory, base64-ing it and posting it in order to be
+   * told no is a slow way to say something that could be said
+   * immediately — on a phone, on a connection that may be poor. The
+   * server refuses at the same number, so this is a kindness rather than
+   * the check.
+   */
+  it('says a photograph is too large before uploading any of it', async () => {
+    const calls = stubWithFiles([]);
+    await act(async () => {
+      render(<MyLifeStory session={session} />);
+    });
+    await openMemory();
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Add a photograph' }));
+    });
+
+    const huge = new File([new Uint8Array(1)], 'enormous.jpg', { type: 'image/jpeg' });
+    Object.defineProperty(huge, 'size', { value: 24 * 1024 * 1024 });
+    Object.defineProperty(huge, 'arrayBuffer', { value: async () => new Uint8Array(1).buffer });
+    await act(async () => {
+      fireEvent.change(screen.getByLabelText('Add a photograph to this entry'), { target: { files: [huge] } });
+    });
+
+    expect(calls.some((c) => c.path === '/v1/objects'), 'the upload started before the size was checked').toBe(false);
+    // And it says which numbers, rather than only that something is wrong.
+    const said = document.body.textContent ?? '';
+    expect(said).toMatch(/24 MB/);
+    expect(said).toMatch(/10 MB/);
+  });
+
+  /**
+   * And a photograph of an ordinary size goes up whole.
+   *
+   * The bytes are turned into base64 a character at a time in the
+   * browser, which is fine for the three-byte file every other test uses
+   * and is worth exercising once at a size somebody's camera produces.
+   */
+  it('encodes a photograph of a realistic size without losing any of it', async () => {
+    const calls = stubWithFiles([]);
+    await act(async () => {
+      render(<MyLifeStory session={session} />);
+    });
+    await openMemory();
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Add a photograph' }));
+    });
+
+    const bytes = new Uint8Array(1_200_000);
+    for (let i = 0; i < bytes.length; i += 1) bytes[i] = i % 251;
+    const photo = new File([bytes], 'gran.jpg', { type: 'image/jpeg' });
+    Object.defineProperty(photo, 'arrayBuffer', { value: async () => bytes.buffer });
+    await act(async () => {
+      fireEvent.change(screen.getByLabelText('Add a photograph to this entry'), { target: { files: [photo] } });
+    });
+
+    const declared = calls.find((c) => c.path === '/v1/objects');
+    expect(declared?.body).toMatchObject({ declaredSizeBytes: bytes.length });
+    const sent = calls.find((c) => /\/v1\/objects\/.*\/content$/.test(c.path));
+    const decoded = Uint8Array.from(atob(sent!.body['contentBase64'] as string), (ch) => ch.charCodeAt(0));
+    expect(decoded.length, 'the photograph arrived a different length than it left').toBe(bytes.length);
+    expect(decoded[0]).toBe(bytes[0]);
+    expect(decoded[decoded.length - 1]).toBe(bytes[bytes.length - 1]);
+  });
+
+  /**
    * An entry with no photographs shows nothing about photographs.
    *
    * It used to show a heading, a sentence saying there was nothing, and

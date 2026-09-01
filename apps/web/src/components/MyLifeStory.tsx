@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { api, type AttachedFile, type MyLifeStoryItem, type Session } from '../api.js';
+import { api, MAX_FILE_BYTES, MAX_FILE_MB, type AttachedFile, type MyLifeStoryItem, type Session } from '../api.js';
 import { presentError, type PresentedError } from '../errors.js';
 import { EmptyState, ErrorState, LoadingState } from './StateBlock.js';
 import { TabIcon } from './elder/TabIcon.js';
@@ -268,6 +268,24 @@ export function MyLifeStory({ session }: { session: Session }) {
   };
 
   const attach = async (itemId: string, file: File) => {
+    /*
+     * Said here rather than raised as an error, because the wording is
+     * the point. `presentError` replaces a server message with prepared
+     * wording by design, so a refusal routed through it arrives as "one
+     * field still needs a change" — which does not tell somebody their
+     * photograph is twice the size this platform can take. This is the
+     * same kind of refusal as "both a title and something to say are
+     * needed", and it is said the same way.
+     *
+     * `api.attachToLifeStoryItem` refuses at the same number too, so no
+     * caller can skip the check by not being this one.
+     */
+    if (file.size > MAX_FILE_BYTES) {
+      setAnnouncement(
+        `That photograph is about ${String(Math.round(file.size / 1024 / 1024))} MB, and the largest this platform can take is ${String(MAX_FILE_MB)} MB. Nothing was sent. A smaller copy, or a photograph of the photograph, will go through.`,
+      );
+      return;
+    }
     setUploading(itemId);
     try {
       await api.attachToLifeStoryItem(session, itemId, file);

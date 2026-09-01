@@ -1,9 +1,7 @@
 import 'reflect-metadata';
 import { join } from 'node:path';
-import { NestFactory } from '@nestjs/core';
-import type { NestExpressApplication } from '@nestjs/platform-express';
 import express from 'express';
-import { buildAppModule } from './app.module.js';
+import { createApiApp } from './app-factory.js';
 import { loadConfig } from './config.js';
 import { createLogger } from './logger.js';
 import { servesSpaShell } from './spa-fallback.js';
@@ -12,7 +10,7 @@ async function bootstrap(): Promise<void> {
   const config = loadConfig();
   const logger = createLogger(config.LOG_LEVEL, 'api');
 
-  const app = await NestFactory.create<NestExpressApplication>(buildAppModule(config), { logger: false });
+  const app = await createApiApp(config);
   app.enableShutdownHooks();
   if (config.WEB_DIST_DIR !== undefined) {
     // Single-service deployment: the API serves the built web app. Static
