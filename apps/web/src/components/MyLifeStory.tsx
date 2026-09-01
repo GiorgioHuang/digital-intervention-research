@@ -56,13 +56,36 @@ const SOURCE_WORDING: Record<string, string> = {
   Translation: 'This is a translation of something written elsewhere.',
 };
 
+/**
+ * Who can see a memory — the choice, not a claim about what has happened.
+ *
+ * These said "People in your community can see this" and the like, and
+ * every one of them was false. Visibility is stored on the item and
+ * audited when it changes, and nothing reads it: `life-story.view-own` is
+ * `ownerOnly` in the policy catalogue, `getMyLifeStory` is the only query
+ * there is, and no route, screen or module reads another person's story
+ * (B-30). So a participant chose to share a memory with their community,
+ * was told they had, and nobody could reach it.
+ *
+ * Which direction the error ran matters. Nothing leaked — the platform
+ * was more private than it said. But somebody may have believed their
+ * granddaughter could read their story, and she could not, and on a
+ * project whose purpose is keeping people connected to their families
+ * that is the worse half of the two.
+ *
+ * So these state the choice, and `SHARING_NOT_BUILT` below says plainly
+ * what has come of it. Neither promises when that changes.
+ */
 const VISIBILITY_WORDING: Record<string, string> = {
   Private: 'Only you can see this.',
-  'Selected People': 'Only the people you chose can see this.',
-  Connections: 'The people you are connected with can see this.',
-  Community: 'People in your community can see this.',
-  'Platform Public': 'Anyone using this platform can see this.',
+  'Selected People': 'You have chosen to share this with the people you pick.',
+  Connections: 'You have chosen to share this with the people you are connected with.',
+  Community: 'You have chosen to share this with your community.',
+  'Platform Public': 'You have chosen to share this with anyone using this platform.',
 };
+
+const SHARING_NOT_BUILT =
+  'Nothing on this platform can show your story to another person yet, so nobody has seen it. Your choice is on the record.';
 
 const STATE_NOTE: Record<string, string> = {
   Draft: 'Still a draft.',
@@ -1026,6 +1049,7 @@ export function MyLifeStory({ session }: { session: Session }) {
                     </p>
                   )}
                   <p>{VISIBILITY_WORDING[item.visibility] ?? item.visibility}</p>
+                  {item.visibility !== 'Private' && <p>{SHARING_NOT_BUILT}</p>}
                   {STATE_NOTE[item.itemState] !== undefined && <p>{STATE_NOTE[item.itemState]}</p>}
                   {item.versionCount > 1 && (
                     <p>

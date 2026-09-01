@@ -231,7 +231,18 @@ describe('a participant reading their own life story', () => {
    * story that is all private and false the moment one piece is shared,
    * and this is a claim about who can read somebody's memories.
    */
-  it('does not say only you can see them over a shared entry', async () => {
+  /**
+   * This asserted the opposite until the premise was checked.
+   *
+   * It required the summary not to say "only you" once an entry was
+   * marked Community. Nobody can read a Community entry either:
+   * `life-story.view-own` is `ownerOnly`, `getMyLifeStory` is the only
+   * query, and no route or screen reads another person's story (B-30).
+   * The screen must say what is so — and must not go quiet about the
+   * choice, because a participant who chose to share and was shown
+   * nothing about it would have no way to learn it never happened.
+   */
+  it('says only you can see them, and that a choice to share was made', async () => {
     stubFetch({
       data: [item(), item({ itemId: 'li_2', title: 'The move', visibility: 'Community' })],
       meta: { archiveId: 'ar_1' },
@@ -241,7 +252,28 @@ describe('a participant reading their own life story', () => {
     });
     const line = screen.getByText(/pieces so far/).textContent ?? '';
     expect(line).toMatch(/Two pieces so far/);
-    expect(line, 'a shared entry is on the page and it still says only you').not.toMatch(/only you/i);
+    expect(line).toMatch(/Only you can see them/);
+    expect(line, 'the choice to share is not mentioned at all').toMatch(/chosen to share one of them/);
+    expect(line, 'the screen says the sharing has happened').not.toMatch(/you have shared/i);
+  });
+
+  /**
+   * And on the entry itself, where the claim was most direct: "People in
+   * your community can see this." Nobody can.
+   */
+  it('does not tell a participant their community can see a memory', async () => {
+    stubFetch({
+      data: [item({ visibility: 'Community' })],
+      meta: { archiveId: 'ar_1' },
+    });
+    await act(async () => {
+      render(<MyLifeStory session={session} />);
+    });
+    await openMemory();
+    const said = document.body.textContent ?? '';
+    expect(said, 'the entry claims other people can see it').not.toMatch(/People in your community can see this/);
+    expect(said).toMatch(/You have chosen to share this with your community/);
+    expect(said, 'nothing says the sharing has not happened').toMatch(/nobody has seen it/i);
   });
 
   /**

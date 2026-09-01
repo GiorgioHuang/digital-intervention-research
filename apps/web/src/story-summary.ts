@@ -44,19 +44,34 @@ export function piecesSoFar(count: number): string {
 }
 
 /**
- * Who can read them, counted from the entries themselves.
+ * Who can read them.
  *
- * The drawing states "Only you can see them" flatly. It is true of a story
- * that is all private and false the moment one piece is shared, and this
- * is not a detail to be approximate about — so the sentence is derived,
- * and when something is shared it says how much rather than going quiet.
+ * The drawing states "Only you can see them" flatly. This used to derive
+ * a different sentence the moment one piece was shared — "You have shared
+ * one of them" — on the reasoning that saying "only you" over something
+ * somebody else could read is worse than saying nothing.
+ *
+ * The reasoning was right and the premise was wrong. Nobody else can read
+ * any of them: `life-story.view-own` is `ownerOnly`, `getMyLifeStory` is
+ * the only query that exists, and no route or screen reads another
+ * person's story (B-30). Setting a memory to Community records a choice
+ * and shows it to nobody. So the drawing's flat sentence turns out to be
+ * the true one, and what this adds is the part it cannot say on its own:
+ * that a choice was made and has not taken effect.
+ *
+ * Both halves are needed. "Only you can see them" alone would hide that
+ * somebody has asked to share; the count alone would say sharing happened.
  */
 export function whoCanSee(visibilities: readonly string[]): string {
   if (visibilities.length === 0) return '';
+  const one = visibilities.length === 1;
+  const seen = one ? 'Only you can see it.' : 'Only you can see them.';
   const shared = visibilities.filter((v) => v !== PRIVATE).length;
-  if (shared === 0) return 'Only you can see them.';
+  if (shared === 0) return seen;
   if (shared === visibilities.length) {
-    return visibilities.length === 1 ? 'You have shared it.' : 'You have shared all of them.';
+    return one ? `${seen} You have chosen to share it.` : `${seen} You have chosen to share them all.`;
   }
-  return shared === 1 ? 'You have shared one of them.' : `You have shared ${String(shared)} of them.`;
+  return shared === 1
+    ? `${seen} You have chosen to share one of them.`
+    : `${seen} You have chosen to share ${String(shared)} of them.`;
 }

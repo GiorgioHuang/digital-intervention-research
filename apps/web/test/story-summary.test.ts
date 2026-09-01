@@ -37,22 +37,49 @@ describe('the line under the heading', () => {
   });
 
   /**
-   * The failure this exists for. One shared piece makes the drawing's flat
-   * sentence false, and going quiet about it would be its own kind of
-   * wrong — so it says how many.
+   * This test used to assert the opposite, and its premise was wrong.
+   *
+   * It required the line NOT to say "only you" once a piece was shared,
+   * on the reasoning that saying so over something another person can
+   * read is worse than saying nothing. The reasoning holds. What did not
+   * is that anybody can read it: `life-story.view-own` is `ownerOnly`,
+   * `getMyLifeStory` is the only query there is, and no route, screen or
+   * module reads another person's story (B-30). Setting a memory to
+   * Community records a choice and shows it to nobody.
+   *
+   * So "only you can see them" is the true half — and a line that stopped
+   * there would hide that somebody asked to share and nothing came of it,
+   * which on a project about keeping people connected to their families
+   * is the half that matters. Both are required here, together.
    */
-  it('never claims only you can see them once something is shared', () => {
+  it('says only you can see them even when something is marked shared, and says a choice was made', () => {
     for (const shared of ['Community', 'Connections', 'Selected People', 'Platform Public']) {
       const line = whoCanSee(['Private', shared, 'Private']);
-      expect(line, `"${line}" was said with a ${shared} entry present`).not.toMatch(/only you/i);
-      expect(line).toBe('You have shared one of them.');
+      expect(line, `"${line}" claimed a ${shared} entry had reached somebody`).toBe(
+        'Only you can see them. You have chosen to share one of them.',
+      );
     }
   });
 
-  it('counts how many are shared, and says when it is all of them', () => {
-    expect(whoCanSee(['Community', 'Private', 'Community', 'Private'])).toBe('You have shared 2 of them.');
-    expect(whoCanSee(['Community', 'Community'])).toBe('You have shared all of them.');
-    expect(whoCanSee(['Community'])).toBe('You have shared it.');
+  /**
+   * The failure mode to guard hardest: a line that says sharing happened.
+   * Nothing on this platform can show a story to another person, and a
+   * sentence in the past tense over an entry nobody has seen is the
+   * screen telling somebody their family has read them.
+   */
+  it('never says a memory has been shared, only that it was chosen to be', () => {
+    for (const set of [['Community'], ['Community', 'Private'], ['Community', 'Community'], []]) {
+      const line = whoCanSee(set);
+      expect(line, `"${line}" says the sharing already happened`).not.toMatch(/you have shared/i);
+    }
+  });
+
+  it('counts how many were chosen, and says when it is all of them', () => {
+    expect(whoCanSee(['Community', 'Private', 'Community', 'Private'])).toBe(
+      'Only you can see them. You have chosen to share 2 of them.',
+    );
+    expect(whoCanSee(['Community', 'Community'])).toBe('Only you can see them. You have chosen to share them all.');
+    expect(whoCanSee(['Community'])).toBe('Only you can see it. You have chosen to share it.');
   });
 
   it('says nothing about visibility when there is nothing to see', () => {
