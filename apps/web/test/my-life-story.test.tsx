@@ -665,6 +665,92 @@ describe('a participant reading their own life story', () => {
   });
 
   /**
+   * A preview the browser will not draw.
+   *
+   * Reported from a real phone: the photograph uploaded, and where the
+   * preview should have been there was a broken-image glyph and the alt
+   * text sitting in the page. Why the browser declined is not knowable
+   * from here — and it does not need to be, because what the person needs
+   * to know is that their photograph went. A torn-paper icon over
+   * somebody's own photograph says the opposite.
+   */
+  it('says so plainly when it cannot draw the photograph, instead of showing a broken picture', async () => {
+    stubWithFiles([]);
+    const { container } = render(<MyLifeStory session={session} />);
+    await act(async () => {});
+    await openMemory();
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Add a photograph' }));
+    });
+    const bytes = new Uint8Array([1, 2, 3]);
+    const photo = new File([bytes], 'gran.jpg', { type: 'image/jpeg' });
+    Object.defineProperty(photo, 'arrayBuffer', { value: async () => bytes.buffer });
+    await act(async () => {
+      fireEvent.change(screen.getByLabelText('Add a photograph to this entry'), { target: { files: [photo] } });
+    });
+    await act(async () => {});
+
+    const img = container.querySelector('.story-photograph--pending img')!;
+    expect(img, 'there was no preview to fail').not.toBeNull();
+    await act(async () => {
+      fireEvent.error(img);
+    });
+
+    expect(
+      container.querySelector('.story-photograph--pending img'),
+      'the broken picture is still on the screen',
+    ).toBeNull();
+    const said = document.body.textContent ?? '';
+    expect(said).toMatch(/cannot show you the photograph you chose/i);
+    // And it does not leave somebody thinking their photograph failed.
+    expect(said, 'the fault was put on the photograph rather than the page').toMatch(/fault of this page/i);
+    expect(said).toMatch(/it was sent/i);
+  });
+
+  /**
+   * An upload is two requests, and which one failed changes what is true.
+   *
+   * The first creates the record; the second sends the bytes. When the
+   * second failed the screen showed the network wording — "nothing was
+   * submitted" — over a record that had already been created. Reported
+   * from the deployed site, where an entry that had shown an error turned
+   * out to have the photograph in it.
+   */
+  it('does not say nothing was sent when the record was already made', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (path: string, init?: RequestInit) => {
+        const method = init?.method ?? 'GET';
+        if (method === 'POST' && /\/v1\/objects\/[^/]+\/content$/.test(path)) {
+          // The bytes fail; the record above them exists.
+          throw new TypeError('Failed to fetch');
+        }
+        if (method === 'POST') return new Response(JSON.stringify({ data: { id: 'obj_1' } }), { status: 201 });
+        if (path.includes('/objects')) return new Response(JSON.stringify({ data: [] }), { status: 200 });
+        return new Response(JSON.stringify({ data: [item()], meta: { archiveId: 'ar_1' } }), { status: 200 });
+      }),
+    );
+    render(<MyLifeStory session={session} />);
+    await act(async () => {});
+    await openMemory();
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Add a photograph' }));
+    });
+    const bytes = new Uint8Array([1, 2, 3]);
+    const photo = new File([bytes], 'gran.jpg', { type: 'image/jpeg' });
+    Object.defineProperty(photo, 'arrayBuffer', { value: async () => bytes.buffer });
+    await act(async () => {
+      fireEvent.change(screen.getByLabelText('Add a photograph to this entry'), { target: { files: [photo] } });
+    });
+    await act(async () => {});
+
+    const said = document.body.textContent ?? '';
+    expect(said, 'the screen claimed nothing was sent').not.toMatch(/nothing was submitted/i);
+    expect(said).toMatch(/did not finish sending/i);
+    expect(said, 'nothing said the entry survived it').toMatch(/nothing is on your entry/i);
+  });
+
+  /**
    * A refused file said nothing at all before.
    *
    * The attachment listing shows only files that cleared checking, so a

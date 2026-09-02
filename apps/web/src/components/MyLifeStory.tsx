@@ -5,6 +5,7 @@ import {
   MAX_FILE_MB,
   PHOTOGRAPH_TYPES,
   PHOTOGRAPH_TYPE_WORDS,
+  UploadInterrupted,
   type AttachedFile,
   type MyLifeStoryItem,
   type Session,
@@ -245,6 +246,18 @@ export function MyLifeStory({ session }: { session: Session }) {
   const [pending, setPending] = useState<
     Record<string, { objectId: string; url: string; state: string; checking: boolean }>
   >({});
+  /**
+   * Previews the browser would not draw.
+   *
+   * Reported from a real phone: the photograph uploaded, and where the
+   * preview should have been there was a broken-image glyph and the alt
+   * text. Why the browser could not draw it is not knowable from here —
+   * an object URL it declined to resolve, a file whose bytes are not the
+   * format its name claims. What is knowable is that the picture went,
+   * and a page showing somebody a torn-paper icon over their own
+   * photograph is telling them something frightening and wrong.
+   */
+  const [unpreviewable, setUnpreviewable] = useState<ReadonlySet<string>>(new Set());
   const pendingRef = useRef<Record<string, { objectId: string; url: string; state: string; checking: boolean }>>({});
   pendingRef.current = pending;
   /** Cleared on unmount, so a poll in flight stops asking. */
@@ -425,7 +438,21 @@ export function MyLifeStory({ session }: { session: Session }) {
       say('Your photograph has been received and is being checked. It is not on this entry yet.', true);
       void watchUpload(itemId, objectId);
     } catch (err) {
-      setActionError(presentError(err));
+      /*
+       * Which half failed decides what is true. If the bytes failed there
+       * is already a record waiting for them, so "nothing was submitted"
+       * — the sentence the network wording gives — would be false. It is
+       * said plainly instead, and the prepared error block is kept for
+       * the case where nothing was started at all.
+       */
+      if (err instanceof UploadInterrupted) {
+        setActionError(null);
+        say(
+          'The photograph did not finish sending. Nothing is on your entry and nothing you have written is affected. You can choose it again.',
+        );
+      } else {
+        setActionError(presentError(err));
+      }
     } finally {
       setUploading(null);
     }
@@ -783,11 +810,21 @@ export function MyLifeStory({ session }: { session: Session }) {
                 */}
                 {pending[item.itemId] !== undefined && (
                   <div className="story-photograph story-photograph--pending">
-                    <img
-                      className="story-photograph__image"
-                      src={pending[item.itemId]!.url}
-                      alt="The photograph you have just sent. Nothing here describes what is in it."
-                    />
+                    {unpreviewable.has(pending[item.itemId]!.objectId) ? (
+                      <p className="story-photograph__unshown">
+                        This page cannot show you the photograph you chose. That is a fault of this page and not of
+                        your photograph — it was sent, and it is being checked.
+                      </p>
+                    ) : (
+                      <img
+                        className="story-photograph__image"
+                        src={pending[item.itemId]!.url}
+                        alt="The photograph you have just sent. Nothing here describes what is in it."
+                        onError={() =>
+                          setUnpreviewable((was) => new Set(was).add(pending[item.itemId]!.objectId))
+                        }
+                      />
+                    )}
                     {pending[item.itemId]!.state === 'Rejected' ? (
                       /*
                         Nothing said this before: the listing shows only

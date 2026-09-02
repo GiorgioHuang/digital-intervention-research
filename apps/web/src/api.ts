@@ -13,6 +13,20 @@ export interface ApiError {
   retryable: boolean;
 }
 
+/**
+ * The bytes did not arrive, and the record for them does.
+ *
+ * Thrown only for a failure of the second request in an upload. The first
+ * one has already created a stored object, so the screen must not say
+ * nothing was sent: something was started, nothing is on the entry, and
+ * the difference matters to somebody deciding whether to try again.
+ */
+export class UploadInterrupted extends Error {
+  constructor(readonly platform?: PlatformApiError, readonly cause?: unknown) {
+    super(platform?.message ?? 'The photograph was not finished');
+  }
+}
+
 export class PlatformApiError extends Error {
   constructor(readonly error: ApiError, readonly status: number) {
     super(error.message);
@@ -561,7 +575,21 @@ export const api = {
       declaredSizeBytes: bytes.byteLength,
       attachTo: { owningResourceType: 'LifeStoryItem', owningResourceId: itemId },
     });
-    await post(s, `/v1/objects/${started.data.id}/content`, { contentBase64: toBase64(bytes) });
+    /*
+     * Two requests, and which one failed changes what is true.
+     *
+     * The first creates the record; the second sends the bytes. If the
+     * second fails there IS an object, waiting for an upload that never
+     * came — so telling somebody "nothing was submitted" would be false,
+     * and it is the sentence they were given. The failure is marked with
+     * the half it happened in so the screen can say which.
+     */
+    try {
+      await post(s, `/v1/objects/${started.data.id}/content`, { contentBase64: toBase64(bytes) });
+    } catch (err) {
+      if (err instanceof PlatformApiError) throw new UploadInterrupted(err);
+      throw new UploadInterrupted(undefined, err);
+    }
     return started.data.id;
   },
   /**
