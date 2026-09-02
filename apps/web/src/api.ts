@@ -557,9 +557,21 @@ export const api = {
   getMyProfile: (s: Session) =>
     get<{ data: { id: string; attributes: MyProfile } | null }>(s, `/v1/participants/${s.participantId}/profile`),
   listLifeStoryItemFiles: (s: Session, itemId: string) =>
+    api.listItemFilesOwnedBy(s, s.participantId, itemId),
+  /**
+   * The photographs on somebody's memory, asked for by whoever may see
+   * it.
+   *
+   * The owner is named rather than assumed, because a supporter has no
+   * participant record of their own and the one they are reading belongs
+   * to somebody else. The server decides whether they may: a photograph
+   * follows the memory it is on, so this returns nothing unless that
+   * memory was shared with the caller.
+   */
+  listItemFilesOwnedBy: (s: Session, ownerParticipantId: string, itemId: string) =>
     get<{ data: { id: string; attributes: AttachedFile }[] }>(
       s,
-      `/v1/participants/${s.participantId}/objects?owningResourceType=LifeStoryItem&owningResourceId=${encodeURIComponent(itemId)}`,
+      `/v1/participants/${ownerParticipantId}/objects?owningResourceType=LifeStoryItem&owningResourceId=${encodeURIComponent(itemId)}`,
     ),
   readFileContent: (s: Session, objectId: string) => readBlob(s, `/v1/objects/${objectId}/content`),
   /**
