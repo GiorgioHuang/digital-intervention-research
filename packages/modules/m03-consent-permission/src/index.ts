@@ -20,3 +20,4 @@ export {
   type SupportedPersonView,
 } from './application/consent-queries.js';
 export { expireRelationships } from './application/sweeps.js';
+export { relationshipStateNow, relationshipInForce } from './application/in-force.js';

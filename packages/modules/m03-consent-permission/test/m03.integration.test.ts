@@ -605,6 +605,62 @@ describe.skipIf(!dbAvailable)('M01+M03 identity, consent and permission (integra
     expect(ok.relationshipId).toBeTruthy();
   });
 
+  /**
+   * A relationship that has run out is described as run out, when
+   * somebody asks.
+   *
+   * `relationship_state` is moved to 'Expired' by a sweep, and there is
+   * no worker to run it (owner, 2026-09-02) — so a relationship that
+   * lapsed months ago goes on reading 'Active' in the column. This is the
+   * screen that answers "who has access to my information". Telling
+   * somebody an access is Active when it lapsed is being wrong about who
+   * can read them, in the direction that worries a person more.
+   *
+   * The permission engine was never fooled: it compares the expiry
+   * against the clock every time it decides. Only the description was.
+   */
+  it('describes a lapsed access as expired, without waiting for a sweep', async () => {
+    const own = ctxFor(participantId);
+    const { relationshipId } = await proposeRelationship(m03, ctxFor(adminId), {
+      participantId,
+      relatedActorId: supporterId,
+      relationshipType: 'Friend',
+      permittedActions: ['participant.view-shared'],
+    });
+    const proposed = (await listOwnRelationships(m03, own, participantId)).find(
+      (r) => r.relationshipId === relationshipId,
+    );
+    await approveRelationship(m03, own, {
+      relationshipId,
+      expectedVersion: proposed!.recordVersion,
+      confirmed: true,
+    });
+
+    // Expired in the past, and still 'Active' in the column, which is
+    // exactly the state nothing is left to correct.
+    await pool.query(`UPDATE consent_permission.relationships SET expires_at = $2 WHERE id = $1`, [
+      relationshipId,
+      new Date('2020-01-01T00:00:00Z'),
+    ]);
+    const stored = await pool.query(
+      `SELECT relationship_state FROM consent_permission.relationships WHERE id = $1`,
+      [relationshipId],
+    );
+    expect(stored.rows[0].relationship_state, 'the fixture stopped testing what it was for').toBe('Active');
+
+    const mine = (await listOwnRelationships(m03, own, participantId)).find(
+      (r) => r.relationshipId === relationshipId,
+    );
+    expect(mine?.relationshipState, 'a lapsed access was reported as active').toBe('Expired');
+
+    // And the supporter's own list says the same thing, rather than
+    // offering them a door that will not open.
+    const theirs = (await listRelationshipsForActor(m03, ctxFor(supporterId))).find(
+      (r) => r.relationshipId === relationshipId,
+    );
+    expect(theirs?.relationshipState, 'the supporter was told they still had access').toBe('Expired');
+  });
+
   it('a participant lists who has, or has asked for, access — and ends it', async () => {
     const own = ctxFor(participantId);
     const { relationshipId } = await proposeRelationship(m03, ctxFor(adminId), {

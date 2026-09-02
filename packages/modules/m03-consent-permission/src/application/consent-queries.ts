@@ -1,4 +1,5 @@
 import type { RequestContext } from '@platform/kernel';
+import { relationshipStateNow } from './in-force.js';
 import { assertAllowed } from '@platform/policy';
 import type { M03Deps } from './consent-commands.js';
 
@@ -63,7 +64,23 @@ export async function listOwnRelationships(
     relationshipId: r.id as string,
     relatedActorId: r.related_actor_id as string,
     relationshipType: r.relationship_type as string,
-    relationshipState: r.relationship_state as string,
+    /*
+     * The state it is really in, not the state last written down.
+     *
+     * `relationship_state` is moved to 'Expired' by a sweep, and there is
+     * no worker to run it (owner, 2026-09-02) — so a relationship that
+     * lapsed months ago still reads 'Active' in the column. This is the
+     * screen that answers "who has access to my information", and
+     * telling somebody an access is Active when it lapsed is being wrong
+     * about who can read them, in the direction that worries a person
+     * more. The permission engine has never been fooled by it; only the
+     * description was.
+     */
+    relationshipState: relationshipStateNow(
+      r.relationship_state as string,
+      (r.expires_at as Date | null) ?? null,
+      deps.clock.now(),
+    ),
     permittedActions: (r.permitted_actions ?? []) as string[],
     expiresAt: r.expires_at === null ? null : (r.expires_at as Date).toISOString(),
     recordVersion: r.record_version as number,
@@ -120,7 +137,12 @@ export async function listRelationshipsForActor(
     relationshipId: r.id as string,
     participantId: r.participant_id as string,
     relationshipType: r.relationship_type as string,
-    relationshipState: r.relationship_state as string,
+    /* Worked out now, not when a sweep gets to it. See above. */
+    relationshipState: relationshipStateNow(
+      r.relationship_state as string,
+      (r.expires_at as Date | null) ?? null,
+      deps.clock.now(),
+    ),
     permittedActions: (r.permitted_actions ?? []) as string[],
     expiresAt: r.expires_at === null ? null : (r.expires_at as Date).toISOString(),
   }));
