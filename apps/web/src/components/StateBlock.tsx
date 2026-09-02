@@ -52,12 +52,23 @@ export function ErrorState({ error, actions }: { error: PresentedError; actions?
       {error.reason !== undefined && <p>{error.reason}</p>}
       <p>{error.nextStep}</p>
       {actions}
-      {/* The code helps support and nobody else, so it stays collapsed. */}
+      {/* Helps support and nobody else, so it stays collapsed. */}
       <details>
         <summary>Technical details</summary>
         <p>
           <code>{error.code}</code>
         </p>
+        {/*
+          What the server said, when it said anything. The code alone
+          named a family rather than a fault — an upload failing on a
+          real phone offered "NETWORK" and nothing else, which was not
+          enough to act on and was not even true.
+        */}
+        {error.detail !== undefined && (
+          <p>
+            <code>{error.detail}</code>
+          </p>
+        )}
       </details>
     </div>
   );

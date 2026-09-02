@@ -24,6 +24,17 @@ export interface PresentedError {
   nextStep: string;
   /** Technical code, shown only inside a details disclosure. */
   code: string;
+  /**
+   * What the server actually said, when it said anything.
+   *
+   * Collapsed with the code, never in the sentence. The code alone was
+   * all support had, and it named a family rather than a fault: an
+   * upload failing on a real phone showed "NETWORK", which was both
+   * uninformative and untrue — the server had answered, with something
+   * that was not JSON. A status and a fragment of the body is what makes
+   * that answerable.
+   */
+  detail?: string;
 }
 
 const SUPPORT = 'If this looks wrong, you can contact the research team from Help and safety.';
@@ -295,7 +306,13 @@ export function presentError(err: unknown): PresentedError {
   // A protected-existence 404 and a genuine missing record are the same
   // wording by design; see NOT_FOUND.
   const mapped = BY_CODE[code] ?? (err.status === 404 ? NOT_FOUND : UNKNOWN);
-  return { ...mapped, code };
+  /*
+   * The message is the server's own and is written for support, not for
+   * the person reading the screen — so it travels in `detail`, behind
+   * the disclosure, and never replaces the prepared wording above it.
+   */
+  const detail = err.error?.message === undefined ? undefined : `${String(err.status)} · ${err.error.message}`;
+  return { ...mapped, code, ...(detail === undefined ? {} : { detail }) };
 }
 
 /**

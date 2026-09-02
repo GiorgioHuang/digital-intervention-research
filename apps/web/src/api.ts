@@ -141,6 +141,60 @@ export const MAX_FILE_BYTES = MAX_FILE_MB * 1024 * 1024;
 export const PHOTOGRAPH_TYPES = ['image/jpeg', 'image/png'] as const;
 export const PHOTOGRAPH_TYPE_WORDS = 'JPEG or PNG';
 
+/**
+ * The response body, whether or not it is this platform's envelope.
+ *
+ * `res.json()` used to be called before `res.ok` was checked, so any
+ * answer that was not JSON threw a SyntaxError — which is not a
+ * `PlatformApiError`, so `presentError` fell through to NETWORK and the
+ * screen said "The server could not be reached". The server had been
+ * reached. It had answered. What it answered was an HTML error page from
+ * something between the browser and this application, and the one thing
+ * the screen kept for support was the word NETWORK, which is the one
+ * thing that was not true.
+ *
+ * So a body that is not the envelope becomes an error naming the status
+ * it arrived with. `HTTP_502` in the technical details is worth more than
+ * a wrong sentence, and the wording above it stays honest: for a 5xx this
+ * platform genuinely does not know whether the request took effect.
+ */
+/**
+ * Bytes to base64, in chunks.
+ *
+ * This was `for (const b of bytes) binary += String.fromCharCode(b)` —
+ * one iteration per byte, so four million of them for an ordinary
+ * photograph, building a four-megabyte string a character at a time on
+ * the main thread of somebody's phone. `apply` over a slice does the same
+ * work per chunk in one call; the chunk is small enough not to overflow
+ * the argument list, which is what a single `apply` over the whole array
+ * would do on a large file.
+ */
+export function toBase64(bytes: Uint8Array): string {
+  const CHUNK = 0x8000;
+  let binary = '';
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
+  }
+  return btoa(binary);
+}
+
+async function envelope(res: Response): Promise<{ error?: ApiError }> {
+  const text = await res.text();
+  try {
+    return JSON.parse(text) as { error?: ApiError };
+  } catch {
+    return {
+      error: {
+        code: `HTTP_${String(res.status)}`,
+        // Kept for the collapsed details, never shown as the sentence.
+        message: text.slice(0, 200),
+        requestId: 'none',
+        retryable: res.status >= 500,
+      },
+    };
+  }
+}
+
 async function post<T>(session: Session, path: string, body: object): Promise<T> {
   const res = await fetch(path, {
     method: 'POST',
@@ -152,7 +206,7 @@ async function post<T>(session: Session, path: string, body: object): Promise<T>
     },
     body: JSON.stringify(body),
   });
-  const json = (await res.json()) as T & { error?: ApiError };
+  const json = (await envelope(res)) as T & { error?: ApiError };
   if (!res.ok) raiseApiError(json, res.status);
   return json;
 }
@@ -174,15 +228,7 @@ async function readBlob(session: Session, path: string): Promise<Blob> {
   const res = await fetch(path, {
     headers: { 'x-actor-id': session.actorId, ...platformClientHeader(), ...accessTokenHeader() },
   });
-  if (!res.ok) {
-    let json: { error?: ApiError } = {};
-    try {
-      json = (await res.json()) as { error?: ApiError };
-    } catch {
-      // A body that is not JSON is still a failure; raiseApiError says so.
-    }
-    raiseApiError(json, res.status);
-  }
+  if (!res.ok) raiseApiError(await envelope(res), res.status);
   return res.blob();
 }
 
@@ -190,7 +236,7 @@ async function get<T>(session: Session, path: string): Promise<T> {
   const res = await fetch(path, {
     headers: { 'x-actor-id': session.actorId, ...platformClientHeader(), ...accessTokenHeader() },
   });
-  const json = (await res.json()) as T & { error?: ApiError };
+  const json = (await envelope(res)) as T & { error?: ApiError };
   if (!res.ok) raiseApiError(json, res.status);
   return json;
 }
@@ -515,9 +561,7 @@ export const api = {
       declaredSizeBytes: bytes.byteLength,
       attachTo: { owningResourceType: 'LifeStoryItem', owningResourceId: itemId },
     });
-    let binary = '';
-    for (const b of bytes) binary += String.fromCharCode(b);
-    await post(s, `/v1/objects/${started.data.id}/content`, { contentBase64: btoa(binary) });
+    await post(s, `/v1/objects/${started.data.id}/content`, { contentBase64: toBase64(bytes) });
     return started.data.id;
   },
   /**
