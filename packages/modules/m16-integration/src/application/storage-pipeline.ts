@@ -472,7 +472,7 @@ async function mayReadAttachments(
   deps: StorageDeps,
   ctx: RequestContext,
   input: { owningResourceType: string; owningResourceId: string; ownerParticipantId: string; objectId: string },
-): Promise<{ allowed: boolean; policyVersion: string }> {
+): Promise<{ allowed: boolean; isOwner: boolean; policyVersion: string }> {
   const resource = {
     type: 'StoredObject',
     id: input.objectId,
@@ -481,19 +481,21 @@ async function mayReadAttachments(
     ownerParticipantId: input.ownerParticipantId,
   };
   const own = await deps.checkPermission(ctx, { action: 'object.view-own', resource });
-  if (own.outcome === 'Allow') return { allowed: true, policyVersion: own.policyVersion };
+  if (own.outcome === 'Allow') return { allowed: true, isOwner: true, policyVersion: own.policyVersion };
 
   // Not the owner. Only a wired port can open this, and only then if the
   // owning record says this viewer was shared it.
-  if (deps.mayReadOwningResource === undefined) return { allowed: false, policyVersion: own.policyVersion };
+  if (deps.mayReadOwningResource === undefined) {
+    return { allowed: false, isOwner: false, policyVersion: own.policyVersion };
+  }
   const shared = await deps.checkPermission(ctx, { action: 'object.view-shared', resource });
-  if (shared.outcome !== 'Allow') return { allowed: false, policyVersion: shared.policyVersion };
+  if (shared.outcome !== 'Allow') return { allowed: false, isOwner: false, policyVersion: shared.policyVersion };
   const permitted = await deps.mayReadOwningResource(ctx, {
     owningResourceType: input.owningResourceType,
     owningResourceId: input.owningResourceId,
     ownerParticipantId: input.ownerParticipantId,
   });
-  return { allowed: permitted, policyVersion: shared.policyVersion };
+  return { allowed: permitted, isOwner: false, policyVersion: shared.policyVersion };
 }
 
 export interface AttachedObject {
@@ -549,15 +551,33 @@ export async function listObjectsForResource(
     // record has files on it, or that it exists.
     throw new PlatformError('RESOURCE_NOT_FOUND', 'Object not found');
   }
+  /*
+   * The owner also sees what is still being checked, and what was
+   * refused. Everybody else sees only what cleared.
+   *
+   * This listed Available alone, for everybody including the person who
+   * sent the file — so a photograph sat in quarantine invisible to its
+   * own owner, and since nothing runs the scan sweep in the deployed
+   * environment (B-29) it stayed invisible for good. What that looked
+   * like from a phone: send a photograph, see it, refresh, and it is
+   * gone with no trace and no explanation. Somebody has every reason to
+   * conclude the platform lost it.
+   *
+   * A shared viewer is still Available-only, and deliberately: a file
+   * that has not cleared checking is not something to hand to a third
+   * person, and which files somebody tried to add and had refused is
+   * their business and not their daughter's.
+   */
+  const states = may.isOwner ? ['Available', 'Quarantined', 'Rejected'] : ['Available'];
   const res = await deps.pool.query(
     `SELECT id, declared_content_type, declared_size_bytes, object_state, data_classification, created_at
        FROM storage_ops.stored_objects
       WHERE owner_participant_id = $1
         AND owning_resource_type = $2
         AND owning_resource_id = $3
-        AND object_state = 'Available'
+        AND object_state = ANY($4::text[])
       ORDER BY created_at`,
-    [input.ownerParticipantId, input.owningResourceType, input.owningResourceId],
+    [input.ownerParticipantId, input.owningResourceType, input.owningResourceId, states],
   );
   return res.rows.map((r) => ({
     objectId: r.id as string,

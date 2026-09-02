@@ -48,6 +48,8 @@ function stubFetch(body: unknown) {
  */
 function stubWithFiles(files: unknown[], only?: unknown, objectState?: string) {
   const calls: { path: string; method: string; body: Record<string, unknown> }[] = [];
+  /** What has been uploaded during the test, as the server would list it. */
+  const uploaded: unknown[] = [];
   vi.stubGlobal(
     'fetch',
     vi.fn(async (path: string, init?: RequestInit) => {
@@ -80,10 +82,27 @@ function stubWithFiles(files: unknown[], only?: unknown, objectState?: string) {
         );
       }
       if (method === 'GET' && path.includes('/objects')) {
-        return new Response(JSON.stringify({ data: files }), { status: 200 });
+        /*
+         * The server lists the owner's own files including the ones
+         * still being checked, so a photograph just sent appears in the
+         * listing straight away — which is what makes it survive a
+         * refresh. A stub that kept returning the original list would
+         * make every test here pass over a screen that had lost it.
+         */
+        return new Response(JSON.stringify({ data: [...files, ...uploaded] }), { status: 200 });
       }
       if (method === 'GET') {
         return new Response(JSON.stringify({ data: [only ?? item()], meta: { archiveId: 'ar_1' } }), { status: 200 });
+      }
+      if (method === 'POST' && path === '/v1/objects') {
+        uploaded.push({
+          id: 'obj_1',
+          attributes: {
+            objectId: 'obj_1', declaredContentType: 'image/jpeg', declaredSizeBytes: 3,
+            objectState: objectState ?? 'Quarantined', dataClassification: 'Sensitive-Personal',
+            createdAt: '2026-09-02T00:00:00Z',
+          },
+        });
       }
       return new Response(JSON.stringify({ data: { id: 'obj_1' } }), { status: 201 });
     }),
@@ -690,21 +709,154 @@ describe('a participant reading their own life story', () => {
     });
     await act(async () => {});
 
-    const img = container.querySelector('.story-photograph--pending img')!;
+    const img = container.querySelector('.story-photograph img')!;
     expect(img, 'there was no preview to fail').not.toBeNull();
     await act(async () => {
       fireEvent.error(img);
     });
 
-    expect(
-      container.querySelector('.story-photograph--pending img'),
-      'the broken picture is still on the screen',
-    ).toBeNull();
+    expect(container.querySelector('.story-photograph img'), 'the broken picture is still on the screen').toBeNull();
     const said = document.body.textContent ?? '';
-    expect(said).toMatch(/cannot show you the photograph you chose/i);
+    expect(said).toMatch(/cannot show you this photograph/i);
     // And it does not leave somebody thinking their photograph failed.
     expect(said, 'the fault was put on the photograph rather than the page').toMatch(/fault of this page/i);
-    expect(said).toMatch(/it was sent/i);
+    expect(said).toMatch(/it reached this platform/i);
+  });
+
+  /**
+   * A photograph that has been sent is still there after a refresh.
+   *
+   * Reported 2026-09-02: send a photograph, see it, refresh, and it is
+   * gone. It existed nowhere but in this browser — the listing returned
+   * files that had cleared checking and nothing else, so a photograph in
+   * quarantine was invisible even to the person who sent it, and nothing
+   * runs the scan sweep in the deployed environment (B-29), so it stayed
+   * invisible for good. The row comes from the record now.
+   */
+  it('keeps a photograph on the entry after a reload, while it is being checked', async () => {
+    stubWithFiles([]);
+    const { container, unmount } = render(<MyLifeStory session={session} />);
+    await act(async () => {});
+    await openMemory();
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Add a photograph' }));
+    });
+    const bytes = new Uint8Array([1, 2, 3]);
+    const photo = new File([bytes], 'gran.jpg', { type: 'image/jpeg' });
+    Object.defineProperty(photo, 'arrayBuffer', { value: async () => bytes.buffer });
+    await act(async () => {
+      fireEvent.change(screen.getByLabelText('Add a photograph to this entry'), { target: { files: [photo] } });
+    });
+    await act(async () => {});
+    expect(container.querySelectorAll('.story-photograph').length).toBe(1);
+
+    // The same thing a refresh does: everything this session held is gone.
+    unmount();
+    render(<MyLifeStory session={session} />);
+    await act(async () => {});
+    await openMemory();
+    await act(async () => {});
+
+    expect(
+      document.querySelectorAll('.story-photograph').length,
+      'the photograph vanished when the page was opened again',
+    ).toBe(1);
+    const said = document.body.textContent ?? '';
+    expect(said).toMatch(/Received, and being checked/i);
+    expect(said, 'nothing said it survives closing the page').toMatch(/whether or not you close this page/i);
+    // The privacy answer travels with it, because the upload box has closed.
+    expect(said).toMatch(/no way to share a photograph with anyone/i);
+  });
+
+  /**
+   * The photograph appears even when asking after it fails.
+   *
+   * The list is reloaded straight after the upload AND again by the first
+   * status check. That looks redundant until the status call is the thing
+   * that fails: `checkUpload` swallows the failure and returns, so
+   * without the reload in `attach` the photograph would be on the server
+   * and on no screen. A mutation showed nothing tested the difference.
+   */
+  it('shows the photograph even if asking what happened to it fails', async () => {
+    const uploaded: unknown[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (path: string, init?: RequestInit) => {
+        const method = init?.method ?? 'GET';
+        // The one call that fails: "what became of this object?"
+        if (method === 'GET' && /\/v1\/objects\/[^/]+$/.test(path)) throw new TypeError('Failed to fetch');
+        if (method === 'GET' && path.includes('/objects')) {
+          return new Response(JSON.stringify({ data: uploaded }), { status: 200 });
+        }
+        if (method === 'GET') {
+          return new Response(JSON.stringify({ data: [item()], meta: { archiveId: 'ar_1' } }), { status: 200 });
+        }
+        if (path === '/v1/objects') {
+          uploaded.push({ id: 'obj_1', attributes: {
+            objectId: 'obj_1', declaredContentType: 'image/jpeg', declaredSizeBytes: 3,
+            objectState: 'Quarantined', dataClassification: 'Sensitive-Personal', createdAt: '2026-09-02T00:00:00Z',
+          } });
+        }
+        return new Response(JSON.stringify({ data: { id: 'obj_1' } }), { status: 201 });
+      }),
+    );
+    const { container } = render(<MyLifeStory session={session} />);
+    await act(async () => {});
+    await openMemory();
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Add a photograph' }));
+    });
+    const bytes = new Uint8Array([1, 2, 3]);
+    const photo = new File([bytes], 'gran.jpg', { type: 'image/jpeg' });
+    Object.defineProperty(photo, 'arrayBuffer', { value: async () => bytes.buffer });
+    await act(async () => {
+      fireEvent.change(screen.getByLabelText('Add a photograph to this entry'), { target: { files: [photo] } });
+    });
+    await act(async () => {});
+
+    expect(
+      container.querySelectorAll('.story-photograph').length,
+      'the photograph was on the server and on no screen',
+    ).toBe(1);
+  });
+
+  /**
+   * A second photograph does not take the place of the first.
+   *
+   * Reported alongside: uploading another photograph left the memory
+   * showing the old one and lost the new one on refresh. Both were sent,
+   * both were waiting, and the screen could hold only one because it
+   * remembered a pending upload per ENTRY rather than per file.
+   */
+  it('shows both photographs when a second is added to the same memory', async () => {
+    const calls = stubWithFiles([
+      { id: 'obj_old', attributes: {
+        objectId: 'obj_old', declaredContentType: 'image/jpeg', declaredSizeBytes: 2048,
+        objectState: 'Available', dataClassification: 'Sensitive-Personal', createdAt: '2026-06-01T00:00:00Z',
+      } },
+    ]);
+    const { container } = render(<MyLifeStory session={session} />);
+    await act(async () => {});
+    await openMemory();
+    await act(async () => {});
+    expect(container.querySelectorAll('.story-photograph').length).toBe(1);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Add a photograph' }));
+    });
+    const bytes = new Uint8Array([4, 5, 6]);
+    const photo = new File([bytes], 'new.jpg', { type: 'image/jpeg' });
+    Object.defineProperty(photo, 'arrayBuffer', { value: async () => bytes.buffer });
+    await act(async () => {
+      fireEvent.change(screen.getByLabelText('Add a photograph to this entry'), { target: { files: [photo] } });
+    });
+    await act(async () => {});
+
+    expect(
+      container.querySelectorAll('.story-photograph').length,
+      'the new photograph replaced the one already there',
+    ).toBe(2);
+    expect(calls.some((c) => c.path === '/v1/objects')).toBe(true);
   });
 
   /**

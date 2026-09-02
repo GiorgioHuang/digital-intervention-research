@@ -332,6 +332,73 @@ describe.skipIf(!dbAvailable)('object-storage quarantine pipeline (integration)'
   });
 
   /**
+   * A photograph in quarantine, seen by the person who sent it.
+   *
+   * The listing returned Available alone, for everybody including the
+   * owner — so a file that had been received and not yet checked was
+   * invisible to the person who sent it, and since nothing runs the scan
+   * sweep in the deployed environment (B-29) it stayed invisible for
+   * good. From a phone that looked like: send a photograph, see it,
+   * refresh, and it is gone with nothing said. Reported 2026-09-02.
+   */
+  it('shows the owner a photograph that is still being checked', async () => {
+    const entryId = await entry('lsi_quarantined');
+    const objectId = await upload(PNG_BYTES, 'image/png');
+    // Attached at the start, and not yet scanned: the state the report
+    // is about.
+    await pool.query(
+      `UPDATE storage_ops.stored_objects
+          SET owning_resource_type = 'LifeStoryItem', owning_resource_id = $2
+        WHERE id = $1`,
+      [objectId, entryId],
+    );
+
+    const mine = await listObjectsForResource(storage, ctx(patAcc), {
+      ownerParticipantId: patId, owningResourceType: 'LifeStoryItem', owningResourceId: entryId,
+    });
+    const found = mine.find((a) => a.objectId === objectId);
+    expect(found, 'the owner could not see their own photograph while it was being checked').toBeDefined();
+    expect(found?.objectState).toBe('Quarantined');
+  });
+
+  /**
+   * And nobody else does. A file that has not cleared checking is not
+   * something to hand to a third person, and which files somebody tried
+   * to add and had refused is their business and not their daughter's.
+   */
+  it('shows a shared viewer only what has cleared checking', async () => {
+    const entryId = await entry('lsi_quarantined_shared');
+    const cleared = await upload(PNG_BYTES, 'image/png');
+    await scanPendingObjects(storage, sysCtx());
+    await releaseObject(storage, ctx(patAcc), cfg, {
+      objectId: cleared, owningResourceType: 'LifeStoryItem', owningResourceId: entryId,
+    });
+    const waiting = await upload(PNG_BYTES, 'image/png');
+    await pool.query(
+      `UPDATE storage_ops.stored_objects
+          SET owning_resource_type = 'LifeStoryItem', owning_resource_id = $2
+        WHERE id = $1`,
+      [waiting, entryId],
+    );
+
+    const shared: StorageDeps = { ...storage, mayReadOwningResource: async () => true };
+    const theirs = await listObjectsForResource(shared, ctx(otherAcc), {
+      ownerParticipantId: patId, owningResourceType: 'LifeStoryItem', owningResourceId: entryId,
+    });
+    expect(theirs.map((a) => a.objectId)).toEqual([cleared]);
+    expect(
+      theirs.map((a) => a.objectId),
+      'a file that had not cleared checking was handed to somebody else',
+    ).not.toContain(waiting);
+
+    // The owner sees both, and which is which.
+    const mine = await listObjectsForResource(storage, ctx(patAcc), {
+      ownerParticipantId: patId, owningResourceType: 'LifeStoryItem', owningResourceId: entryId,
+    });
+    expect(mine.map((a) => a.objectId).sort()).toEqual([cleared, waiting].sort());
+  });
+
+  /**
    * A photograph follows the memory it is on.
    *
    * The owner's decision (2026-09-01, B-30): one scope per memory,
