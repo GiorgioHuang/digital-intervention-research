@@ -194,7 +194,13 @@ export async function completeUpload(
   deps: StorageDeps,
   ctx: RequestContext,
   input: { objectId: string; content: Buffer },
-): Promise<{ checksum: string }> {
+  config: StorageConfig = DEFAULT_STORAGE_CONFIG,
+): Promise<{
+  checksum: string;
+  /** Null when the checker could not run at all; the object stays quarantined. */
+  scanOutcome: 'Clean' | 'Malware Detected' | 'Scan Failed' | null;
+  objectState: string;
+}> {
   const row = await loadOwnedObject(deps, ctx, input.objectId);
   if (row.object_state !== 'Pending Upload') {
     throw new PlatformError('INVALID_STATE_TRANSITION', 'Object is not awaiting upload');
@@ -235,7 +241,53 @@ export async function completeUpload(
       occurredAt: now,
     });
   });
-  return { checksum };
+
+  /*
+   * Checked now, not on a schedule.
+   *
+   * Quarantine was passed through by a sweep: the bytes landed here, the
+   * object sat Quarantined, and something scheduled came along later and
+   * released it. Nothing scheduled runs in the deployed environment
+   * (B-29), so every photograph anybody added stayed in quarantine for
+   * good — invisible on the entry, with the participant told to wait for
+   * a check that was never coming.
+   *
+   * The owner's ruling (2026-09-02): if a file needs checking, the
+   * checking starts when it arrives. So it happens here, in the same act
+   * as the upload.
+   *
+   * What has NOT changed is the gate. The object is written Quarantined
+   * first and is scanned from that state — it never goes straight to
+   * Available, the CHECK constraint still refuses Available without a
+   * clean scan, a checksum, a classification and an owning resource, and
+   * a failed scan still never marks anything safe. Only the timing moved.
+   *
+   * A scan that throws leaves the object Quarantined and the upload
+   * successful, because the bytes did arrive: losing somebody's
+   * photograph to report a fault in the checker would be the wrong trade.
+   * `scanPendingObjects` remains the way to pick such an object up.
+   *
+   * This is affordable because the checker is in-process and
+   * deterministic (ADR-126 — a real scanning vendor is Pending External
+   * Approval). A real one is an external call and would belong back on a
+   * queue; the sweep is still here for that day.
+   */
+  let scanOutcome: 'Clean' | 'Malware Detected' | 'Scan Failed' | null = null;
+  try {
+    ({ outcome: scanOutcome } = await scanObject(deps, ctx, { objectId: input.objectId }, config));
+  } catch {
+    scanOutcome = null;
+  }
+
+  const after = await deps.pool.query(`SELECT object_state FROM storage_ops.stored_objects WHERE id = $1`, [
+    input.objectId,
+  ]);
+  return {
+    checksum,
+    scanOutcome,
+    /** What the object really is now, so the caller need not guess. */
+    objectState: (after.rows[0]?.object_state as string | undefined) ?? 'Quarantined',
+  };
 }
 
 /**
@@ -569,13 +621,34 @@ export async function listObjectsForResource(
    * their business and not their daughter's.
    */
   const states = may.isOwner ? ['Available', 'Quarantined', 'Rejected'] : ['Available'];
+  /*
+   * Matched on the intended destination as well as the settled one.
+   *
+   * `owning_resource_*` is written by a CLEAN scan; until then the
+   * destination named at upload lives in `intended_owning_resource_*`.
+   * So a photograph waiting to be checked belongs to no entry as far as
+   * the settled column is concerned, and the first version of this
+   * showed the owner nothing — the very case it was added for. The test
+   * that was supposed to prove otherwise set the settled column by hand
+   * and passed for the wrong reason.
+   *
+   * A shared viewer is confined by the STATE filter above and not by
+   * this clause: they see Available only, and the table's CHECK
+   * constraint refuses Available without an owning resource, so an
+   * intended destination can never reach them. An `isOwner` guard was
+   * written here as well and then taken out — it could not be reached,
+   * and unreachable code that looks like a lock is worse than no lock,
+   * because the next reader trusts it.
+   */
   const res = await deps.pool.query(
     `SELECT id, declared_content_type, declared_size_bytes, object_state, data_classification, created_at
        FROM storage_ops.stored_objects
       WHERE owner_participant_id = $1
-        AND owning_resource_type = $2
-        AND owning_resource_id = $3
         AND object_state = ANY($4::text[])
+        AND (
+          (owning_resource_type = $2 AND owning_resource_id = $3)
+          OR (intended_owning_resource_type = $2 AND intended_owning_resource_id = $3)
+        )
       ORDER BY created_at`,
     [input.ownerParticipantId, input.owningResourceType, input.owningResourceId, states],
   );

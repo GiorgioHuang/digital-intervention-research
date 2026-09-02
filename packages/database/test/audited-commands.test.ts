@@ -107,7 +107,14 @@ describe('commands that change something and record nothing', () => {
       'm13-analysis draftResearchFinding',
       'm13-analysis rejectAnalysisPlan',
       'm13-analysis runAnalysis',
-      'm16-integration completeUpload',
+      /*
+       * `m16-integration completeUpload` was here and has left it. The
+       * upload used to change an object's state and record nothing, on
+       * the reasoning that the scan which followed would do the
+       * recording — and the scan was a scheduled sweep that nothing ran.
+       * It scans as the bytes arrive now (owner, 2026-09-02), so the act
+       * that changes the record is the act that writes the audit event.
+       */
       'm16-integration handleProviderCallback',
       'm17-life-story proposeContribution',
       'm17-life-story reviewContribution',

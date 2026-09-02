@@ -515,12 +515,30 @@ export class CommandController {
     @Body() body: { contentBase64: string },
   ) {
     const ctx = requireActor(req);
-    // Uploads land in QUARANTINE — never directly available (Doc 14 §59).
-    const result = await completeUpload(this.deps.m16storage, ctx, {
-      objectId,
-      content: Buffer.from(body.contentBase64, 'base64'),
-    });
-    return { data: { type: 'StoredObject', id: objectId, meta: { state: 'Quarantined', checksum: result.checksum } } };
+    /*
+     * Uploads land in QUARANTINE and are checked from there — never
+     * directly available (Doc 14 §59). What changed on 2026-09-02 is
+     * when the checking happens: in this same request rather than on a
+     * sweep nothing runs, so a photograph is on the entry when the
+     * person is still looking at the screen.
+     *
+     * The state is reported rather than assumed. It used to say
+     * "Quarantined" as a literal, which was true only until the checking
+     * moved and would have gone on saying so afterwards.
+     */
+    const result = await completeUpload(
+      this.deps.m16storage,
+      ctx,
+      { objectId, content: Buffer.from(body.contentBase64, 'base64') },
+      DEFAULT_STORAGE_CONFIG,
+    );
+    return {
+      data: {
+        type: 'StoredObject',
+        id: objectId,
+        meta: { state: result.objectState, checksum: result.checksum, scanOutcome: result.scanOutcome },
+      },
+    };
   }
 
   @Post('objects/:objectId/release')

@@ -561,22 +561,23 @@ describe.skipIf(!dbAvailable)('HTTP API (e2e)', () => {
 
     const uploaded = await call(`/v1/objects/${objectId}/content`, patAcc, { contentBase64: content.toString('base64') });
     expect(uploaded.status).toBe(201);
-    expect(((await uploaded.json()) as { data: { meta: { state: string } } }).data.meta.state).toBe('Quarantined');
+    /*
+     * Checked as it arrives (owner, 2026-09-02), so by the time this
+     * answers the scan has run. It is still Quarantined because this
+     * upload named no destination — a clean scan is not somewhere to put
+     * it — and the state is reported rather than assumed.
+     *
+     * "Release before scan is refused" used to be asserted here and
+     * cannot be any more: there is no longer a moment between the bytes
+     * arriving and being scanned. The rule it protected is unchanged and
+     * is exercised in the M16 suite with an object whose scan does not
+     * come back clean, which is the only way to be in that state now.
+     */
+    const done = (await uploaded.json()) as { data: { meta: { state: string; scanOutcome: string | null } } };
+    expect(done.data.meta.scanOutcome).toBe('Clean');
+    expect(done.data.meta.state).toBe('Quarantined');
 
-    // Release before scan is refused — nothing skips quarantine.
-    const early = await call(`/v1/objects/${objectId}/release`, patAcc, {
-      owningResourceType: 'LifeStoryItem', owningResourceId: 'lsi_e2e',
-    });
-    expect(early.status).toBe(409);
-    expect(((await early.json()) as { error: { code: string } }).error.code).toBe('ATTACHMENT_NOT_READY');
-
-    // The scan is the worker's job; trigger the same sweep directly.
     const clock = new FixedClock('2026-07-31T12:00:00Z');
-    await scanPendingObjects(
-      { pool, clock, blobs: createPostgresBlobStore(pool), checkPermission: () => { throw new Error('sweeps hold no authority'); } },
-      createRequestContext({ actor: { type: 'service-account', id: 'sa_scheduler' }, purposeCode: 'platform-maintenance' }),
-    );
-
     const released = await call(`/v1/objects/${objectId}/release`, patAcc, {
       owningResourceType: 'LifeStoryItem', owningResourceId: 'lsi_e2e',
     });

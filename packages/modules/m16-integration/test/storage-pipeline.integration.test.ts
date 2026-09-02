@@ -147,17 +147,27 @@ describe.skipIf(!dbAvailable)('object-storage quarantine pipeline (integration)'
 
   it('clean pipeline: quarantined until scan + classification + owning resource are ALL complete', async () => {
     const objectId = await upload(Buffer.from('family photo bytes'));
-    // Quarantined, not sendable.
+    /*
+     * Checked on arrival now rather than on a sweep (owner, 2026-09-02),
+     * and a clean scan is still not a destination: with nothing to
+     * attach to, this stays Quarantined.
+     */
     await expect(assertObjectSendable(storage, objectId)).rejects.toMatchObject({ code: 'ATTACHMENT_NOT_READY' });
-    // Release before scan is refused.
-    await expect(
-      releaseObject(storage, ctx(patAcc), cfg, { objectId, owningResourceType: 'LifeStoryItem', owningResourceId: 'lsi_1' }),
-    ).rejects.toMatchObject({ code: 'ATTACHMENT_NOT_READY' });
 
-    const { scanned } = await scanPendingObjects(storage, sysCtx());
-    expect(scanned).toBeGreaterThanOrEqual(1);
-    // Clean scan alone is still not Available.
-    await expect(assertObjectSendable(storage, objectId)).rejects.toMatchObject({ code: 'ATTACHMENT_NOT_READY' });
+    /*
+     * Release still requires a CLEAN scan, and that is shown with an
+     * object whose scan did not come back clean — a clean one now
+     * happens by itself, so there is no longer a moment between arriving
+     * and being scanned in which to catch the refusal. The rule is
+     * unchanged; only the way to demonstrate it is.
+     */
+    const unscannable = await upload(Buffer.from(`prefix ${SCAN_ERROR_MARKER} suffix`));
+    expect((await getObjectStatus(storage, ctx(patAcc), unscannable)).scanOutcome).toBe('Scan Failed');
+    await expect(
+      releaseObject(storage, ctx(patAcc), cfg, {
+        objectId: unscannable, owningResourceType: 'LifeStoryItem', owningResourceId: 'lsi_1',
+      }),
+    ).rejects.toMatchObject({ code: 'ATTACHMENT_NOT_READY' });
 
     // Unmapped resource types fail closed.
     await expect(
@@ -206,15 +216,23 @@ describe.skipIf(!dbAvailable)('object-storage quarantine pipeline (integration)'
       declaredSizeBytes: 5,
       attachTo: { owningResourceType: 'LifeStoryItem', owningResourceId: await entry('lsi_one_step') },
     });
-    await completeUpload(storage, ctx(patAcc), { objectId, content: Buffer.from('hello') });
+    const done = await completeUpload(storage, ctx(patAcc), { objectId, content: Buffer.from('hello') });
 
-    // Still quarantined: naming a destination does not attach anything.
-    const before = await listObjectsForResource(storage, ctx(patAcc), {
-      ownerParticipantId: patId, owningResourceType: 'LifeStoryItem', owningResourceId: 'lsi_one_step',
-    });
-    expect(before).toEqual([]);
-
-    await scanPendingObjects(storage, sysCtx(), cfg);
+    /*
+     * One act, and now one request: the destination named at the start
+     * takes effect as the bytes arrive, with no sweep in between (owner,
+     * 2026-09-02). What has not changed is that it went through
+     * quarantine to get there — the event says so, and the state machine
+     * never wrote Available directly.
+     */
+    expect(done.scanOutcome).toBe('Clean');
+    expect(done.objectState).toBe('Available');
+    const quarantined = await pool.query(
+      `SELECT count(*)::int AS n FROM platform_kernel.outbox_messages
+        WHERE event_type = 'ObjectQuarantined' AND aggregate_id = $1`,
+      [objectId],
+    );
+    expect(quarantined.rows[0].n, 'the object reached Available without passing through quarantine').toBe(1);
 
     const after = await listObjectsForResource(storage, ctx(patAcc), {
       ownerParticipantId: patId, owningResourceType: 'LifeStoryItem', owningResourceId: 'lsi_one_step',
@@ -239,16 +257,34 @@ describe.skipIf(!dbAvailable)('object-storage quarantine pipeline (integration)'
     await completeUpload(storage, ctx(patAcc), { objectId, content: Buffer.from(EICAR_MARKER) });
     await scanPendingObjects(storage, sysCtx(), cfg);
 
-    expect(
-      await listObjectsForResource(storage, ctx(patAcc), {
-        ownerParticipantId: patId, owningResourceType: 'LifeStoryItem', owningResourceId: 'lsi_bad',
-      }),
-    ).toEqual([]);
+    /*
+     * Attached to nothing — asserted on the column, which is what that
+     * means. The listing used to stand in for it and cannot any more:
+     * its owner now sees their own refused file, marked as refused,
+     * because the alternative is that it disappears without a word and
+     * they are left wondering what became of it.
+     */
     const row = await pool.query(
       `SELECT object_state, owning_resource_id FROM storage_ops.stored_objects WHERE id = $1`,
       [objectId],
     );
     expect(row.rows[0]).toMatchObject({ object_state: 'Rejected', owning_resource_id: null });
+
+    const mine = await listObjectsForResource(storage, ctx(patAcc), {
+      ownerParticipantId: patId, owningResourceType: 'LifeStoryItem', owningResourceId: 'lsi_bad',
+    });
+    expect(mine.map((a) => a.objectState), 'the refusal was hidden from the person it happened to').toEqual([
+      'Rejected',
+    ]);
+
+    // And nobody else sees it at all.
+    const shared: StorageDeps = { ...storage, mayReadOwningResource: async () => true };
+    expect(
+      await listObjectsForResource(shared, ctx(otherAcc), {
+        ownerParticipantId: patId, owningResourceType: 'LifeStoryItem', owningResourceId: 'lsi_bad',
+      }),
+      'a refused file was shown to somebody else',
+    ).toEqual([]);
   });
 
   /**
@@ -332,6 +368,127 @@ describe.skipIf(!dbAvailable)('object-storage quarantine pipeline (integration)'
   });
 
   /**
+   * Checked when it arrives, not on a schedule.
+   *
+   * Quarantine was passed through by a scheduled sweep, and nothing
+   * scheduled runs in the deployed environment (B-29) — so every
+   * photograph anybody added stayed quarantined for good, invisible on
+   * the entry, with the participant told to wait for a check that was
+   * never coming. Owner's ruling, 2026-09-02: if a file needs checking,
+   * the checking starts when it arrives.
+   */
+  it('puts a clean photograph on the entry in the same act as the upload', async () => {
+    const entryId = await entry('lsi_inline_clean');
+    const { objectId } = await initiateUpload(storage, ctx(patAcc), cfg, {
+      ownerParticipantId: patId,
+      declaredContentType: 'image/png',
+      declaredSizeBytes: PNG_BYTES.byteLength,
+      attachTo: { owningResourceType: 'LifeStoryItem', owningResourceId: entryId },
+    });
+    const done = await completeUpload(storage, ctx(patAcc), { objectId, content: PNG_BYTES });
+
+    expect(done.scanOutcome).toBe('Clean');
+    expect(done.objectState, 'the photograph was still waiting for a sweep').toBe('Available');
+    // No sweep has run in this test at all.
+    const attached = await listObjectsForResource(storage, ctx(patAcc), {
+      ownerParticipantId: patId, owningResourceType: 'LifeStoryItem', owningResourceId: entryId,
+    });
+    expect(attached.map((a) => a.objectId)).toEqual([objectId]);
+    expect(attached[0]?.objectState).toBe('Available');
+  });
+
+  /**
+   * And the checking still refuses. Moving when it happens must not move
+   * what it decides: malware is rejected in the same act, attached to
+   * nothing, and the upload does not quietly succeed into the entry.
+   */
+  it('refuses malware in the same act, and attaches it to nothing', async () => {
+    const entryId = await entry('lsi_inline_bad');
+    const bad = Buffer.from(EICAR_MARKER);
+    const { objectId } = await initiateUpload(storage, ctx(patAcc), cfg, {
+      ownerParticipantId: patId,
+      declaredContentType: 'image/png',
+      declaredSizeBytes: bad.byteLength,
+      attachTo: { owningResourceType: 'LifeStoryItem', owningResourceId: entryId },
+    });
+    const done = await completeUpload(storage, ctx(patAcc), { objectId, content: bad });
+
+    expect(done.scanOutcome).toBe('Malware Detected');
+    expect(done.objectState).toBe('Rejected');
+    const row = await pool.query(
+      `SELECT object_state, owning_resource_id FROM storage_ops.stored_objects WHERE id = $1`,
+      [objectId],
+    );
+    expect(row.rows[0]).toMatchObject({ object_state: 'Rejected', owning_resource_id: null });
+  });
+
+  /**
+   * The bytes arrived, so the upload succeeded — even when the checker
+   * did not. Losing somebody's photograph in order to report a fault in
+   * the checker would be the wrong trade; it stays quarantined and says
+   * so, which is a state the screen already knows how to show.
+   */
+  it('keeps the photograph when the checker itself fails', async () => {
+    const entryId = await entry('lsi_inline_scanfail');
+    const content = Buffer.from(`before ${SCAN_ERROR_MARKER} after`);
+    const { objectId } = await initiateUpload(storage, ctx(patAcc), cfg, {
+      ownerParticipantId: patId,
+      declaredContentType: 'text/plain',
+      declaredSizeBytes: content.byteLength,
+      attachTo: { owningResourceType: 'LifeStoryItem', owningResourceId: entryId },
+    });
+    const done = await completeUpload(storage, ctx(patAcc), { objectId, content });
+
+    expect(done.scanOutcome).toBe('Scan Failed');
+    expect(done.objectState, 'a file the checker could not clear was made available').toBe('Quarantined');
+    // Its owner can still see it waiting, rather than it vanishing.
+    const mine = await listObjectsForResource(storage, ctx(patAcc), {
+      ownerParticipantId: patId, owningResourceType: 'LifeStoryItem', owningResourceId: entryId,
+    });
+    expect(mine.map((a) => a.objectId), 'the photograph vanished from its own owner').toEqual([objectId]);
+    const status = await getObjectStatus(storage, ctx(patAcc), objectId);
+    expect(status.objectState).toBe('Quarantined');
+  });
+
+  /**
+   * The checker itself falling over is not the photograph's fault.
+   *
+   * `scanObject` throws when it cannot read the bytes it is meant to
+   * check — a real fault, and the one outcome that must never follow from
+   * a fault is "safe". What must also not follow is losing the upload:
+   * the bytes arrived and are stored, so the object stays quarantined and
+   * its owner is told it is being checked. A mutation showed nothing
+   * exercised this, because the checker never throws in a happy test.
+   */
+  it('keeps the upload when the checker throws, and does not call it clean', async () => {
+    const entryId = await entry('lsi_scanner_down');
+    const broken: StorageDeps = {
+      ...storage,
+      blobs: {
+        ...storage.blobs,
+        get: async () => {
+          throw new Error('the object store could not be reached');
+        },
+      },
+    };
+    const { objectId } = await initiateUpload(broken, ctx(patAcc), cfg, {
+      ownerParticipantId: patId,
+      declaredContentType: 'image/png',
+      declaredSizeBytes: PNG_BYTES.byteLength,
+      attachTo: { owningResourceType: 'LifeStoryItem', owningResourceId: entryId },
+    });
+    const done = await completeUpload(broken, ctx(patAcc), { objectId, content: PNG_BYTES });
+
+    expect(done.scanOutcome, 'a checker that fell over was reported as an outcome').toBeNull();
+    expect(done.objectState, 'a file nobody could check was made available').toBe('Quarantined');
+    // And it is still the owner's, visible and waiting, not lost.
+    const mine = await listObjectsForResource(storage, ctx(patAcc), {
+      ownerParticipantId: patId, owningResourceType: 'LifeStoryItem', owningResourceId: entryId,
+    });
+    expect(mine.map((a) => a.objectId)).toEqual([objectId]);
+  });
+
+  /**
    * A photograph in quarantine, seen by the person who sent it.
    *
    * The listing returned Available alone, for everybody including the
@@ -343,15 +500,29 @@ describe.skipIf(!dbAvailable)('object-storage quarantine pipeline (integration)'
    */
   it('shows the owner a photograph that is still being checked', async () => {
     const entryId = await entry('lsi_quarantined');
-    const objectId = await upload(PNG_BYTES, 'image/png');
-    // Attached at the start, and not yet scanned: the state the report
-    // is about.
-    await pool.query(
-      `UPDATE storage_ops.stored_objects
-          SET owning_resource_type = 'LifeStoryItem', owning_resource_id = $2
-        WHERE id = $1`,
-      [objectId, entryId],
+    /*
+     * Through the real path, and this matters: the first version of this
+     * test wrote `owning_resource_id` by hand, which no quarantined
+     * object ever has — that column is set by a clean scan, and until
+     * then the destination lives in `intended_owning_resource_id`. So it
+     * passed over a query that could not have found the row.
+     *
+     * The checker is made to fail, because a clean scan now attaches the
+     * object in the same act and there would be nothing left waiting.
+     */
+    const content = Buffer.from(`before ${SCAN_ERROR_MARKER} after`);
+    const { objectId } = await initiateUpload(storage, ctx(patAcc), cfg, {
+      ownerParticipantId: patId,
+      declaredContentType: 'text/plain',
+      declaredSizeBytes: content.byteLength,
+      attachTo: { owningResourceType: 'LifeStoryItem', owningResourceId: entryId },
+    });
+    await completeUpload(storage, ctx(patAcc), { objectId, content });
+    const settled = await pool.query(
+      `SELECT owning_resource_id FROM storage_ops.stored_objects WHERE id = $1`,
+      [objectId],
     );
+    expect(settled.rows[0].owning_resource_id, 'the fixture stopped testing what it was for').toBeNull();
 
     const mine = await listObjectsForResource(storage, ctx(patAcc), {
       ownerParticipantId: patId, owningResourceType: 'LifeStoryItem', owningResourceId: entryId,
