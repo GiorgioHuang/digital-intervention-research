@@ -36,6 +36,7 @@ import { MessagesScreen } from './components/MessagesScreen.js';
 import { MyDataCopy } from './components/MyDataCopy.js';
 import { MyLifeStory } from './components/MyLifeStory.js';
 import { StoriesSharedWithMe } from './components/StoriesSharedWithMe.js';
+import { OtherPeoplesStories } from './components/OtherPeoplesStories.js';
 import { MyResearchPart } from './components/MyResearchPart.js';
 import { WhoHasAccess } from './components/WhoHasAccess.js';
 import { InviteSomeone } from './components/InviteSomeone.js';
@@ -1133,6 +1134,18 @@ export function App() {
         {screen === 'matching' && <MatchingPanel session={session} />}
         {screen === 'community' && (
           <>
+            {/*
+              The drawing's community screen: pieces of other people's
+              life stories. It goes first because it is what the tab is
+              drawn as.
+
+              The spaces-and-posts panel stays below it rather than being
+              replaced. It is working machinery — joining a space,
+              drafting and publishing a post, reporting one — and the
+              drawing not showing it is not a reason to take it away from
+              anybody using it (X-41).
+            */}
+            <OtherPeoplesStories session={session} onGoToMyStory={() => setScreen('life-story')} />
             <CommunityPanel session={session} />
             {/*
               Meeting new people is optional and low-frequency, and it used

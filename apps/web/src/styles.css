@@ -2247,6 +2247,27 @@ a[role='button']:hover { background-color: var(--color-action-secondary-bg-hover
   color: var(--cl-text-4);
   line-height: 1.45;
 }
+/* The drawing's reassurance panel above the feed: a quiet box, because
+   it is the one thing on the screen a person may want to read before
+   anything else. */
+[data-workspace='participant'] .story-reassurance {
+  margin: 0;
+  padding: var(--space-4);
+  border: var(--border-hairline) solid var(--cl-divider);
+  border-radius: var(--radius-2);
+  background-color: color-mix(in srgb, var(--cl-text) 3%, transparent);
+  color: var(--cl-text-2);
+  line-height: 1.6;
+}
+/* Who wrote a piece, above its title, as the drawing sets it. */
+[data-workspace='participant'] .story-entry__who {
+  margin: 0 0 var(--space-1);
+  font-family: var(--cl-family-body);
+  font-size: var(--type-size-0);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--cl-accent-700);
+}
 [data-workspace='participant'] .story-note {
   color: var(--cl-text-4);
   line-height: 1.45;

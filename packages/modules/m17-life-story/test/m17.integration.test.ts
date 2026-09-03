@@ -27,6 +27,7 @@ import {
   findArchiveForContribution,
   getMyLifeStory,
   getSharedLifeStory,
+  listStoriesSharedWithMe,
   listContributionsAwaitingReview,
   proposeContribution,
   reviewContribution,
@@ -54,6 +55,7 @@ describe.skipIf(!dbAvailable)('M17 Life Story (integration)', () => {
   let pool: pg.Pool;
   const clock = new FixedClock('2026-07-30T12:00:00Z');
   let m01: M01Deps, m02: M02Deps, m03: M03Deps, m17: M17Deps;
+  let names: ReturnType<typeof createParticipantQuery>;
   let adminId: string, orgId: string, coordinatorId: string, supporterId: string;
   let participantAccountId: string, participantId: string;
   let archiveId: string, itemId: string, aiDraftVersionId: string;
@@ -76,6 +78,7 @@ describe.skipIf(!dbAvailable)('M17 Life Story (integration)', () => {
     m02 = { pool, clock, checkPermission };
     m03 = { pool, clock, permissions };
     m17 = { pool, clock, checkPermission };
+    names = createParticipantQuery(pool);
 
     ({ userAccountId: adminId } = await seedBootstrapAdministrator(pool, clock, { displayName: 'Admin' }));
     ({ organisationId: orgId } = await createOrganisation(m01, ctx(adminId), { name: 'M17 Org' }));
@@ -450,6 +453,163 @@ describe.skipIf(!dbAvailable)('M17 Life Story (integration)', () => {
     expect(item?.itemState).toBe('Withdrawn');
     expect(item?.visibility).toBe('Private');
     expect(item?.contentText).not.toBeNull();
+  });
+
+  /**
+   * The community feed — "Other people's stories".
+   *
+   * The Community and Connections scopes reached nobody: a participant
+   * could mark a memory for their community and there was no feed to
+   * carry it (B-30 left this open after the supporter path was built).
+   *
+   * Written mostly from the refusing side. A feed is the place where a
+   * mistake is worst: it does not leak one memory to one person, it puts
+   * somebody's life in front of everybody who opens a tab.
+   */
+  describe('the feed of stories shared with me', () => {
+    let feedParticipant: string, feedAccount: string;
+    let mineShared: string, minePrivate: string;
+
+    const feed = (viewer: string, viewerParticipantId: string | null) =>
+      listStoriesSharedWithMe({ ...m17, participantNames: names }, ctx(viewer), {
+        viewerActorId: viewer,
+        viewerParticipantId,
+      });
+
+    const shareable = async (title: string, visibility: string) => {
+      const { itemId: id, versionId } = await createItem(m17, ctx(participantAccountId), {
+        archiveId, title, contentText: `The words of ${title}.`, sourceType: 'ParticipantAuthored',
+      });
+      await confirmTestimony(m17, ctx(participantAccountId), { itemId: id, versionId, confirmed: true });
+      if (visibility !== 'Private') {
+        await changeVisibility(m17, ctx(participantAccountId), { itemId: id, visibility: visibility as never, confirmed: true });
+      }
+      return id;
+    };
+
+    beforeAll(async () => {
+      const adminCtx = createRequestContext({ actor: { type: 'user', id: adminId }, organisationId: orgId });
+      ({ userAccountId: feedAccount } = await createUserAccount(m01, adminCtx, { displayName: 'Fern' }));
+      await assignRole(m01, adminCtx, { userAccountId: feedAccount, role: 'Participant', confirmed: true });
+      ({ participantId: feedParticipant } = await registerParticipant(
+        m02,
+        createRequestContext({ actor: { type: 'user', id: coordinatorId }, organisationId: orgId }),
+        { displayName: 'Fern F.', userAccountId: feedAccount },
+      ));
+      mineShared = await shareable('For the whole community', 'Community');
+      minePrivate = await shareable('For nobody at all', 'Private');
+    }, 30_000);
+
+    /**
+     * A stranger sees nothing. No connection, no community, no
+     * relationship — and the memory is marked Community, which means a
+     * community they are not in.
+     */
+    it('shows nothing to somebody who shares no community', async () => {
+      const seen = await feed(feedAccount, feedParticipant);
+      expect(seen.map((p) => p.itemId), 'a community memory reached somebody outside it').not.toContain(mineShared);
+    });
+
+    /**
+     * And the one that would be worst. A private memory must never be in
+     * a feed — not for a stranger, and not for its own author, whose
+     * screen is headed with other people's stories.
+     */
+    it('never puts a private memory in the feed, including the author’s own', async () => {
+      for (const [viewer, pid] of [[feedAccount, feedParticipant], [participantAccountId, participantId]] as const) {
+        const seen = await feed(viewer, pid);
+        expect(seen.map((p) => p.itemId), 'a private memory was in the feed').not.toContain(minePrivate);
+      }
+    });
+
+    /**
+     * Their own shared piece IS there, and marked. The drawing promises
+     * "nothing of yours appears here unless you choose a piece and share
+     * it", which is only true if a piece they did share appears — and it
+     * is the only way somebody can check that sharing did what they
+     * meant.
+     */
+    it('shows the author their own shared piece, marked as theirs', async () => {
+      const seen = await feed(participantAccountId, participantId);
+      const own = seen.find((p) => p.itemId === mineShared);
+      expect(own, 'their own shared piece was missing from the feed').toBeDefined();
+      expect(own?.mine).toBe(true);
+      expect(own?.ownerDisplayName).toBe('Pat P.');
+    });
+
+    /**
+     * Standing is not a ladder, tested from the side that can catch it.
+     *
+     * A mutation that let ANY reach match ANY scope went green, because
+     * the only viewer being asked was a community member with no
+     * supporter relationship — an empty set matches nothing either way.
+     * The supporter holds a real relationship, so a Community memory
+     * reaching them is the collapse this is for.
+     */
+    it('does not give a supporter what was shared with a community', async () => {
+      const seen = await feed(supporterId, null);
+      expect(
+        seen.map((p) => p.itemId),
+        'a supporter was given a memory shared with a community',
+      ).not.toContain(mineShared);
+
+      // And the scope that does name them reaches them.
+      const forFamily = await shareable('For my family only', 'My Supporters');
+      const after = await feed(supporterId, null);
+      expect(after.map((p) => p.itemId), 'the supporter scope did not carry the memory').toContain(forFamily);
+    }, 30_000);
+
+    /**
+     * Only Active memories. A draft is something somebody has not
+     * finished saying, and a withdrawn one is something they took back —
+     * a feed carrying either would publish a decision they did not make.
+     *
+     * A mutation removing the state filter went green, because every
+     * fixture here was Active. This makes one of each.
+     */
+    it('carries no draft and nothing withdrawn, whatever scope they were given', async () => {
+      const draft = await createItem(m17, ctx(participantAccountId), {
+        archiveId, title: 'Half a thought', contentText: 'Not finished.', sourceType: 'ParticipantAuthored',
+      });
+      await changeVisibility(m17, ctx(participantAccountId), {
+        itemId: draft.itemId, visibility: 'Community' as never, confirmed: true,
+      });
+
+      const taken = await shareable('Shared and then taken back', 'Community');
+      await withdrawItem(m17, ctx(participantAccountId), { itemId: taken, confirmed: true });
+
+      const seen = (await feed(participantAccountId, participantId)).map((p) => p.itemId);
+      expect(seen, 'an unfinished draft was published to the feed').not.toContain(draft.itemId);
+      expect(seen, 'a withdrawn memory was still in the feed').not.toContain(taken);
+    }, 30_000);
+
+    /**
+     * Sharing a community opens it, and only for the scope that names
+     * the community. Standing is not a ladder here either.
+     */
+    it('shows a community memory to somebody in that community, and not other scopes', async () => {
+      const space = await pool.query(
+        `SELECT id, (SELECT id FROM community_social.community_rule_versions WHERE space_id = s.id LIMIT 1) AS rule
+           FROM community_social.community_spaces s LIMIT 1`,
+      );
+      if (space.rowCount === 0) return; // no space fixture in this suite
+      for (const pid of [participantId, feedParticipant]) {
+        await pool.query(
+          `INSERT INTO community_social.community_memberships (id, space_id, participant_id, rule_version_id, membership_state)
+           VALUES ($1, $2, $3, $4, 'Active') ON CONFLICT DO NOTHING`,
+          [`cm_${pid}`, space.rows[0].id, pid, space.rows[0].rule],
+        );
+      }
+      const seen = await feed(feedAccount, feedParticipant);
+      expect(seen.map((p) => p.itemId), 'sharing a community did not carry the memory').toContain(mineShared);
+
+      const supportersOnly = await shareable('For family only', 'My Supporters');
+      const after = await feed(feedAccount, feedParticipant);
+      expect(
+        after.map((p) => p.itemId),
+        'a community member was given what was shared with supporters',
+      ).not.toContain(supportersOnly);
+    }, 30_000);
   });
 
   /**

@@ -57,6 +57,7 @@ import {
   findArchiveForContribution,
   getMyLifeStory,
   getSharedLifeStory,
+  listStoriesSharedWithMe,
   listContributionsAwaitingReview,
   listMyContributions,
   proposeContribution,
@@ -1037,6 +1038,29 @@ export class CommandController {
    * route that let a caller say who they were would be asking the
    * attacker to fill in the security check.
    */
+  /**
+   * "Other people's stories" — the pieces this person may read.
+   *
+   * The Community and Connections scopes reached nobody until this: a
+   * participant could mark a memory for their community and there was no
+   * feed to carry it (B-30).
+   *
+   * The viewer comes from the session, never from the request.
+   */
+  @Get('life-story/shared-with-me')
+  async storiesSharedWithMe(@Req() req: Request) {
+    const ctx = requireActor(req);
+    const viewerActorId = ctx.actor?.id ?? '';
+    const viewerParticipantId =
+      (await this.deps.participantNames.findParticipantIdByAccount(viewerActorId)) ?? null;
+    const pieces = await listStoriesSharedWithMe(
+      { ...this.deps.m17, participantNames: this.deps.participantNames },
+      ctx,
+      { viewerActorId, viewerParticipantId },
+    );
+    return { data: pieces.map((p) => ({ type: 'SharedLifeStoryItem', id: p.itemId, attributes: p })) };
+  }
+
   @Get('participants/:participantId/life-story/shared')
   async sharedLifeStory(@Req() req: Request, @Param('participantId') participantId: string) {
     const ctx = requireActor(req);

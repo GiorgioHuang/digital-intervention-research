@@ -385,6 +385,14 @@ export interface StoredObjectStatus {
   rejectionReason: string | null;
 }
 
+export interface SharedStoryPiece extends SharedStoryItem {
+  ownerParticipantId: string;
+  /** Null when the name could not be resolved; the screen says so rather than filling it in. */
+  ownerDisplayName: string | null;
+  /** Yours, so the screen says so rather than presenting it as somebody else's. */
+  mine: boolean;
+}
+
 export interface SupportedPerson {
   relationshipId: string;
   participantId: string;
@@ -657,6 +665,9 @@ export const api = {
   /** The people this supporter supports. A supporter has no participantId. */
   listPeopleISupport: (s: Session) =>
     get<{ data: { id: string; attributes: SupportedPerson }[] }>(s, '/v1/relationships/mine'),
+  /** The pieces of other people's stories this person may read. */
+  storiesSharedWithMe: (s: Session) =>
+    get<{ data: { id: string; attributes: SharedStoryPiece }[] }>(s, '/v1/life-story/shared-with-me'),
   /** Somebody else's life story, as far as they have shared it with you. */
   sharedLifeStory: (s: Session, participantId: string) =>
     get<{ data: { id: string; attributes: SharedStoryItem }[]; meta: { ownerParticipantId: string } }>(

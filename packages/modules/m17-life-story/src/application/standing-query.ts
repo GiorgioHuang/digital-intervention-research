@@ -156,3 +156,72 @@ export async function mayReadLifeStoryItem(
   });
   return sharedWithOthers(row.item_state, row.visibility, standing);
 }
+
+
+/**
+ * Which participants this viewer stands in some relation to.
+ *
+ * The single-participant `standingOf` answers "what am I to Margaret".
+ * A feed asks the other way round — "whose stories may I see" — and
+ * answering it by walking every participant and asking `standingOf` for
+ * each would be one query per person on the platform.
+ *
+ * The same rules, in sets. Every clause fails closed and every clause is
+ * the same one `standingOf` uses: an approved, unexpired, unrevoked
+ * supporter relationship; an Active connection; an Active membership of a
+ * space the other person is also an Active member of.
+ */
+export interface ViewerReach {
+  readonly supporterOf: readonly string[];
+  readonly connectedTo: readonly string[];
+  readonly sharesCommunityWith: readonly string[];
+}
+
+export async function reachOf(
+  deps: StandingDeps,
+  input: { viewerActorId: string; viewerParticipantId: string | null },
+): Promise<ViewerReach> {
+  const now = deps.clock.now();
+
+  const supporter = await deps.pool.query(
+    `SELECT DISTINCT participant_id FROM consent_permission.relationships
+      WHERE related_actor_id = $1
+        AND relationship_state = 'Active'
+        AND revoked_at IS NULL
+        AND (expires_at IS NULL OR expires_at > $2)`,
+    [input.viewerActorId, now],
+  );
+
+  if (input.viewerParticipantId === null) {
+    // A supporter has no participant record, so they can hold neither a
+    // connection nor a community membership.
+    return {
+      supporterOf: supporter.rows.map((r) => r.participant_id as string),
+      connectedTo: [],
+      sharesCommunityWith: [],
+    };
+  }
+
+  const connections = await deps.pool.query(
+    `SELECT CASE WHEN participant_a_id = $1 THEN participant_b_id ELSE participant_a_id END AS other
+       FROM community_social.connections
+      WHERE connection_state = 'Active' AND (participant_a_id = $1 OR participant_b_id = $1)`,
+    [input.viewerParticipantId],
+  );
+
+  const community = await deps.pool.query(
+    `SELECT DISTINCT theirs.participant_id AS other
+       FROM community_social.community_memberships mine
+       JOIN community_social.community_memberships theirs ON theirs.space_id = mine.space_id
+      WHERE mine.participant_id = $1 AND mine.membership_state = 'Active'
+        AND theirs.membership_state = 'Active'
+        AND theirs.participant_id <> $1`,
+    [input.viewerParticipantId],
+  );
+
+  return {
+    supporterOf: supporter.rows.map((r) => r.participant_id as string),
+    connectedTo: connections.rows.map((r) => r.other as string),
+    sharesCommunityWith: community.rows.map((r) => r.other as string),
+  };
+}

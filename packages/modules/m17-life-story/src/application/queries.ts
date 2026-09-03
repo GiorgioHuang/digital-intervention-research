@@ -2,7 +2,7 @@ import type { RequestContext } from '@platform/kernel';
 import { assertAllowed } from '@platform/policy';
 import type { M17Deps } from './commands.js';
 import { sharedWithOthers } from './standing.js';
-import { standingOf, type StandingDeps } from './standing-query.js';
+import { reachOf, standingOf, type StandingDeps } from './standing-query.js';
 
 export interface MyContribution {
   contributionId: string;
@@ -359,4 +359,95 @@ export async function getSharedLifeStory(
     }));
 
   return { ownerParticipantId: input.ownerParticipantId, items };
+}
+
+
+/** One piece in the community feed, with who wrote it. */
+export interface SharedStoryPiece extends SharedLifeStoryItem {
+  ownerParticipantId: string;
+  /** Null when the name cannot be resolved; the screen says so rather than filling it in. */
+  ownerDisplayName: string | null;
+  /** Yours, so the screen can say so rather than presenting it as somebody else's. */
+  mine: boolean;
+}
+
+/**
+ * The pieces of other people's stories this person may read.
+ *
+ * The drawing calls the screen "Other people's stories", and until now
+ * the Community and Connections scopes reached nobody: a participant
+ * could mark a memory for their community and there was no feed to carry
+ * it (B-30 left this open after the supporter path was built).
+ *
+ * Their own shared pieces are included and marked. The drawing's
+ * reassurance says "Nothing of yours appears here unless you choose a
+ * piece and share it", which is only true if a piece they DID share
+ * appears — and it is the only way somebody can check that sharing did
+ * what they meant.
+ *
+ * Private is excluded explicitly rather than left to the standing rule.
+ * `sharedWithOthers` says yes to the owner for anything, which is right
+ * when it is answering "may Margaret read her own memory" and wrong here:
+ * a feed that leaned on it would put a participant's private memories
+ * into a screen headed with other people's.
+ */
+export async function listStoriesSharedWithMe(
+  deps: M17Deps & StandingDeps & { participantNames: { findDisplayNames(ids: string[]): Promise<Map<string, string>> } },
+  ctx: RequestContext,
+  input: { viewerActorId: string; viewerParticipantId: string | null; limit?: number },
+): Promise<SharedStoryPiece[]> {
+  const decision = await deps.checkPermission(ctx, {
+    action: 'life-story.view-shared',
+    resource: { type: 'LifeStoryArchive', id: 'feed', state: 'Any', protectedExistence: true },
+  });
+  assertAllowed(decision, false);
+
+  const reach = await reachOf(deps, input);
+  const limit = Math.min(Math.max(input.limit ?? 50, 1), 200);
+
+  /*
+   * Whose stories, worked out first, so this is one query rather than
+   * one per participant on the platform. Each scope is matched only
+   * against the people who satisfy THAT scope — a supporter does not
+   * thereby see what was shared with a community, because the
+   * participant did not say that.
+   */
+  const res = await deps.pool.query(
+    `SELECT i.id, i.title, i.visibility, i.updated_at, a.participant_id,
+            v.content_text, v.source_type, v.testimony_state
+       FROM life_story.items i
+       JOIN life_story.archives a ON a.id = i.archive_id
+       LEFT JOIN life_story.item_versions v ON v.id = i.current_version_id
+      WHERE i.item_state = 'Active'
+        AND i.visibility <> 'Private'
+        AND (
+          a.participant_id = $1
+          OR (i.visibility = 'My Supporters' AND a.participant_id = ANY($2::text[]))
+          OR (i.visibility = 'Connections' AND a.participant_id = ANY($3::text[]))
+          OR (i.visibility = 'Community' AND a.participant_id = ANY($4::text[]))
+          OR i.visibility = 'Platform Public'
+        )
+      ORDER BY i.updated_at DESC
+      LIMIT $5`,
+    [
+      input.viewerParticipantId ?? '',
+      reach.supporterOf,
+      reach.connectedTo,
+      reach.sharesCommunityWith,
+      limit,
+    ],
+  );
+
+  const names = await deps.participantNames.findDisplayNames(res.rows.map((r) => r.participant_id as string));
+  return res.rows.map((r) => ({
+    itemId: r.id as string,
+    title: r.title as string,
+    contentText: (r.content_text as string | null) ?? null,
+    sourceType: (r.source_type as string | null) ?? null,
+    testimonyState: (r.testimony_state as string | null) ?? null,
+    updatedAt: (r.updated_at as Date).toISOString(),
+    ownerParticipantId: r.participant_id as string,
+    ownerDisplayName: names.get(r.participant_id as string) ?? null,
+    mine: input.viewerParticipantId !== null && r.participant_id === input.viewerParticipantId,
+  }));
 }

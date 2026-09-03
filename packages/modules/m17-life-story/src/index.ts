@@ -20,8 +20,10 @@ export {
   type MyLifeStory,
   type MyLifeStoryItem,
   getSharedLifeStory,
+  listStoriesSharedWithMe,
+  type SharedStoryPiece,
   type SharedLifeStory,
   type SharedLifeStoryItem,
 } from './application/queries.js';
 export { mayRead, sharedWithOthers, NO_STANDING, type ViewerStanding } from './application/standing.js';
-export { standingOf, mayReadLifeStoryItem, type StandingDeps } from './application/standing-query.js';
+export { standingOf, mayReadLifeStoryItem, reachOf, type StandingDeps, type ViewerReach } from './application/standing-query.js';
