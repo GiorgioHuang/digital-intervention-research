@@ -1,20 +1,32 @@
 import { useEffect, useState } from 'react';
-import { api, type ConnectionSummary, type Session, type ThreadSummary } from '../api.js';
+import {
+  api,
+  type ConnectionSummary,
+  type MyRelationship,
+  type Session,
+  type ThreadSummary,
+} from '../api.js';
+import { previewLine, whenLine } from '../conversation-row.js';
 import { presentError, type PresentedError } from '../errors.js';
 import { nameOrGap } from '../names.js';
 import { ErrorState, LoadingState } from './StateBlock.js';
 import { MessagePanel } from './MessagePanel.js';
 
 /**
- * Messages entry: conversations and connections come from the API — no
- * manual identifier entry. A thread can only exist on a valid
- * CommunicationBasis (the server enforces this; ADR-031), so the list
- * here is exactly what the participant may use.
+ * Messages: the drawing's list of conversations.
  *
- * Each conversation states that basis in words. The reason a person is
- * reachable is not incidental — it is the whole permission story, and a
- * participant who cannot see it has no way to understand why one person
- * can be written to and another cannot, or what would end that.
+ * Each row carries who, when, and roughly what about — nothing else. The
+ * screen that was here listed conversations as "Conversation with Ben
+ * (ongoing)" with a paragraph under each explaining why the two could
+ * write to each other, and a second section of connections beneath. It
+ * said a great deal and showed nothing: a person could not tell which
+ * conversation had something new in it, which is the one question this
+ * screen exists to answer.
+ *
+ * The permission story is not lost, it has moved to where the
+ * conversation is: `MessagePanel` states the basis at the top of every
+ * thread it opens. The reason a person is reachable belongs beside the
+ * writing, not on a list somebody is scanning.
  */
 const BASIS_WORDING: Record<string, string> = {
   ActiveConnection: 'you and this person both agreed to connect',
@@ -27,6 +39,10 @@ const BASIS_WORDING: Record<string, string> = {
  * A thread whose state is not Active cannot be written to. Saying so on
  * the row is the honest form: the alternative is letting someone open it,
  * type, and be refused at the end.
+ *
+ * The drawing has no such line, because the drawing draws conversations
+ * that are open. It is kept, shortened to what fits a row, and the full
+ * sentence stays on the conversation itself (X-42).
  */
 const CLOSED_THREAD_WORDING: Record<string, string> = {
   Paused: 'This conversation is paused, so nothing can be sent right now.',
@@ -35,6 +51,26 @@ const CLOSED_THREAD_WORDING: Record<string, string> = {
   Expired: 'The reason this conversation was possible has ended, so nothing more can be sent.',
   Archived: 'This conversation is archived. You can read it, but nothing more can be sent.',
 };
+const CLOSED_SHORT: Record<string, string> = {
+  Paused: 'Paused',
+  Closed: 'Closed',
+  Blocked: 'Not available',
+  Expired: 'Ended',
+  Archived: 'Archived',
+};
+
+/** Somebody who can be written to, from either kind of basis. */
+interface Writable {
+  key: string;
+  name: string;
+  /** The existing conversation, when there is one; otherwise how to open one. */
+  threadId: string | null;
+  start: () => Promise<string>;
+  otherParticipantId: string;
+  /** Present only for a connection, which is the only thing that can be ended here. */
+  connection: ConnectionSummary | null;
+}
+
 export function MessagesScreen({
   session,
   onGetHelp,
@@ -47,9 +83,12 @@ export function MessagesScreen({
   const [threads, setThreads] = useState<ThreadSummary[] | null>(null);
   const [actionError, setActionError] = useState<PresentedError | null>(null);
   const [connections, setConnections] = useState<ConnectionSummary[] | null>(null);
+  const [relationships, setRelationships] = useState<MyRelationship[] | null>(null);
   const [active, setActive] = useState<ThreadSummary | null>(null);
   const [ending, setEnding] = useState<ConnectionSummary | null>(null);
+  const [choosing, setChoosing] = useState(false);
   const [announcement, setAnnouncement] = useState('');
+  const now = new Date();
 
   // Read on arrival: making someone press a button to see whether they
   // have any messages is a barrier with nothing behind it.
@@ -59,10 +98,14 @@ export function MessagesScreen({
 
   const load = async () => {
     try {
-      const [t, c] = await Promise.all([api.listThreads(session), api.listConnections(session)]);
+      const [t, c, r] = await Promise.all([
+        api.listThreads(session),
+        api.listConnections(session),
+        api.listMyRelationships(session),
+      ]);
       setThreads(t.data.map((x) => x.attributes));
       setConnections(c.data.map((x) => x.attributes));
-      setAnnouncement('The lists have been updated.');
+      setRelationships(r.data.map((x) => x.attributes));
     } catch (err) {
       setActionError(presentError(err));
     }
@@ -85,18 +128,72 @@ export function MessagesScreen({
     }
   };
 
-  const startThread = async (conn: ConnectionSummary) => {
+  /**
+   * Everybody this participant may write to, from either basis.
+   *
+   * A supporter is only here if the relationship they were approved under
+   * actually permits messages: being trusted to read what somebody shares
+   * is not the same as being allowed to write to them (D-29), and the
+   * server refuses the difference, so the screen must not offer it.
+   */
+  const writable: Writable[] = [
+    ...(connections ?? [])
+      .filter((c) => c.connectionState === 'Active')
+      .map((c) => ({
+        key: `conn_${c.connectionId}`,
+        name: nameOrGap(c.otherDisplayName),
+        threadId:
+          threads?.find((t) => t.basisType === 'ActiveConnection' && t.otherParticipantId === c.otherParticipantId)
+            ?.threadId ?? null,
+        start: async () => (await api.createThread(session, c.connectionId)).data.id,
+        otherParticipantId: c.otherParticipantId,
+        connection: c,
+      })),
+    ...(relationships ?? [])
+      .filter((r) => r.relationshipState === 'Active' && r.permittedActions.includes('relationship.message'))
+      .map((r) => ({
+        key: `rel_${r.relationshipId}`,
+        name: nameOrGap(r.relatedDisplayName),
+        threadId:
+          threads?.find(
+            (t) => t.basisType === 'AuthorisedRelationship' && t.otherParticipantId === r.relatedActorId,
+          )?.threadId ?? null,
+        start: async () => (await api.startRelationshipThread(session, r.relationshipId)).data.id,
+        otherParticipantId: r.relatedActorId,
+        connection: null,
+      })),
+  ];
+
+  /**
+   * Open the conversation with this person, making it first if it does
+   * not exist. Asking again for one that exists returns the same
+   * conversation rather than splitting the history in two, so the two
+   * cases can be one act on the screen.
+   */
+  const writeTo = async (person: Writable) => {
+    setActionError(null);
+    const existing = threads?.find((t) => t.threadId === person.threadId);
+    if (existing !== undefined) {
+      setChoosing(false);
+      setActive(existing);
+      return;
+    }
     try {
-      const res = await api.createThread(session, conn.connectionId);
+      const threadId = await person.start();
       const thread: ThreadSummary = {
-        threadId: res.data.id,
-        otherParticipantId: conn.otherParticipantId,
-        otherDisplayName: conn.otherDisplayName,
-        basisType: 'ActiveConnection',
+        threadId,
+        otherParticipantId: person.otherParticipantId,
+        otherDisplayName: person.name,
+        basisType: person.connection === null ? 'AuthorisedRelationship' : 'ActiveConnection',
         threadState: 'Active',
         createdAt: new Date().toISOString(),
+        lastMessageAt: null,
+        lastMessageState: null,
+        lastMessageFromMe: null,
+        lastMessagePreview: null,
       };
       setThreads((ts) => [thread, ...(ts ?? [])]);
+      setChoosing(false);
       setActive(thread);
       setAnnouncement('The conversation has been created.');
     } catch (err) {
@@ -107,7 +204,9 @@ export function MessagesScreen({
   if (active !== null) {
     return (
       <section>
-        <button onClick={() => setActive(null)}>← Back to the conversation list</button>
+        <button className="back-link" onClick={() => setActive(null)}>
+          ← Back to the conversation list
+        </button>
         <MessagePanel
           session={session}
           threadId={active.threadId}
@@ -127,39 +226,91 @@ export function MessagesScreen({
   }
 
   return (
-    <section aria-labelledby="messages-heading">
+    <section className="messages-screen" aria-labelledby="messages-heading">
       <h1 id="messages-heading">Messages</h1>
-      <p>
-        <button onClick={() => void load()}>Refresh my conversations and connections</button>
-      </p>
-      {threads === null && connections === null && actionError === null && (
-        <LoadingState label="Loading your conversations and connections…" />
+      {/*
+        The drawing's reassurance, and it is exactly true: a thread exists
+        only on a CommunicationBasis (ADR-031), which is either a
+        connection this participant agreed to or a supporter they approved.
+      */}
+      <p className="messages-reassurance">Nobody can write to you unless you have allowed them.</p>
+
+      {threads === null && actionError === null && <LoadingState label="Looking for your conversations…" />}
+
+      {threads !== null && threads.length === 0 && (
+        <p className="messages-reassurance">
+          You have no conversations yet. Below is everybody you can write to.
+        </p>
       )}
-      {threads !== null && (
-        <section aria-labelledby="threads-heading">
-          <h2 id="threads-heading">My conversations</h2>
-          {threads.length === 0 && (
-            <p>You have no conversations yet. You can start one from your connections below.</p>
+
+      {(threads ?? []).map((t) => (
+        <button key={t.threadId} className="conversation-row" onClick={() => setActive(t)}>
+          <span className="conversation-row__top">
+            <span className="conversation-row__who">{nameOrGap(t.otherDisplayName)}</span>
+            <span className="conversation-row__when">{whenLine(t.lastMessageAt ?? t.createdAt, now)}</span>
+          </span>
+          <span className="conversation-row__preview">{previewLine(t)}</span>
+          {t.threadState !== 'Active' && (
+            <span className="conversation-row__state">{CLOSED_SHORT[t.threadState] ?? t.threadState}</span>
           )}
-          <ul className="list-plain">
-            {threads.map((t) => (
-              <li key={t.threadId}>
-                <button onClick={() => setActive(t)}>
-                  Conversation with {nameOrGap(t.otherDisplayName)} (
-                  {t.threadState === 'Active' ? 'ongoing' : t.threadState})
+        </button>
+      ))}
+
+      <button className="messages-write" aria-expanded={choosing} onClick={() => setChoosing((was) => !was)}>
+        Write a message
+      </button>
+      {/*
+        A second door to the same panel, because the panel does two
+        things. Ending a connection lives in there — this is the only
+        screen that lists connections — and somebody who has come to leave
+        a connection will not press a button that says "Write a message"
+        to do it. The drawing has no such control, and it has no way out
+        of a connection either (X-44).
+      */}
+      <button className="messages-manage" aria-expanded={choosing} onClick={() => setChoosing((was) => !was)}>
+        Who I am connected to
+      </button>
+
+      {choosing && (
+        <div className="messages-chooser">
+          <h2 className="messages-chooser__heading">The people you can write to</h2>
+          {writable.length === 0 ? (
+            /*
+              Not an error, and not a dead end. Both ways somebody becomes
+              reachable are named, because a person who cannot write to
+              anybody needs to know what would change that.
+            */
+            <p>
+              There is nobody you can write to yet. A conversation becomes possible when you and somebody else both
+              say you are interested under Meet new people, or when you approve someone as a supporter and allow them
+              to send you messages.
+            </p>
+          ) : (
+            writable.map((person) => (
+              <div key={person.key} className="messages-chooser__person">
+                <button className="messages-chooser__write" onClick={() => void writeTo(person)}>
+                  Write to {person.name}
                 </button>
-                <p>Why you can write to each other: {BASIS_WORDING[t.basisType] ?? t.basisType}.</p>
-                {t.threadState !== 'Active' && (
-                  <p>{CLOSED_THREAD_WORDING[t.threadState] ?? 'Nothing more can be sent in this conversation.'}</p>
+                {person.connection !== null && (
+                  /*
+                    Ending a connection lives here because this is the only
+                    screen that lists connections. Until it existed the
+                    only way out of one was to block, so an ordinary
+                    parting had to be dressed up as an accusation.
+                  */
+                  <button className="messages-chooser__end" onClick={() => setEnding(person.connection)}>
+                    End this connection
+                  </button>
                 )}
-              </li>
-            ))}
-          </ul>
-        </section>
+              </div>
+            ))
+          )}
+        </div>
       )}
+
       {ending !== null && (
-        <div role="alertdialog" aria-labelledby="end-connection-heading">
-          <p id="end-connection-heading">End your connection with {ending.otherDisplayName}?</p>
+        <div role="alertdialog" aria-labelledby="end-connection-heading" className="messages-ending">
+          <p id="end-connection-heading">End your connection with {nameOrGap(ending.otherDisplayName)}?</p>
           {/*
             The distinction that matters. Blocking says something about the
             other person and belongs to the safety screen; this says only
@@ -172,7 +323,7 @@ export function MessagesScreen({
           <p>
             You will not be able to write to each other, and your conversations will show that nothing more can be
             sent. Nothing you have already written is deleted, and you can both still read it.{' '}
-            {ending.otherDisplayName} is not told that you did this.
+            {nameOrGap(ending.otherDisplayName)} is not told that you did this.
           </p>
           <p>
             <button onClick={() => void endThisConnection()}>Yes, end this connection</button>{' '}
@@ -181,37 +332,8 @@ export function MessagesScreen({
         </div>
       )}
 
-      {connections !== null && (
-        <section aria-labelledby="connections-heading">
-          <h2 id="connections-heading">My connections</h2>
-          {connections.length === 0 && (
-            <p>
-              You have no connections yet. One can be made under Meet new people, after you and the other person have
-              both said you are interested.
-            </p>
-          )}
-          <ul className="list-plain">
-            {connections.map((c) => (
-              <li key={c.connectionId}>
-                {c.otherDisplayName} ({c.connectionState === 'Active' ? 'connected' : c.connectionState}){' '}
-                {c.connectionState === 'Active' && (
-                  <>
-                    <button onClick={() => void startThread(c)}>Start a conversation</button>{' '}
-                    {/*
-                      Until this existed the only way out of a connection
-                      was to block, so an ordinary parting had to be dressed
-                      up as an accusation.
-                    */}
-                    <button onClick={() => setEnding(c)}>End this connection</button>
-                  </>
-                )}
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
       {actionError !== null && <ErrorState error={actionError} />}
-      <p aria-live="polite" role="status">
+      <p aria-live="polite" role="status" className="visually-hidden">
         {announcement}
       </p>
     </section>

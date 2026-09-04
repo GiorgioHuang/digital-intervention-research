@@ -67,6 +67,9 @@ describe.skipIf(!dbAvailable)('M18/M16 messaging pipeline (integration)', () => 
   let aAcc: string, aId: string, bAcc: string, bId: string;
   let threadId: string, messageId: string;
   let supporterActorId: string;
+  // The thread test 1 leaves with words in it, so test 2 can open a newer
+  // conversation and check which of the two the list puts first.
+  let writtenThread = '';
   const ctx = (actorId: string) => createRequestContext({ actor: { type: 'user', id: actorId } });
   const svcCtx = () => createRequestContext({ actor: { type: 'service-account', id: 'sa_worker' } });
 
@@ -419,6 +422,175 @@ describe.skipIf(!dbAvailable)('M18/M16 messaging pipeline (integration)', () => 
     // there the directory being asked is the right one.
     const inbox = await listThreadsForActor(m18, ctx(supporterActorId));
     expect(inbox.find((t) => t.threadId === relThread)?.otherDisplayName).toBe('Ann');
+  });
+
+  /**
+   * The messages screen is drawn as a list of conversations, each row
+   * carrying who wrote, when, and roughly what about. The listing
+   * supplied none of the three, so the screen could only offer a name and
+   * the word "ongoing" — a list of conversations that says nothing about
+   * any conversation.
+   *
+   * The rule the preview has to keep is the one the conversation itself
+   * keeps: a draft is nobody's words yet, and somebody else's draft is
+   * not even visible. A preview that showed what the thread would not is
+   * a leak with a friendly face, and it would be on the screen anybody
+   * glancing at the phone sees first.
+   */
+  it('a conversation row carries when it was last written in, and what was said', async () => {
+    const { relationshipId } = await proposeRelationship(m03, ctx(coordId), {
+      participantId: bId,
+      relatedActorId: supporterActorId,
+      relationshipType: 'FamilyMember',
+      permittedActions: ['relationship.message'],
+    });
+    await approveRelationship(m03, ctx(bAcc), { relationshipId, expectedVersion: 1, confirmed: true });
+    const { threadId: relThread } = await createRelationshipThread(m18, ctx(bAcc), {
+      relationshipId,
+      creatorId: bId,
+    });
+
+    const rowFor = async (id: string) => (await listThreads(m18, ctx(bAcc), bId)).find((t) => t.threadId === id);
+
+    // Nothing written yet: the row says so on all four rather than
+    // inventing a date from when the conversation was opened.
+    const empty = await rowFor(relThread);
+    expect(empty).toBeDefined();
+    expect(empty?.lastMessageAt).toBeNull();
+    expect(empty?.lastMessageState).toBeNull();
+    expect(empty?.lastMessageFromMe).toBeNull();
+    expect(empty?.lastMessagePreview).toBeNull();
+
+    // A message the participant confirmed. It rests at Queued until a
+    // delivery callback arrives, and with no provider configured it rests
+    // there for good — so this is what an ordinary sent message looks
+    // like, and the preview has to carry it.
+    const { messageId: mine } = await createMessageDraft(m18, ctx(bAcc), {
+      threadId: relThread,
+      senderParticipantId: bId,
+      contentText: 'The roses came out this week.',
+    });
+    const drafted = await rowFor(relThread);
+    // My own draft: the row admits it exists, and withholds the words,
+    // because I have not said them.
+    expect(drafted?.lastMessageState).toBe('Draft');
+    expect(drafted?.lastMessageFromMe).toBe(true);
+    expect(drafted?.lastMessagePreview).toBeNull();
+    expect(drafted?.lastMessageAt).not.toBeNull();
+
+    await confirmSend(m18, ctx(bAcc), {
+      messageId: mine,
+      senderParticipantId: bId,
+      expectedMessageVersion: 1,
+      recipientIds: [supporterActorId],
+      confirmed: true,
+    });
+    const sent = await rowFor(relThread);
+    expect(sent?.lastMessageState).toBe('Queued');
+    expect(sent?.lastMessageFromMe).toBe(true);
+    expect(sent?.lastMessagePreview).toBe('The roses came out this week.');
+
+    // The supporter's own list of the same conversation: the words are
+    // there, and they are not theirs.
+    const inbox = await listThreadsForActor(m18, ctx(supporterActorId));
+    const theirs = inbox.find((t) => t.threadId === relThread);
+    expect(theirs?.lastMessagePreview).toBe('The roses came out this week.');
+    expect(theirs?.lastMessageFromMe).toBe(false);
+
+    // The supporter answers, and the row turns around: the words are
+    // theirs now, and the participant's list must not claim them as its
+    // owner's. A row that says "you wrote" over somebody else's words is
+    // a small lie on the screen a person checks first.
+    const { messageId: reply } = await createMessageDraft(m18, ctx(supporterActorId), {
+      threadId: relThread,
+      senderParticipantId: supporterActorId,
+      contentText: 'I will come and see them on Sunday.',
+    });
+    await confirmSend(m18, ctx(supporterActorId), {
+      messageId: reply,
+      senderParticipantId: supporterActorId,
+      expectedMessageVersion: 1,
+      recipientIds: [bId],
+      confirmed: true,
+    });
+    const answered = await rowFor(relThread);
+    expect(answered?.lastMessagePreview).toBe('I will come and see them on Sunday.');
+    expect(answered?.lastMessageFromMe).toBe(false);
+    writtenThread = relThread;
+  });
+
+  /**
+   * Drafts are private to their author (Doc 20 §158), and this screen is
+   * where that promise is easiest to break: the other party never opens
+   * the conversation, so a preview is the only place the words would
+   * appear — and it is the place they would be read fastest.
+   */
+  it("does not preview, or even date, somebody else's unsent draft", async () => {
+    const { relationshipId } = await proposeRelationship(m03, ctx(coordId), {
+      participantId: bId,
+      relatedActorId: supporterActorId,
+      relationshipType: 'Friend',
+      permittedActions: ['relationship.message'],
+    });
+    await approveRelationship(m03, ctx(bAcc), { relationshipId, expectedVersion: 1, confirmed: true });
+    const { threadId: quiet } = await createRelationshipThread(m18, ctx(bAcc), {
+      relationshipId,
+      creatorId: bId,
+    });
+
+    await createMessageDraft(m18, ctx(supporterActorId), {
+      threadId: quiet,
+      senderParticipantId: supporterActorId,
+      contentText: 'I have been meaning to tell you something.',
+    });
+
+    const row = (await listThreads(m18, ctx(bAcc), bId)).find((t) => t.threadId === quiet);
+    expect(row).toBeDefined();
+    // Not the words, and not the date either: a timestamp on an otherwise
+    // silent conversation says somebody is writing to you.
+    expect(row?.lastMessagePreview).toBeNull();
+    expect(row?.lastMessageState).toBeNull();
+    expect(row?.lastMessageAt).toBeNull();
+
+    // And the author's own list does not preview it either — a supporter
+    // has no participant record to compare a sender against, so that
+    // side withholds every draft rather than run a comparison that
+    // quietly matches nothing.
+    const theirs = (await listThreadsForActor(m18, ctx(supporterActorId))).find((t) => t.threadId === quiet);
+    expect(theirs?.lastMessagePreview).toBeNull();
+    expect(theirs?.lastMessageState).toBeNull();
+
+    /*
+     * The list is ordered by when somebody last wrote in a conversation,
+     * not by when it was opened — and a conversation nobody has written
+     * in yet is ordered by when it was opened, which is the most recent
+     * thing that has happened to it.
+     *
+     * `quiet` was opened after everything in the test above, so it
+     * legitimately leads Ben's list right now. Writing in the older
+     * conversation is what makes the two orderings disagree, and that
+     * disagreement is the only arrangement in which this assertion says
+     * anything at all: by creation `quiet` still wins, by last-written it
+     * must not.
+     */
+    expect(writtenThread).not.toBe('');
+    const { messageId: later } = await createMessageDraft(m18, ctx(bAcc), {
+      threadId: writtenThread,
+      senderParticipantId: bId,
+      contentText: 'Sunday suits me.',
+    });
+    await confirmSend(m18, ctx(bAcc), {
+      messageId: later,
+      senderParticipantId: bId,
+      expectedMessageVersion: 1,
+      recipientIds: [supporterActorId],
+      confirmed: true,
+    });
+
+    const mine = await listThreads(m18, ctx(bAcc), bId);
+    const at = (id: string) => mine.findIndex((t) => t.threadId === id);
+    expect(at(writtenThread)).toBeGreaterThanOrEqual(0);
+    expect(at(quiet)).toBeGreaterThan(at(writtenThread));
   });
 
 });

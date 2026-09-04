@@ -273,6 +273,20 @@ export interface ThreadSummary {
   basisType: string;
   threadState: string;
   createdAt: string;
+  /**
+   * The latest message, as far as this person may see it. Null on all
+   * four when nothing has been written — or when the only thing written
+   * is somebody else's draft, which is not visible and does not leave a
+   * date behind either.
+   */
+  lastMessageAt: string | null;
+  lastMessageState: string | null;
+  lastMessageFromMe: boolean | null;
+  /**
+   * The words, and only once the sender has said them. The server
+   * decides; the screen words the absence (`previewLine`).
+   */
+  lastMessagePreview: string | null;
 }
 
 export interface MatchCandidateSummary {

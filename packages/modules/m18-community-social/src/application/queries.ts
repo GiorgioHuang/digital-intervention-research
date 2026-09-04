@@ -92,7 +92,47 @@ export interface ThreadSummary {
   basisType: string;
   threadState: string;
   createdAt: string;
+  /**
+   * The latest message in the conversation, as far as this person may
+   * see it — everything except somebody else's draft, which is the same
+   * rule the conversation itself applies.
+   *
+   * Null on all four when nothing has been written yet.
+   */
+  lastMessageAt: string | null;
+  lastMessageState: string | null;
+  lastMessageFromMe: boolean | null;
+  /**
+   * The words, and only once the sender has actually said them — see
+   * {@link SAID}.
+   */
+  lastMessagePreview: string | null;
 }
+
+/**
+ * The lifecycle states in which a message's words may be shown as a
+ * preview: the sender has said them, and the conversation shows them.
+ *
+ * It is an allow-list rather than a list of what to hide, so a lifecycle
+ * state added later withholds a preview until somebody decides it should
+ * show one. The failure of a missing entry is a blank line on a list
+ * screen; the failure of a missing exclusion is words on the front screen
+ * that their author took back.
+ *
+ * `Queued` is in it deliberately. A confirmed message rests there until a
+ * delivery callback arrives, and with no provider configured it rests
+ * there for good — so an earlier version of this rule, which asked for
+ * `Sent`, left every real conversation on the list screen with no preview
+ * at all. What the sender confirmed is in the thread for both parties to
+ * read; the list may say so.
+ *
+ * `Draft` is the one state excluded that anything can currently write.
+ * `Withdrawn`, `Cancelled`, `Archived`, `Sending`, `Expired` and
+ * `Confirmed for Send` are in the column's CHECK and no command writes
+ * them (B-32) — they are covered here by the allow-list's shape, not by
+ * guards written against states that cannot occur.
+ */
+const SAID = new Set(['Queued', 'Sending', 'Sent', 'Archived']);
 
 export async function listThreads(
   deps: M18Deps,
@@ -100,11 +140,35 @@ export async function listThreads(
   participantId: string,
 ): Promise<ThreadSummary[]> {
   await assertOwnView(deps, ctx, participantId);
+  /*
+   * The latest message in each conversation, so the list can say when
+   * somebody last wrote and roughly what about — which is what the
+   * drawing asks of this screen, and what makes a list of conversations
+   * worth reading rather than a list of names.
+   *
+   * The visibility rule is copied from `listMessages` exactly: everything
+   * except somebody ELSE's draft. A preview that showed what the
+   * conversation itself would not is a leak with a friendly face.
+   *
+   * Ordered by that message rather than by when the conversation was
+   * opened, because "most recently written in" is what somebody means by
+   * the top of the list.
+   */
   const res = await deps.pool.query(
-    `SELECT id, participant_a_id, participant_b_id, basis_type, thread_state, created_at
-       FROM community_social.conversation_threads
-      WHERE participant_a_id = $1 OR participant_b_id = $1
-      ORDER BY created_at DESC`,
+    `SELECT t.id, t.participant_a_id, t.participant_b_id, t.basis_type, t.thread_state, t.created_at,
+            m.created_at AS last_at, m.content_text AS last_text,
+            m.lifecycle_state AS last_state, m.sender_participant_id AS last_sender
+       FROM community_social.conversation_threads t
+       LEFT JOIN LATERAL (
+         SELECT created_at, content_text, lifecycle_state, sender_participant_id
+           FROM community_social.messages
+          WHERE thread_id = t.id
+            AND (lifecycle_state <> 'Draft' OR sender_participant_id = $1)
+          ORDER BY created_at DESC
+          LIMIT 1
+       ) m ON TRUE
+      WHERE t.participant_a_id = $1 OR t.participant_b_id = $1
+      ORDER BY COALESCE(m.created_at, t.created_at) DESC`,
     [participantId],
   );
   const rows = res.rows.map((r) => ({
@@ -113,6 +177,15 @@ export async function listThreads(
     basisType: r.basis_type as string,
     threadState: r.thread_state as string,
     createdAt: (r.created_at as Date).toISOString(),
+    lastMessageAt: r.last_at === null ? null : (r.last_at as Date).toISOString(),
+    lastMessageState: (r.last_state as string | null) ?? null,
+    lastMessageFromMe: r.last_sender === null ? null : r.last_sender === participantId,
+    /*
+     * The caller's own draft reaches this far — the query above admits it
+     * so the row can say the words are waiting — but its text is not a
+     * preview of the conversation, because nobody has said it.
+     */
+    lastMessagePreview: SAID.has(r.last_state as string) ? ((r.last_text as string | null) ?? null) : null,
   }));
   // Only the rows whose other side is actually a participant are looked up
   // here. Passing a supporter's account identifier into the participant
@@ -470,11 +543,33 @@ export async function listThreadsForActor(deps: M18Deps, ctx: RequestContext): P
     resource: { type: 'ConversationThread', id: 'mine', state: 'Any', protectedExistence: true },
   });
   assertAllowed(decision, false);
+  /*
+   * The same latest-message summary as the participant's own list, with
+   * one difference: no draft is previewed at all, not even the caller's.
+   *
+   * The rule on the participant's side is "everything except somebody
+   * ELSE's draft", and it works there because a draft's author is named
+   * by a participant id the caller has. A supporter has no participant
+   * record, so there is nothing here to compare a sender against — and
+   * an unexplained comparison that quietly matches nothing is worse than
+   * a rule that says less and means it. No draft is previewed; a
+   * supporter's own unsent words are on the conversation screen, where
+   * they can be seen as unsent.
+   */
   const res = await deps.pool.query(
-    `SELECT id, participant_a_id, participant_b_id, basis_type, thread_state, created_at
-       FROM community_social.conversation_threads
-      WHERE basis_type = 'AuthorisedRelationship' AND participant_b_id = $1
-      ORDER BY created_at DESC`,
+    `SELECT t.id, t.participant_a_id, t.participant_b_id, t.basis_type, t.thread_state, t.created_at,
+            m.created_at AS last_at, m.content_text AS last_text,
+            m.lifecycle_state AS last_state, m.sender_participant_id AS last_sender
+       FROM community_social.conversation_threads t
+       LEFT JOIN LATERAL (
+         SELECT created_at, content_text, lifecycle_state, sender_participant_id
+           FROM community_social.messages
+          WHERE thread_id = t.id AND lifecycle_state <> 'Draft'
+          ORDER BY created_at DESC
+          LIMIT 1
+       ) m ON TRUE
+      WHERE t.basis_type = 'AuthorisedRelationship' AND t.participant_b_id = $1
+      ORDER BY COALESCE(m.created_at, t.created_at) DESC`,
     [actorId],
   );
   const rows = res.rows.map((r) => ({
@@ -483,6 +578,11 @@ export async function listThreadsForActor(deps: M18Deps, ctx: RequestContext): P
     basisType: r.basis_type as string,
     threadState: r.thread_state as string,
     createdAt: (r.created_at as Date).toISOString(),
+    lastMessageAt: r.last_at === null ? null : (r.last_at as Date).toISOString(),
+    lastMessageState: (r.last_state as string | null) ?? null,
+    /* Nothing here can be the caller's: a supporter is not a participant. */
+    lastMessageFromMe: r.last_sender === null ? null : false,
+    lastMessagePreview: SAID.has(r.last_state as string) ? ((r.last_text as string | null) ?? null) : null,
   }));
   // The far side here is a participant, so the directory is the right one
   // to ask — but the community placeholder is not the right answer when it

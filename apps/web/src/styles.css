@@ -3412,6 +3412,196 @@ main[data-workspace='staff'] .scroll-x {
   min-inline-size: calc(50% - var(--space-1));
 }
 
+/* ---------- The conversation list -------------------------------------
+ * The drawing's messages screen: hairline-separated rows, each carrying
+ * who the conversation is with, when it was last written in, and roughly
+ * what about. No card, no fill, no panel — the same row language as the
+ * life story beside it, because nobody should have to learn two kinds of
+ * row on one product.
+ */
+/*
+ * The screen's own rhythm: the drawing sets 18px between everything on
+ * it, rows included. The rows carry their own hairline and padding, so
+ * the gap is what separates the heading, the reassurance and the button
+ * from the list rather than something the list needs.
+ */
+[data-workspace='participant'] .messages-screen {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+/* Consecutive rows sit against each other, separated by the hairline the
+   drawing separates them with and nothing else. */
+[data-workspace='participant'] .conversation-row + .conversation-row {
+  margin-block-start: calc(-1 * var(--space-4));
+}
+[data-workspace='participant'] .messages-reassurance {
+  margin: 0;
+  color: var(--cl-text-4);
+  line-height: 1.6;
+}
+[data-workspace='participant'] .conversation-row {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+  inline-size: 100%;
+  padding: var(--space-4) 2px;
+  border: 0;
+  border-block-start: var(--border-hairline) solid var(--cl-divider);
+  border-radius: 0;
+  background-color: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+}
+[data-workspace='participant'] .conversation-row:hover {
+  background-color: color-mix(in srgb, var(--cl-text) 5%, transparent);
+}
+[data-workspace='participant'] .conversation-row__top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-3);
+  inline-size: 100%;
+}
+[data-workspace='participant'] .conversation-row__who {
+  font-family: var(--cl-family-display);
+  font-size: var(--type-size-2);
+  font-weight: var(--type-weight-semibold);
+  line-height: 1.25;
+  color: var(--cl-text);
+}
+/* The date holds one line at the end of the row. It is short by
+   construction — "Yesterday", "Tuesday", "27 Aug" — so wrapping it would
+   be a fault rather than a fit. */
+[data-workspace='participant'] .conversation-row__when {
+  flex: 0 0 auto;
+  font-family: var(--cl-family-body);
+  font-size: var(--type-size-0);
+  color: var(--cl-text-4);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+/*
+ * What was last said. At the reading size, not the drawing's 16px: these
+ * are somebody's own words, and on a folded row they are the one line
+ * that tells a person which conversation this is — the same judgement
+ * made for the life story's excerpt (X-31).
+ */
+[data-workspace='participant'] .conversation-row__preview {
+  font-family: var(--cl-family-body);
+  font-size: var(--type-size-1);
+  font-weight: var(--type-weight-regular);
+  line-height: 1.55;
+  color: var(--cl-text-3);
+}
+/* A conversation that can no longer be written to says so before it is
+   opened (X-42). Marked rather than tinted: colour alone would carry it
+   for nobody who cannot see the difference. */
+[data-workspace='participant'] .conversation-row__state {
+  margin-block-start: var(--space-1);
+  border-inline-start: var(--border-emphasis) solid var(--cl-text-4);
+  padding-inline-start: var(--space-2);
+  font-family: var(--cl-family-body);
+  font-size: var(--type-size-0);
+  color: var(--cl-text-4);
+}
+/* The drawing's accent button, full width, below the list. */
+[data-workspace='participant'] .messages-write {
+  display: flex;
+  justify-content: center;
+  inline-size: 100%;
+  min-block-size: 3.444rem; /* the drawing's 62px */
+  margin-block-start: var(--space-1);
+  border: var(--border-hairline) solid var(--cl-accent);
+  border-radius: var(--radius-2);
+  background-color: transparent;
+  font-family: var(--cl-family-display);
+  font-size: var(--type-size-1);
+  font-weight: var(--type-weight-semibold);
+  color: var(--cl-accent-700);
+}
+[data-workspace='participant'] .messages-write:hover {
+  background-color: color-mix(in srgb, var(--cl-accent) 12%, transparent);
+}
+/* The second door. Text rather than a button shape: it is a way to
+   something, not the act this screen is for, and giving it a button's
+   weight would put it in competition with the drawing's own. */
+[data-workspace='participant'] .messages-manage {
+  align-self: flex-start;
+  min-block-size: var(--target-min);
+  padding: var(--space-1) var(--space-1);
+  border: 0;
+  background-color: transparent;
+  font-family: var(--cl-family-body);
+  font-size: var(--type-size-1);
+  font-weight: var(--type-weight-regular);
+  color: var(--cl-accent-700);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+[data-workspace='participant'] .messages-chooser {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: var(--border-hairline) solid var(--cl-divider);
+  border-radius: var(--radius-2);
+}
+[data-workspace='participant'] .messages-chooser__heading {
+  margin: 0;
+  font-size: var(--type-size-2);
+}
+[data-workspace='participant'] .messages-chooser p {
+  margin: 0;
+  line-height: 1.6;
+}
+/* One person, one row: writing to them is the ordinary act and takes the
+   width; ending the connection is beside it and quieter, because it is
+   rare and not what somebody came here to do. */
+[data-workspace='participant'] .messages-chooser__person {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+[data-workspace='participant'] .messages-chooser__write {
+  flex: 1 1 13rem;
+  min-block-size: var(--target-min);
+  padding: var(--space-2) var(--space-3);
+  border: var(--border-hairline) solid var(--cl-accent);
+  border-radius: var(--radius-2);
+  background-color: transparent;
+  font-family: var(--cl-family-body);
+  font-size: var(--type-size-1);
+  font-weight: var(--type-weight-regular);
+  color: var(--cl-accent-700);
+}
+[data-workspace='participant'] .messages-chooser__end {
+  flex: 0 1 auto;
+  min-block-size: var(--target-min);
+  padding: var(--space-2) var(--space-3);
+  border: var(--border-hairline) solid var(--cl-text-4);
+  border-radius: var(--radius-2);
+  background-color: transparent;
+  font-family: var(--cl-family-body);
+  font-size: var(--type-size-1);
+  font-weight: var(--type-weight-regular);
+  color: var(--cl-text-2);
+}
+[data-workspace='participant'] :is(.messages-chooser__write, .messages-chooser__end):hover {
+  background-color: color-mix(in srgb, var(--cl-text) 6%, transparent);
+}
+[data-workspace='participant'] .messages-ending {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: var(--border-emphasis) solid var(--cl-accent);
+  border-radius: var(--radius-2);
+}
+[data-workspace='participant'] .messages-ending p { margin: 0; line-height: 1.6; }
+
 /* ---------- 13. Motion and reduced-motion (§A.6) ---------- */
 /* The user has explicitly chosen "reduce motion" — the same effect as the
    OS signal, but not dependent on the OS setting.

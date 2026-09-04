@@ -129,6 +129,11 @@ describe('ending a connection', () => {
       render(<MessagesScreen session={session} />);
     });
     await act(async () => {
+      // The way to a connection is a control that says so. Somebody who
+      // has come to leave one will not press "Write a message" to do it.
+      fireEvent.click(screen.getByRole('button', { name: 'Who I am connected to' }));
+    });
+    await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'End this connection' }));
     });
     expect(screen.getByText(/This is not the same as blocking/)).toBeTruthy();
@@ -139,6 +144,11 @@ describe('ending a connection', () => {
     stubFetch(CONNECTIONS);
     await act(async () => {
       render(<MessagesScreen session={session} />);
+    });
+    await act(async () => {
+      // The way to a connection is a control that says so. Somebody who
+      // has come to leave one will not press "Write a message" to do it.
+      fireEvent.click(screen.getByRole('button', { name: 'Who I am connected to' }));
     });
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'End this connection' }));
@@ -152,6 +162,11 @@ describe('ending a connection', () => {
     const calls = stubFetch(CONNECTIONS);
     await act(async () => {
       render(<MessagesScreen session={session} />);
+    });
+    await act(async () => {
+      // The way to a connection is a control that says so. Somebody who
+      // has come to leave one will not press "Write a message" to do it.
+      fireEvent.click(screen.getByRole('button', { name: 'Who I am connected to' }));
     });
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'End this connection' }));
