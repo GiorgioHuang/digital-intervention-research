@@ -403,8 +403,17 @@ export interface SharedStoryPiece extends SharedStoryItem {
   ownerParticipantId: string;
   /** Null when the name could not be resolved; the screen says so rather than filling it in. */
   ownerDisplayName: string | null;
+  /** The city they chose to say, if they said one. */
+  ownerCity: string | null;
   /** Yours, so the screen says so rather than presenting it as somebody else's. */
   mine: boolean;
+}
+
+/** What somebody put up for other people to see. */
+export interface PublicProfile {
+  chosenName: string;
+  /** Null when they did not say, which is the default. */
+  city: string | null;
 }
 
 export interface SupportedPerson {
@@ -650,6 +659,21 @@ export const api = {
     ),
   getMyProfile: (s: Session) =>
     get<{ data: { id: string; attributes: MyProfile } | null }>(s, `/v1/participants/${s.participantId}/profile`),
+  /*
+   * What this person chose to be called in front of other people — a
+   * different thing from the profile above, by hard rule (Doc 20 §354),
+   * and a different route. `null` is the ordinary answer for somebody who
+   * has chosen nothing.
+   */
+  myPublicProfile: (s: Session) =>
+    get<{ data: { id: string; attributes: PublicProfile } | null }>(
+      s,
+      `/v1/participants/${s.participantId}/public-profile`,
+    ),
+  setPublicProfile: (s: Session, input: { chosenName: string; city: string | null }) =>
+    post(s, `/v1/participants/${s.participantId}/public-profile`, input),
+  withdrawPublicProfile: (s: Session) =>
+    post(s, `/v1/participants/${s.participantId}/public-profile/withdraw`, { confirmed: true }),
   listLifeStoryItemFiles: (s: Session, itemId: string) =>
     api.listItemFilesOwnedBy(s, s.participantId, itemId),
   /**

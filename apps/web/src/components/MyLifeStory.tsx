@@ -243,6 +243,25 @@ export function MyLifeStory({ session }: { session: Session }) {
       onScreen.current = false;
     };
   }, []);
+  /*
+   * What a shared memory will carry of this person's name.
+   *
+   * Read here rather than assumed, because the confirmation below makes
+   * a promise about it and the promise has to be true: somebody who has
+   * chosen no public name appears to other people as the placeholder,
+   * not under the name the study office has (D-105).
+   */
+  const [publicName, setPublicName] = useState<{ chosenName: string; city: string | null } | null>(null);
+  useEffect(() => {
+    void (async () => {
+      try {
+        setPublicName((await api.myPublicProfile(session)).data?.attributes ?? null);
+      } catch {
+        /* The confirmation words the uncertain case, so a failure here
+           costs a detail rather than the ability to share. */
+      }
+    })();
+  }, []);
   const [pictures, setPictures] = useState<Record<string, { url: string; type: string }>>({});
   const picturesRef = useRef<Record<string, { url: string; type: string }>>({});
   picturesRef.current = pictures;
@@ -1005,6 +1024,31 @@ export function MyLifeStory({ session }: { session: Session }) {
                     <p>
                       Nobody is told. It simply becomes something they can open if they look.
                     </p>
+                    {/*
+                      The drawing's promise about what a shared memory
+                      carries of your name — said truthfully, which means
+                      reading what this person actually chose rather than
+                      reciting the drawing's "your first name and your
+                      city". Not shown for supporters: they were invited
+                      by name and already know who you are.
+                    */}
+                    {confirmingScope.visibility !== 'My Supporters' &&
+                      (publicName === null ? (
+                        <p>
+                          You have not chosen a name for other people yet, so it will appear as &ldquo;a community
+                          member&rdquo;. You can choose one under Help, in &ldquo;What other people call me&rdquo;.
+                        </p>
+                      ) : (
+                        <p>
+                          It will appear as{' '}
+                          <strong>
+                            {publicName.chosenName}
+                            {publicName.city === null ? '' : ` · ${publicName.city}`}
+                          </strong>
+                          . Never the fuller name the study office has, and never your address or your telephone
+                          number.
+                        </p>
+                      ))}
                     <p>
                       <button className="story-action" onClick={() => void setScope(item, confirmingScope.visibility)}>
                         Yes, let them read it

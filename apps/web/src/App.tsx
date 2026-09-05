@@ -5,6 +5,7 @@ import { SupporterApp } from './SupporterApp.js';
 import { AccessTokenGate } from './components/AccessTokenGate.js';
 import { HelperScreen } from './components/elder/HelperScreen.js';
 import { Exercises, Tapping } from './components/elder/Exercises.js';
+import { WhatOthersCallMe } from './components/elder/WhatOthersCallMe.js';
 import { SiteFooter } from './components/elder/SiteFooter.js';
 import { AboutScreen } from './components/elder/AboutScreen.js';
 import { BrandBlock } from './components/elder/BrandMark.js';
@@ -162,6 +163,25 @@ export function App() {
    * name rather than flashing a nameless greeting and then adding one.
    */
   const [displayName, setDisplayName] = useState<string | null>(null);
+  /*
+   * Whether this person has chosen what other people call them.
+   *
+   * `undefined` while unknown, so the first-arrival screen is not flashed
+   * at somebody who has a name already. `null` is the settled answer for
+   * somebody who has chosen nothing — which is the state the placeholder
+   * comes from, and the reason this screen exists (D-105).
+   */
+  const [publicName, setPublicName] = useState<string | null | undefined>(undefined);
+  /*
+   * Set when somebody presses "not now" on the first-arrival screen.
+   *
+   * Choosing nothing is a real answer and the ruling makes it a valid
+   * state, so the screen must be passable — but it is asked once per
+   * visit rather than once ever, because the placeholder is a thing
+   * somebody might want to change their mind about and there is no other
+   * prompt anywhere that would remind them.
+   */
+  const [skippedNaming, setSkippedNaming] = useState(false);
   /** The photograph being captioned, carried to the `caption` screen. */
   const [captioning, setCaptioning] = useState<UncaptionedPhotograph | null>(null);
   /** Whether Home has an unfinished thing on it. Decides the second line. */
@@ -400,9 +420,23 @@ export function App() {
    * unfinished photograph because a courtesy failed would be the wrong
    * order of importance.
    */
+  /** Re-read after the naming screen writes, so Home is right at once. */
+  const refreshPublicName = async () => {
+    if (session === null) return;
+    try {
+      const res = await api.myPublicProfile(session);
+      setPublicName(res.data?.attributes.chosenName ?? null);
+    } catch {
+      /* Leaving it as it was is right: the write either happened or the
+         screen already showed the failure. */
+    }
+  };
+
   useEffect(() => {
     if (session === null) {
       setDisplayName(null);
+      setPublicName(undefined);
+      setSkippedNaming(false);
       return;
     }
     let cancelled = false;
@@ -412,6 +446,21 @@ export function App() {
         if (!cancelled) setDisplayName(res.data?.attributes.displayName ?? null);
       } catch {
         if (!cancelled) setDisplayName(null);
+      }
+      /*
+       * Asked separately from the profile above, because they are
+       * separate things (§354) and because a failure to read one must
+       * not decide the other. A public name that cannot be read is
+       * treated as "already chosen": the cost of being wrong that way is
+       * a person not being asked, and the cost of being wrong the other
+       * way is a naming screen in front of somebody who named themselves
+       * months ago.
+       */
+      try {
+        const res = await api.myPublicProfile(session);
+        if (!cancelled) setPublicName(res.data?.attributes.chosenName ?? null);
+      } catch {
+        if (!cancelled) setPublicName('');
       }
     })();
     return () => {
@@ -816,6 +865,56 @@ export function App() {
     );
   }
 
+  /*
+   * The way in, once: what should we call you?
+   *
+   * Somebody who signed in with Google had the name from their Google
+   * account used as their name on this platform, and until the public
+   * profile existed that name was also what every other participant saw
+   * — taken, never asked for. This asks, on the first arrival, before the
+   * workspace.
+   *
+   * The bottom tab bar is deliberately absent, which is how the drawing
+   * treats the screens on the way in: welcome, sign-in and this one carry
+   * the toolbar and nothing else, so there is one thing to do. The
+   * toolbar itself is here because the handoff says "every screen" and
+   * because somebody who cannot read this screen cannot get past it.
+   */
+  if (publicName === null && !skippedNaming && screen !== 'help') {
+    return (
+      <div data-workspace="participant" className="welcome">
+        <AccessibilityToolbar
+          zoom={zoom}
+          onZoom={(next) => setZoom((from) => next(from))}
+          highContrast={highContrast}
+          onHighContrast={setHighContrast}
+          readAloudTarget={contentRef}
+          onHome={() => setSkippedNaming(true)}
+          homeLabel="Home"
+        />
+        <main
+          ref={contentRef}
+          id="main-content"
+          data-elder-content=""
+          data-contrast={highContrast ? 'high' : undefined}
+          data-zoom={String(Math.round(zoom * 100))}
+        >
+          <WhatOthersCallMe
+            session={session}
+            onRecord={displayName}
+            firstTime
+            onDone={() => {
+              setSkippedNaming(true);
+              void refreshPublicName();
+            }}
+            onGetHelp={() => setScreen('help')}
+          />
+          <SiteFooter year={copyrightYear(new Date())} onAbout={() => setScreen('about')} />
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div data-workspace="participant">
       <a className="skip-link" href="#main-content">
@@ -1058,6 +1157,17 @@ export function App() {
         {screen === 'helper' && (
           <HelperScreen helper={helper} onChange={setHelper} onDone={() => setScreen('help')} />
         )}
+        {screen === 'name' && (
+          <WhatOthersCallMe
+            session={session}
+            onRecord={displayName}
+            firstTime={false}
+            onDone={() => {
+              void refreshPublicName();
+              setScreen('help');
+            }}
+          />
+        )}
         {screen === 'caption' && captioning !== null && (
           <CaptionPhotograph
             session={session}
@@ -1189,6 +1299,16 @@ export function App() {
               */}
               <button className="row-summary" onClick={() => setScreen('shared-stories')}>
                 Stories shared with me
+              </button>
+              {/*
+                The way back to the naming screen. It has to live
+                somewhere reachable: the first arrival is the only other
+                place it appears, and a person who pressed "not now"
+                there, or who wants their name off the community, would
+                otherwise have nowhere to go (D-105).
+              */}
+              <button className="row-summary" onClick={() => setScreen('name')}>
+                What other people call me
               </button>
               <button className="row-summary" onClick={() => setScreen('about')}>
                 About this project

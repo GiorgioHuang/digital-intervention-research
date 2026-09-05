@@ -3602,6 +3602,128 @@ main[data-workspace='staff'] .scroll-x {
 }
 [data-workspace='participant'] .messages-ending p { margin: 0; line-height: 1.6; }
 
+/* ---------- The way in: what should we call you? ----------------------
+ * The drawing's registration screen. Two boxes and an optional third,
+ * each with the sentence that says who sees what is in it — which is the
+ * whole point of the screen, and the reason the notes are set at a size
+ * meant to be read rather than skipped past.
+ */
+[data-workspace='participant'] .first-arrival {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+[data-workspace='participant'] .first-arrival__lede {
+  margin: 0;
+  color: var(--cl-text-3);
+  line-height: 1.65;
+}
+[data-workspace='participant'] .first-arrival__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+[data-workspace='participant'] :is(.first-arrival__field label, .first-arrival__label) {
+  font-family: var(--cl-family-display);
+  font-size: var(--type-size-2);
+  font-weight: var(--type-weight-semibold);
+}
+[data-workspace='participant'] .first-arrival__optional {
+  font-family: var(--cl-family-body);
+  font-size: var(--type-size-1);
+  font-weight: var(--type-weight-regular);
+  color: var(--cl-text-4);
+}
+/* Not shrunk. This sentence is who can see what somebody is about to
+   type, and a note about privacy set smaller than the thing it warns
+   about is a note written to be missed. */
+[data-workspace='participant'] .first-arrival__note {
+  font-family: var(--cl-family-body);
+  font-size: var(--type-size-1);
+  line-height: 1.55;
+  color: var(--cl-text-4);
+}
+[data-workspace='participant'] .first-arrival__field input {
+  inline-size: 100%;
+  min-block-size: 3.444rem; /* the drawing's 62px */
+  padding: var(--space-3);
+  border: var(--border-hairline) solid var(--cl-divider);
+  border-radius: var(--radius-2);
+  background-color: transparent;
+  font-family: var(--cl-family-body);
+  font-size: var(--type-size-3);
+  color: var(--cl-text);
+}
+/* The name other people see is the accented box, as the drawing marks
+   the field it treats as the point of the screen. */
+[data-workspace='participant'] #call-me-name {
+  border-color: var(--cl-accent);
+}
+/* What the study office has: shown, not typed into. Set as a fact rather
+   than dressed as a disabled input, because a greyed-out box reads as
+   something that ought to work and does not (B-33). */
+[data-workspace='participant'] .first-arrival__onrecord {
+  margin: 0;
+  padding: var(--space-3);
+  border-inline-start: var(--border-emphasis) solid var(--cl-text-4);
+  font-family: var(--cl-family-body);
+  font-size: var(--type-size-2);
+  color: var(--cl-text-2);
+}
+[data-workspace='participant'] .first-arrival__promises {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+[data-workspace='participant'] .first-arrival__promise {
+  padding-inline-start: var(--space-4);
+  border-inline-start: var(--border-emphasis) solid var(--cl-text-4);
+  font-family: var(--cl-family-body);
+  line-height: 1.55;
+}
+[data-workspace='participant'] .first-arrival__promise--kept {
+  border-inline-start-color: var(--cl-accent);
+}
+[data-workspace='participant'] .first-arrival__continue {
+  display: flex;
+  justify-content: center;
+  inline-size: 100%;
+  min-block-size: 3.667rem; /* the drawing's 66px */
+  border: var(--border-hairline) solid var(--cl-accent);
+  border-radius: var(--radius-2);
+  background-color: transparent;
+  font-family: var(--cl-family-display);
+  font-size: var(--type-size-2);
+  font-weight: var(--type-weight-semibold);
+  color: var(--cl-accent-700);
+}
+[data-workspace='participant'] .first-arrival__continue:hover:not(:disabled) {
+  background-color: color-mix(in srgb, var(--cl-accent) 12%, transparent);
+}
+[data-workspace='participant'] :is(.first-arrival__skip, .first-arrival__telephone) {
+  align-self: flex-start;
+  border: 0;
+  padding: var(--space-2) var(--space-1);
+  background-color: transparent;
+  font-family: var(--cl-family-body);
+  font-size: var(--type-size-1);
+  font-weight: var(--type-weight-regular);
+  color: var(--cl-accent-700);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  text-align: start;
+}
+[data-workspace='participant'] .first-arrival__confirm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: var(--border-emphasis) solid var(--cl-accent);
+  border-radius: var(--radius-2);
+}
+[data-workspace='participant'] .first-arrival__confirm p { margin: 0; line-height: 1.6; }
+[data-workspace='participant'] .first-arrival__confirm h2 { margin: 0; font-size: var(--type-size-2); }
+
 /* ---------- 13. Motion and reduced-motion (§A.6) ---------- */
 /* The user has explicitly chosen "reduce motion" — the same effect as the
    OS signal, but not dependent on the OS setting.

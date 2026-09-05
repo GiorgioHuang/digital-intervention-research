@@ -185,6 +185,12 @@ describe('the confirmation tier is confirmed by a person, not by the api client'
       'components/approver/ProtocolDecisions.tsx → rejectProtocolVersion',
       'components/approver/ReConsent.tsx → requireReConsent',
       'components/approver/ReportDecisions.tsx → approveReportVersion',
+      /*
+       * Taking your name down. The screen asks first — "other people will
+       * see you as a community member", and what already went out stays
+       * where it went — and only then sends the confirmation.
+       */
+      'components/elder/WhatOthersCallMe.tsx → withdrawPublicProfile',
     ]);
   });
 });

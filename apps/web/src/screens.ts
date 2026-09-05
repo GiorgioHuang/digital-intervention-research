@@ -22,4 +22,5 @@ export type Screen =
   | 'exercises'
   | 'tapping'
   | 'helper'
+  | 'name'
   | 'help';

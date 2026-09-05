@@ -152,7 +152,11 @@ describe('a participant reading their own life story', () => {
       render(<MyLifeStory session={session} />);
     });
     await openMemory();
-    expect(calls[0]?.path).toBe('/v1/participants/pt_a/life-story');
+    // By presence rather than by position: the screen also asks what
+    // this person chose to be called, so that the sharing confirmation
+    // can say truthfully what a shared memory will carry, and the order
+    // of two independent reads is not a contract.
+    expect(calls.some((c) => c.path === '/v1/participants/pt_a/life-story')).toBe(true);
     expect(screen.getByText(/I grew roses/)).toBeTruthy();
     expect(screen.getByText('You wrote this.')).toBeTruthy();
     expect(screen.getByText('You have not confirmed this as your own words.')).toBeTruthy();

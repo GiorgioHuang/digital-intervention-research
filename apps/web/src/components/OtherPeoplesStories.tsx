@@ -51,7 +51,16 @@ export function OtherPeoplesStories({ session, onGoToMyStory }: { session: Sessi
    * made-up name is worse than saying the name is missing.
    */
   const who = (piece: SharedStoryPiece) =>
-    piece.mine ? 'Yours' : (piece.ownerDisplayName ?? 'Somebody on this platform');
+    piece.mine ? 'Yours' : (piece.ownerDisplayName ?? 'A community member');
+
+  /*
+   * Name and city, which is exactly what the sharing screen promises a
+   * shared memory will carry — and the city only when they chose to say
+   * one. It is joined here rather than on the server so the two stay
+   * separately readable: a screen that wants only the name has one.
+   */
+  const whoLine = (piece: SharedStoryPiece) =>
+    piece.mine || piece.ownerCity === null ? who(piece) : `${who(piece)} · ${piece.ownerCity}`;
 
   if (error !== null) return <ErrorState error={error} />;
   if (pieces === null) return <LoadingState label="Looking for stories shared with you…" />;
@@ -80,7 +89,7 @@ export function OtherPeoplesStories({ session, onGoToMyStory }: { session: Sessi
           const body = `shared-piece-${piece.itemId}`;
           return (
             <article key={piece.itemId} className="story-entry" aria-label={piece.title}>
-              <p className="story-entry__who">{who(piece)}</p>
+              <p className="story-entry__who">{whoLine(piece)}</p>
               <h2 className="story-entry__heading">
                 <button
                   className="story-entry__open"

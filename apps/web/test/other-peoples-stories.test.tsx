@@ -16,6 +16,7 @@ const piece = (over: Record<string, unknown> = {}) => ({
     updatedAt: '2026-06-02T00:00:00Z',
     ownerParticipantId: 'pt_mum',
     ownerDisplayName: 'Margaret',
+    ownerCity: null,
     mine: false,
     ...over,
   },
@@ -68,7 +69,29 @@ describe('other people’s stories', () => {
     stub([piece({ ownerDisplayName: null })]);
     render(<OtherPeoplesStories session={session} onGoToMyStory={() => undefined} />);
     await act(async () => {});
-    expect(screen.getByText('Somebody on this platform')).toBeTruthy();
+    // The platform's one placeholder, the same for everybody on purpose
+    // so it cannot be used to tell two people apart (D-12).
+    expect(screen.getByText('A community member')).toBeTruthy();
+  });
+
+  /**
+   * The sharing screen promises a shared memory carries the name this
+   * person chose and the city they chose, and this is where that promise
+   * is kept or broken. The city is shown only when they said one, and
+   * never on their own piece — "Yours · Halifax" tells them where they
+   * live.
+   */
+  it('carries the city beside the name when the author gave one', async () => {
+    stub([piece({ ownerCity: 'Halifax' })]);
+    render(<OtherPeoplesStories session={session} onGoToMyStory={() => undefined} />);
+    await act(async () => {});
+    expect(screen.getByText('Margaret · Halifax')).toBeTruthy();
+    cleanup();
+
+    stub([piece({ mine: true, ownerCity: 'Halifax' })]);
+    render(<OtherPeoplesStories session={session} onGoToMyStory={() => undefined} />);
+    await act(async () => {});
+    expect(screen.getByText('Yours')).toBeTruthy();
   });
 
   /**
