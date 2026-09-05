@@ -1,4 +1,4 @@
-import { newId, type Clock, type RequestContext } from '@platform/kernel';
+import { newId, PlatformError, type Clock, type RequestContext } from '@platform/kernel';
 import { appendToOutbox, recordAuditEvent, withTransaction, type Pool } from '@platform/database';
 import { assertAllowed, type PolicyDecisionResult } from '@platform/policy';
 import { M02_EVENTS } from '../contracts/index.js';
@@ -128,4 +128,148 @@ export async function recordAccessibilityPreference(
     });
   });
   return { preferenceId };
+}
+
+/**
+ * What this participant would like other people to call them, and the
+ * city they are happy to say they live in.
+ *
+ * A SEPARATE THING from the name on the research record, by hard rule
+ * (Doc 20 §354), and separate here too: a different table, a different
+ * permission action, and no value copied between the two in either
+ * direction. The study office may hold somebody's full name because the
+ * study needs it; what other participants are shown is only ever what
+ * the person put here.
+ *
+ * The name is not split into parts. The drawing asks for "your first
+ * name", and a first name is not reliably the first word of a name in
+ * every culture this study recruits from — so the participant is asked
+ * what to be called and that is what is stored, whole.
+ *
+ * Upsert rather than insert-or-fail: changing what you are called is the
+ * ordinary case, not an exception, and a screen that made somebody
+ * delete a name before choosing another would leave them anonymous in
+ * between.
+ */
+export async function setPublicProfile(
+  deps: M02Deps,
+  ctx: RequestContext,
+  input: { participantId: string; chosenName: string; city?: string | null },
+): Promise<void> {
+  const decision = await deps.checkPermission(ctx, {
+    action: 'public-profile.change',
+    resource: {
+      type: 'PublicProfile',
+      id: input.participantId,
+      state: 'Active',
+      protectedExistence: false,
+      ownerParticipantId: input.participantId,
+    },
+  });
+  assertAllowed(decision, false);
+
+  /*
+   * Trimmed here rather than left to the CHECK constraint, because a name
+   * of spaces is a person's mistake, not an attack, and the answer to it
+   * is a clear refusal rather than a constraint violation surfacing as a
+   * server fault. An empty city is stored as "they did not say" — the
+   * field is optional, and blanking it is how somebody takes it back.
+   */
+  const chosenName = input.chosenName.trim();
+  if (chosenName === '') {
+    throw new PlatformError('VALIDATION_ERROR', 'A name is needed for other people to call you');
+  }
+  const city = (input.city ?? '').trim() === '' ? null : (input.city as string).trim();
+
+  const now = deps.clock.now();
+  await withTransaction(deps.pool, async (client) => {
+    await client.query(
+      `INSERT INTO public_profile.public_profiles (participant_id, chosen_name, city)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (participant_id) DO UPDATE
+          SET chosen_name = EXCLUDED.chosen_name,
+              city = EXCLUDED.city,
+              record_version = public_profile.public_profiles.record_version + 1,
+              updated_at = $4`,
+      [input.participantId, chosenName, city, now],
+    );
+    /*
+     * The payload carries whether a city was given, not the city itself,
+     * and never the name. An outbox message is read by machinery that has
+     * no business knowing what somebody is called (ADR-034).
+     */
+    await appendToOutbox(client, ctx, {
+      eventCategory: 'Domain',
+      eventType: M02_EVENTS.PublicProfileChanged,
+      sourceModule: 'M02',
+      aggregateType: 'Participant',
+      aggregateId: input.participantId,
+      occurredAt: now,
+      payload: { hasCity: city !== null },
+    });
+    await recordAuditEvent(client, ctx, {
+      action: 'public-profile.change',
+      targetType: 'PublicProfile',
+      targetId: input.participantId,
+      participantId: input.participantId,
+      occurredAt: now,
+      result: 'Succeeded',
+      source: 'M02',
+      policyVersion: decision.policyVersion,
+    });
+  });
+}
+
+/**
+ * Taking it down. Afterwards other people see the same placeholder as
+ * somebody who never chose a name.
+ *
+ * This exists because the screen would otherwise be a one-way door: B14's
+ * fourth question is "can I take it down?", and a profile that can only
+ * be changed and never removed answers no. Nothing already shared is
+ * deleted by this — the memories stay where they were shared, under a
+ * name nobody can read any more, which is what taking a name down means.
+ */
+export async function withdrawPublicProfile(
+  deps: M02Deps,
+  ctx: RequestContext,
+  input: { participantId: string; confirmed: boolean },
+): Promise<void> {
+  const decision = await deps.checkPermission(ctx, {
+    action: 'public-profile.withdraw',
+    resource: {
+      type: 'PublicProfile',
+      id: input.participantId,
+      state: 'Active',
+      protectedExistence: false,
+      ownerParticipantId: input.participantId,
+    },
+    confirmed: input.confirmed,
+  });
+  assertAllowed(decision, input.confirmed);
+
+  const now = deps.clock.now();
+  await withTransaction(deps.pool, async (client) => {
+    await client.query(`DELETE FROM public_profile.public_profiles WHERE participant_id = $1`, [
+      input.participantId,
+    ]);
+    await appendToOutbox(client, ctx, {
+      eventCategory: 'Domain',
+      eventType: M02_EVENTS.PublicProfileWithdrawn,
+      sourceModule: 'M02',
+      aggregateType: 'Participant',
+      aggregateId: input.participantId,
+      occurredAt: now,
+    });
+    await recordAuditEvent(client, ctx, {
+      action: 'public-profile.withdraw',
+      targetType: 'PublicProfile',
+      targetId: input.participantId,
+      participantId: input.participantId,
+      occurredAt: now,
+      result: 'Succeeded',
+      source: 'M02',
+      policyVersion: decision.policyVersion,
+    });
+  });
 }

@@ -113,6 +113,13 @@ export const POLICY_V1: PolicyConfiguration = {
       // Participant self-service actions are owner-permitted on own resources.
       'participant.view-own',
       'participant.update-own',
+      // What other people call you. Deliberately not folded into
+      // `participant.update-own`: the research record and the public
+      // profile are two different things by hard rule (Doc 20 §354), and
+      // no staff role holds either of these — the study office does not
+      // decide what somebody is called in front of other participants.
+      'public-profile.change',
+      'public-profile.withdraw',
       'consent.record',
       'consent.withdraw',
       'relationship.approve',
@@ -339,6 +346,14 @@ export const POLICY_V1: PolicyConfiguration = {
 
     'participant.view-own': { ownerPermitted: true, ownerOnly: true },
     'participant.update-own': { ownerPermitted: true, ownerOnly: true },
+    'public-profile.change': { ownerPermitted: true, ownerOnly: true },
+    /*
+     * Taking your name down is its own action because it is the one with
+     * a consequence somebody cannot see from here: every screen other
+     * people read you on goes back to the placeholder. Choosing or
+     * changing a name is ordinary and is not made to feel grave.
+     */
+    'public-profile.withdraw': { ownerPermitted: true, ownerOnly: true, confirmationRequired: true },
     // Researcher/coordinator access to assigned participant data requires
     // study-participation consent and a declared research purpose.
     'participant.view-assigned': {

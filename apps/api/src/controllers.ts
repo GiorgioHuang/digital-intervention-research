@@ -9,7 +9,13 @@ import {
   type AccountNameQueryPort,
   type M01Deps,
 } from '@platform/m01-identity-org';
-import { getMyProfile, type M02Deps } from '@platform/m02-participant';
+import {
+  getMyProfile,
+  getMyPublicProfile,
+  setPublicProfile,
+  withdrawPublicProfile,
+  type M02Deps,
+} from '@platform/m02-participant';
 import {
   approveRelationship,
   listOwnConsents,
@@ -109,6 +115,14 @@ export interface ApiDeps {
   /** Participant display names (M02), for the same reason on the supporter side. */
   participantNames: {
     findDisplayNames(participantIds: string[]): Promise<Map<string, string>>;
+    /**
+     * What participants chose to be called in front of other people — a
+     * different question from the one above, and the only one a screen
+     * shown to a peer or a stranger may ask (Doc 20 §354).
+     */
+    findPublicNames(
+      participantIds: string[],
+    ): Promise<Map<string, { chosenName: string; city: string | null }>>;
     /** Who the signed-in actor is as a participant, or undefined for a supporter. */
     findParticipantIdByAccount(userAccountId: string): Promise<string | undefined>;
   };
@@ -153,6 +167,64 @@ export class CommandController {
     const ctx = requireActor(req);
     const profile = await getMyProfile(this.deps.m02, ctx, participantId);
     return { data: profile === null ? null : { type: 'Participant', id: profile.participantId, attributes: profile } };
+  }
+
+  /**
+   * What this participant chose to be called in front of other people,
+   * and where they said they live.
+   *
+   * A SEPARATE THING from the profile above, by hard rule (Doc 20 §354),
+   * and separate here: its own route, its own table, its own write
+   * action. Nothing on this platform copies a value from one to the
+   * other, in either direction.
+   *
+   * Null is the ordinary answer for somebody who has chosen nothing —
+   * other participants see the uniform placeholder until they do.
+   */
+  @Get('participants/:participantId/public-profile')
+  async myPublicProfile(@Req() req: Request, @Param('participantId') participantId: string) {
+    const ctx = requireActor(req);
+    const profile = await getMyPublicProfile(this.deps.m02, ctx, participantId);
+    return {
+      data: profile === null ? null : { type: 'PublicProfile', id: participantId, attributes: profile },
+    };
+  }
+
+  @Post('participants/:participantId/public-profile')
+  async changePublicProfile(
+    @Req() req: Request,
+    @Param('participantId') participantId: string,
+    @Body() body: { chosenName: string; city?: string | null },
+  ) {
+    const ctx = requireActor(req);
+    await setPublicProfile(this.deps.m02, ctx, {
+      participantId,
+      chosenName: body.chosenName,
+      city: body.city ?? null,
+    });
+    return { data: { type: 'PublicProfile', id: participantId } };
+  }
+
+  /**
+   * Taking the name down. Afterwards other people see the same
+   * placeholder as somebody who never chose one.
+   *
+   * Confirmed, because it changes what everybody else sees and there is
+   * nothing on the other screens to undo it from — the person has to come
+   * back here and choose a name again.
+   */
+  @Post('participants/:participantId/public-profile/withdraw')
+  async removePublicProfile(
+    @Req() req: Request,
+    @Param('participantId') participantId: string,
+    @Body() body: { confirmed?: boolean },
+  ) {
+    const ctx = requireActor(req);
+    await withdrawPublicProfile(this.deps.m02, ctx, {
+      participantId,
+      confirmed: body.confirmed === true,
+    });
+    return { data: { type: 'PublicProfile', id: participantId } };
   }
 
   /**

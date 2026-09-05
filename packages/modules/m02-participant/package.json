@@ -17,6 +17,8 @@
     "@platform/policy": "workspace:*"
   },
   "devDependencies": {
+    "@platform/m01-identity-org": "workspace:*",
+    "@platform/m03-consent-permission": "workspace:*",
     "@types/node": "^22.20.1",
     "@types/pg": "^8.16.0",
     "pg": "^8.16.4",

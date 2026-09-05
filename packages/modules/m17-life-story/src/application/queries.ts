@@ -365,8 +365,14 @@ export async function getSharedLifeStory(
 /** One piece in the community feed, with who wrote it. */
 export interface SharedStoryPiece extends SharedLifeStoryItem {
   ownerParticipantId: string;
-  /** Null when the name cannot be resolved; the screen says so rather than filling it in. */
+  /**
+   * What the author chose to be called in front of other people. Null
+   * when they have chosen nothing — the screen says so rather than
+   * filling it in, and never fills it in from the research record.
+   */
   ownerDisplayName: string | null;
+  /** The city they chose to say, if they said one. */
+  ownerCity: string | null;
   /** Yours, so the screen can say so rather than presenting it as somebody else's. */
   mine: boolean;
 }
@@ -392,7 +398,17 @@ export interface SharedStoryPiece extends SharedLifeStoryItem {
  * into a screen headed with other people's.
  */
 export async function listStoriesSharedWithMe(
-  deps: M17Deps & StandingDeps & { participantNames: { findDisplayNames(ids: string[]): Promise<Map<string, string>> } },
+  deps: M17Deps &
+    StandingDeps & {
+      /*
+       * The PUBLIC name, not the one on the research record. A feed is
+       * read by people the author never met, so what appears above their
+       * memory is only ever what they chose to put up (§354, C2).
+       */
+      participantNames: {
+        findPublicNames(ids: string[]): Promise<Map<string, { chosenName: string; city: string | null }>>;
+      };
+    },
   ctx: RequestContext,
   input: { viewerActorId: string; viewerParticipantId: string | null; limit?: number },
 ): Promise<SharedStoryPiece[]> {
@@ -438,7 +454,7 @@ export async function listStoriesSharedWithMe(
     ],
   );
 
-  const names = await deps.participantNames.findDisplayNames(res.rows.map((r) => r.participant_id as string));
+  const names = await deps.participantNames.findPublicNames(res.rows.map((r) => r.participant_id as string));
   return res.rows.map((r) => ({
     itemId: r.id as string,
     title: r.title as string,
@@ -447,7 +463,14 @@ export async function listStoriesSharedWithMe(
     testimonyState: (r.testimony_state as string | null) ?? null,
     updatedAt: (r.updated_at as Date).toISOString(),
     ownerParticipantId: r.participant_id as string,
-    ownerDisplayName: names.get(r.participant_id as string) ?? null,
+    ownerDisplayName: names.get(r.participant_id as string)?.chosenName ?? null,
+    /*
+     * Where they said they live, if they said it. The drawing promises a
+     * shared memory carries "your first name and your city", and this is
+     * the city half of that promise — optional, chosen, and never an
+     * address.
+     */
+    ownerCity: names.get(r.participant_id as string)?.city ?? null,
     mine: input.viewerParticipantId !== null && r.participant_id === input.viewerParticipantId,
   }));
 }

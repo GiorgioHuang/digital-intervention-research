@@ -11,7 +11,12 @@ import {
   seedBootstrapAdministrator,
   type M01Deps,
 } from '@platform/m01-identity-org';
-import { createParticipantQuery, registerParticipant, type M02Deps } from '@platform/m02-participant';
+import {
+  createParticipantQuery,
+  registerParticipant,
+  setPublicProfile,
+  type M02Deps,
+} from '@platform/m02-participant';
 import {
   approveRelationship,
   createPermissionService,
@@ -410,18 +415,42 @@ describe.skipIf(!dbAvailable)('M18/M16 messaging pipeline (integration)', () => 
     expect(supporterRow?.basisType).toBe('AuthorisedRelationship');
     expect(supporterRow?.otherDisplayName).toBeNull();
 
-    // The peer rows are unaffected: their other side really is a
-    // participant, and that lookup was never the broken one. This is the
-    // Ann-Ben thread the formation test above built, so it is asserted by
-    // name rather than by "not null" — an undefined row would satisfy the
-    // weaker form and prove nothing.
+    /*
+     * The peer row. This is the Ann-Ben thread the formation test above
+     * built, so it is asserted by name rather than by "not null" — an
+     * undefined row would satisfy the weaker form and prove nothing.
+     *
+     * What a peer is called changed on 2026-09-05: it is the name Ben
+     * chose to be shown as, and until he chooses one Ann sees the
+     * placeholder. His research record still says 'Ben' and Ann is not
+     * shown it, which is the whole of the change (§354, C2 ruling) —
+     * asserted with a different public name so the two cannot be
+     * confused for each other.
+     */
     const peerRow = mine.find((t) => t.basisType === 'ActiveConnection');
-    expect(peerRow?.otherDisplayName).toBe('Ben');
+    expect(peerRow?.otherDisplayName).toBe('A community member');
 
-    // And the supporter's own list still names the participant, because
-    // there the directory being asked is the right one.
+    await setPublicProfile(m02, ctx(bAcc), { participantId: bId, chosenName: 'Benny' });
+    const named = await listThreads(m18, ctx(aAcc), aId);
+    expect(named.find((t) => t.basisType === 'ActiveConnection')?.otherDisplayName).toBe('Benny');
+    expect(JSON.stringify(named)).not.toContain('"Ben"');
+
+    /*
+     * The supporter's own list still names the participant, and this is
+     * the one place the research record may still reach another human:
+     * a supporter was invited by this participant, at an address she
+     * typed, to help her — they know what she is called, and a list of
+     * identical placeholders is exactly the defect this assertion was
+     * written for.
+     */
     const inbox = await listThreadsForActor(m18, ctx(supporterActorId));
     expect(inbox.find((t) => t.threadId === relThread)?.otherDisplayName).toBe('Ann');
+
+    // And when she does choose a name, her daughter sees the chosen one
+    // rather than the record — the public name wins wherever it exists.
+    await setPublicProfile(m02, ctx(aAcc), { participantId: aId, chosenName: 'Annie' });
+    const afterInbox = await listThreadsForActor(m18, ctx(supporterActorId));
+    expect(afterInbox.find((t) => t.threadId === relThread)?.otherDisplayName).toBe('Annie');
   });
 
   /**

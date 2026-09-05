@@ -11,7 +11,12 @@ import {
   seedBootstrapAdministrator,
   type M01Deps,
 } from '@platform/m01-identity-org';
-import { createParticipantQuery, registerParticipant, type M02Deps } from '@platform/m02-participant';
+import {
+  createParticipantQuery,
+  registerParticipant,
+  setPublicProfile,
+  type M02Deps,
+} from '@platform/m02-participant';
 import {
   approveRelationship,
   createPermissionService,
@@ -300,14 +305,28 @@ describe.skipIf(!dbAvailable)('M18 block/report/moderation/community (integratio
     const post = await pool.query(`SELECT post_state FROM community_social.social_posts WHERE id = $1`, [postId]);
     expect(post.rows[0].post_state).toBe('Published');
 
-    // Decision D-12: the feed carries a name, not an internal identifier.
-    // Until PublicProfile exists that name is the one on the participant
-    // record, and it must actually be resolved — a screen that prints the
-    // key hands every reader a handle for correlating that person.
+    /*
+     * Decision D-12: the feed carries a name, not an internal identifier —
+     * a screen that prints the key hands every reader a handle for
+     * correlating that person.
+     *
+     * WHICH name changed on 2026-09-05. It used to be the one on the
+     * participant record, because that was the only name the platform
+     * had; it is now the one this person chose to be shown as, and until
+     * they choose one the community sees the placeholder rather than the
+     * study office's record (Doc 20 §354, C2 ruling).
+     */
+    const before = await listCommunityFeed(m18, ctx(patAccountId), { spaceId, participantId: patId });
+    expect(before.find((f) => f.postId === postId)?.authorDisplayName).toBe('A community member');
+
+    await setPublicProfile(m02, ctx(patAccountId), { participantId: patId, chosenName: 'Pat' });
     const feed = await listCommunityFeed(m18, ctx(patAccountId), { spaceId, participantId: patId });
     const mine = feed.find((f) => f.postId === postId);
-    expect(mine?.authorDisplayName).toBe('Pat P.');
+    expect(mine?.authorDisplayName).toBe('Pat');
     expect(mine?.authorDisplayName).not.toContain('pt_');
+    // The research record's name is not in the answer at all, under any
+    // field — which is the promise, not just "the name field is right".
+    expect(JSON.stringify(feed)).not.toContain('Pat P.');
   });
 
   it('a participant whose name cannot be resolved is described, never numbered', async () => {
@@ -315,7 +334,10 @@ describe.skipIf(!dbAvailable)('M18 block/report/moderation/community (integratio
     // reachable state today; the guarantee still has to hold, because the
     // alternative fallback — printing the id — is the exact defect D-12
     // exists to remove.
-    const bare: M18Deps = { ...m18, participants: { findDisplayNames: async () => new Map() } };
+    const bare: M18Deps = {
+      ...m18,
+      participants: { findDisplayNames: async () => new Map(), findPublicNames: async () => new Map() },
+    };
     const { spaceId, ruleVersionId } = await createCommunitySpace(
       m18,
       createRequestContext({ actor: { type: 'user', id: adminId }, organisationId: orgId }),

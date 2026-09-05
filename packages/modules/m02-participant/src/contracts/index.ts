@@ -22,9 +22,31 @@ export interface ParticipantQueryPort {
    * already hold.
    */
   findDisplayNames(participantIds: string[]): Promise<Map<string, string>>;
+  /**
+   * What these participants chose to be called in front of other people,
+   * and where they said they live if they said it at all.
+   *
+   * A DIFFERENT QUESTION from `findDisplayNames`, and the difference is a
+   * hard rule (Doc 20 §354): that one answers "what does the study office
+   * have on record", this one answers "what did this person put up for
+   * other people to see". Nothing copies a value from one to the other,
+   * so a participant who has chosen nothing is simply absent from this
+   * map — and absence must not be filled in from the research record,
+   * which is the whole point (the C2 ruling, 2026-09-05).
+   */
+  findPublicNames(participantIds: string[]): Promise<Map<string, PublicName>>;
+}
+
+/** What one participant put up for other people to see. */
+export interface PublicName {
+  chosenName: string;
+  /** Null when they did not say, which is the default. */
+  city: string | null;
 }
 
 export const M02_EVENTS = {
   ParticipantRegistered: 'ParticipantRegistered',
   AccessibilityPreferenceRecorded: 'AccessibilityPreferenceRecorded',
+  PublicProfileChanged: 'PublicProfileChanged',
+  PublicProfileWithdrawn: 'PublicProfileWithdrawn',
 } as const;

@@ -20,7 +20,17 @@ export type PermissionCheck = (
  * query object, which satisfies this structurally.
  */
 export interface ParticipantNamePort {
+  /**
+   * The name on the research record. Used only where the reader is
+   * somebody the participant admitted by name — an approved supporter —
+   * and never on a screen a peer or a stranger sees (§354, D-12).
+   */
   findDisplayNames(participantIds: string[]): Promise<Map<string, string>>;
+  /**
+   * What the participant chose to be shown as. Absent when they have
+   * chosen nothing, and absence is not filled in from the record above.
+   */
+  findPublicNames(participantIds: string[]): Promise<Map<string, { chosenName: string; city: string | null }>>;
 }
 
 export interface M18Deps {

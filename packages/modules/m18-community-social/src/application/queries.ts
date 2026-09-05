@@ -42,9 +42,25 @@ export interface ConnectionSummary {
  */
 const UNNAMED = 'A community member';
 
+/**
+ * What one participant is called in front of another.
+ *
+ * The PUBLIC name, and only that. This used to read the research
+ * record's `display_name`, which meant the name the study office holds —
+ * quite possibly somebody's full legal name — was what every peer saw on
+ * a connection, a conversation and a feed. D-12 recorded that as a cost
+ * to be paid until a public profile existed; it exists now, so it is
+ * paid off here.
+ *
+ * Somebody who has chosen no public name is the uniform placeholder.
+ * That is a real loss of legibility and it is the ruling (C2,
+ * 2026-09-05): a name nobody chose to show should not be shown, and the
+ * platform asks for one on the way in rather than helping itself to the
+ * research record.
+ */
 async function nameOf(deps: M18Deps, ids: string[]): Promise<(id: string) => string> {
-  const names = await deps.participants.findDisplayNames(ids);
-  return (id: string) => names.get(id) ?? UNNAMED;
+  const names = await deps.participants.findPublicNames(ids);
+  return (id: string) => names.get(id)?.chosenName ?? UNNAMED;
 }
 
 export async function listConnections(
@@ -584,11 +600,29 @@ export async function listThreadsForActor(deps: M18Deps, ctx: RequestContext): P
     lastMessageFromMe: r.last_sender === null ? null : false,
     lastMessagePreview: SAID.has(r.last_state as string) ? ((r.last_text as string | null) ?? null) : null,
   }));
-  // The far side here is a participant, so the directory is the right one
-  // to ask — but the community placeholder is not the right answer when it
-  // misses. A supporter is not in a community with the person they
-  // support; they were approved by that person by name, and a row saying
-  // "a community member" describes a relationship neither of them has.
-  const names = await deps.participants.findDisplayNames(rows.map((r) => r.otherParticipantId));
-  return rows.map((r) => ({ ...r, otherDisplayName: names.get(r.otherParticipantId) ?? null }));
+  /*
+   * The far side here is a participant, so the directory is the right one
+   * to ask — but the community placeholder is not the right answer when it
+   * misses. A supporter is not in a community with the person they
+   * support; they were approved by that person by name, and a row saying
+   * "a community member" describes a relationship neither of them has.
+   *
+   * This is also the one place the research record's name is still
+   * allowed to reach another human, and the reason is the relationship
+   * itself: a supporter was invited by this participant, at an address
+   * this participant typed, to help them — they already know what she is
+   * called. The public name wins when there is one, so that somebody who
+   * chooses to be "Margaret" is Margaret to her daughter too; the record
+   * only fills a gap that would otherwise be an unreadable list.
+   */
+  const ids = rows.map((r) => r.otherParticipantId);
+  const [chosen, onRecord] = await Promise.all([
+    deps.participants.findPublicNames(ids),
+    deps.participants.findDisplayNames(ids),
+  ]);
+  return rows.map((r) => ({
+    ...r,
+    otherDisplayName:
+      chosen.get(r.otherParticipantId)?.chosenName ?? onRecord.get(r.otherParticipantId) ?? null,
+  }));
 }

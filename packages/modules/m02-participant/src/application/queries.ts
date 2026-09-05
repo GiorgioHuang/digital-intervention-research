@@ -142,3 +142,44 @@ export async function getMyProfile(
   if (row === undefined) return null;
   return { participantId: row.id as string, displayName: row.display_name as string };
 }
+
+/** What this participant put up for other people to see, read back to them. */
+export interface MyPublicProfile {
+  chosenName: string;
+  city: string | null;
+}
+
+/**
+ * The participant's own view of their public profile.
+ *
+ * Null means they have chosen nothing, which is the default and is not an
+ * error: other people see the placeholder, and the screen says so. Read
+ * under `participant.view-own` rather than a new action — this is a
+ * person looking at their own record, and the separation that matters is
+ * on the WRITE side and in what other people's screens are allowed to
+ * ask for.
+ */
+export async function getMyPublicProfile(
+  deps: M02Deps,
+  ctx: RequestContext,
+  participantId: string,
+): Promise<MyPublicProfile | null> {
+  const decision = await deps.checkPermission(ctx, {
+    action: 'participant.view-own',
+    resource: {
+      type: 'PublicProfile',
+      id: participantId,
+      state: 'Active',
+      protectedExistence: true,
+      ownerParticipantId: participantId,
+    },
+  });
+  assertAllowed(decision, false);
+  const res = await deps.pool.query(
+    `SELECT chosen_name, city FROM public_profile.public_profiles WHERE participant_id = $1`,
+    [participantId],
+  );
+  const row = res.rows[0];
+  if (row === undefined) return null;
+  return { chosenName: row.chosen_name as string, city: (row.city as string | null) ?? null };
+}

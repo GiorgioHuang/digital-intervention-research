@@ -11,7 +11,13 @@ import {
   seedBootstrapAdministrator,
   type M01Deps,
 } from '@platform/m01-identity-org';
-import { createParticipantQuery, registerParticipant, type M02Deps } from '@platform/m02-participant';
+import {
+  createParticipantQuery,
+  registerParticipant,
+  setPublicProfile,
+  withdrawPublicProfile,
+  type M02Deps,
+} from '@platform/m02-participant';
 import {
   approveRelationship,
   createPermissionService,
@@ -534,7 +540,53 @@ describe.skipIf(!dbAvailable)('M17 Life Story (integration)', () => {
       const own = seen.find((p) => p.itemId === mineShared);
       expect(own, 'their own shared piece was missing from the feed').toBeDefined();
       expect(own?.mine).toBe(true);
-      expect(own?.ownerDisplayName).toBe('Pat P.');
+    });
+
+    /**
+     * What a shared memory says about who wrote it.
+     *
+     * It used to say the name on the RESEARCH record — 'Pat P.' here —
+     * because that was the only name the platform had, and every
+     * outward-facing screen read it (D-12 recorded the cost and left the
+     * question open). The study office holds that name because the study
+     * needs it. A feed read by people the author never met is not the
+     * study office.
+     *
+     * So: nothing until the author chooses something, and then exactly
+     * what they chose. The two names are never joined and neither falls
+     * back to the other (Doc 20 §354, and the C2 ruling).
+     */
+    it('carries the name the author chose to show, and never the one on the research record', async () => {
+      const before = (await feed(participantAccountId, participantId)).find((p) => p.itemId === mineShared);
+      expect(before?.ownerDisplayName, 'the research record leaked into the feed').toBeNull();
+      expect(before?.ownerCity).toBeNull();
+
+      await setPublicProfile(m02, ctx(participantAccountId), {
+        participantId,
+        chosenName: 'Pat',
+        city: 'Halifax',
+      });
+      const after = (await feed(participantAccountId, participantId)).find((p) => p.itemId === mineShared);
+      expect(after?.ownerDisplayName).toBe('Pat');
+      expect(after?.ownerCity).toBe('Halifax');
+
+      // The drawing's promise, checked as a whole answer rather than one
+      // field: the surname on the research record is nowhere in what the
+      // feed hands to a screen.
+      expect(JSON.stringify(await feed(participantAccountId, participantId))).not.toContain('Pat P.');
+    });
+
+    /**
+     * And taking it down puts them back to the placeholder, rather than
+     * back to the research record — which would make "take it down" mean
+     * "show the study office's name instead".
+     */
+    it('goes back to nothing when the author takes their name down', async () => {
+      await setPublicProfile(m02, ctx(participantAccountId), { participantId, chosenName: 'Pat', city: 'Halifax' });
+      await withdrawPublicProfile(m02, ctx(participantAccountId), { participantId, confirmed: true });
+      const after = (await feed(participantAccountId, participantId)).find((p) => p.itemId === mineShared);
+      expect(after?.ownerDisplayName).toBeNull();
+      expect(after?.ownerCity).toBeNull();
     });
 
     /**

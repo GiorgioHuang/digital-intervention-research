@@ -81,6 +81,9 @@ async function main(): Promise<void> {
       findDisplayNames: (): never => {
         throw new PlatformError('AUTHORISATION_DENIED', 'Sweeps do not read participant names');
       },
+      findPublicNames: (): never => {
+        throw new PlatformError('AUTHORISATION_DENIED', 'Sweeps do not read participant names');
+      },
     },
   };
   for (const queue of SWEEP_QUEUES) await boss.createQueue(queue);
