@@ -115,6 +115,17 @@ export function createSessionStore(options: SessionStoreOptions): SessionStore {
           await applyPendingInvitationTo(client, identity, identityRow.user_account_id, now());
         }
 
+        /*
+         * An account with a participant record holds the Participant
+         * role. Checked on every sign-in rather than only where the
+         * record is made, because everybody already on the platform got
+         * their record from a version that wrote no role at all, and a
+         * fix that only applies to new arrivals leaves them broken for
+         * good — nothing else on this platform would ever grant it to
+         * them except a member of staff opening the accounts screen.
+         */
+        await ensureParticipantRole(client, identityRow.user_account_id);
+
         const account = await client.query<{ display_name: string; account_state: string }>(
           `SELECT display_name, account_state
              FROM identity_org.user_accounts
@@ -477,6 +488,11 @@ async function createAccount(
  * and later claims a participant-creating invitation, must not end up as
  * two people. The unique index on (user_account_id) enforces it; this
  * checks first so the ordinary path does not rely on catching an error.
+ *
+ * The Participant role is NOT granted here. Both callers run inside a
+ * sign-in, and the sign-in path checks the invariant afterwards for every
+ * account — so a grant here would be a second place doing the same thing
+ * that no test could tell apart from the first.
  */
 async function ensureParticipant(
   client: { query: Pool['query'] },
@@ -486,15 +502,85 @@ async function ensureParticipant(
     `SELECT 1 FROM participant_profile.participants WHERE user_account_id = $1`,
     [accountId],
   );
-  if (existing.rowCount !== 0) return;
-  const account = await client.query<{ display_name: string }>(
-    `SELECT display_name FROM identity_org.user_accounts WHERE id = $1`,
+  if (existing.rowCount === 0) {
+    const account = await client.query<{ display_name: string }>(
+      `SELECT display_name FROM identity_org.user_accounts WHERE id = $1`,
+      [accountId],
+    );
+    await client.query(
+      `INSERT INTO participant_profile.participants (id, user_account_id, display_name)
+       VALUES ($1, $2, $3)`,
+      [newId('pt'), accountId, account.rows[0]?.display_name ?? 'New member'],
+    );
+  }
+}
+
+/**
+ * A participant record and the Participant role are the same fact, and
+ * only one of them was ever written.
+ *
+ * Nothing on this platform assigned the Participant role except a staff
+ * screen. So everybody who signed in with Google got a participant record
+ * and no role — and every screen that reads something SOMEBODY ELSE
+ * shared was denied, because those are the only participant actions that
+ * are not owner-scoped. The community feed and "stories shared with me"
+ * answered 404 for every real person on the platform, while passing their
+ * tests, because the test fixtures assign the role by hand.
+ *
+ * WHAT THIS DOES NOT WIDEN. Every other action the Participant role
+ * carries is `ownerOnly`, so it was already reachable by the owner
+ * without any role, and the ones that are not owner-only carry their own
+ * second gate: the two shared-view actions are resolved against the
+ * standing the viewer actually has (`reachOf`, `mayRead`), so somebody
+ * with no supporters, no connections and no community still sees nothing.
+ * `connection.activate` needs a mutual acceptance and `enrolment.withdraw`
+ * needs to be the enrolee. What this grants is the fact that the account
+ * is a participant, which is what the role names.
+ *
+ * Platform-wide (no organisation scope) deliberately: being a participant
+ * is not a fact about an organisation, and an org-scoped assignment would
+ * stop applying the moment a request carried a different one.
+ */
+async function ensureParticipantRole(
+  client: { query: Pool['query'] },
+  accountId: string,
+): Promise<void> {
+  /*
+   * This runs for every account signing in, staff and supporters
+   * included, and they must not be given the study's own actions. A
+   * participant record is the whole of what makes somebody a
+   * participant here.
+   */
+  const isParticipant = await client.query(
+    `SELECT 1 FROM participant_profile.participants WHERE user_account_id = $1`,
     [accountId],
   );
+  if (isParticipant.rowCount === 0) return;
+  const held = await client.query(
+    `SELECT 1 FROM identity_org.role_assignments
+      WHERE user_account_id = $1 AND role = 'Participant' AND assignment_state = 'Active'
+      LIMIT 1`,
+    [accountId],
+  );
+  if (held.rowCount !== 0) return;
+  /*
+   * Revoked, suspended or expired assignments are left alone and are not
+   * re-granted here: a role somebody took away is a decision, and a
+   * sign-in must not quietly undo it. Only an account with no active
+   * assignment and no history of one gets it.
+   */
+  const previous = await client.query(
+    `SELECT 1 FROM identity_org.role_assignments
+      WHERE user_account_id = $1 AND role = 'Participant' LIMIT 1`,
+    [accountId],
+  );
+  if (previous.rowCount !== 0) return;
   await client.query(
-    `INSERT INTO participant_profile.participants (id, user_account_id, display_name)
-     VALUES ($1, $2, $3)`,
-    [newId('pt'), accountId, account.rows[0]?.display_name ?? 'New member'],
+    `INSERT INTO identity_org.role_assignments
+       (id, user_account_id, role, assignment_state, assigned_by_actor_id)
+     VALUES ($1, $2, 'Participant', 'Active', 'system-registration')
+     ON CONFLICT DO NOTHING`,
+    [newId('ra'), accountId],
   );
 }
 

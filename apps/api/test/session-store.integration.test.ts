@@ -184,6 +184,97 @@ describe.skipIf(!dbAvailable)('sessions, invitations, and who a Google account t
     expect(participant.rowCount).toBe(1);
   });
 
+  /**
+   * The record and the role are the same fact, and only the record was
+   * ever written.
+   *
+   * Nothing assigned the Participant role except a staff screen, so
+   * everybody who signed in with Google had a participant record and no
+   * role — and the only participant actions that are not owner-scoped are
+   * the two that read what somebody ELSE shared. So the community feed
+   * and "stories shared with me" answered 404 for every real person on
+   * the platform, while their own tests passed, because those fixtures
+   * assign the role by hand. This asserts it through the door people
+   * actually come in by.
+   */
+  it('makes a self-registered person a Participant, not only a participant record', async () => {
+    const result = await sessions.signIn(identity(), nextNonce());
+    const role = await pool.query<{ organisation_id: string | null }>(
+      `SELECT organisation_id FROM identity_org.role_assignments
+        WHERE user_account_id = $1 AND role = 'Participant' AND assignment_state = 'Active'`,
+      [result.userAccountId],
+    );
+    expect(role.rowCount).toBe(1);
+    // Platform-wide: being a participant is not a fact about an
+    // organisation, and an org-scoped assignment would stop applying the
+    // moment a request carried a different one.
+    expect(role.rows[0]?.organisation_id).toBeNull();
+
+    // And the thing that was actually broken: the feed's permission.
+    const decision = await permissions.evaluate(
+      createRequestContext({ actor: { type: 'user', id: result.userAccountId } }),
+      {
+        action: 'life-story.view-shared',
+        resource: { type: 'LifeStoryArchive', id: 'feed', state: 'Any', protectedExistence: true },
+      },
+    );
+    expect(decision.outcome).toBe('Allow');
+  });
+
+  /**
+   * Granted once. A sign-in must not keep writing assignments, and — the
+   * one that matters — must not undo a decision somebody made: a role
+   * that was revoked stays revoked, rather than being quietly restored by
+   * the next visit.
+   */
+  it('grants the role once, and does not restore one that was taken away', async () => {
+    const result = await sessions.signIn(identity(), nextNonce());
+    await sessions.signIn(identity(), nextNonce());
+    const once = await pool.query(
+      `SELECT count(*)::int AS n FROM identity_org.role_assignments
+        WHERE user_account_id = $1 AND role = 'Participant'`,
+      [result.userAccountId],
+    );
+    expect(once.rows[0].n).toBe(1);
+
+    await pool.query(
+      `UPDATE identity_org.role_assignments SET assignment_state = 'Revoked'
+        WHERE user_account_id = $1 AND role = 'Participant'`,
+      [result.userAccountId],
+    );
+    await sessions.signIn(identity(), nextNonce());
+    const after = await pool.query<{ n: number; active: number }>(
+      `SELECT count(*)::int AS n,
+              count(*) FILTER (WHERE assignment_state = 'Active')::int AS active
+         FROM identity_org.role_assignments
+        WHERE user_account_id = $1 AND role = 'Participant'`,
+      [result.userAccountId],
+    );
+    expect(after.rows[0]?.n).toBe(1);
+    expect(after.rows[0]?.active).toBe(0);
+  });
+
+  /**
+   * An account that signed in before the role was granted at all. Its
+   * participant record exists, so the create branch is skipped — and the
+   * repair has to happen anyway, or everybody already on the platform
+   * stays broken.
+   */
+  it('repairs an account that already had a record and no role', async () => {
+    const result = await sessions.signIn(identity(), nextNonce());
+    await pool.query(
+      `DELETE FROM identity_org.role_assignments WHERE user_account_id = $1 AND role = 'Participant'`,
+      [result.userAccountId],
+    );
+    await sessions.signIn(identity(), nextNonce());
+    const role = await pool.query(
+      `SELECT 1 FROM identity_org.role_assignments
+        WHERE user_account_id = $1 AND role = 'Participant' AND assignment_state = 'Active'`,
+      [result.userAccountId],
+    );
+    expect(role.rowCount).toBe(1);
+  });
+
   it('recognises a self-registered person on their second visit rather than making another account', async () => {
     const first = await sessions.signIn(identity(), nextNonce());
     const second = await sessions.signIn(identity(), nextNonce());
@@ -391,6 +482,17 @@ describe.skipIf(!dbAvailable)('sessions, invitations, and who a Google account t
       [daughter.userAccountId],
     );
     expect(participant.rowCount).toBe(0);
+
+    // Nor the Participant role. Sign-in now makes sure an account with a
+    // participant record holds it, and this is the account that must not
+    // be caught by that: a supporter is not a participant in the study,
+    // and the role carries the study's own actions.
+    const role = await pool.query(
+      `SELECT 1 FROM identity_org.role_assignments
+        WHERE user_account_id = $1 AND role = 'Participant'`,
+      [daughter.userAccountId],
+    );
+    expect(role.rowCount).toBe(0);
   });
 
   /**
