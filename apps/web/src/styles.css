@@ -770,6 +770,34 @@ main {
   padding-block-start: var(--elder-gutter-block);
   padding-inline: var(--elder-gutter);
 }
+/*
+ * `main` takes the slack the window leaves, and the footer takes the
+ * bottom of it.
+ *
+ * The footer is inside `main` on purpose — `main` already reserves the
+ * fixed tab bar's height at its foot, so the footer scrolls with the page
+ * and the bar never covers it — which means the push has to happen in
+ * here rather than on the shell.
+ *
+ * A column flex container, so `margin-block-start: auto` on the last
+ * child can do the pushing. The children are the same blocks in the same
+ * order at full width; what changes is that margins between them no
+ * longer collapse, and the participant screens build their spacing from
+ * flex `gap` rather than from collapsing margins, so there is nothing
+ * here that was relying on it.
+ */
+[data-workspace='participant'] > main {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+}
+[data-workspace='participant'] > main > .site-footer {
+  margin-block-start: auto;
+  /* The rule above it is the design's; the space before that rule is what
+     pushes, so the margin the footer carries for a full page must not be
+     added to it as well. */
+  padding-block-start: var(--space-6);
+}
 /* The gutter is the gutter; the heading does not add its own on top of it.
    Measured, the greeting sat 50px below the toolbar — 24 of padding plus
    27 of heading margin, which do not collapse through the padding — where
@@ -1273,6 +1301,28 @@ main {
   background-color: var(--cl-bg);
   color: var(--cl-text);
   font-family: var(--cl-family-body);
+
+  /*
+   * The workspace covers the window, and the footer sits at its foot.
+   *
+   * Reported from a phone in dark mode (owner, 2026-09-05): black below
+   * the content, and the footer floating halfway up a short screen.
+   *
+   * Two faults, one shape. This element paints the Classical ground and
+   * was only as tall as what was on it, so on any short screen the page
+   * behind it showed through — and in dark mode that page is
+   * `--color-surface-page` at #12181a, which is the black. The
+   * participant workspace is a light design and its ground has to be the
+   * whole window, whatever scheme the phone is in.
+   *
+   * `svh` rather than `vh`: on a phone the address bar shrinks and grows
+   * as you scroll, and `100vh` is the LARGE viewport — so it overshoots
+   * by the height of the bar and leaves the page permanently scrollable
+   * by that much. The small viewport is the one that is always visible.
+   */
+  display: flex;
+  flex-direction: column;
+  min-block-size: 100svh;
 
   /*
    * This workspace is light, so its native controls are too.

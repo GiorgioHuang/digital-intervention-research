@@ -257,7 +257,16 @@ export function App() {
    * moment before it knows there is one.
    */
   const [contactConfigured, setContactConfigured] = useState(false);
-  const navRef = useRef<HTMLElement | null>(null);
+  /*
+   * The bar itself, held as state rather than in a ref.
+   *
+   * A ref does not re-run the effect below when the element it points at
+   * changes, and this bar comes and goes: it is absent on the sign-in
+   * screen and on the first-arrival screen, and present in the workspace.
+   * With a ref the measurement was taken once and then went wrong in a
+   * way that was invisible — see the effect.
+   */
+  const [navEl, setNavEl] = useState<HTMLElement | null>(null);
 
   /*
    * The stylesheet has carried `data-font-scale`, `data-density` and
@@ -474,17 +483,32 @@ export function App() {
    * screen sits underneath it permanently. The height is not a constant:
    * at 200%/400% zoom the bar wraps to two rows. Measuring it is the only
    * honest way to keep the reservation correct.
+   *
+   * It is keyed on the ELEMENT, not on the session. Keyed on the session
+   * it measured once and then quietly went wrong: the bar unmounts when a
+   * screen without it appears — the first-arrival screen, added on
+   * 2026-09-05 — and the observer, still watching a node no longer in the
+   * document, fires with a height of zero and writes `0px`. Nothing
+   * re-ran it afterwards, because the session had not changed, so for the
+   * rest of that visit the reservation was 36px against a 72px bar and
+   * the foot of every long screen sat underneath it.
+   *
+   * The variable is removed rather than left at a stale number when the
+   * bar is gone, so the fallback in the stylesheet is what applies.
    */
   useEffect(() => {
-    const nav = navRef.current;
-    if (nav === null || typeof ResizeObserver === 'undefined') return;
+    if (navEl === null) {
+      document.documentElement.style.removeProperty('--nav-primary-height');
+      return;
+    }
     const apply = () =>
-      document.documentElement.style.setProperty('--nav-primary-height', `${nav.offsetHeight}px`);
+      document.documentElement.style.setProperty('--nav-primary-height', `${navEl.offsetHeight}px`);
     apply();
+    if (typeof ResizeObserver === 'undefined') return;
     const observer = new ResizeObserver(apply);
-    observer.observe(nav);
+    observer.observe(navEl);
     return () => observer.disconnect();
-  }, [session, mode]);
+  }, [navEl]);
 
   if (mode === 'staff') {
     return <StaffApp onExit={surface === 'staff' ? undefined : () => setMode('participant')} />;
@@ -946,7 +970,7 @@ export function App() {
         visible labels with the fuller name as the accessible name — the
         visible text stays contained in it (WCAG 2.5.3 Label in Name).
       */}
-      <nav aria-label="Primary" className="nav-primary" ref={navRef}>
+      <nav aria-label="Primary" className="nav-primary" ref={setNavEl}>
         <ul>
           {PRIMARY_DESTINATIONS.map((d) => (
             <li key={d.key}>
