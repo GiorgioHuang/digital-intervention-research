@@ -1,3 +1,4 @@
+import { Modal } from './Modal.js';
 import { useEffect, useState } from 'react';
 import { api, type Session, type ThreadMessage } from '../api.js';
 import { presentError, type PresentedError } from '../errors.js';
@@ -185,7 +186,7 @@ export function MessagePanel({
         </section>
       )}
       {reviewing && draft !== null && (
-        <div role="alertdialog" aria-labelledby="send-confirm-heading">
+        <Modal labelledBy="send-confirm-heading" onClose={() => setReviewing(false)}>
           <h3 id="send-confirm-heading">Send confirmation</h3>
           <p>
             You are about to send the following text (version {draft.version}) to{' '}
@@ -211,7 +212,7 @@ export function MessagePanel({
           </p>
           <button onClick={() => void confirmSend()}>Send message</button>{' '}
           <button onClick={() => setReviewing(false)}>Go back without sending</button>
-        </div>
+        </Modal>
       )}
       {deliveryState !== null && (
         <StatusLine status={deliveryStatus(deliveryState)} />

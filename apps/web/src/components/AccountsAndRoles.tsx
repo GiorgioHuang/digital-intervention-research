@@ -1,3 +1,4 @@
+import { Modal } from './Modal.js';
 import { useEffect, useState } from 'react';
 import { staffActionError, staffLoadError } from '../errors.js';
 import {
@@ -465,7 +466,7 @@ export function AccountsAndRoles({ session }: { session: StaffSession }) {
       </section>
 
       {suspending !== null && (
-        <div role="alertdialog" aria-labelledby="suspend-confirm">
+        <Modal labelledBy="suspend-confirm" onClose={() => setSuspending(null)}>
           <p id="suspend-confirm">Suspend {suspending.displayName}?</p>
           <p>
             They will be signed out immediately — mid-screen, if they are using the platform right now — and cannot
@@ -489,11 +490,11 @@ export function AccountsAndRoles({ session }: { session: StaffSession }) {
             </button>{' '}
             <button onClick={() => setSuspending(null)}>Cancel</button>
           </p>
-        </div>
+        </Modal>
       )}
 
       {revoking !== null && (
-        <div role="alertdialog" aria-labelledby="revoke-confirm">
+        <Modal labelledBy="revoke-confirm" onClose={() => setRevoking(null)}>
           <p id="revoke-confirm">
             Take {revoking.role.role} back from {revoking.account.displayName}?
           </p>
@@ -512,7 +513,7 @@ export function AccountsAndRoles({ session }: { session: StaffSession }) {
             <button onClick={() => void revoke()}>Yes, take it back</button>{' '}
             <button onClick={() => setRevoking(null)}>Go back</button>
           </p>
-        </div>
+        </Modal>
       )}
       <p aria-live="polite" role="status">
         {announcement}

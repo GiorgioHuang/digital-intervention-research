@@ -1,3 +1,4 @@
+import { Modal } from './Modal.js';
 import { useState } from 'react';
 import { api, type Session } from '../api.js';
 import { presentError, type PresentedError } from '../errors.js';
@@ -173,7 +174,7 @@ export function ReportPerson({
         </button>
       )}
       {askingBlock && (
-        <div role="alertdialog" aria-labelledby="hide-heading" className="confirm-panel">
+        <Modal labelledBy="hide-heading" onClose={() => setAskingBlock(false)}>
           <p id="hide-heading">Send the report and block {name}?</p>
           <p>
             The two of you will not be able to write to each other, and you will not appear in each other&apos;s
@@ -195,7 +196,7 @@ export function ReportPerson({
             </button>{' '}
             <button onClick={() => setAskingBlock(false)}>Go back</button>
           </p>
-        </div>
+        </Modal>
       )}
       {onGetHelp !== undefined && (
         <button className="report-telephone" onClick={onGetHelp}>

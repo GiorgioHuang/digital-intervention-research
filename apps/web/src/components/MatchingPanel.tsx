@@ -1,3 +1,4 @@
+import { Modal } from './Modal.js';
 import { useState } from 'react';
 import { api, type MatchCandidateSummary, type Session } from '../api.js';
 import { presentError, type PresentedError } from '../errors.js';
@@ -100,7 +101,7 @@ export function MatchingPanel({ session }: { session: Session }) {
           <button onClick={() => setConfirmingMatching(true)}>Switch on matching</button>
         </p>
         {confirmingMatching && (
-          <div role="alertdialog" aria-labelledby="matching-confirm-heading">
+          <Modal labelledBy="matching-confirm-heading" onClose={() => setConfirmingMatching(false)}>
             <h4 id="matching-confirm-heading">Switch matching on?</h4>
             <p>
               You will start being suggested to other people who have also switched it on, and they will start being
@@ -139,7 +140,7 @@ export function MatchingPanel({ session }: { session: Session }) {
               </button>{' '}
               <button onClick={() => setConfirmingMatching(false)}>Go back</button>
             </p>
-          </div>
+          </Modal>
         )}
 
         {/*
@@ -153,7 +154,7 @@ export function MatchingPanel({ session }: { session: Session }) {
           <button onClick={() => setConfirmingStop(true)}>Switch off matching</button>
         </p>
         {confirmingStop && (
-          <div role="alertdialog" aria-labelledby="matching-stop-heading">
+          <Modal labelledBy="matching-stop-heading" onClose={() => setConfirmingStop(false)}>
             <h4 id="matching-stop-heading">Switch matching off?</h4>
             <p>
               You stop being suggested to anyone and nobody new is suggested to you. Nobody is told that you have done
@@ -187,7 +188,7 @@ export function MatchingPanel({ session }: { session: Session }) {
               </button>{' '}
               <button onClick={() => setConfirmingStop(false)}>Go back</button>
             </p>
-          </div>
+          </Modal>
         )}
       </section>
 
@@ -218,7 +219,7 @@ export function MatchingPanel({ session }: { session: Session }) {
           </ul>
         )}
         {pending !== null && (
-          <div role="alertdialog" aria-labelledby="decision-confirm-heading">
+          <Modal labelledBy="decision-confirm-heading" onClose={() => setPending(null)}>
             <p id="decision-confirm-heading">
               Choose "{DECISION_LABELS[pending.decision]}" for this suggestion (version{' '}
               {pending.candidate.candidateVersion})? The other person is not notified.
@@ -226,7 +227,7 @@ export function MatchingPanel({ session }: { session: Session }) {
             <blockquote>{pending.candidate.explanation}</blockquote>
             <button onClick={() => void decide()}>Confirm</button>{' '}
             <button onClick={() => setPending(null)}>Go back</button>
-          </div>
+          </Modal>
         )}
       </section>
 
@@ -245,7 +246,7 @@ export function MatchingPanel({ session }: { session: Session }) {
           </p>
           <button onClick={() => setConfirmingConnection(true)}>Connect</button>
           {confirmingConnection && (
-            <div role="alertdialog" aria-labelledby="conn-confirm-heading">
+            <Modal labelledBy="conn-confirm-heading" onClose={() => setConfirmingConnection(false)}>
               <p id="conn-confirm-heading">
                 Connect with this person? Once you are connected, the two of you can exchange messages. You can block
                 them or end the connection at any time.
@@ -262,7 +263,7 @@ export function MatchingPanel({ session }: { session: Session }) {
                 Confirm connection
               </button>{' '}
               <button onClick={() => setConfirmingConnection(false)}>Go back</button>
-            </div>
+            </Modal>
           )}
         </section>
       )}

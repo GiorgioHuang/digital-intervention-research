@@ -1,3 +1,4 @@
+import { Modal } from './Modal.js';
 import { useEffect, useState } from 'react';
 import { api, type MyExportRequest, type Session } from '../api.js';
 import { presentError, type PresentedError } from '../errors.js';
@@ -112,7 +113,7 @@ export function MyDataCopy({ session }: { session: Session }) {
       )}
 
       {asking && (
-        <div role="alertdialog" aria-labelledby="ask-copy-heading">
+        <Modal labelledBy="ask-copy-heading" onClose={() => setAsking(false)}>
           <h2 id="ask-copy-heading">Ask for a copy of your information?</h2>
           <p>
             This is a request, not a download. Someone other than you reviews it — the platform will not let the
@@ -131,7 +132,7 @@ export function MyDataCopy({ session }: { session: Session }) {
             <button onClick={() => void ask()}>Yes, ask for a copy</button>{' '}
             <button onClick={() => setAsking(false)}>Go back without asking</button>
           </p>
-        </div>
+        </Modal>
       )}
 
       {actionError !== null && <ErrorState error={actionError} />}

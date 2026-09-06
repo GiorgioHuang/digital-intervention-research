@@ -1,3 +1,4 @@
+import { Modal } from './Modal.js';
 import { useState } from 'react';
 import { staffActionError, staffLoadError } from '../errors.js';
 import { staffApi, type EnrolmentItem, type StaffSession } from '../staff-api.js';
@@ -266,7 +267,7 @@ export function StaffCoordinatorPanel({ session }: { session: StaffSession }) {
       </section>
 
       {decidingEligibility !== null && (
-        <div role="alertdialog" aria-labelledby="elig-confirm">
+        <Modal labelledBy="elig-confirm" onClose={() => setDecidingEligibility(null)}>
           <p id="elig-confirm">
             Record this person as{' '}
             {decidingEligibility.decision === 'Eligible' ? 'eligible' : 'not eligible'} for the study?
@@ -293,11 +294,11 @@ export function StaffCoordinatorPanel({ session }: { session: StaffSession }) {
             </button>{' '}
             <button onClick={() => setDecidingEligibility(null)}>Go back</button>
           </p>
-        </div>
+        </Modal>
       )}
 
       {withdrawing !== null && (
-        <div role="alertdialog" aria-labelledby="wd-confirm">
+        <Modal labelledBy="wd-confirm" onClose={() => setWithdrawing(null)}>
           <p id="wd-confirm">
             Withdraw {withdrawing.participantId} from {withdrawing.researchProjectId}?
           </p>
@@ -332,7 +333,7 @@ export function StaffCoordinatorPanel({ session }: { session: StaffSession }) {
             Confirm withdrawal
           </button>{' '}
           <button onClick={() => setWithdrawing(null)}>Back</button>
-        </div>
+        </Modal>
       )}
 
       <p aria-live="polite" role="status">

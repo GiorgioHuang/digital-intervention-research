@@ -600,6 +600,20 @@ describe('a participant reading their own life story', () => {
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Add a photograph' }));
     });
+    /*
+     * What the window says about who will see it — and it has to be
+     * true. It said "this platform has no way to share a photograph with
+     * anyone, not even a supporter", which stopped being true on
+     * 2026-09-02 when a photograph began travelling with the memory it
+     * is on, and stayed on screen for four days because nothing checked
+     * a reassurance against what the platform does.
+     */
+    const window_ = screen.getByRole('alertdialog');
+    expect(window_.textContent, 'the upload window promises something the platform no longer keeps').not.toMatch(
+      /no way to share a photograph with anyone, not even a supporter/i,
+    );
+    expect(window_.textContent).toMatch(/goes wherever the memory it is on goes/i);
+
     const input = screen.getAllByLabelText('Add a photograph to this entry')[0]!;
     const file = new File([new Uint8Array([1, 2, 3])], 'gran.jpg', { type: 'image/jpeg' });
     // jsdom's File does not implement arrayBuffer(); browsers do.
@@ -626,7 +640,13 @@ describe('a participant reading their own life story', () => {
     expect(said).toMatch(/not on this entry yet/i);
     // The two claims the platform cannot keep.
     expect(said).not.toMatch(/virus|malware|scanned for/i);
-    expect(said).toMatch(/no way to share a photograph with anyone/i);
+    /*
+     * The whole clause, not its first half. The upload window says
+     * something different and weaker — that a photograph goes wherever
+     * its memory goes — so a regex stopping at "with anyone" would match
+     * that sentence instead and pass while this one had been deleted.
+     */
+    expect(said).toMatch(/no way to share a photograph with anyone who has not been given the memory it is on/i);
   });
 
   /**
@@ -673,7 +693,9 @@ describe('a participant reading their own life story', () => {
      * likely to wonder who can now see the photograph they just handed
      * over.
      */
-    expect(block.textContent).toMatch(/no way to share a photograph with anyone/i);
+    expect(block.textContent).toMatch(
+      /no way to share a photograph with anyone who has not been given the memory it is on/i,
+    );
 
     /*
      * And the words are not printed twice. The live region still carries
@@ -769,7 +791,7 @@ describe('a participant reading their own life story', () => {
     expect(said).toMatch(/Received, and being checked/i);
     expect(said, 'nothing said it survives closing the page').toMatch(/whether or not you close this page/i);
     // The privacy answer travels with it, because the upload box has closed.
-    expect(said).toMatch(/no way to share a photograph with anyone/i);
+    expect(said).toMatch(/no way to share a photograph with anyone who has not been given the memory it is on/i);
   });
 
   /**

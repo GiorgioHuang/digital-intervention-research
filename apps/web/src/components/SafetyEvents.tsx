@@ -1,3 +1,4 @@
+import { Modal } from './Modal.js';
 import { useEffect, useState } from 'react';
 import { staffActionError, staffLoadError } from '../errors.js';
 import { staffApi, type SafetyEventItem, type StaffSession } from '../staff-api.js';
@@ -340,7 +341,7 @@ export function SafetyEvents({ session }: { session: StaffSession }) {
         );
       })}
       {confirming !== null && (
-        <div role="alertdialog" aria-labelledby="safety-confirm">
+        <Modal labelledBy="safety-confirm" onClose={() => setConfirming(null)}>
           <p id="safety-confirm">{confirming.heading}</p>
           {confirming.lines.map((l) => (
             <p key={l}>{l}</p>
@@ -357,7 +358,7 @@ export function SafetyEvents({ session }: { session: StaffSession }) {
             </button>{' '}
             <button onClick={() => setConfirming(null)}>Go back</button>
           </p>
-        </div>
+        </Modal>
       )}
       <p aria-live="polite" role="status">
         {announcement}

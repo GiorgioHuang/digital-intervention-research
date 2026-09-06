@@ -1,3 +1,4 @@
+import { Modal } from './Modal.js';
 import { useCallback, useEffect, useState } from 'react';
 import {
   api,
@@ -249,7 +250,7 @@ export function CommunityPanel({ session }: { session: Session }) {
           </ul>
         )}
         {leaving !== null && (
-          <div role="alertdialog" aria-labelledby="leave-confirm-heading">
+          <Modal labelledBy="leave-confirm-heading" onClose={() => setLeaving(null)}>
             <p id="leave-confirm-heading">Leave "{leaving.name}"?</p>
             {/*
               What actually happens, said before the button. Leaving stops
@@ -266,11 +267,11 @@ export function CommunityPanel({ session }: { session: Session }) {
               <button onClick={() => void leave()}>Yes, leave this community</button>{' '}
               <button onClick={() => setLeaving(null)}>Go back</button>
             </p>
-          </div>
+          </Modal>
         )}
 
         {joining !== null && (
-          <div role="alertdialog" aria-labelledby="join-confirm-heading">
+          <Modal labelledBy="join-confirm-heading" onClose={() => setJoining(null)}>
             <p id="join-confirm-heading">
               Before you join "{joining.name}", please read the community rules (version {joining.ruleVersionNumber}):
             </p>
@@ -281,7 +282,7 @@ export function CommunityPanel({ session }: { session: Session }) {
             </p>
             <button onClick={() => void join()}>Agree to the rules and join</button>{' '}
             <button onClick={() => setJoining(null)}>Go back</button>
-          </div>
+          </Modal>
         )}
       </section>
 
@@ -367,7 +368,7 @@ export function CommunityPanel({ session }: { session: Session }) {
             ))}
           </ul>
           {publishing !== null && (
-            <div role="alertdialog" aria-labelledby="publish-confirm-heading">
+            <Modal labelledBy="publish-confirm-heading" onClose={() => setPublishing(null)}>
               <p id="publish-confirm-heading">
                 Publish this to "{spaceName(publishing.spaceId)}"? Once published, members of that community can see
                 it.
@@ -375,13 +376,13 @@ export function CommunityPanel({ session }: { session: Session }) {
               <blockquote>{publishing.contentText}</blockquote>
               <button onClick={() => void publish()}>Confirm publishing</button>{' '}
               <button onClick={() => setPublishing(null)}>Go back</button>
-            </div>
+            </Modal>
           )}
         </section>
       )}
 
       {reporting !== null && (
-        <div role="alertdialog" aria-labelledby="report-post-heading">
+        <Modal labelledBy="report-post-heading" onClose={() => setReporting(null)}>
           <h4 id="report-post-heading">Report this post</h4>
           <p>
             A person reads every report. Nothing is decided automatically. You are not told who else has reported
@@ -415,7 +416,7 @@ export function CommunityPanel({ session }: { session: Session }) {
             </button>{' '}
             <button onClick={() => setReporting(null)}>Go back</button>
           </p>
-        </div>
+        </Modal>
       )}
 
       {actionError !== null && <ErrorState error={actionError} />}

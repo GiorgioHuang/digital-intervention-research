@@ -1,3 +1,4 @@
+import { Modal } from './Modal.js';
 import { useState } from 'react';
 import { SafetyEvents } from './SafetyEvents.js';
 import { staffActionError, staffLoadError } from '../errors.js';
@@ -200,7 +201,7 @@ export function StaffSafetyTriagePanel({ session }: { session: StaffSession }) {
         </button>
       </p>
       {confirming && form.disposition !== null && (
-        <div role="alertdialog" aria-labelledby="triage-confirm">
+        <Modal labelledBy="triage-confirm" onClose={() => setConfirming(false)}>
           <p id="triage-confirm">
             Record the disposition “{DISPOSITIONS.find((d) => d.value === form.disposition)?.label}” for signal{' '}
             {form.signalId}?
@@ -216,7 +217,7 @@ export function StaffSafetyTriagePanel({ session }: { session: StaffSession }) {
           */}
           <button onClick={() => void submit()}>Confirm and record the disposition</button>{' '}
           <button onClick={() => setConfirming(false)}>Back, do not record it</button>
-        </div>
+        </Modal>
       )}
       <p aria-live="polite" role="status">
         {announcement}

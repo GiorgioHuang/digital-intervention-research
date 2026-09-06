@@ -1,3 +1,4 @@
+import { Modal } from './Modal.js';
 import { useEffect, useState } from 'react';
 import { api, type ConsentState, type Session } from '../api.js';
 import { presentError, type PresentedError } from '../errors.js';
@@ -255,7 +256,7 @@ export function ConsentPanel({ session, assistedBy }: { session: Session; assist
                 <button onClick={() => setPendingWithdrawal(scope)}>Withdraw consent for "{label}"</button>
               )}
               {pendingWithdrawal === scope && (
-                <div role="alertdialog" aria-labelledby={`wd-${scope}`}>
+                <Modal labelledBy={`wd-${scope}`} onClose={() => setPendingWithdrawal(null)}>
                   <p id={`wd-${scope}`}>
                     After you withdraw, the platform stops using your information for this purpose. Research datasets
                     that are already locked are not rewritten, but no new data of yours is added to them.
@@ -273,7 +274,7 @@ export function ConsentPanel({ session, assistedBy }: { session: Session; assist
                     Confirm withdrawal of "{label}"
                   </button>{' '}
                   <button onClick={() => setPendingWithdrawal(null)}>Go back without withdrawing</button>
-                </div>
+                </Modal>
               )}
             </li>
           );

@@ -3903,6 +3903,54 @@ main[data-workspace='staff'] .scroll-x {
 }
 [data-workspace='participant'] .report-from-here { color: var(--cl-text-4); }
 
+/* ---------- A window over the page ------------------------------------
+ * See `Modal.tsx` for why these are windows and not panels in the flow.
+ * Deliberately not scoped to a workspace: a form opening where nobody can
+ * see it is not a participant-only problem.
+ */
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: var(--layer-dialog);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  /* Dark enough to say the page behind is not the thing to read now, and
+     opaque rather than blurred: a blur can be recovered, and this sits
+     over somebody's own words. */
+  background-color: var(--color-surface-scrim);
+  overflow-y: auto;
+}
+.modal__panel {
+  inline-size: 100%;
+  max-inline-size: var(--measure-default);
+  /* Its own scroll, so a long form is reachable on a short screen
+     without the page behind moving. `dvh` rather than `vh` for the same
+     reason the shell uses it: on a phone the two are not the same. */
+  max-block-size: 88dvh;
+  overflow-y: auto;
+  padding: var(--space-5);
+  border: var(--border-hairline) solid var(--color-border-subtle);
+  border-radius: var(--radius-2);
+  background-color: var(--color-surface-raised);
+  box-shadow: var(--elevation-3);
+}
+[data-workspace='participant'] .modal__panel {
+  border-color: var(--cl-accent);
+  background-color: var(--cl-neutral-100);
+}
+/* The window's own heading, whatever element carries it. */
+/* The window says what it is, in a heading. An inline panel could lean on
+   the button just above it for that; a window that covers the page cannot,
+   and a screen reader needs a name to announce. */
+.modal__heading {
+  margin-block: 0 var(--space-4);
+  font-size: var(--type-size-3);
+}
+.modal__panel > :first-child { margin-block-start: 0; }
+.modal__panel > :last-child { margin-block-end: 0; }
+
 /* ---------- 13. Motion and reduced-motion (§A.6) ---------- */
 /* The user has explicitly chosen "reduce motion" — the same effect as the
    OS signal, but not dependent on the OS setting.

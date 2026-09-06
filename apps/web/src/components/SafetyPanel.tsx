@@ -1,3 +1,4 @@
+import { Modal } from './Modal.js';
 import { useEffect, useState } from 'react';
 import { api, type MyBlock, type Session } from '../api.js';
 import { presentError, type PresentedError } from '../errors.js';
@@ -152,7 +153,7 @@ export function MyBlocks({ session, onBack }: { session: Session; onBack: () => 
               <button onClick={() => setUnblocking(b)}>Unblock this person</button>
             </p>
             {unblocking?.blockId === b.blockId && (
-              <div role="alertdialog" aria-labelledby={`unblock-${b.blockId}`}>
+              <Modal labelledBy={`unblock-${b.blockId}`} onClose={() => setUnblocking(null)}>
                 <p id={`unblock-${b.blockId}`}>
                   Unblock {b.blockedDisplayName ?? b.blockedActorId}? They will be able to reach you again in the same
                   ways as anyone else. Unblocking does not bring back anything you missed, and it does not restore any
@@ -169,7 +170,7 @@ export function MyBlocks({ session, onBack }: { session: Session; onBack: () => 
                   </button>{' '}
                   <button onClick={() => setUnblocking(null)}>Keep the block</button>
                 </p>
-              </div>
+              </Modal>
             )}
           </article>
         ))}

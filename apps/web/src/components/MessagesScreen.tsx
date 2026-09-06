@@ -1,3 +1,4 @@
+import { Modal } from './Modal.js';
 import { useEffect, useState } from 'react';
 import {
   api,
@@ -345,7 +346,7 @@ export function MessagesScreen({
       )}
 
       {ending !== null && (
-        <div role="alertdialog" aria-labelledby="end-connection-heading" className="confirm-panel">
+        <Modal labelledBy="end-connection-heading" onClose={() => setEnding(null)}>
           <p id="end-connection-heading">End your connection with {nameOrGap(ending.otherDisplayName)}?</p>
           {/*
             The distinction that matters. Blocking says something about the
@@ -365,7 +366,7 @@ export function MessagesScreen({
             <button onClick={() => void endThisConnection()}>Yes, end this connection</button>{' '}
             <button onClick={() => setEnding(null)}>Go back</button>
           </p>
-        </div>
+        </Modal>
       )}
 
       {actionError !== null && <ErrorState error={actionError} />}

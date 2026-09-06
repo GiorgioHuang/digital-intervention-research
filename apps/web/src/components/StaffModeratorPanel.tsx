@@ -1,3 +1,4 @@
+import { Modal } from './Modal.js';
 import { useState } from 'react';
 import { staffActionError, staffLoadError } from '../errors.js';
 import { staffApi, type ModerationCaseItem, type StaffSession } from '../staff-api.js';
@@ -182,7 +183,7 @@ export function StaffModeratorPanel({ session }: { session: StaffSession }) {
       <NotOfferedHere />
 
       {confirming !== null && (
-        <div role="alertdialog" aria-labelledby="mod-confirm">
+        <Modal labelledBy="mod-confirm" onClose={() => setConfirming(null)}>
           <p id="mod-confirm">
             {confirming.choice.label}, for case {confirming.item.moderationCaseId}?
           </p>
@@ -212,7 +213,7 @@ export function StaffModeratorPanel({ session }: { session: StaffSession }) {
             Confirm and record this decision
           </button>{' '}
           <button onClick={() => setConfirming(null)}>Back, do not record it</button>
-        </div>
+        </Modal>
       )}
       <p aria-live="polite" role="status">
         {announcement}

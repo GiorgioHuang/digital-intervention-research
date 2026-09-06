@@ -1,3 +1,4 @@
+import { Modal } from './Modal.js';
 import { useEffect, useState } from 'react';
 import { api, type MyEnrolment, type Session } from '../api.js';
 import { presentError, type PresentedError } from '../errors.js';
@@ -108,7 +109,7 @@ export function MyResearchPart({
           )}
 
           {leaving === e.enrolmentId && (
-            <div role="alertdialog" aria-labelledby={`leave-${e.enrolmentId}`}>
+            <Modal labelledBy={`leave-${e.enrolmentId}`} onClose={() => setLeaving(null)}>
               <h3 id={`leave-${e.enrolmentId}`}>Leave this study?</h3>
               <p>
                 Nothing new will be collected from you, and the activities stop. Information already included in a
@@ -133,7 +134,7 @@ export function MyResearchPart({
                   Go back without leaving
                 </button>
               </p>
-            </div>
+            </Modal>
           )}
         </article>
       ))}

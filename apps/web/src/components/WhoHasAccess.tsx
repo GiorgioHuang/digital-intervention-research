@@ -1,3 +1,4 @@
+import { Modal } from './Modal.js';
 import { useEffect, useState } from 'react';
 import { api, type MyRelationship, type Session } from '../api.js';
 import { presentError, type PresentedError } from '../errors.js';
@@ -239,7 +240,7 @@ export function WhoHasAccess({ session }: { session: Session }) {
           )}
 
           {deciding?.relationshipId === r.relationshipId && (
-            <div role="alertdialog" aria-labelledby={`decide-${r.relationshipId}`}>
+            <Modal labelledBy={`decide-${r.relationshipId}`} onClose={() => setDeciding(null)}>
               <h3 id={`decide-${r.relationshipId}`}>Give {who(r)} this access?</h3>
               <p>
                 Nothing has been given yet. If you agree, they can do the things listed above from that moment, and
@@ -254,11 +255,11 @@ export function WhoHasAccess({ session }: { session: Session }) {
                 </button>{' '}
                 <button onClick={() => setDeciding(null)}>Decide later</button>
               </p>
-            </div>
+            </Modal>
           )}
 
           {ending?.relationshipId === r.relationshipId && (
-            <div role="alertdialog" aria-labelledby={`end-${r.relationshipId}`}>
+            <Modal labelledBy={`end-${r.relationshipId}`} onClose={() => setEnding(null)}>
               <h3 id={`end-${r.relationshipId}`}>End {who(r)}'s access?</h3>
               <p>
                 They stop being able to do the things listed above. Anything they already saw, they have already
@@ -271,7 +272,7 @@ export function WhoHasAccess({ session }: { session: Session }) {
                 </button>{' '}
                 <button onClick={() => setEnding(null)}>Leave it as it is</button>
               </p>
-            </div>
+            </Modal>
           )}
         </article>
       ))}

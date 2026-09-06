@@ -1,3 +1,4 @@
+import { Modal } from './Modal.js';
 import { useEffect, useRef, useState } from 'react';
 import {
   api,
@@ -919,7 +920,8 @@ export function MyLifeStory({ session }: { session: Session }) {
                 </div>
 
                 {adding === item.itemId && item.itemState !== 'Withdrawn' && (
-                  <div className="story-upload">
+                  <Modal labelledBy={`upload-heading-${item.itemId}`} onClose={() => setAdding(null)}>
+                    <h3 id={`upload-heading-${item.itemId}`} className="modal__heading">Add a photograph to this memory</h3>
                     {/*
                       What will go through, said before the file is
                       chosen rather than after it is refused. Both
@@ -961,16 +963,27 @@ export function MyLifeStory({ session }: { session: Session }) {
                       malware (ADR-126), so "checked" is as far as the
                       wording may go.
                     */}
+                    {/*
+                      This said "no way to share a photograph with anyone,
+                      not even a supporter", which stopped being true on
+                      2026-09-02 when a photograph began travelling with
+                      the memory it is on. Found by reading the screen
+                      rather than by any test: nothing checks the wording
+                      of a reassurance against what the platform does, and
+                      a promise that has quietly become false is worse
+                      than one that was never made.
+                    */}
                     <p className="story-note">
-                      A file you add is kept privately and is checked before it appears here. Nobody else can see it —
-                      this platform has no way to share a photograph with anyone, not even a supporter.
+                      A photograph you add is kept privately and is checked before it appears here. It goes wherever
+                      the memory it is on goes — so while that memory is only yours, the photograph is too, and if you
+                      later let somebody read the memory they will see the photograph with it.
                     </p>
                     <p>
                       <button className="story-action" onClick={() => setAdding(null)}>
                         Not now
                       </button>
                     </p>
-                  </div>
+                  </Modal>
                 )}
                 {item.itemState === 'Withdrawn' && shown.length > 0 && (
                   <p className="story-note">
@@ -1013,7 +1026,7 @@ export function MyLifeStory({ session }: { session: Session }) {
                 )}
 
                 {confirmingScope?.item.itemId === item.itemId && (
-                  <div role="alertdialog" aria-labelledby={`scope-${item.itemId}`} className="story-ask-first">
+                  <Modal labelledBy={`scope-${item.itemId}`} onClose={() => setConfirmingScope(null)}>
                     <h3 id={`scope-${item.itemId}`}>
                       Let {visibilityLabel(confirmingScope.visibility).toLowerCase()} read &ldquo;{item.title}&rdquo;?
                     </h3>
@@ -1057,11 +1070,12 @@ export function MyLifeStory({ session }: { session: Session }) {
                         Not now
                       </button>
                     </p>
-                  </div>
+                  </Modal>
                 )}
 
                 {revising?.itemId === item.itemId && (
-                  <div className="story-revise">
+                  <Modal labelledBy={`revise-heading-${item.itemId}`} onClose={() => setRevising(null)}>
+                    <h3 id={`revise-heading-${item.itemId}`} className="modal__heading">Change the words of this memory</h3>
                     <p>
                       <label htmlFor={`revise-${item.itemId}`}>Your words</label>
                     </p>
@@ -1100,11 +1114,11 @@ export function MyLifeStory({ session }: { session: Session }) {
                         Leave it as it was
                       </button>
                     </p>
-                  </div>
+                  </Modal>
                 )}
 
                 {withdrawing?.itemId === item.itemId && (
-                  <div role="alertdialog" aria-labelledby={`withdraw-${item.itemId}`} className="story-ask-first">
+                  <Modal labelledBy={`withdraw-${item.itemId}`} onClose={() => setWithdrawing(null)}>
                     <h3 id={`withdraw-${item.itemId}`}>Take &ldquo;{item.title}&rdquo; out of your story?</h3>
                     {/*
                       What it does and, just as importantly, what it does
@@ -1134,11 +1148,11 @@ export function MyLifeStory({ session }: { session: Session }) {
                         Leave it as it is
                       </button>
                     </p>
-                  </div>
+                  </Modal>
                 )}
 
                 {confirming?.itemId === item.itemId && (
-                  <div role="alertdialog" aria-labelledby={`confirm-${item.itemId}`} className="story-ask-first">
+                  <Modal labelledBy={`confirm-${item.itemId}`} onClose={() => setConfirming(null)}>
                     <h3 id={`confirm-${item.itemId}`}>Confirm this is in your own words?</h3>
                     <p>
                       This applies to exactly the words above, and to no other version. If you change the text
@@ -1158,7 +1172,7 @@ export function MyLifeStory({ session }: { session: Session }) {
                         Not now
                       </button>
                     </p>
-                  </div>
+                  </Modal>
                 )}
 
                 {/*
@@ -1205,7 +1219,7 @@ export function MyLifeStory({ session }: { session: Session }) {
 
       {actionError !== null && <ErrorState error={actionError} />}
       {removing !== null && (
-        <div role="alertdialog" aria-labelledby="remove-file-confirm">
+        <Modal labelledBy="remove-file-confirm" onClose={() => setRemoving(null)}>
           <h3 id="remove-file-confirm">Remove this photograph?</h3>
           {/*
             What is destroyed and what is not, said before it happens.
@@ -1224,7 +1238,7 @@ export function MyLifeStory({ session }: { session: Session }) {
             <button onClick={() => void remove(removing.itemId, removing.objectId)}>Yes, remove it</button>{' '}
             <button onClick={() => setRemoving(null)}>Keep it</button>
           </p>
-        </div>
+        </Modal>
       )}
       <p aria-live="polite" role="status" className={announcementShownInPlace ? 'visually-hidden' : undefined}>
         {announcement}
