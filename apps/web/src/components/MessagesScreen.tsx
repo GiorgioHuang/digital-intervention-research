@@ -211,21 +211,6 @@ export function MessagesScreen({
     }
   };
 
-  if (reporting !== null) {
-    return (
-      <ReportPerson
-        session={session}
-        name={nameOrGap(reporting.otherDisplayName)}
-        subject={{
-          kind: 'thread',
-          threadId: reporting.threadId,
-          blockIdentity: reporting.otherParticipantId,
-        }}
-        onBack={() => setReporting(null)}
-        {...(onGetHelp === undefined ? {} : { onGetHelp })}
-      />
-    );
-  }
 
   if (active !== null) {
     return (
@@ -258,6 +243,23 @@ export function MessagesScreen({
             Report {nameOrGap(active.otherDisplayName)}
           </button>
         </p>
+        {/*
+          A window over the conversation, not instead of it: what is being
+          reported stays on screen behind it.
+        */}
+        {reporting !== null && (
+          <ReportPerson
+            session={session}
+            name={nameOrGap(reporting.otherDisplayName)}
+            subject={{
+              kind: 'thread',
+              threadId: reporting.threadId,
+              blockIdentity: reporting.otherParticipantId,
+            }}
+            onBack={() => setReporting(null)}
+            {...(onGetHelp === undefined ? {} : { onGetHelp })}
+          />
+        )}
       </section>
     );
   }

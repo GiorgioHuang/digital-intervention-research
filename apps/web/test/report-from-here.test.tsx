@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { act } from 'react';
 import { OtherPeoplesStories } from '../src/components/OtherPeoplesStories.js';
 import { MessagesScreen } from '../src/components/MessagesScreen.js';
@@ -96,7 +96,17 @@ describe('reporting a piece of somebody’s story, from the piece', () => {
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Report this' }));
     });
-    expect(screen.getByRole('heading', { level: 1, name: 'Report Margaret' })).toBeTruthy();
+    /*
+     * A window over the feed, with the piece still behind it. It used to
+     * replace the whole screen; a form that arrives somewhere other than
+     * where the person is looking is the defect this became (X-53).
+     */
+    const window_ = screen.getByRole('alertdialog');
+    expect(window_.getAttribute('aria-labelledby')).toBe('report-heading');
+    expect(within(window_).getByRole('heading', { name: 'Report Margaret' })).toBeTruthy();
+    expect(document.activeElement).toBe(window_);
+    // The piece is still there underneath.
+    expect(screen.getByText(/The winter we moved/)).toBeTruthy();
     // No identifier field anywhere: who is being reported came from the
     // piece that was open.
     expect(document.querySelectorAll('input').length).toBe(0);
@@ -185,7 +195,9 @@ describe('reporting and blocking the person you are talking to', () => {
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Report Ben' }));
     });
-    expect(screen.getByRole('heading', { level: 1, name: 'Report Ben' })).toBeTruthy();
+    const window_ = screen.getByRole('alertdialog');
+    expect(within(window_).getByRole('heading', { name: 'Report Ben' })).toBeTruthy();
+    expect(document.activeElement).toBe(window_);
     expect(document.querySelectorAll('input').length).toBe(0);
   });
 

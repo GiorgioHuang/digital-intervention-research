@@ -81,22 +81,6 @@ export function OtherPeoplesStories({
   if (error !== null) return <ErrorState error={error} />;
   if (pieces === null) return <LoadingState label="Looking for stories shared with you…" />;
 
-  if (reporting !== null) {
-    return (
-      <ReportPerson
-        session={session}
-        name={who(reporting)}
-        /*
-          The MEMORY, not its author: the server looks the author up from
-          the piece, so the case cannot be opened against somebody this
-          screen merely named (D-107).
-        */
-        subject={{ kind: 'item', itemId: reporting.itemId }}
-        onBack={() => setReporting(null)}
-        {...(onGetHelp === undefined ? {} : { onGetHelp })}
-      />
-    );
-  }
 
   return (
     <section className="story-screen" aria-labelledby="others-heading">
@@ -183,6 +167,25 @@ export function OtherPeoplesStories({
       <button className="story-ask" onClick={onGoToMyStory}>
         Choose one of mine to share
       </button>
+      {/*
+        A window over the feed, not instead of it: the piece being
+        reported stays on screen behind, which is what somebody is
+        reporting and what they should still be able to see.
+      */}
+      {reporting !== null && (
+        <ReportPerson
+          session={session}
+          name={who(reporting)}
+          /*
+            The MEMORY, not its author: the server looks the author up
+            from the piece, so the case cannot be opened against somebody
+            this screen merely named (D-107).
+          */
+          subject={{ kind: 'item', itemId: reporting.itemId }}
+          onBack={() => setReporting(null)}
+          {...(onGetHelp === undefined ? {} : { onGetHelp })}
+        />
+      )}
     </section>
   );
 }

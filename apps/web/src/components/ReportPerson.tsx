@@ -96,8 +96,10 @@ export function ReportPerson({
 
   if (sent !== null) {
     return (
-      <section aria-labelledby="report-sent-heading">
-        <h1 id="report-sent-heading">Thank you. It has been sent.</h1>
+      <Modal labelledBy="report-sent-heading" onClose={onBack}>
+        <h2 id="report-sent-heading" className="modal__heading">
+          Thank you. It has been sent.
+        </h2>
         <p role="status">
           A person at the study office will read it. You will not be asked to explain yourself, and {name} is not
           told who reported them.
@@ -109,22 +111,53 @@ export function ReportPerson({
           </p>
         )}
         <p>
-          <button className="back-link" onClick={onBack}>
-            ‹ Go back
-          </button>
+          <button onClick={onBack}>Close</button>
         </p>
-      </section>
+      </Modal>
+    );
+  }
+
+  /*
+   * The block confirmation is a STEP INSIDE this window, not a second
+   * window on top of it. Two stacked windows would each trap focus and
+   * each listen for Escape — one press would close both, and the report
+   * somebody had written would go with it.
+   */
+  if (askingBlock) {
+    return (
+      <Modal labelledBy="hide-heading" onClose={() => setAskingBlock(false)}>
+        <h2 id="hide-heading" className="modal__heading">
+          Send the report and block {name}?
+        </h2>
+        <p>
+          The two of you will not be able to write to each other, and you will not appear in each other&apos;s
+          suggestions. {name} is not told, either about the report or about the block.
+        </p>
+        <p>
+          You can undo the block at any time under Help, in &ldquo;Blocking&rdquo; — undoing it does not bring back
+          anything you missed in the meantime, and your report is handled either way.
+        </p>
+        <p>
+          <button
+            disabled={sending}
+            onClick={() => {
+              setAskingBlock(false);
+              void send(true);
+            }}
+          >
+            Yes, send it and block {name}
+          </button>{' '}
+          <button onClick={() => setAskingBlock(false)}>Go back</button>
+        </p>
+      </Modal>
     );
   }
 
   return (
-    <section aria-labelledby="report-heading">
-      <p>
-        <button className="back-link" onClick={onBack}>
-          ‹ Back
-        </button>
-      </p>
-      <h1 id="report-heading">Report {name}</h1>
+    <Modal labelledBy="report-heading" onClose={onBack}>
+      <h2 id="report-heading" className="modal__heading">
+        Report {name}
+      </h2>
       <p>
         A person at the study office reads every report. You will not be asked to explain yourself, and the person
         you report is not told who reported them.
@@ -173,36 +206,14 @@ export function ReportPerson({
           Send it, and hide this person from me
         </button>
       )}
-      {askingBlock && (
-        <Modal labelledBy="hide-heading" onClose={() => setAskingBlock(false)}>
-          <p id="hide-heading">Send the report and block {name}?</p>
-          <p>
-            The two of you will not be able to write to each other, and you will not appear in each other&apos;s
-            suggestions. {name} is not told, either about the report or about the block.
-          </p>
-          <p>
-            You can undo the block at any time under Help, in &ldquo;Blocking&rdquo; — undoing it does not bring back
-            anything you missed in the meantime, and your report is handled either way.
-          </p>
-          <p>
-            <button
-              disabled={sending}
-              onClick={() => {
-                setAskingBlock(false);
-                void send(true);
-              }}
-            >
-              Yes, send it and block {name}
-            </button>{' '}
-            <button onClick={() => setAskingBlock(false)}>Go back</button>
-          </p>
-        </Modal>
-      )}
       {onGetHelp !== undefined && (
         <button className="report-telephone" onClick={onGetHelp}>
           I would rather telephone someone
         </button>
       )}
-    </section>
+      <button className="report-telephone" onClick={onBack}>
+        Go back without sending anything
+      </button>
+    </Modal>
   );
 }
