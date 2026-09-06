@@ -8,49 +8,34 @@ import { App } from '../src/App.js';
 const json = (b: unknown) => new Response(JSON.stringify(b), { status: 200 });
 
 /**
- * The fixed bottom bar covers the foot of every screen unless `main`
- * reserves exactly as much room as the bar takes up, and the reservation
- * is a measurement written into `--nav-primary-height` at runtime.
+ * The bar takes its own room, so nothing has to reserve it.
  *
- * The measurement used to be keyed on the session. That was true for as
- * long as every signed-in screen had the bar — and stopped being true the
- * day a screen without one arrived in front of the workspace (the
- * first-arrival naming screen, 2026-09-05). The bar unmounts, the
- * observer still watching the detached node fires with a height of zero,
- * `0px` is written, and nothing re-runs it because the session has not
- * changed. For the rest of that visit the reservation was 36px against a
- * 72px bar, and the foot of every long screen — the footer, the last
- * button on a form — sat underneath it.
+ * There used to be a reservation: `main` carried bottom padding the
+ * height of the bar, written at runtime into a custom property from a
+ * measurement. It was wrong twice. Keyed on the session, it went stale
+ * the day a screen without a bar appeared in front of the workspace —
+ * the observer, still watching a node no longer in the document, wrote
+ * `0px`, and the foot of every long screen sat under the tabs for the
+ * rest of that visit. And the bar it was measuring was `position: fixed`,
+ * which on Chrome for Android is anchored to the layout viewport and
+ * therefore sits below the visible area whenever the URL bar is showing:
+ * the tabs were cut in half on the about screen, labels gone (owner,
+ * 2026-09-06).
  *
- * jsdom has no layout, so the height is mocked. What is being tested is
- * not the number but WHEN it is taken: that the bar going away and coming
- * back leaves the reservation right.
+ * The bar is sticky and in the flow now. It occupies its own space, so
+ * content cannot be underneath it and no measurement is needed — the
+ * property, the observer and the padding rule are all gone. jsdom lays
+ * nothing out, so this asserts the shape that makes it true; the layout
+ * itself was checked in a browser at 393x700 on every screen, both
+ * colour schemes, scrolled to the foot.
  */
-describe('the reservation for the fixed tab bar', () => {
-  const BAR_HEIGHT = 72;
-  let restoreHeight: (() => void) | undefined;
-
+describe('the room the tab bar takes', () => {
   beforeEach(() => {
     (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
-    const original = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetHeight');
-    Object.defineProperty(HTMLElement.prototype, 'offsetHeight', {
-      configurable: true,
-      get(this: HTMLElement) {
-        // Only the bar, and only while it is in the document — which is
-        // the whole of what went wrong.
-        return this.classList?.contains('nav-primary') && this.isConnected ? BAR_HEIGHT : 0;
-      },
-    });
-    restoreHeight = () => {
-      if (original === undefined) delete (HTMLElement.prototype as { offsetHeight?: unknown }).offsetHeight;
-      else Object.defineProperty(HTMLElement.prototype, 'offsetHeight', original);
-    };
     vi.stubGlobal(
       'fetch',
       vi.fn(async (path: string, init?: RequestInit) => {
         if (path === '/health') return json({ status: 'ok', authMode: 'dev-header' });
-        // No public name: the first-arrival screen appears, and it has no
-        // tab bar. This is the sequence that broke the measurement.
         if (path.endsWith('/public-profile')) return json({ data: null });
         if ((init?.method ?? 'GET') !== 'GET') return json({ data: { id: 'x' } });
         return json({ data: [], meta: {} });
@@ -60,13 +45,9 @@ describe('the reservation for the fixed tab bar', () => {
   afterEach(() => {
     cleanup();
     vi.unstubAllGlobals();
-    restoreHeight?.();
-    document.documentElement.style.removeProperty('--nav-primary-height');
   });
 
-  const reserved = () => document.documentElement.style.getPropertyValue('--nav-primary-height');
-
-  it('is measured again when the bar comes back after a screen without one', async () => {
+  const arrive = async () => {
     await act(async () => {
       render(<App />);
     });
@@ -75,21 +56,24 @@ describe('the reservation for the fixed tab bar', () => {
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
     });
-
-    // The first-arrival screen: no bar, so nothing to reserve. The stale
-    // number from before must not be left behind either.
-    expect(screen.getByRole('heading', { name: /What should we call you/ })).toBeTruthy();
-    expect(document.querySelector('.nav-primary')).toBeNull();
-    expect(reserved()).toBe('');
-
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: /Not now/ }));
     });
+  };
 
-    // The workspace, with the bar — and the reservation is its height,
-    // not the zero left behind by the node that went away.
+  it('writes no measurement anywhere, on the screens with a bar or without', async () => {
+    await arrive();
     expect(document.querySelector('.nav-primary')).not.toBeNull();
-    expect(reserved()).toBe(`${BAR_HEIGHT}px`);
+    expect(
+      document.documentElement.style.getPropertyValue('--nav-primary-height'),
+      'the runtime measurement is back; it is the thing that went stale',
+    ).toBe('');
+  });
+
+  it('is the last thing in the shell, so normal flow puts it at the foot', async () => {
+    await arrive();
+    const shell = document.querySelector('[data-workspace="participant"]')!;
+    expect(shell.lastElementChild?.classList.contains('nav-primary')).toBe(true);
   });
 });
 

@@ -259,16 +259,6 @@ export function App() {
    * moment before it knows there is one.
    */
   const [contactConfigured, setContactConfigured] = useState(false);
-  /*
-   * The bar itself, held as state rather than in a ref.
-   *
-   * A ref does not re-run the effect below when the element it points at
-   * changes, and this bar comes and goes: it is absent on the sign-in
-   * screen and on the first-arrival screen, and present in the workspace.
-   * With a ref the measurement was taken once and then went wrong in a
-   * way that was invisible — see the effect.
-   */
-  const [navEl, setNavEl] = useState<HTMLElement | null>(null);
 
   /*
    * The stylesheet has carried `data-font-scale`, `data-density` and
@@ -479,38 +469,6 @@ export function App() {
     };
   }, [session]);
 
-  /**
-   * The bottom bar is fixed, so `main` has to reserve exactly as much space
-   * as the bar actually occupies — otherwise the last confirm button on a
-   * screen sits underneath it permanently. The height is not a constant:
-   * at 200%/400% zoom the bar wraps to two rows. Measuring it is the only
-   * honest way to keep the reservation correct.
-   *
-   * It is keyed on the ELEMENT, not on the session. Keyed on the session
-   * it measured once and then quietly went wrong: the bar unmounts when a
-   * screen without it appears — the first-arrival screen, added on
-   * 2026-09-05 — and the observer, still watching a node no longer in the
-   * document, fires with a height of zero and writes `0px`. Nothing
-   * re-ran it afterwards, because the session had not changed, so for the
-   * rest of that visit the reservation was 36px against a 72px bar and
-   * the foot of every long screen sat underneath it.
-   *
-   * The variable is removed rather than left at a stale number when the
-   * bar is gone, so the fallback in the stylesheet is what applies.
-   */
-  useEffect(() => {
-    if (navEl === null) {
-      document.documentElement.style.removeProperty('--nav-primary-height');
-      return;
-    }
-    const apply = () =>
-      document.documentElement.style.setProperty('--nav-primary-height', `${navEl.offsetHeight}px`);
-    apply();
-    if (typeof ResizeObserver === 'undefined') return;
-    const observer = new ResizeObserver(apply);
-    observer.observe(navEl);
-    return () => observer.disconnect();
-  }, [navEl]);
 
   if (mode === 'staff') {
     return <StaffApp onExit={surface === 'staff' ? undefined : () => setMode('participant')} />;
@@ -963,34 +921,6 @@ export function App() {
           }}
         />
       )}
-      {/*
-        Bottom bar on phones (design decision D-3), four destinations only
-        (D-10 — see the width arithmetic above). Doc 20 §33 requires
-        persistent access to Consent and Help, so those keep permanent
-        slots; matching and community are opt-in and low-frequency, reached
-        from the Home task list instead of holding a slot forever. Short
-        visible labels with the fuller name as the accessible name — the
-        visible text stays contained in it (WCAG 2.5.3 Label in Name).
-      */}
-      <nav aria-label="Primary" className="nav-primary" ref={setNavEl}>
-        <ul>
-          {PRIMARY_DESTINATIONS.map((d) => (
-            <li key={d.key}>
-              <button
-                aria-current={screen === d.key ? 'page' : undefined}
-                aria-label={d.fullLabel}
-                onClick={() => {
-                  setToast('');
-                  setScreen(d.key);
-                }}
-              >
-                <TabIcon name={d.icon} />
-                {d.label}
-              </button>
-            </li>
-          ))}
-        </ul>
-      </nav>
       {/*
         The global chrome, from the handoff. Both sit above the content and
         neither scrolls away: text size and reading aloud are the brief.
@@ -1462,6 +1392,42 @@ export function App() {
           }}
         />
       </main>
+      {/*
+        Last in the shell, and sticky rather than fixed: on a phone,
+        "fixed to the bottom" is not the same as "at the bottom of what
+        you can see" — see `.nav-primary` in the stylesheet. Written here
+        rather than before the content because that is where it is on
+        screen, so somebody moving through the page with a keyboard or a
+        screen reader reaches the destinations after the screen they are
+        on rather than before it.
+
+        Bottom bar on phones (design decision D-3), four destinations only
+        (D-10 — see the width arithmetic above). Doc 20 §33 requires
+        persistent access to Consent and Help, so those keep permanent
+        slots; matching and community are opt-in and low-frequency, reached
+        from the Home task list instead of holding a slot forever. Short
+        visible labels with the fuller name as the accessible name — the
+        visible text stays contained in it (WCAG 2.5.3 Label in Name).
+      */}
+      <nav aria-label="Primary" className="nav-primary">
+        <ul>
+          {PRIMARY_DESTINATIONS.map((d) => (
+            <li key={d.key}>
+              <button
+                aria-current={screen === d.key ? 'page' : undefined}
+                aria-label={d.fullLabel}
+                onClick={() => {
+                  setToast('');
+                  setScreen(d.key);
+                }}
+              >
+                <TabIcon name={d.icon} />
+                {d.label}
+              </button>
+            </li>
+          ))}
+        </ul>
+      </nav>
     </div>
   );
 }

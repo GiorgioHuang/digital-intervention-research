@@ -2944,9 +2944,31 @@ nav [aria-current='page'] {
    permanently present. The bottom bar must leave room for the system
    gesture area and must never cover content or a confirmation area — hence
    the matching bottom padding added to main. */
+/*
+ * The bar stays at the foot of the window, and STAYS IN THE FLOW.
+ *
+ * It was `position: fixed; inset-block-end: 0`, and on a phone that is
+ * not the same thing as "at the bottom of what you can see". Chrome on
+ * Android leaves the layout viewport at its URL-bar-hidden height, so a
+ * fixed element anchored to the bottom of it sits below the visible area
+ * by the height of the URL bar whenever the URL bar is showing — which
+ * is most of the time on a page somebody is reading. Reported from the
+ * about screen, where the text is long enough to scroll: the tabs were
+ * cut in half, labels gone (owner, 2026-09-06).
+ *
+ * Sticky is what the toolbar above already does, for a reason written
+ * out there: it stays in the flow, so nothing has to reserve space for
+ * it and no content can end up underneath it. That toolbar is pinned
+ * correctly on the same phone in the same screenshot, which is the
+ * evidence for this fix rather than a theory about it.
+ *
+ * In the flow means the reservation goes too: `main` no longer needs
+ * bottom padding the height of the bar, and the runtime measurement that
+ * wrote it — a custom property, a ResizeObserver, and a defect of its
+ * own two days ago — is deleted rather than kept in step.
+ */
 .nav-primary {
-  position: fixed;
-  inset-inline: 0;
+  position: sticky;
   inset-block-end: 0;
   z-index: var(--layer-header);
   padding: var(--space-2) var(--space-2)
@@ -2986,28 +3008,27 @@ nav [aria-current='page'] {
   border-block-start: var(--border-emphasis) solid var(--color-action-primary-bg);
   font-weight: var(--type-weight-bold);
 }
-/* The bottom bar is fixed, so main has to reserve matching bottom padding
-   itself or the last confirm button is permanently covered.
-   --nav-primary-height is written at runtime by App from an actual
-   measurement (so it follows a wrap to two rows and any change to the system
-   safe area); the default value covers the first frame, before the JS has
-   run. */
-body:has(.nav-primary) main {
-  padding-block-end: calc(
-    var(--nav-primary-height, var(--target-min)) + var(--space-6) + env(safe-area-inset-bottom, 0px)
-  );
-}
+/*
+ * No reservation. The bar is in the flow now (see `.nav-primary`), so it
+ * takes its own room and nothing can end up underneath it — which is
+ * what the reservation was for, and what it kept getting wrong: it was a
+ * runtime measurement written into a custom property, and when the bar
+ * unmounted on a screen without one the observer wrote a zero and the
+ * foot of every long screen went under the bar until the next sign-in.
+ */
 
 /* Tablet and desktop: the bar stays at the bottom.
  *
  * This block used to turn it back into a static top navigation, which
  * predates the elder handoff and its five-tab bottom bar. `position: static`
- * puts an element back at its place in the document, and this nav is written
- * before the toolbar in the markup — so above 40rem the tabs did not merely
- * move to the top, they landed *above* the reading controls, and the top of
- * a participant's screen became a row of destinations instead of the
- * text-size buttons the brief puts on every screen. It looked like a
- * responsive nicety and was a reversal of the design.
+ * puts an element back at its place in the document, and this nav was then
+ * written before the toolbar in the markup — so above 40rem the tabs did
+ * not merely move to the top, they landed *above* the reading controls,
+ * and the top of a participant's screen became a row of destinations
+ * instead of the text-size buttons the brief puts on every screen. It
+ * looked like a responsive nicety and was a reversal of the design. (The
+ * bar is now the last thing in the shell and sticks to the foot, so its
+ * place in the document is also where it belongs on screen.)
  *
  * The tabs stay where the design puts them at every width. What does change
  * is that they stop stretching: five items sharing 1920px are 380px wide

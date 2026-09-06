@@ -225,18 +225,39 @@ describe('the toolbar has one shape everywhere', () => {
    * So the guard is against the stylesheet text and against the one
    * structural fact that makes the defect possible.
    */
-  it('keeps the tabs below the reading controls at every width', async () => {
+  /**
+   * The tabs are below the reading controls, and below the screen, at
+   * every width.
+   *
+   * This used to be held up by the CSS alone: the nav was written FIRST
+   * in the markup, so any rule returning it to normal flow put the row of
+   * destinations above the text-size buttons — which happened once, from
+   * a pre-handoff `position: static` in a media query. The nav is now
+   * written last, so normal flow is where it belongs and that particular
+   * reversal cannot be written any more.
+   *
+   * What replaced it as the thing to guard: the bar is STICKY, in the
+   * flow. Fixed is what put it half off the bottom of a phone — Chrome on
+   * Android leaves the layout viewport at its URL-bar-hidden height, so a
+   * fixed element anchored to the bottom of it is below the visible area
+   * whenever the URL bar shows (owner, 2026-09-06).
+   */
+  it('keeps the tabs below the reading controls, and in the flow', async () => {
     await arrive();
     const nav = document.querySelector('.nav-primary');
     const bar = document.querySelector('.elder-toolbar');
+    const main = document.querySelector('main');
     expect(nav, 'the primary nav is gone').toBeTruthy();
-    // This is what makes the CSS load-bearing: in document order the nav
-    // comes first, so anything that returns it to normal flow puts it above
-    // the toolbar. Asserted so the rule below is not mistaken for a
-    // preference.
+    // Document order: toolbar, screen, then destinations. This is what
+    // makes normal flow the right answer rather than something the CSS
+    // has to correct.
     expect(
-      nav!.compareDocumentPosition(bar!) & Node.DOCUMENT_POSITION_FOLLOWING,
-      'the nav no longer precedes the toolbar; the rule below may be stale',
+      bar!.compareDocumentPosition(nav!) & Node.DOCUMENT_POSITION_FOLLOWING,
+      'the nav no longer follows the toolbar',
+    ).toBeTruthy();
+    expect(
+      main!.compareDocumentPosition(nav!) & Node.DOCUMENT_POSITION_FOLLOWING,
+      'the nav no longer follows the content it navigates away from',
     ).toBeTruthy();
 
     const css = readFileSync(resolve(process.cwd(), 'src/styles.css'), 'utf8');
@@ -246,24 +267,23 @@ describe('the toolbar has one shape everywhere', () => {
     // block and reported the bar as no longer fixed when it was.
     const at = css.indexOf('\n.nav-primary {');
     expect(at, 'the .nav-primary rule has been renamed').toBeGreaterThan(-1);
-    expect(
-      css.slice(at, css.indexOf('}', at)),
-      'the tab bar is no longer fixed',
-    ).toMatch(/position:\s*fixed/);
-    // Anywhere in the file, in any media query: a single `position: static`
-    // on this selector is the whole defect.
+    const rule = css.slice(at, css.indexOf('}', at));
+    expect(rule, 'the tab bar is no longer sticky').toMatch(/position:\s*sticky/);
+    expect(rule, 'the tab bar is fixed again, which is what cut it in half on a phone').not.toMatch(
+      /position:\s*fixed/,
+    );
+    expect(rule, 'the tab bar no longer sticks to the foot').toMatch(/inset-block-end:\s*0/);
+    // Anywhere in the file, in any media query: taking the stick off is
+    // the whole defect, and it would scroll the destinations away.
     expect(
       css,
-      'something returns the tab bar to normal flow, which puts it above the reading controls',
+      'something returns the tab bar to unstuck normal flow, and it will scroll away',
     ).not.toMatch(/\.nav-primary[^{}]*\{[^{}]*position:\s*static/);
-    // The bar is fixed, so main reserves its height. The removed block also
-    // cancelled that reserve, which would have hidden the last row of every
-    // wide screen behind the tabs.
-    expect(css, 'main no longer reserves room for the fixed bar').toContain(
+    // In the flow means nothing reserves room for it. The reservation was
+    // a runtime measurement and a defect of its own; it must not come back
+    // alongside a bar that already takes its own space.
+    expect(css, 'the bottom reservation is back, and it now double-counts the bar').not.toContain(
       'body:has(.nav-primary) main {',
-    );
-    expect(css, 'the reserved room is cancelled again').not.toMatch(
-      /body:has\(\.nav-primary\) main \{ padding-block-end: var\(--space-6\); \}/,
     );
   });
 
