@@ -29,11 +29,14 @@ export function ReportPerson({
   session,
   name,
   /**
-   * How the report names who it is about.
+   * How the report names who it is about — never by naming them.
    *
-   * `item` names the MEMORY and the server looks its author up; `person`
-   * names the person, which is all a conversation has to go on. The two
-   * are not equally strong and the difference is recorded (B-36).
+   * `item` names the MEMORY and `thread` names the CONVERSATION; either
+   * way the server works out whose it is, so this screen cannot open a
+   * case against somebody it merely named. `blockIdentity` is separate
+   * and is not the same kind of thing: blocking is a decision about your
+   * own screens with no authority over anybody, so naming who to hide
+   * from yourself is exactly what it should be.
    */
   subject,
   onBack,
@@ -41,7 +44,9 @@ export function ReportPerson({
 }: {
   session: Session;
   name: string;
-  subject: { kind: 'item'; itemId: string } | { kind: 'person'; identity: string };
+  subject:
+    | { kind: 'item'; itemId: string }
+    | { kind: 'thread'; threadId: string; blockIdentity: string };
   onBack: () => void;
   onGetHelp?: () => void;
 }) {
@@ -69,7 +74,7 @@ export function ReportPerson({
     setSending(true);
     try {
       if (subject.kind === 'item') await api.reportLifeStoryItem(session, subject.itemId, reason, words);
-      else await api.submitReport(session, subject.identity, reason, words);
+      else await api.reportThread(session, subject.threadId, reason, words);
       /*
        * The block is a second act and is only offered on the button that
        * says so. It is attempted after the report, and a failure here
@@ -77,8 +82,8 @@ export function ReportPerson({
        * report that reached the study office is not undone by a block
        * that did not (ADR-038 keeps them independent).
        */
-      if (alsoBlock && subject.kind === 'person') {
-        await api.createBlock(session, subject.identity, true);
+      if (alsoBlock && subject.kind === 'thread') {
+        await api.createBlock(session, subject.blockIdentity, true);
       }
       setSent(alsoBlock ? 'report-and-block' : 'report');
     } catch (err) {
@@ -162,7 +167,7 @@ export function ReportPerson({
       <button className="report-send" disabled={reason === null || sending} onClick={() => void send(false)}>
         Send this to the study office
       </button>
-      {subject.kind === 'person' && (
+      {subject.kind === 'thread' && (
         <button className="report-send-and-hide" disabled={reason === null || sending} onClick={() => setAskingBlock(true)}>
           Send it, and hide this person from me
         </button>

@@ -804,6 +804,22 @@ export const api = {
       description,
     }),
   /**
+   * Reporting the person you are talking to, from the conversation.
+   *
+   * The THREAD is named and the other party is worked out from it on the
+   * server, against the signed-in account — so this screen does not get
+   * to say who a case is opened against, and a caller who is not in the
+   * conversation is answered as though it did not exist (B-36, closed).
+   */
+  reportThread: (s: Session, threadId: string, category: string, description: string) =>
+    post<{ data: { id: string; meta: { moderationCaseId: string } } }>(s, '/v1/reports', {
+      reporterId: s.participantId,
+      reportedActorId: '',
+      reportedThreadId: threadId,
+      category,
+      description,
+    }),
+  /**
    * Reporting a piece of somebody's life story, from the feed.
    *
    * The MEMORY is named and the author is looked up from it on the

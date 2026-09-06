@@ -466,6 +466,7 @@ export class CommandController {
       reportedActorId: string;
       reportedContentId?: string;
       reportedLifeStoryItemId?: string;
+      reportedThreadId?: string;
       category: string;
       description: string;
     },
@@ -490,6 +491,12 @@ export class CommandController {
       description: body.description,
     };
     if (body.reportedContentId !== undefined) input.reportedContentId = body.reportedContentId;
+    /*
+     * Passed straight through: the thread's two parties, and which of
+     * them the caller is, are M18's own facts and are resolved inside the
+     * command against the authenticated actor.
+     */
+    if (body.reportedThreadId !== undefined) input.reportedThreadId = body.reportedThreadId;
     const result = await submitUserReport(this.deps.m18, ctx, input);
     // A ModerationCase is opened in the same transaction: reports are
     // reviewed by staff, never adjudicated by automation alone.

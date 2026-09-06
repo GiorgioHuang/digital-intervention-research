@@ -702,6 +702,64 @@ describe.skipIf(!dbAvailable)('HTTP API (e2e)', () => {
     expect(outsider.status).toBe(404);
     const wrongOwner = await call(`/v1/conversation-threads/${threadId}/messages?participantId=${patId}`, strangerAcc);
     expect(wrongOwner.status).toBe(404);
+
+    /*
+     * Reporting the person you are talking to names the CONVERSATION, and
+     * the other party comes from it (B-36).
+     *
+     * The subject is asserted against a deliberately wrong
+     * `reportedActorId`, because that is the only version of the test
+     * that means anything: one sending the right answer would pass
+     * whether or not the server resolved it.
+     */
+    const rep = await call('/v1/reports', patAcc, {
+      reporterId: patId,
+      reportedActorId: moderatorAcc,
+      reportedThreadId: threadId,
+      category: 'harassment',
+      description: '',
+    });
+    expect(rep.status).toBe(201);
+    const caseId = ((await rep.json()) as { data: { meta: { moderationCaseId: string } } }).data.meta
+      .moderationCaseId;
+    const subject = await pool.query<{ subject_actor_id: string }>(
+      `SELECT subject_actor_id FROM community_social.moderation_cases WHERE id = $1`,
+      [caseId],
+    );
+    expect(subject.rows[0]?.subject_actor_id).toBe(otherId);
+    expect(subject.rows[0]?.subject_actor_id).not.toBe(moderatorAcc);
+
+    /*
+     * And the check that makes the resolution worth anything: it is
+     * against the AUTHENTICATED actor, not against `reporterId`. A
+     * stranger claiming to be a party is refused — and refused the same
+     * way as somebody naming a conversation that does not exist, because
+     * "you are not in that one" tells them it is real (ADR-050).
+     */
+    const bystander = await call('/v1/reports', strangerAcc, {
+      reporterId: patId,
+      reportedActorId: '',
+      reportedThreadId: threadId,
+      category: 'harassment',
+      description: '',
+    });
+    expect(bystander.status).toBe(404);
+    const noSuchThread = await call('/v1/reports', patAcc, {
+      reporterId: patId,
+      reportedActorId: '',
+      reportedThreadId: 'th_no_such_conversation',
+      category: 'harassment',
+      description: '',
+    });
+    expect(noSuchThread.status).toBe(404);
+    // Indistinguishable: same status, same code, same message. Anything
+    // that told the two apart would answer the question the refusal is
+    // there to withhold.
+    const code = async (r: Response) => (await r.json()) as { error: { code: string; message: string } };
+    const a = await code(bystander);
+    const b = await code(noSuchThread);
+    expect(a.error.code).toBe(b.error.code);
+    expect(a.error.message).toBe(b.error.message);
   });
 
   it('staff work queues are role-gated and reflect real pending work', async () => {

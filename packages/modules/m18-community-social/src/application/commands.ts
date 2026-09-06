@@ -31,6 +31,14 @@ export interface ParticipantNamePort {
    * chosen nothing, and absence is not filled in from the record above.
    */
   findPublicNames(participantIds: string[]): Promise<Map<string, { chosenName: string; city: string | null }>>;
+  /**
+   * Who the signed-in account is as a participant, or undefined for
+   * somebody with no participant record — a supporter, or a member of
+   * staff. Needed wherever the platform has to know that the person
+   * making a request is one of the two parties to something, because a
+   * thread names its parties by whichever identity they hold.
+   */
+  findParticipantIdByAccount(userAccountId: string): Promise<string | undefined>;
 }
 
 export interface M18Deps {
@@ -162,6 +170,12 @@ export async function submitUserReport(
     reporterId: string;
     reportedActorId: string;
     reportedContentId?: string;
+    /**
+     * The conversation this report is about. When it is given, who the
+     * report is against comes from the thread's two parties and not from
+     * the request — see below.
+     */
+    reportedThreadId?: string;
     category: string;
     description: string;
   },
@@ -187,6 +201,42 @@ export async function submitUserReport(
     );
     const author = post.rows[0]?.author_participant_id as string | undefined;
     if (author !== undefined) reportedActorId = author;
+  }
+
+  /*
+   * The same rule for a conversation: name the thread, and the other
+   * party comes from it.
+   *
+   * The check is against the AUTHENTICATED actor, never against
+   * `input.reporterId`. `reporterId` is a value in the request body, so a
+   * check that asked "is the reporter a party to this thread" could be
+   * satisfied by claiming to be one — the check would then be theatre,
+   * and worse than none because it would be counted.
+   *
+   * A caller who is not a party gets the same answer as a caller naming a
+   * thread that does not exist: threads carry protected existence
+   * (ADR-050), and "you are not in that conversation" tells a stranger
+   * that the conversation is real.
+   */
+  if (input.reportedThreadId !== undefined) {
+    const actorId = ctx.actor?.id;
+    const actorParticipantId =
+      actorId === undefined ? undefined : await deps.participants.findParticipantIdByAccount(actorId);
+    const mine = [actorId, actorParticipantId].filter((x): x is string => x !== undefined);
+    const thread = await deps.pool.query(
+      `SELECT participant_a_id, participant_b_id
+         FROM community_social.conversation_threads WHERE id = $1`,
+      [input.reportedThreadId],
+    );
+    const t = thread.rows[0] as { participant_a_id: string; participant_b_id: string } | undefined;
+    if (t === undefined) throw new PlatformError('RESOURCE_NOT_FOUND', 'Conversation not found');
+    const other = mine.includes(t.participant_a_id)
+      ? t.participant_b_id
+      : mine.includes(t.participant_b_id)
+        ? t.participant_a_id
+        : undefined;
+    if (other === undefined) throw new PlatformError('RESOURCE_NOT_FOUND', 'Conversation not found');
+    reportedActorId = other;
   }
 
   const reportId = newId('rep');

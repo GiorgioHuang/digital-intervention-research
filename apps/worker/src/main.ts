@@ -84,6 +84,15 @@ async function main(): Promise<void> {
       findPublicNames: (): never => {
         throw new PlatformError('AUTHORISATION_DENIED', 'Sweeps do not read participant names');
       },
+      /*
+       * A sweep acts as nobody, so there is no account to resolve. Same
+       * reasoning as the two above: throwing says a sweep that reached
+       * for an identity is a design change to make deliberately, not
+       * something to discover from an unexplained undefined.
+       */
+      findParticipantIdByAccount: (): never => {
+        throw new PlatformError('AUTHORISATION_DENIED', 'Sweeps act as nobody');
+      },
     },
   };
   for (const queue of SWEEP_QUEUES) await boss.createQueue(queue);

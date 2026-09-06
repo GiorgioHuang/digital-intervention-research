@@ -228,8 +228,14 @@ describe('reporting and blocking the person you are talking to', () => {
     });
     const posts = seen.filter((c) => c.method === 'POST');
     expect(posts.map((p) => p.path)).toEqual(['/v1/reports', '/v1/blocks']);
-    expect(posts[0]?.body?.['reportedActorId']).toBe('pt_b');
+    // The CONVERSATION is named, and the server works out who the other
+    // party is — this screen does not get to say who a case is opened
+    // against (B-36).
+    expect(posts[0]?.body?.['reportedThreadId']).toBe('th_1');
+    expect(posts[0]?.body?.['reportedActorId']).toBe('');
     expect(posts[0]?.body?.['category']).toBe('scam');
+    // Blocking is the one that does name somebody, and should: it is a
+    // decision about your own screens with no authority over them.
     expect(posts[1]?.body?.['blockedActorId']).toBe('pt_b');
     expect(posts[1]?.body?.['confirmed']).toBe(true);
     // And it says both things happened, rather than only the report.

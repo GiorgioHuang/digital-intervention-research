@@ -215,7 +215,11 @@ export function MessagesScreen({
       <ReportPerson
         session={session}
         name={nameOrGap(reporting.otherDisplayName)}
-        subject={{ kind: 'person', identity: reporting.otherParticipantId }}
+        subject={{
+          kind: 'thread',
+          threadId: reporting.threadId,
+          blockIdentity: reporting.otherParticipantId,
+        }}
         onBack={() => setReporting(null)}
         {...(onGetHelp === undefined ? {} : { onGetHelp })}
       />
