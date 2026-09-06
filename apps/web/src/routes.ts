@@ -39,6 +39,10 @@ const PATHS: Readonly<Record<Exclude<Screen, 'review' | 'caption'>, string>> = {
   tapping: '/exercises/tapping',
   helper: '/someone-is-helping-me',
   name: '/what-other-people-call-me',
+  report: '/report-something',
+  'safety-concern': '/a-safety-concern',
+  blocks: '/blocking',
+  display: '/how-this-looks',
   about: '/about',
   help: '/help',
 };

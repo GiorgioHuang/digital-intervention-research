@@ -42,7 +42,7 @@ import { MyResearchPart } from './components/MyResearchPart.js';
 import { WhoHasAccess } from './components/WhoHasAccess.js';
 import { InviteSomeone } from './components/InviteSomeone.js';
 import { WaitingForYou } from './components/WaitingForYou.js';
-import { SafetyPanel } from './components/SafetyPanel.js';
+import { MyBlocks, ReportSomething, SafetyConcern } from './components/SafetyPanel.js';
 import { SessionGuard } from './components/SessionGuard.js';
 import { SharedDeviceBar } from './components/SharedDeviceBar.js';
 import { api, PlatformApiError, type Session } from './api.js';
@@ -182,6 +182,8 @@ export function App() {
    * prompt anywhere that would remind them.
    */
   const [skippedNaming, setSkippedNaming] = useState(false);
+  /** Whether the sign-out row has been pressed and is waiting to be answered. */
+  const [signingOut, setSigningOut] = useState(false);
   /** The photograph being captioned, carried to the `caption` screen. */
   const [captioning, setCaptioning] = useState<UncaptionedPhotograph | null>(null);
   /** Whether Home has an unfinished thing on it. Decides the second line. */
@@ -1293,6 +1295,20 @@ export function App() {
             </div>
           </>
         )}
+        {screen === 'report' && <ReportSomething session={session} onBack={() => setScreen('help')} />}
+        {screen === 'safety-concern' && <SafetyConcern session={session} onBack={() => setScreen('help')} />}
+        {screen === 'blocks' && <MyBlocks session={session} onBack={() => setScreen('help')} />}
+        {screen === 'display' && (
+          <section aria-labelledby="display-heading">
+            <p>
+              <button className="back-link" onClick={() => setScreen('help')}>
+                &lsaquo; Back to help
+              </button>
+            </p>
+            <h1 id="display-heading">Make the text bigger, or change the colours</h1>
+            <DisplayPreferencesPanel />
+          </section>
+        )}
         {screen === 'help' && (
           <section aria-labelledby="help-heading">
             <h1 id="help-heading">Help and safety</h1>
@@ -1305,14 +1321,33 @@ export function App() {
               not an emergency service.
             </p>
             {/*
-              Where the design puts it: a chevron row on Help. Above the
-              safety panel, because somebody who has a person beside them
-              is more likely to be here for that than for a report.
+              A list, and only a list.
+              
+              This page carried three open forms — report, block, safety
+              concern — plus a display-settings disclosure and a sign-out
+              section, under four chevron rows. Somebody arrives at Help
+              because something has gone wrong, and met three forms they
+              were not looking for before reaching the one they were
+              (owner, 2026-09-06). Every one of them is now what a row
+              opens, in the same row language as the rest of the product,
+              and the page can be read in one glance.
+              
+              The order is by what brings somebody here: the person beside
+              them, then the two ways to say something is wrong, then
+              blocking, then the quieter settings.
             */}
-            {/* The prototype's Help row. */}
             <div className="nav-rows">
               <button className="row-summary" onClick={() => setScreen('helper')}>
                 Someone is helping me use this
+              </button>
+              <button className="row-summary" onClick={() => setScreen('report')}>
+                Report something that made you uncomfortable
+              </button>
+              <button className="row-summary" onClick={() => setScreen('safety-concern')}>
+                I have a safety concern
+              </button>
+              <button className="row-summary" onClick={() => setScreen('blocks')}>
+                Blocking, and the people I have blocked
               </button>
               {/*
                 A supporter's way in. There is no supporter workspace on
@@ -1334,71 +1369,74 @@ export function App() {
               <button className="row-summary" onClick={() => setScreen('name')}>
                 What other people call me
               </button>
+              {/*
+                It was a closed disclosure, which was already better than
+                fifteen controls sitting open on this page — but it was
+                the one thing here that opened in place while everything
+                beside it went somewhere. A row says what is inside in the
+                words somebody would use looking for it, which is what the
+                disclosure's summary was for.
+                
+                Where this ought to live is a larger question than the
+                folding — the bottom bar has four slots by D-10's
+                arithmetic and none spare — and it is the owner's to
+                answer, not mine.
+              */}
+              <button className="row-summary" onClick={() => setScreen('display')}>
+                Make the text bigger, or change the colours
+              </button>
               <button className="row-summary" onClick={() => setScreen('about')}>
                 About this project
               </button>
+              {/*
+                Signing out is a row like the others, as the drawing has
+                it — and it asks first, because on a shared tablet at a
+                community centre the person who presses it by mistake has
+                to sign in again with identifiers they may not have.
+              */}
+              <button className="row-summary" onClick={() => setSigningOut(true)}>
+                {authMode === 'google' ? 'Sign out of this device' : 'Sign out and enter different identifiers'}
+              </button>
             </div>
-            <SafetyPanel session={session} />
-            {/*
-              Folded, and it is the biggest thing on this page: 191 words
-              and 15 controls against the safety panel's 131 and 8. Two
-              people were being failed at once — somebody in difficulty
-              waded through text-size settings to reach the thing they came
-              for, and somebody who could not read the screen had to guess
-              that "make the text bigger" lived under "Help and safety".
-
-              Folding fixes the first. The summary fixes the second, and is
-              the reason this is not simply hidden: it says what is inside
-              in the words somebody would use looking for it, where the
-              heading beneath it ("How this looks and reads") does not.
-              A closed disclosure with a plain label is easier to find on
-              this page than fifteen controls buried in it.
-
-              Where this ought to live is a larger question than folding it
-              — the bottom bar has four slots by D-10's arithmetic and none
-              spare — and it is the owner's to answer, not mine.
-            */}
-            <details>
-              <summary>Make the text bigger, or change the colours</summary>
-              <DisplayPreferencesPanel />
-            </details>
-            {/*
-              The only way out of a session was to reload the page. Someone
-              signed in with identifiers that no longer work — after a demo
-              environment is reseeded, for instance — met a 404 on every
-              screen and no control that would let them try different ones.
-            */}
-            {/*
-              This block described the dev-header stub — "identifies you by
-              the identifiers you typed in" — and rendered unconditionally,
-              so the deployed environment, which signs people in with
-              Google, told them something untrue about how they got here
-              and offered a button that named a thing they had never done.
-              The same shape as D-94's ten sites, and this one is on screen
-              in front of participants.
-            */}
-            <section aria-labelledby="signout-heading">
-              <h2 id="signout-heading">{authMode === 'google' ? 'Signing out' : 'Signing in as someone else'}</h2>
-              {authMode === 'dev-header' && (
-                <p>
-                  This development environment identifies you by the identifiers you typed in. If they stop working —
-                  after this demo environment is set up again, for example — nothing here is broken; the identifiers
-                  have changed.
+            {signingOut && (
+              <div role="alertdialog" aria-labelledby="signout-heading" className="confirm-panel">
+                <p id="signout-heading">
+                  {authMode === 'google' ? 'Sign out of this device?' : 'Sign out and enter different identifiers?'}
                 </p>
-              )}
-              <p>
-                <button
-                  onClick={() => {
-                    if (shared) endVisit();
-                    void signOut();
-                    setSession(null);
-                    setScreen('home');
-                  }}
-                >
-                  {authMode === 'google' ? 'Sign out' : 'Sign out and enter different identifiers'}
-                </button>
-              </p>
-            </section>
+                <p>
+                  Nothing of yours is deleted. You will need to sign in again to reach your story, your messages and
+                  your settings.
+                </p>
+                {/*
+                  This block described the dev-header stub — "identifies
+                  you by the identifiers you typed in" — and rendered
+                  unconditionally, so the deployed environment, which signs
+                  people in with Google, told them something untrue about
+                  how they got here.
+                */}
+                {authMode === 'dev-header' && (
+                  <p>
+                    This development environment identifies you by the identifiers you typed in. If they stop
+                    working — after this demo environment is set up again, for example — nothing here is broken; the
+                    identifiers have changed.
+                  </p>
+                )}
+                <p>
+                  <button
+                    onClick={() => {
+                      if (shared) endVisit();
+                      void signOut();
+                      setSigningOut(false);
+                      setSession(null);
+                      setScreen('home');
+                    }}
+                  >
+                    {authMode === 'google' ? 'Yes, sign out' : 'Yes, sign out'}
+                  </button>{' '}
+                  <button onClick={() => setSigningOut(false)}>Stay signed in</button>
+                </p>
+              </div>
+            )}
           </section>
         )}
         {/*

@@ -3642,7 +3642,10 @@ main[data-workspace='staff'] .scroll-x {
 [data-workspace='participant'] :is(.messages-chooser__write, .messages-chooser__end):hover {
   background-color: color-mix(in srgb, var(--cl-text) 6%, transparent);
 }
-[data-workspace='participant'] .messages-ending {
+/* A question that has to be answered before the thing happens: ending a
+   connection, signing out of a shared device. Named for what it is rather
+   than for the first screen that needed one — the second was on Help. */
+[data-workspace='participant'] .confirm-panel {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
@@ -3650,7 +3653,7 @@ main[data-workspace='staff'] .scroll-x {
   border: var(--border-emphasis) solid var(--cl-accent);
   border-radius: var(--radius-2);
 }
-[data-workspace='participant'] .messages-ending p { margin: 0; line-height: 1.6; }
+[data-workspace='participant'] .confirm-panel p { margin: 0; line-height: 1.6; }
 
 /* ---------- The way in: what should we call you? ----------------------
  * The drawing's registration screen. Two boxes and an optional third,

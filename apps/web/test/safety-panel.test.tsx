@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { act } from 'react';
-import { SafetyPanel } from '../src/components/SafetyPanel.js';
+import { MyBlocks, ReportSomething, SafetyConcern } from '../src/components/SafetyPanel.js';
 
 const session = { actorId: 'actor_test', participantId: 'pt_test' };
 
@@ -35,7 +35,15 @@ const blockRow = {
   },
 };
 
-describe('SafetyPanel (block & report, Doc 20 / ADR-037/038)', () => {
+const noop = () => undefined;
+
+/**
+ * These were one panel of three stacked forms sitting open on Help. They
+ * are three screens now, each reached from a row (owner, 2026-09-06) —
+ * same wording, same confirmations, same requests, asserted here through
+ * the components a row actually opens.
+ */
+describe('block & report (Doc 20 / ADR-037/038)', () => {
   beforeEach(() => {
     (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
   });
@@ -47,7 +55,7 @@ describe('SafetyPanel (block & report, Doc 20 / ADR-037/038)', () => {
   it('report goes to human review and the UI says so; submission posts category and description', async () => {
     const calls = stubFetch();
     await act(async () => {
-      render(<SafetyPanel session={session} />);
+      render(<ReportSomething session={session} onBack={noop} />);
     });
     expect(screen.getByText(/no automated system decides them on its own/)).toBeTruthy();
     // A report survives a later block (ADR-038) — the UI states this.
@@ -66,7 +74,7 @@ describe('SafetyPanel (block & report, Doc 20 / ADR-037/038)', () => {
   it('block requires explicit confirmation and can be backed out of without any API call', async () => {
     const calls = stubFetch();
     await act(async () => {
-      render(<SafetyPanel session={session} />);
+      render(<MyBlocks session={session} onBack={noop} />);
     });
     fireEvent.change(screen.getByLabelText('Identifier of the person to block'), { target: { value: 'actor_bad' } });
     fireEvent.click(screen.getByRole('button', { name: 'Block this person' }));
@@ -87,7 +95,7 @@ describe('SafetyPanel (block & report, Doc 20 / ADR-037/038)', () => {
   it('safety concern raises a participant-sourced SafetySignal and shows the emergency disclaimer', async () => {
     const calls = stubFetch();
     await act(async () => {
-      render(<SafetyPanel session={session} />);
+      render(<SafetyConcern session={session} onBack={noop} />);
     });
     expect(screen.getByText(/not an emergency service/)).toBeTruthy();
     fireEvent.change(screen.getByLabelText('Your safety concern'), { target: { value: 'I have been feeling unsafe recently' } });
@@ -106,7 +114,7 @@ describe('SafetyPanel (block & report, Doc 20 / ADR-037/038)', () => {
   it('lists the blocks placed and lifts one, without claiming anything is restored', async () => {
     const calls = stubFetch([blockRow]);
     await act(async () => {
-      render(<SafetyPanel session={session} />);
+      render(<MyBlocks session={session} onBack={noop} />);
     });
     expect(screen.getByText('Sam S.', { exact: false })).toBeTruthy();
     await act(async () => {
@@ -125,7 +133,7 @@ describe('SafetyPanel (block & report, Doc 20 / ADR-037/038)', () => {
   it('says plainly when no one is blocked, rather than showing an empty area', async () => {
     stubFetch([]);
     await act(async () => {
-      render(<SafetyPanel session={session} />);
+      render(<MyBlocks session={session} onBack={noop} />);
     });
     expect(screen.getByText('You have not blocked anyone')).toBeTruthy();
   });

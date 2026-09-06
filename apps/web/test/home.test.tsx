@@ -267,18 +267,52 @@ describe('the help screen', () => {
     });
   };
 
-  it('leads with safety, and folds the display settings behind a plain label', async () => {
+  /**
+   * Help is a list, and only a list.
+   *
+   * It used to carry three open forms — report, block, safety concern —
+   * plus a display-settings disclosure and a sign-out section, under four
+   * chevron rows. Somebody arrives here because something has gone wrong,
+   * and met three forms they were not looking for before reaching the one
+   * they were (owner, 2026-09-06).
+   *
+   * Asserted as "no field to fill in anywhere on the page", not as a list
+   * of the rows: a test that named the rows would pass while a fourth
+   * form sat open beneath them.
+   */
+  it('is a list of rows, with nothing to fill in on the page itself', async () => {
     await openHelp();
-    // What the page is for stays open.
-    expect(screen.getByRole('button', { name: /Report/i })).toBeTruthy();
-
-    const summary = [...document.querySelectorAll('main details > summary')].find((el) =>
-      /text bigger/i.test(el.textContent ?? ''),
+    expect(document.querySelectorAll('main input, main textarea, main select').length).toBe(0);
+    expect(document.querySelectorAll('main details').length).toBe(0);
+    // And every control on it is a row.
+    const notRows = [...document.querySelectorAll('main button')].filter(
+      (b) => !b.classList.contains('row-summary') && !b.closest('.elder-toolbar') && !b.closest('.site-footer'),
     );
-    expect(summary, 'the display settings are not behind a summary that says what they are').toBeTruthy();
-    expect((summary!.parentElement as HTMLDetailsElement).hasAttribute('open')).toBe(false);
-    // Folded, not removed.
-    expect(screen.getByRole('heading', { name: 'How this looks and reads' })).toBeTruthy();
+    expect(notRows.map((b) => b.textContent), 'something on Help is not a row').toEqual([]);
+  });
+
+  /**
+   * Folded is not removed. Each row opens the thing it names, and the
+   * thing it names still works — which is the half a "nothing is on the
+   * page" assertion cannot see on its own.
+   */
+  it('opens each form from its own row', async () => {
+    await openHelp();
+    for (const [row, heading] of [
+      ['Report something that made you uncomfortable', 'Report something that made you uncomfortable'],
+      ['I have a safety concern', 'I have a safety concern'],
+      ['Blocking, and the people I have blocked', 'Blocking'],
+      ['Make the text bigger, or change the colours', 'Make the text bigger, or change the colours'],
+    ] as const) {
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: row }));
+      });
+      expect(screen.getByRole('heading', { level: 1, name: heading }), `${row} opened nothing`).toBeTruthy();
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: '‹ Back to help' }));
+      });
+      expect(screen.getByRole('heading', { level: 1, name: 'Help and safety' })).toBeTruthy();
+    }
   });
 
   /**
@@ -318,20 +352,42 @@ describe('the help screen', () => {
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Help and safety' }));
     });
-    const section = screen.getByRole('heading', { name: 'Signing out' }).closest('section')!;
-    expect(section.textContent, 'a Google sign-in is still explained as typed identifiers').not.toMatch(
-      /identifiers you typed/,
-    );
-    expect(screen.getByRole('button', { name: 'Sign out' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Sign out of this device' })).toBeTruthy();
     expect(
       screen.queryByRole('button', { name: 'Sign out and enter different identifiers' }),
-      'the button still offers to enter identifiers nobody typed',
+      'the row still offers to enter identifiers nobody typed',
     ).toBeNull();
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Sign out of this device' }));
+    });
+    const dialog = screen.getByRole('alertdialog');
+    expect(dialog.textContent, 'a Google sign-in is still explained as typed identifiers').not.toMatch(
+      /identifiers you typed/,
+    );
   });
 
   it('still explains the identifiers under the development stub', async () => {
     await openHelp();
-    const section = screen.getByRole('heading', { name: 'Signing in as someone else' }).closest('section')!;
-    expect(section.textContent).toMatch(/identifiers you typed/);
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Sign out and enter different identifiers' }));
+    });
+    expect(screen.getByRole('alertdialog').textContent).toMatch(/identifiers you typed/);
+  });
+
+  /**
+   * Signing out asks first. On a shared tablet at a community centre the
+   * person who presses the row by mistake has to sign in again with
+   * identifiers they may not have.
+   */
+  it('asks before signing out, and backing out signs nobody out', async () => {
+    await openHelp();
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Sign out and enter different identifiers' }));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Stay signed in' }));
+    });
+    expect(screen.queryByRole('alertdialog')).toBeNull();
+    expect(screen.getByRole('heading', { level: 1, name: 'Help and safety' })).toBeTruthy();
   });
 });

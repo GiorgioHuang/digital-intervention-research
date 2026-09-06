@@ -102,6 +102,10 @@ describe('participant sign-in', () => {
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Sign out and enter different identifiers' }));
     });
+    // Signing out asks first now — the row is on Help beside the others.
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Yes, sign out' }));
+    });
     expect(screen.getByLabelText('Participant identifier')).toBeTruthy();
   });
 

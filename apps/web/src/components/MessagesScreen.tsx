@@ -309,7 +309,7 @@ export function MessagesScreen({
       )}
 
       {ending !== null && (
-        <div role="alertdialog" aria-labelledby="end-connection-heading" className="messages-ending">
+        <div role="alertdialog" aria-labelledby="end-connection-heading" className="confirm-panel">
           <p id="end-connection-heading">End your connection with {nameOrGap(ending.otherDisplayName)}?</p>
           {/*
             The distinction that matters. Blocking says something about the
