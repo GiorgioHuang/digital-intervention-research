@@ -147,9 +147,16 @@ describe('the confirmation tier is confirmed by a person, not by the api client'
       'components/MyLifeStory.tsx → setLifeStoryVisibility',
       'components/MyLifeStory.tsx → withdrawLifeStoryItem',
       'components/MyResearchPart.tsx → withdrawFromStudy',
+      /*
+       * The drawing's "send it, and hide this person from me". One press
+       * in the drawing; here it asks first, because a block is
+       * confirmation-tier and the confirmation is what says what a block
+       * does — no messages either way, no suggestions, and undoing it
+       * brings nothing back.
+       */
+      'components/ReportPerson.tsx → createBlock',
       'components/SafetyEvents.tsx → moveSafetyEvent',
       'components/SafetyEvents.tsx → recordSafetyAction',
-      'components/SafetyPanel.tsx → createBlock',
       'components/SafetyPanel.tsx → revokeBlock',
       'components/StaffCoordinatorPanel.tsx → eligibilityDecision',
       'components/StaffCoordinatorPanel.tsx → withdrawEnrolment',
@@ -185,6 +192,7 @@ describe('the confirmation tier is confirmed by a person, not by the api client'
       'components/approver/ProtocolDecisions.tsx → rejectProtocolVersion',
       'components/approver/ReConsent.tsx → requireReConsent',
       'components/approver/ReportDecisions.tsx → approveReportVersion',
+
       /*
        * Taking your name down. The screen asks first — "other people will
        * see you as a community member", and what already went out stays

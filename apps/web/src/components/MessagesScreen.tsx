@@ -11,6 +11,7 @@ import { presentError, type PresentedError } from '../errors.js';
 import { nameOrGap } from '../names.js';
 import { ErrorState, LoadingState } from './StateBlock.js';
 import { MessagePanel } from './MessagePanel.js';
+import { ReportPerson } from './ReportPerson.js';
 
 /**
  * Messages: the drawing's list of conversations.
@@ -87,6 +88,14 @@ export function MessagesScreen({
   const [active, setActive] = useState<ThreadSummary | null>(null);
   const [ending, setEnding] = useState<ConnectionSummary | null>(null);
   const [choosing, setChoosing] = useState(false);
+  /*
+   * Reporting the person on the other side of the open conversation.
+   *
+   * Here rather than on a settings page, which is where it was: report
+   * and block belong where you are interacting with somebody, and then
+   * there is no identifier to type (owner, 2026-09-06).
+   */
+  const [reporting, setReporting] = useState<ThreadSummary | null>(null);
   const [announcement, setAnnouncement] = useState('');
   const now = new Date();
 
@@ -201,6 +210,18 @@ export function MessagesScreen({
     }
   };
 
+  if (reporting !== null) {
+    return (
+      <ReportPerson
+        session={session}
+        name={nameOrGap(reporting.otherDisplayName)}
+        subject={{ kind: 'person', identity: reporting.otherParticipantId }}
+        onBack={() => setReporting(null)}
+        {...(onGetHelp === undefined ? {} : { onGetHelp })}
+      />
+    );
+  }
+
   if (active !== null) {
     return (
       <section>
@@ -221,6 +242,17 @@ export function MessagesScreen({
                   CLOSED_THREAD_WORDING[active.threadState] ?? 'Nothing more can be sent in this conversation.',
               })}
         />
+        {/*
+          Quiet, and at the foot: it is not what somebody came to this
+          conversation to do. It is here at all because this is where they
+          would be when they wanted it — the alternative was a form on
+          Help asking for an identifier nobody can know.
+        */}
+        <p>
+          <button className="report-from-here" onClick={() => setReporting(active)}>
+            Report {nameOrGap(active.otherDisplayName)}
+          </button>
+        </p>
       </section>
     );
   }

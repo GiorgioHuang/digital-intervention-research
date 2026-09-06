@@ -3,6 +3,7 @@ import { api, type SharedStoryPiece, type Session } from '../api.js';
 import { presentError, type PresentedError } from '../errors.js';
 import { EmptyState, ErrorState, LoadingState } from './StateBlock.js';
 import { entryDate, excerptOf } from '../story-entry.js';
+import { ReportPerson } from './ReportPerson.js';
 
 /**
  * "Other people's stories" — the drawing's community screen.
@@ -22,10 +23,25 @@ import { entryDate, excerptOf } from '../story-entry.js';
  * the failure this project keeps taking out, so they are not drawn
  * (X-40).
  */
-export function OtherPeoplesStories({ session, onGoToMyStory }: { session: Session; onGoToMyStory: () => void }) {
+export function OtherPeoplesStories({
+  session,
+  onGoToMyStory,
+  onGetHelp,
+}: {
+  session: Session;
+  onGoToMyStory: () => void;
+  onGetHelp?: () => void;
+}) {
   const [pieces, setPieces] = useState<SharedStoryPiece[] | null>(null);
   const [error, setError] = useState<PresentedError | null>(null);
   const [open, setOpen] = useState<ReadonlySet<string>>(new Set());
+  /*
+   * The piece being reported. Reporting is offered here — on the thing
+   * somebody is actually reading — rather than on a settings page behind
+   * a field asking for the author's internal identifier, which nobody
+   * can know (owner, 2026-09-06).
+   */
+  const [reporting, setReporting] = useState<SharedStoryPiece | null>(null);
 
   useEffect(() => {
     void (async () => {
@@ -64,6 +80,23 @@ export function OtherPeoplesStories({ session, onGoToMyStory }: { session: Sessi
 
   if (error !== null) return <ErrorState error={error} />;
   if (pieces === null) return <LoadingState label="Looking for stories shared with you…" />;
+
+  if (reporting !== null) {
+    return (
+      <ReportPerson
+        session={session}
+        name={who(reporting)}
+        /*
+          The MEMORY, not its author: the server looks the author up from
+          the piece, so the case cannot be opened against somebody this
+          screen merely named (D-107).
+        */
+        subject={{ kind: 'item', itemId: reporting.itemId }}
+        onBack={() => setReporting(null)}
+        {...(onGetHelp === undefined ? {} : { onGetHelp })}
+      />
+    );
+  }
 
   return (
     <section className="story-screen" aria-labelledby="others-heading">
@@ -126,6 +159,19 @@ export function OtherPeoplesStories({ session, onGoToMyStory }: { session: Sessi
                       <p>They have not confirmed these as their own words.</p>
                     )}
                   </div>
+                  {/*
+                    On somebody else's piece only. "Report" under your own
+                    memory is a control that can do nothing, and the
+                    server would refuse it — a report names the author,
+                    and here the author would be the reporter.
+                  */}
+                  {!piece.mine && (
+                    <div className="story-actions">
+                      <button className="story-action" onClick={() => setReporting(piece)}>
+                        Report this
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </article>

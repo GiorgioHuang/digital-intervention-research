@@ -299,7 +299,6 @@ describe('the help screen', () => {
   it('opens each form from its own row', async () => {
     await openHelp();
     for (const [row, heading] of [
-      ['Report something that made you uncomfortable', 'Report something that made you uncomfortable'],
       ['I have a safety concern', 'I have a safety concern'],
       ['Blocking, and the people I have blocked', 'Blocking'],
       ['Make the text bigger, or change the colours', 'Make the text bigger, or change the colours'],

@@ -3777,6 +3777,111 @@ main[data-workspace='staff'] .scroll-x {
 [data-workspace='participant'] .first-arrival__confirm p { margin: 0; line-height: 1.6; }
 [data-workspace='participant'] .first-arrival__confirm h2 { margin: 0; font-size: var(--type-size-2); }
 
+/* ---------- Reporting somebody -----------------------------------------
+ * The drawing's report artboard, reached from the conversation or the
+ * piece rather than from a settings page: choose what the matter is, add
+ * words if you want to, send.
+ */
+[data-workspace='participant'] .report-reasons {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-block: var(--space-3);
+}
+/* A choice, not an action: each one is a row-sized target with its own
+   edge, and the chosen one is marked by more than colour — the border
+   thickens and the ground fills — because colour alone carries it for
+   nobody who cannot see the difference (§A.4). */
+[data-workspace='participant'] .report-reason {
+  inline-size: 100%;
+  min-block-size: var(--target-min);
+  padding: var(--space-3);
+  border: var(--border-hairline) solid var(--cl-divider);
+  border-radius: var(--radius-2);
+  background-color: transparent;
+  font-family: var(--cl-family-body);
+  font-size: var(--type-size-1);
+  font-weight: var(--type-weight-regular);
+  color: var(--cl-text);
+  text-align: start;
+}
+[data-workspace='participant'] .report-reason[aria-checked='true'] {
+  border: var(--border-emphasis) solid var(--cl-accent);
+  background-color: color-mix(in srgb, var(--cl-accent) 10%, transparent);
+  font-weight: var(--type-weight-semibold);
+}
+[data-workspace='participant'] .report-reason:hover {
+  background-color: color-mix(in srgb, var(--cl-text) 5%, transparent);
+}
+[data-workspace='participant'] .report-words {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-block-end: var(--space-4);
+}
+[data-workspace='participant'] .report-words label {
+  font-family: var(--cl-family-body);
+  font-size: var(--type-size-1);
+  color: var(--cl-text-3);
+}
+[data-workspace='participant'] .report-words textarea {
+  inline-size: 100%;
+  padding: var(--space-3);
+  border: var(--border-hairline) solid var(--cl-divider);
+  border-radius: var(--radius-2);
+  background-color: transparent;
+  font-family: var(--cl-family-body);
+  font-size: var(--type-size-1);
+  color: var(--cl-text);
+  resize: vertical;
+}
+[data-workspace='participant'] :is(.report-send, .report-send-and-hide) {
+  display: flex;
+  justify-content: center;
+  inline-size: 100%;
+  margin-block-end: var(--space-3);
+  border-radius: var(--radius-2);
+  background-color: transparent;
+  font-family: var(--cl-family-display);
+  font-weight: var(--type-weight-semibold);
+}
+[data-workspace='participant'] .report-send {
+  min-block-size: 3.444rem; /* the drawing's 62px */
+  border: var(--border-hairline) solid var(--cl-accent);
+  font-size: var(--type-size-2);
+  color: var(--cl-accent-700);
+}
+[data-workspace='participant'] .report-send-and-hide {
+  min-block-size: 3.222rem; /* the drawing's 58px */
+  border: var(--border-hairline) solid var(--cl-divider);
+  font-size: var(--type-size-1);
+  color: var(--cl-text);
+}
+[data-workspace='participant'] .report-send:hover:not(:disabled) {
+  background-color: color-mix(in srgb, var(--cl-accent) 12%, transparent);
+}
+[data-workspace='participant'] .report-send-and-hide:hover:not(:disabled) {
+  background-color: color-mix(in srgb, var(--cl-text) 6%, transparent);
+}
+/* Text, both of them: the way to a telephone is not an action on this
+   screen, and reporting is not what somebody came to a conversation to
+   do. Neither should carry a button's weight. */
+[data-workspace='participant'] :is(.report-telephone, .report-from-here) {
+  align-self: flex-start;
+  min-block-size: var(--target-min);
+  padding: var(--space-2) var(--space-1);
+  border: 0;
+  background-color: transparent;
+  font-family: var(--cl-family-body);
+  font-size: var(--type-size-1);
+  font-weight: var(--type-weight-regular);
+  color: var(--cl-accent-700);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  text-align: start;
+}
+[data-workspace='participant'] .report-from-here { color: var(--cl-text-4); }
+
 /* ---------- 13. Motion and reduced-motion (§A.6) ---------- */
 /* The user has explicitly chosen "reduce motion" — the same effect as the
    OS signal, but not dependent on the OS setting.

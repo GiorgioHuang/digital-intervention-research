@@ -929,6 +929,7 @@ describe.skipIf(!dbAvailable)('HTTP API (e2e)', () => {
   });
 
   let archiveId: string;
+  let reportableItemId = '';
 
   it('life story over HTTP: testimony binds the exact version; Internet Public stays disabled', async () => {
     const arch = await call('/v1/life-story/archives', patAcc, { participantId: patId });
@@ -970,6 +971,57 @@ describe.skipIf(!dbAvailable)('HTTP API (e2e)', () => {
     expect((await call(`/v1/life-story/items/${itemId}/visibility`, patAcc, {
       visibility: 'Connections', confirmed: true,
     })).status).toBe(201);
+    reportableItemId = itemId;
+  });
+
+  /**
+   * A report about a memory names the MEMORY, and the case is opened
+   * against whoever actually wrote it.
+   *
+   * `submitUserReport` already resolves the subject from a community post
+   * for the reason written beside it — a reporter naming both a post and
+   * a third person as its author would open a case against the wrong
+   * person on their own say-so. A report from the community feed had no
+   * such path: the subject was whoever the screen said it was (D-107).
+   *
+   * Asserted over HTTP with a subject the caller deliberately gets wrong,
+   * because that is the only version of this test that means anything —
+   * one that sent the right author would pass whether or not the server
+   * looked anything up.
+   */
+  it('a report about a memory is opened against its author, not against whoever the caller named', async () => {
+    const rep = await call('/v1/reports', strangerAcc, {
+      reporterId: strangerAcc,
+      reportedActorId: moderatorAcc,
+      reportedLifeStoryItemId: reportableItemId,
+      category: 'harassment',
+      description: '',
+    });
+    expect(rep.status).toBe(201);
+    const caseId = ((await rep.json()) as { data: { meta: { moderationCaseId: string } } }).data.meta
+      .moderationCaseId;
+    const subject = await pool.query<{ subject_actor_id: string }>(
+      `SELECT subject_actor_id FROM community_social.moderation_cases WHERE id = $1`,
+      [caseId],
+    );
+    expect(subject.rows[0]?.subject_actor_id).toBe(patId);
+    expect(subject.rows[0]?.subject_actor_id).not.toBe(moderatorAcc);
+  });
+
+  /**
+   * And an id that names no memory is refused rather than falling back to
+   * the caller's own answer — a check that can be skipped by sending a
+   * wrong id is not a check.
+   */
+  it('refuses a report naming a memory that does not exist', async () => {
+    const rep = await call('/v1/reports', strangerAcc, {
+      reporterId: strangerAcc,
+      reportedActorId: moderatorAcc,
+      reportedLifeStoryItemId: 'lsi_no_such_memory',
+      category: 'harassment',
+      description: '',
+    });
+    expect(rep.status).toBe(404);
   });
 
   it('supporter contribution over HTTP needs consent; acceptance never becomes testimony', async () => {

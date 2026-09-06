@@ -61,6 +61,7 @@ import {
   createArchive,
   createItem,
   findArchiveForContribution,
+  findItemAuthor,
   getMyLifeStory,
   getSharedLifeStory,
   listStoriesSharedWithMe,
@@ -441,6 +442,22 @@ export class CommandController {
     return { data: { type: 'BlockRecord', id: blockId, meta: { state: 'Revoked' } } };
   }
 
+  /**
+   * `reportedLifeStoryItemId` names the memory being reported, and the
+   * author is looked up from it here.
+   *
+   * `submitUserReport` already does this for a community post, with the
+   * reason written beside it: a reporter naming both a post and a third
+   * person as its author would open a case against the wrong person on
+   * their own say-so, and authority named by the request is not
+   * authority. A report from the community feed had no such path — the
+   * subject was whoever the screen said it was — and this closes it for
+   * the one other kind of content a participant can read from somebody
+   * else (D-107).
+   *
+   * `reportedContentId` is still the post path, untouched and resolved
+   * inside the command.
+   */
   @Post('reports')
   async submitReport(
     @Req() req: Request,
@@ -448,14 +465,27 @@ export class CommandController {
       reporterId: string;
       reportedActorId: string;
       reportedContentId?: string;
+      reportedLifeStoryItemId?: string;
       category: string;
       description: string;
     },
   ) {
     const ctx = requireActor(req);
+    let reportedActorId = body.reportedActorId;
+    if (body.reportedLifeStoryItemId !== undefined) {
+      const author = await findItemAuthor(this.deps.m17, body.reportedLifeStoryItemId);
+      /*
+       * An id that names no memory is refused rather than quietly
+       * falling back to what the caller said: falling back would make
+       * the resolution optional, and an optional check is one a caller
+       * can skip by sending a wrong id.
+       */
+      if (author === undefined) throw new PlatformError('RESOURCE_NOT_FOUND', 'That memory was not found');
+      reportedActorId = author;
+    }
     const input: Parameters<typeof submitUserReport>[2] = {
       reporterId: body.reporterId,
-      reportedActorId: body.reportedActorId,
+      reportedActorId,
       category: body.category,
       description: body.description,
     };

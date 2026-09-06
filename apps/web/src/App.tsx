@@ -42,7 +42,7 @@ import { MyResearchPart } from './components/MyResearchPart.js';
 import { WhoHasAccess } from './components/WhoHasAccess.js';
 import { InviteSomeone } from './components/InviteSomeone.js';
 import { WaitingForYou } from './components/WaitingForYou.js';
-import { MyBlocks, ReportSomething, SafetyConcern } from './components/SafetyPanel.js';
+import { MyBlocks, SafetyConcern } from './components/SafetyPanel.js';
 import { SessionGuard } from './components/SessionGuard.js';
 import { SharedDeviceBar } from './components/SharedDeviceBar.js';
 import { api, PlatformApiError, type Session } from './api.js';
@@ -1281,7 +1281,11 @@ export function App() {
               drawing not showing it is not a reason to take it away from
               anybody using it (X-41).
             */}
-            <OtherPeoplesStories session={session} onGoToMyStory={() => setScreen('life-story')} />
+            <OtherPeoplesStories
+              session={session}
+              onGoToMyStory={() => setScreen('life-story')}
+              onGetHelp={() => setScreen('help')}
+            />
             <CommunityPanel session={session} />
             {/*
               Meeting new people is optional and low-frequency, and it used
@@ -1295,7 +1299,6 @@ export function App() {
             </div>
           </>
         )}
-        {screen === 'report' && <ReportSomething session={session} onBack={() => setScreen('help')} />}
         {screen === 'safety-concern' && <SafetyConcern session={session} onBack={() => setScreen('help')} />}
         {screen === 'blocks' && <MyBlocks session={session} onBack={() => setScreen('help')} />}
         {screen === 'display' && (
@@ -1339,9 +1342,6 @@ export function App() {
             <div className="nav-rows">
               <button className="row-summary" onClick={() => setScreen('helper')}>
                 Someone is helping me use this
-              </button>
-              <button className="row-summary" onClick={() => setScreen('report')}>
-                Report something that made you uncomfortable
               </button>
               <button className="row-summary" onClick={() => setScreen('safety-concern')}>
                 I have a safety concern

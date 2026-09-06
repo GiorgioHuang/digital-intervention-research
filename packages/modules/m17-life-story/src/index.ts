@@ -19,6 +19,7 @@ export {
   type MyContribution,
   type MyLifeStory,
   type MyLifeStoryItem,
+  findItemAuthor,
   getSharedLifeStory,
   listStoriesSharedWithMe,
   type SharedStoryPiece,

@@ -804,6 +804,22 @@ export const api = {
       description,
     }),
   /**
+   * Reporting a piece of somebody's life story, from the feed.
+   *
+   * The MEMORY is named and the author is looked up from it on the
+   * server. Sending the author instead would make the case subject
+   * whatever this screen said it was — the same reason reporting a post
+   * names the post (D-107).
+   */
+  reportLifeStoryItem: (s: Session, itemId: string, category: string, description: string) =>
+    post<{ data: { id: string; meta: { moderationCaseId: string } } }>(s, '/v1/reports', {
+      reporterId: s.participantId,
+      reportedActorId: '',
+      reportedLifeStoryItemId: itemId,
+      category,
+      description,
+    }),
+  /**
    * Reporting a post rather than a person (decision D-4's main path). Who
    * is being reported is not sent: the server takes the author from the
    * post, so a report cannot open a case against somebody the reporter

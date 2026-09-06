@@ -23,7 +23,6 @@ export type Screen =
   | 'tapping'
   | 'helper'
   | 'name'
-  | 'report'
   | 'safety-concern'
   | 'blocks'
   | 'display'

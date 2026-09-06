@@ -474,3 +474,36 @@ export async function listStoriesSharedWithMe(
     mine: input.viewerParticipantId !== null && r.participant_id === input.viewerParticipantId,
   }));
 }
+
+/**
+ * Who wrote a piece of a life story.
+ *
+ * For the composition root, so that a report about a memory somebody read
+ * in the feed names its author by looking the author up — rather than by
+ * believing the identifier the reporting screen sent. `submitUserReport`
+ * already does exactly this for a community post, with the reason written
+ * beside it: "authority named by the request is not authority". A report
+ * from the feed had no such path, so the subject was whoever the client
+ * said it was.
+ *
+ * NOT PERMISSION-CHECKED, and it must not become a way to ask who wrote
+ * something: it answers only for an item whose id the caller already
+ * holds, it returns nothing else about the item, and its one caller is
+ * the report route, which is reached by an authenticated participant and
+ * writes a moderation case rather than showing anything back. `undefined`
+ * for an id that names no item, so the caller can tell "no such piece"
+ * from "this piece belongs to nobody", which cannot happen.
+ */
+export async function findItemAuthor(
+  deps: Pick<M17Deps, 'pool'>,
+  itemId: string,
+): Promise<string | undefined> {
+  const res = await deps.pool.query(
+    `SELECT a.participant_id
+       FROM life_story.items i
+       JOIN life_story.archives a ON a.id = i.archive_id
+      WHERE i.id = $1`,
+    [itemId],
+  );
+  return res.rows[0]?.participant_id as string | undefined;
+}
