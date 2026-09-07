@@ -1175,7 +1175,7 @@ describe('a participant reading their own life story', () => {
       render(<MyLifeStory session={session} />);
     });
     await openMemory();
-    fireEvent.click(screen.getAllByRole('button', { name: 'Remove this photograph' })[0]!);
+    fireEvent.click(screen.getAllByRole('button', { name: /^Remove this photograph/ })[0]!);
 
     // Nothing is destroyed on the first click.
     expect(calls.some((c) => c.path.includes('/delete'))).toBe(false);
@@ -1203,7 +1203,7 @@ describe('a participant reading their own life story', () => {
       render(<MyLifeStory session={session} />);
     });
     await openMemory();
-    fireEvent.click(screen.getAllByRole('button', { name: 'Remove this photograph' })[0]!);
+    fireEvent.click(screen.getAllByRole('button', { name: /^Remove this photograph/ })[0]!);
     fireEvent.click(screen.getByRole('button', { name: 'Keep it' }));
     expect(screen.queryByRole('alertdialog')).toBeNull();
     expect(calls.some((c) => c.path.includes('/delete'))).toBe(false);
@@ -1233,7 +1233,7 @@ describe('a participant reading their own life story', () => {
       render(<MyLifeStory session={session} />);
     });
     await openMemory();
-    expect(screen.getAllByRole('button', { name: 'Remove this photograph' }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('button', { name: /^Remove this photograph/ }).length).toBeGreaterThan(0);
     // Adding is not offered, because a withdrawn entry refuses every
     // other change and the server refuses this one too.
     expect(screen.queryByLabelText('Add a photograph to this entry')).toBeNull();
@@ -1431,7 +1431,98 @@ describe('a participant reading their own life story', () => {
     expect(container.querySelector('img.story-photograph__image'), 'a file that is not an image was drawn as one').toBeNull();
     expect(screen.getByText(/not a photograph this page can show/i)).toBeTruthy();
     // And it is still removable, which is the whole point of showing it.
-    expect(screen.getByRole('button', { name: 'Remove this photograph' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /^Remove this photograph/ })).toBeTruthy();
+  });
+
+  /**
+   * While a photograph is arriving, the screen says nothing about it.
+   *
+   * It used to say "This photograph has not loaded", with the file's
+   * type and its size in kilobytes — a failure announced before there
+   * had been one, over somebody's own photograph, every time an entry
+   * was opened (owner, 2026-09-07). Somebody watching that had every
+   * reason to think something had gone wrong with the picture they put
+   * there.
+   */
+  it('says nothing about a photograph that is merely still arriving', async () => {
+    let release: (() => void) | undefined;
+    const held = new Promise<void>((r) => {
+      release = r;
+    });
+    const files = [{ id: 'obj_1', attributes: {
+      objectId: 'obj_1', declaredContentType: 'image/jpeg', declaredSizeBytes: 2048,
+      objectState: 'Available', dataClassification: 'Sensitive-Personal', createdAt: '2026-08-07T00:00:00Z',
+    } }];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (path: string, init?: RequestInit) => {
+        const method = init?.method ?? 'GET';
+        if (method === 'GET' && /\/objects\/[^/]+\/content$/.test(path)) {
+          // Held open, so the screen is caught mid-arrival.
+          await held;
+          return new Response(new Blob([new Uint8Array([1, 2, 3])]), {
+            status: 200,
+            headers: { 'content-type': 'image/jpeg' },
+          });
+        }
+        if (method === 'GET' && path.includes('/objects')) {
+          return new Response(JSON.stringify({ data: files }), { status: 200 });
+        }
+        return new Response(JSON.stringify({ data: [item()], meta: { archiveId: 'ar_1' } }), { status: 200 });
+      }),
+    );
+    const { container } = render(<MyLifeStory session={session} />);
+    await act(async () => {});
+    await openMemory();
+    await act(async () => {});
+
+    expect(
+      container.querySelector('.story-photograph__loading'),
+      'nothing stands where the photograph will be',
+    ).not.toBeNull();
+    const said = document.body.textContent ?? '';
+    expect(said, 'a failure is announced while the photograph is still on its way').not.toMatch(
+      /has not loaded|cannot show you this photograph/i,
+    );
+    expect(said, 'the file’s type is printed in place of the photograph').not.toMatch(/image\/jpeg/);
+
+    release?.();
+    await act(async () => {});
+    await act(async () => {});
+    expect(container.querySelector('img.story-photograph__image'), 'the photograph never arrived').not.toBeNull();
+    expect(container.querySelector('.story-photograph__loading')).toBeNull();
+  });
+
+  /**
+   * Taking a photograph off is a bin at its corner, not a button the
+   * width of the entry (owner, 2026-09-07). It is the one control in
+   * this workspace with no visible word beside it, which A.9 forbids and
+   * X-55 departs from knowingly — so the name it carries for anybody who
+   * cannot see the glyph is asserted here.
+   */
+  it('takes a photograph off from a bin on the photograph itself', async () => {
+    stubWithFiles([{ id: 'obj_1', attributes: {
+      objectId: 'obj_1', declaredContentType: 'image/jpeg', declaredSizeBytes: 2048,
+      objectState: 'Available', dataClassification: 'Sensitive-Personal', createdAt: '2026-08-07T00:00:00Z',
+    } }], undefined, 'Available');
+    const { container } = render(<MyLifeStory session={session} />);
+    await act(async () => {});
+    await openMemory();
+    await act(async () => {});
+
+    const frame = container.querySelector('.story-photograph__frame');
+    expect(frame, 'the photograph has no frame for the bin to sit in').not.toBeNull();
+    const bin = frame!.querySelector('button.story-photograph__remove');
+    expect(bin, 'the bin is not on the photograph').not.toBeNull();
+    expect(bin!.getAttribute('aria-label')).toMatch(/^Remove this photograph from /);
+    // A glyph, and no words printed beside it.
+    expect(bin!.querySelector('svg'), 'the bin has no icon').not.toBeNull();
+    expect((bin!.textContent ?? '').trim()).toBe('');
+    // And the wide button underneath is gone.
+    expect(
+      container.querySelector('.story-photograph__actions'),
+      'the full-width remove button is still under the photograph',
+    ).toBeNull();
   });
 
   /**

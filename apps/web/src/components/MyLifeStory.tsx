@@ -264,6 +264,17 @@ export function MyLifeStory({ session }: { session: Session }) {
     })();
   }, []);
   const [pictures, setPictures] = useState<Record<string, { url: string; type: string }>>({});
+  /*
+   * The photographs whose fetch has finished, whether it worked or not.
+   *
+   * Without this, "not here yet" and "will never be here" are one state,
+   * and the screen said "This photograph has not loaded" — plus its type
+   * and its size in kilobytes — during the ordinary second while it was
+   * loading. A failure reported before there has been one, over
+   * somebody's own photograph, every time an entry was opened (owner,
+   * 2026-09-07).
+   */
+  const [settled, setSettled] = useState<ReadonlySet<string>>(new Set());
   const picturesRef = useRef<Record<string, { url: string; type: string }>>({});
   picturesRef.current = pictures;
   useEffect(
@@ -324,6 +335,8 @@ export function MyLifeStory({ session }: { session: Session }) {
       });
     } catch {
       /* Described rather than shown; see above. */
+    } finally {
+      setSettled((was) => new Set(was).add(file.objectId));
     }
   };
 
@@ -801,20 +814,49 @@ export function MyLifeStory({ session }: { session: Session }) {
                           className={waiting ? 'story-photograph story-photograph--pending' : 'story-photograph'}
                         >
                           {picture !== undefined && isShowableImage(picture.type) && !unpreviewable.has(f.objectId) ? (
-                            <img
-                              className="story-photograph__image"
-                              src={picture.url}
-                              alt={`A photograph on ${item.title}. Nothing here describes what is in it.`}
-                              /*
-                                Reported from a real phone: the browser
-                                declined to draw the preview, leaving a
-                                torn-paper glyph and the alt text over
-                                somebody's own photograph. Why it declined
-                                is not knowable from here; that the
-                                picture reached the platform is.
-                              */
-                              onError={() => setUnpreviewable((was) => new Set(was).add(f.objectId))}
-                            />
+                            <div className="story-photograph__frame">
+                              <img
+                                className="story-photograph__image"
+                                src={picture.url}
+                                alt={`A photograph on ${item.title}. Nothing here describes what is in it.`}
+                                /*
+                                  Reported from a real phone: the browser
+                                  declined to draw the preview, leaving a
+                                  torn-paper glyph and the alt text over
+                                  somebody's own photograph. Why it declined
+                                  is not knowable from here; that the
+                                  picture reached the platform is.
+                                */
+                                onError={() => setUnpreviewable((was) => new Set(was).add(f.objectId))}
+                              />
+                              {/*
+                                On the photograph, at its corner, rather
+                                than a full-width button beneath it
+                                (owner, 2026-09-07). It is the one control
+                                in this workspace with no word beside it,
+                                which A.9 forbids and this departs from
+                                knowingly (X-55): it carries its words as
+                                its accessible name, sits on an opaque
+                                disc so it is legible over any photograph,
+                                and keeps the full 44px target.
+                              */}
+                              <button
+                                className="story-photograph__remove"
+                                aria-label={`Remove this photograph from ${item.title}`}
+                                onClick={() => setRemoving({ itemId: item.itemId, objectId: f.objectId })}
+                              >
+                                <TabIcon name="trash-2" />
+                              </button>
+                            </div>
+                          ) : !settled.has(f.objectId) ? (
+                            /*
+                              Still arriving: a quiet frame and no words.
+                              The sentence below is for a screen reader,
+                              which has nothing to look at.
+                            */
+                            <div className="story-photograph__loading" role="status">
+                              <span className="visually-hidden">The photograph is loading.</span>
+                            </div>
                           ) : (
                             /*
                               Either it has not arrived, or the server
@@ -866,14 +908,25 @@ export function MyLifeStory({ session }: { session: Session }) {
                               safety.
                             </p>
                           )}
-                          <p className="story-photograph__actions">
-                            <button
-                              className="story-action"
-                              onClick={() => setRemoving({ itemId: item.itemId, objectId: f.objectId })}
-                            >
-                              Remove this photograph
-                            </button>
-                          </p>
+                          {/*
+                            The corner button needs a photograph to sit
+                            on. Where there is none — still arriving, in
+                            quarantine, refused, or a file this page
+                            cannot draw — the way to take it off is a
+                            plain labelled button, because there is
+                            nothing for an icon to overlay.
+                          */}
+                          {!(picture !== undefined && isShowableImage(picture.type) && !unpreviewable.has(f.objectId)) &&
+                            settled.has(f.objectId) && (
+                              <p className="story-photograph__actions">
+                                <button
+                                  className="story-action"
+                                  onClick={() => setRemoving({ itemId: item.itemId, objectId: f.objectId })}
+                                >
+                                  Remove this photograph
+                                </button>
+                              </p>
+                            )}
                         </li>
                       );
                     })}

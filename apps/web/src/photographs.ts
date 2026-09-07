@@ -36,6 +36,16 @@ export interface Photograph {
 
 export function usePhotographs(session: Session) {
   const [pictures, setPictures] = useState<Record<string, Photograph>>({});
+  /*
+   * The ones whose fetch has finished, whether it worked or not.
+   *
+   * Without this, "no picture yet" and "no picture ever" are the same
+   * state, and the screen said "This photograph has not loaded" during
+   * the ordinary second while it was loading — reporting a failure
+   * before there had been one, over somebody's own photograph (owner,
+   * 2026-09-07).
+   */
+  const [settled, setSettled] = useState<ReadonlySet<string>>(new Set());
   const held = useRef<Record<string, Photograph>>({});
   held.current = pictures;
 
@@ -72,10 +82,12 @@ export function usePhotographs(session: Session) {
           });
         } catch {
           /* Described rather than shown; see above. */
+        } finally {
+          setSettled((was) => new Set(was).add(file.objectId));
         }
       }),
     );
   };
 
-  return { pictures, load, canShow: isShowableImage };
+  return { pictures, settled, load, canShow: isShowableImage };
 }

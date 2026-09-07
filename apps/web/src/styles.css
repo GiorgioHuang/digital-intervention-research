@@ -2161,6 +2161,54 @@ a[role='button']:hover { background-color: var(--color-action-secondary-bg-hover
   block-size: auto;
   border-radius: var(--radius-2);
 }
+/* The photograph and the one thing that can be done to it. */
+[data-workspace='participant'] .story-photograph__frame {
+  position: relative;
+  display: block;
+}
+/*
+ * Taking a photograph off, at its corner.
+ *
+ * An opaque disc rather than a bare glyph: a stroke on its own is
+ * invisible over the wrong photograph, and this is the control that
+ * removes something somebody cannot get back. Full target size, inset
+ * far enough from the edge to be pressed without catching the corner.
+ */
+[data-workspace='participant'] .story-photograph__remove {
+  position: absolute;
+  inset-block-end: var(--space-2);
+  inset-inline-end: var(--space-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--target-min);
+  min-inline-size: var(--target-min);
+  block-size: var(--target-min);
+  min-block-size: var(--target-min);
+  padding: 0;
+  border: var(--border-hairline) solid var(--cl-text-4);
+  border-radius: 50%;
+  background-color: var(--cl-neutral-100);
+  color: var(--cl-text-2);
+}
+[data-workspace='participant'] .story-photograph__remove:hover {
+  background-color: var(--cl-neutral-100);
+  border-color: var(--cl-text);
+  color: var(--cl-text);
+}
+/*
+ * While it is arriving: a quiet frame the size a photograph will fill,
+ * and no words at all. What was here was the sentence "This photograph
+ * has not loaded" with the file's type and size — a failure announced
+ * before there had been one, over somebody's own photograph, every time
+ * an entry was opened.
+ */
+[data-workspace='participant'] .story-photograph__loading {
+  block-size: 9rem;
+  border: var(--border-hairline) solid var(--cl-divider);
+  border-radius: var(--radius-2);
+  background-color: color-mix(in srgb, var(--cl-text) 4%, transparent);
+}
 /*
  * The photograph just sent: shown at full size like any other, and
  * marked, because it is not on the entry until it has cleared checking.

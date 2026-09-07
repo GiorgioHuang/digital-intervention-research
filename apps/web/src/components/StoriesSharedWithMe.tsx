@@ -48,7 +48,7 @@ export function StoriesSharedWithMe({ session }: { session: Session }) {
    */
   const [open, setOpen] = useState<ReadonlySet<string>>(new Set());
   const [files, setFiles] = useState<Record<string, AttachedFile[]>>({});
-  const { pictures, load: loadPictures, canShow } = usePhotographs(session);
+  const { pictures, settled, load: loadPictures, canShow } = usePhotographs(session);
 
   useEffect(() => {
     void (async () => {
@@ -180,6 +180,21 @@ export function StoriesSharedWithMe({ session }: { session: Session }) {
                                 src={picture.url}
                                 alt={`A photograph on ${memory.title}. Nothing here describes what is in it.`}
                               />
+                            ) : !settled.has(f.objectId) ? (
+                              /*
+                                Still arriving. A quiet frame the size the
+                                photograph will fill, and no words: this
+                                said "This photograph has not loaded",
+                                which is a failure reported before there
+                                has been one — and it said it over
+                                somebody's own photograph every single
+                                time one was opened (owner, 2026-09-07).
+                                The sentence is for a screen reader, which
+                                has nothing to look at.
+                              */
+                              <div className="story-photograph__loading" role="status">
+                                <span className="visually-hidden">The photograph is loading.</span>
+                              </div>
                             ) : (
                               <p className="story-photograph__unshown">
                                 {picture === undefined
