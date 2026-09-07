@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
-import { api, type SharedStoryPiece, type Session } from '../api.js';
+import { api, type AttachedFile, type SharedStoryPiece, type Session } from '../api.js';
 import { presentError, type PresentedError } from '../errors.js';
 import { EmptyState, ErrorState, LoadingState } from './StateBlock.js';
-import { entryDate, excerptOf } from '../story-entry.js';
+import { entryDate } from '../story-entry.js';
+import { usePhotographs } from '../photographs.js';
+import { PostMenu, PostMenuItem, PostPhotographs, PostWords, PostFooter } from './Post.js';
 import { ReportPerson } from './ReportPerson.js';
 
 /**
@@ -34,7 +36,6 @@ export function OtherPeoplesStories({
 }) {
   const [pieces, setPieces] = useState<SharedStoryPiece[] | null>(null);
   const [error, setError] = useState<PresentedError | null>(null);
-  const [open, setOpen] = useState<ReadonlySet<string>>(new Set());
   /*
    * The piece being reported. Reporting is offered here — on the thing
    * somebody is actually reading — rather than on a settings page behind
@@ -42,24 +43,49 @@ export function OtherPeoplesStories({
    * can know (owner, 2026-09-06).
    */
   const [reporting, setReporting] = useState<SharedStoryPiece | null>(null);
+  /*
+   * The photographs on each piece.
+   *
+   * This screen did not ask for them at all — so a memory shared with
+   * its photograph appeared here as words alone, while the supporter's
+   * screen showed the same memory with the picture on it. The scope work
+   * made a photograph travel with the memory it is on (B-30); the feed
+   * was the one reader that never looked.
+   */
+  const [files, setFiles] = useState<Record<string, AttachedFile[]>>({});
+  const { pictures, load: loadPictures, canShow } = usePhotographs(session);
 
   useEffect(() => {
     void (async () => {
       try {
-        setPieces((await api.storiesSharedWithMe(session)).data.map((d) => d.attributes));
+        const shared = (await api.storiesSharedWithMe(session)).data.map((d) => d.attributes);
+        setPieces(shared);
+        /*
+         * Each piece's photographs, quietly and in parallel. A refusal
+         * is the ordinary answer for a memory whose photographs were not
+         * shared, and it is not a reason to put an error over somebody's
+         * words — so a failure leaves that piece with none and the feed
+         * readable.
+         */
+        await Promise.all(
+          shared.map(async (piece) => {
+            try {
+              const attached = (
+                await api.listItemFilesOwnedBy(session, piece.ownerParticipantId, piece.itemId)
+              ).data.map((d) => d.attributes);
+              if (attached.length === 0) return;
+              setFiles((f) => ({ ...f, [piece.itemId]: attached }));
+              await loadPictures(attached);
+            } catch {
+              /* This piece has no photographs to show; the words remain. */
+            }
+          }),
+        );
       } catch (err) {
         setError(presentError(err));
       }
     })();
   }, []);
-
-  const toggle = (itemId: string) =>
-    setOpen((was) => {
-      const next = new Set(was);
-      if (next.has(itemId)) next.delete(itemId);
-      else next.add(itemId);
-      return next;
-    });
 
   /**
    * Who wrote it. A name that could not be resolved is said to be
@@ -101,66 +127,72 @@ export function OtherPeoplesStories({
           detail="When somebody in your community shares a piece of their story, it will be here."
         />
       ) : (
-        pieces.map((piece) => {
-          const isOpen = open.has(piece.itemId);
-          const body = `shared-piece-${piece.itemId}`;
-          return (
-            <article key={piece.itemId} className="story-entry" aria-label={piece.title}>
-              <p className="story-entry__who">{whoLine(piece)}</p>
-              <h2 className="story-entry__heading">
-                <button
-                  className="story-entry__open"
-                  aria-expanded={isOpen}
-                  aria-controls={body}
-                  onClick={() => toggle(piece.itemId)}
-                >
-                  <span className="story-entry__title">{piece.title}</span>
-                  {!isOpen && excerptOf(piece.contentText) !== '' && (
-                    <span className="story-entry__excerpt">{excerptOf(piece.contentText)}</span>
-                  )}
-                  <span className="story-entry__meta">
-                    {entryDate(piece.updatedAt)}
-                    {/*
-                      Marked on the row. A reader scanning a feed would
-                      otherwise see a model's draft and somebody's own
-                      writing as the same thing (ADR-024, Doc 19 §10).
-                    */}
-                    {piece.sourceType === 'AIDraft' && (
-                      <span className="state state--ai">A drafting tool wrote this</span>
-                    )}
-                  </span>
-                </button>
-              </h2>
-              {isOpen && (
-                <div id={body} className="story-entry__body">
-                  {piece.contentText !== null && (
-                    <blockquote className="story-entry__words">{piece.contentText}</blockquote>
-                  )}
-                  <div className="story-entry__notes">
-                    {piece.testimonyState === 'ParticipantTestimony' ? (
-                      <p>They have confirmed these are their own words.</p>
-                    ) : (
-                      <p>They have not confirmed these as their own words.</p>
-                    )}
-                  </div>
-                  {/*
-                    On somebody else's piece only. "Report" under your own
-                    memory is a control that can do nothing, and the
-                    server would refuse it — a report names the author,
-                    and here the author would be the reporter.
-                  */}
-                  {!piece.mine && (
-                    <div className="story-actions">
-                      <button className="story-action" onClick={() => setReporting(piece)}>
-                        Report this
-                      </button>
-                    </div>
-                  )}
-                </div>
+        pieces.map((piece) => (
+          /*
+           * A post, in the shape the owner asked for (2026-09-07): the
+           * words folded with a way to read the rest, photographs shown,
+           * everything that can be done at the corner, and when it was
+           * written at the foot.
+           *
+           * It used to fold to a single row that opened. That was right
+           * for a list of one's OWN memories, where somebody is looking
+           * for a particular one among many; it is wrong for a feed of
+           * other people's, where nobody knows what they are looking for
+           * and a row of titles gives them no reason to open any of it.
+           */
+          <article key={piece.itemId} className="post" aria-label={piece.title}>
+            <div className="post__head">
+              <div>
+                <p className="story-entry__who">{whoLine(piece)}</p>
+                <h2 className="post__title">{piece.title}</h2>
+              </div>
+              {/*
+                Only on somebody else's piece. A menu on your own with
+                nothing in it would be a control that opens onto nothing;
+                reporting your own memory is refused by the server, since
+                a report names the author and here the author would be
+                the reporter.
+              */}
+              {!piece.mine && (
+                <PostMenu about={piece.title}>
+                  <PostMenuItem onSelect={() => setReporting(piece)}>Report this</PostMenuItem>
+                </PostMenu>
               )}
-            </article>
-          );
-        })
+            </div>
+
+            {piece.contentText !== null && <PostWords text={piece.contentText} label={piece.title} />}
+
+            <PostPhotographs
+              pictures={(files[piece.itemId] ?? [])
+                .filter((f) => {
+                  const held = pictures[f.objectId];
+                  return held !== undefined && canShow(held.type);
+                })
+                .map((f) => ({
+                  key: f.objectId,
+                  url: pictures[f.objectId]!.url,
+                  alt: `A photograph on ${piece.title}. Nothing here describes what is in it.`,
+                }))}
+            />
+
+            <div className="story-entry__notes">
+              {/*
+                Provenance stays on the post rather than moving into the
+                menu: a reader who cannot tell a drafting tool's words
+                from their mother's has been told something false about
+                their mother (ADR-024, Doc 19 §10).
+              */}
+              {piece.sourceType === 'AIDraft' && <p className="state state--ai">A drafting tool wrote this</p>}
+              {piece.testimonyState === 'ParticipantTestimony' ? (
+                <p>They have confirmed these are their own words.</p>
+              ) : (
+                <p>They have not confirmed these as their own words.</p>
+              )}
+            </div>
+
+            <PostFooter when={entryDate(piece.updatedAt)} />
+          </article>
+        ))
       )}
 
       <hr />

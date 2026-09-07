@@ -57,19 +57,15 @@ function stub(people: unknown[], shared: unknown[], attached: unknown[] = []) {
 }
 
 /**
- * Open the person, then open the memory. Every shared memory is a row
- * that opens, the same idiom as the participant's own story — so a test
- * that wants what is inside one has to make the same two presses a person
- * makes.
+ * Open the person. Their memories are posts — words, photographs and
+ * all — so there is no second press, and a test that wants what is in
+ * one makes exactly the press a person makes (owner, 2026-09-07).
  */
-async function openMemory(personName = /Margaret/, title = /My garden years/) {
+async function openMemory(personName = /Margaret/) {
   await act(async () => {
     fireEvent.click(screen.getByRole('button', { name: personName }));
   });
   await act(async () => {});
-  await act(async () => {
-    fireEvent.click(screen.getByRole('button', { name: title }));
-  });
   await act(async () => {});
 }
 
@@ -114,17 +110,16 @@ describe('a supporter reading what was shared with them', () => {
     await act(async () => {});
 
     /*
-     * Folded, the mark must still be there — a reader scanning a list
-     * would otherwise see a model's draft and their mother's own writing
-     * as the same thing.
+     * At the head of the post, read before the words are — a reader
+     * scanning a page of them would otherwise see a model's draft and
+     * their mother's own writing as the same thing.
      */
-    const row = screen.getByRole('button', { expanded: false, name: /My garden years/ });
-    expect(row.textContent, 'the fold hid that a drafting tool wrote it').toMatch(/A drafting tool wrote this/);
+    const head = container.querySelector('.post__head');
+    expect(head, 'the memory is not a post').not.toBeNull();
+    expect(head!.textContent, 'nothing at the head says a drafting tool wrote it').toMatch(
+      /A drafting tool wrote this/,
+    );
 
-    await act(async () => {
-      fireEvent.click(row);
-    });
-    await act(async () => {});
     const marked = container.querySelector('.story-entry__notes .state--ai');
     expect(marked, 'a drafting tool’s words were shown as this person’s own').not.toBeNull();
     expect(marked!.textContent).toMatch(/not this person’s own words unless they have said so/i);
@@ -159,7 +154,7 @@ describe('a supporter reading what was shared with them', () => {
       'the photographs were asked for against the wrong person',
     ).toBe(true);
 
-    const picture = container.querySelector('img.story-photograph__image');
+    const picture = container.querySelector('img.post-pictures__image');
     expect(picture, 'the photograph was not shown to the person it was shared with').not.toBeNull();
     expect(picture!.getAttribute('src')).toMatch(/^blob:/);
     /*
@@ -170,30 +165,35 @@ describe('a supporter reading what was shared with them', () => {
   });
 
   /**
-   * And nothing is fetched before a memory is opened.
+   * The photographs come with the story, not on a second press.
    *
-   * A screen that pulled every picture on arrival would spend one request
-   * per memory before anybody had decided to read one — on a phone, on a
-   * connection that may be poor.
+   * This screen used to fetch nothing until a memory was unfolded, which
+   * kept the requests proportional: one per memory somebody actually
+   * opened. There is no fold any more — a memory is a post and its words
+   * and photographs are simply there (owner, 2026-09-07) — so a story of
+   * forty asks forty times, on a phone, on whatever connection is going.
+   * That cost is recorded as B-38, whose fix is a listing that takes the
+   * archive rather than the item. What must not happen is the screen
+   * quietly going back to describing photographs it has not fetched.
    */
-  it('fetches no photographs until a memory is opened', async () => {
-    const calls = stub([person()], [memory()], [
+  it('brings each memory’s photographs with the story', async () => {
+    const calls = stub([person()], [memory(), memory({ itemId: 'li_2', title: 'The soup' })], [
       { id: 'obj_1', attributes: {
         objectId: 'obj_1', declaredContentType: 'image/jpeg', declaredSizeBytes: 2048,
         objectState: 'Available', dataClassification: 'Sensitive-Personal', createdAt: '2026-06-03T00:00:00Z',
       } },
     ]);
-    render(<StoriesSharedWithMe session={session} />);
+    const { container } = render(<StoriesSharedWithMe session={session} />);
     await act(async () => {});
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /Margaret/ }));
-    });
-    await act(async () => {});
+    await openMemory();
 
+    /* Both memories, and neither of them pressed. */
+    expect(container.querySelectorAll('article.post').length).toBe(2);
+    expect(container.querySelectorAll('img.post-pictures__image').length, 'a memory was left describing its photographs').toBe(2);
     expect(
-      calls.some((c) => c.includes('/objects')),
-      'photographs were fetched for a memory nobody had opened',
-    ).toBe(false);
+      calls.filter((c) => /\/objects\?/.test(c)).length,
+      'the listing is asked for once per memory, which is what B-38 records',
+    ).toBe(2);
   });
 
   /**
@@ -236,7 +236,7 @@ describe('a supporter reading what was shared with them', () => {
     await act(async () => {});
 
     expect(
-      container.querySelector('img.story-photograph__image'),
+      container.querySelector('img.post-pictures__image'),
       'a file that is not an image was drawn as one on somebody else’s screen',
     ).toBeNull();
     expect(screen.getByText(/not a photograph this page can show/i)).toBeTruthy();
@@ -273,7 +273,7 @@ describe('a supporter reading what was shared with them', () => {
     await act(async () => {});
 
     expect(screen.getByText('I grew roses along the whole south wall.')).toBeTruthy();
-    expect(container.querySelector('img.story-photograph__image')).toBeNull();
+    expect(container.querySelector('img.post-pictures__image')).toBeNull();
     expect(
       document.body.textContent,
       'a refused photograph listing put an error over somebody’s words',

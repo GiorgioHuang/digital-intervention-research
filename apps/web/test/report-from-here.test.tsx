@@ -86,15 +86,17 @@ describe('reporting a piece of somebody’s story, from the piece', () => {
     await act(async () => {
       render(<OtherPeoplesStories session={session} onGoToMyStory={() => undefined} />);
     });
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /The winter we moved/ }));
-    });
   };
 
   it('offers it on the piece, and asks nothing to be typed', async () => {
     await openPiece();
+    // Everything that can be done to a post is behind the menu at its
+    // corner (owner, 2026-09-07).
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Report this' }));
+      fireEvent.click(screen.getByRole('button', { name: /What you can do with/ }));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('menuitem', { name: 'Report this' }));
     });
     /*
      * A window over the feed, with the piece still behind it. It used to
@@ -121,8 +123,13 @@ describe('reporting a piece of somebody’s story, from the piece', () => {
    */
   it('names the memory and lets the server work out whose it is', async () => {
     await openPiece();
+    // Everything that can be done to a post is behind the menu at its
+    // corner (owner, 2026-09-07).
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Report this' }));
+      fireEvent.click(screen.getByRole('button', { name: /What you can do with/ }));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('menuitem', { name: 'Report this' }));
     });
     const seen = calls();
     fireEvent.click(screen.getByRole('radio', { name: /unkind or upsetting/ }));
@@ -141,8 +148,13 @@ describe('reporting a piece of somebody’s story, from the piece', () => {
   /** The words are optional, as the drawing says; the reason is not. */
   it('will not send without a reason, and will send without words', async () => {
     await openPiece();
+    // Everything that can be done to a post is behind the menu at its
+    // corner (owner, 2026-09-07).
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Report this' }));
+      fireEvent.click(screen.getByRole('button', { name: /What you can do with/ }));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('menuitem', { name: 'Report this' }));
     });
     const send = screen.getByRole('button', { name: 'Send this to the study office' }) as HTMLButtonElement;
     expect(send.disabled).toBe(true);
@@ -161,7 +173,8 @@ describe('reporting a piece of somebody’s story, from the piece', () => {
    */
   it('is not offered on the reader’s own piece', async () => {
     await openPiece({ ...PIECE, mine: true });
-    expect(screen.queryByRole('button', { name: 'Report this' })).toBeNull();
+    // No menu at all on your own piece: it would open onto nothing.
+    expect(screen.queryByRole('button', { name: /What you can do with/ })).toBeNull();
   });
 
   /**
@@ -172,8 +185,13 @@ describe('reporting a piece of somebody’s story, from the piece', () => {
    */
   it('does not offer to block from a piece', async () => {
     await openPiece();
+    // Everything that can be done to a post is behind the menu at its
+    // corner (owner, 2026-09-07).
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Report this' }));
+      fireEvent.click(screen.getByRole('button', { name: /What you can do with/ }));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('menuitem', { name: 'Report this' }));
     });
     expect(screen.queryByRole('button', { name: /hide this person/ })).toBeNull();
   });

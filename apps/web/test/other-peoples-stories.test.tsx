@@ -38,12 +38,13 @@ describe('other people’s stories', () => {
     await act(async () => {});
 
     expect(screen.getByText('Margaret')).toBeTruthy();
-    // Folded until asked for, like every other story row.
-    expect(document.querySelector('.story-entry__words')).toBeNull();
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /The winter we moved/ }));
-    });
-    expect(document.querySelector('.story-entry__words')?.textContent).toMatch(/could not get up the hill/);
+    /*
+     * A post rather than a row that opens (owner, 2026-09-07): the words
+     * are on the screen, folded only if they are long. A row of titles
+     * gives a reader of OTHER people's memories no reason to open any of
+     * them — they do not know what they are looking for.
+     */
+    expect(document.querySelector('.post-words__text')?.textContent).toMatch(/could not get up the hill/);
   });
 
   /**
@@ -98,13 +99,20 @@ describe('other people’s stories', () => {
    * A reader scanning a feed would otherwise see a model's draft and
    * somebody's own writing as the same thing (ADR-024).
    */
-  it('marks a drafting tool’s words on the row', async () => {
+  /**
+   * Provenance stays on the post itself, not in the menu at its corner.
+   * A reader who cannot tell a drafting tool's words from their mother's
+   * has been told something false about their mother (ADR-024).
+   */
+  it('marks a drafting tool’s words on the post', async () => {
     stub([piece({ sourceType: 'AIDraft', testimonyState: 'NotTestimony' })]);
     const { container } = render(<OtherPeoplesStories session={session} onGoToMyStory={() => undefined} />);
     await act(async () => {});
-    const row = screen.getByRole('button', { expanded: false, name: /The winter we moved/ });
-    expect(row.textContent, 'the feed hid that a drafting tool wrote it').toMatch(/A drafting tool wrote this/);
+    const post = container.querySelector('article.post')!;
+    expect(post.textContent, 'the feed hid that a drafting tool wrote it').toMatch(/A drafting tool wrote this/);
     expect(container.querySelector('.state--ai')).not.toBeNull();
+    // And not tucked inside the menu, which is closed until it is asked for.
+    expect(container.querySelector('.post-menu__items')).toBeNull();
   });
 
   /**

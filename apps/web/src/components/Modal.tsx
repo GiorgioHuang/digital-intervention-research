@@ -30,17 +30,31 @@ import { useEffect, useRef, type ReactNode } from 'react';
 export function Modal({
   labelledBy,
   role = 'alertdialog',
+  wide = false,
   onClose,
   children,
 }: {
   /** The id of the heading or first line inside — the window's name. */
   labelledBy: string;
   role?: 'dialog' | 'alertdialog';
+  /** For a photograph opened to be looked at: as much room as there is. */
+  wide?: boolean;
   onClose: () => void;
   children: ReactNode;
 }) {
   const panel = useRef<HTMLDivElement | null>(null);
   const opener = useRef<Element | null>(null);
+  /*
+   * The current way out, not the one this window opened with.
+   *
+   * The listener below is registered once, so it closes over whatever
+   * `onClose` was on the first render — and a way out that reads state,
+   * as the correction window's does when it keeps what was typed, would
+   * act on the state as it stood when the window opened. Escape then
+   * kept the first draft and threw away everything written since.
+   */
+  const closing = useRef(onClose);
+  closing.current = onClose;
 
   useEffect(() => {
     opener.current = document.activeElement;
@@ -61,7 +75,7 @@ export function Modal({
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.stopPropagation();
-        onClose();
+        closing.current();
         return;
       }
       if (e.key !== 'Tab') return;
@@ -102,7 +116,7 @@ export function Modal({
   return (
     <div className="modal">
       <div
-        className="modal__panel"
+        className={wide ? 'modal__panel modal__panel--wide' : 'modal__panel'}
         ref={panel}
         role={role}
         aria-modal="true"

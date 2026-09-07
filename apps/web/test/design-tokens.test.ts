@@ -748,8 +748,15 @@ describe('the token architecture holds', () => {
        see which class names are on the elements, and any rule in here
        could give `.story-screen` a background tomorrow without changing a
        single one of them. */
-    const storyRules = ALL_BLOCKS.filter((b) => /\.story-(screen|entry)\b/.test(b.selector));
+    /* `.post` and its own parts, which is what a memory is drawn as
+       since 2026-09-07 — not `.post-menu` or `.post-pictures`, which are
+       a menu and a photograph and do have surfaces of their own. */
+    const storyRules = ALL_BLOCKS.filter((b) => /\.story-(screen|entry)\b|\.post(__[a-z]+)?\s*$/.test(b.selector));
     expect(storyRules.length, 'no story rules found — has the selector been renamed?').toBeGreaterThan(0);
+    expect(
+      storyRules.some((b) => b.selector.trim().endsWith('.post')),
+      'the memory itself has no rule — has it stopped being a post?',
+    ).toBe(true);
     for (const { selector, body } of storyRules) {
       expect(body, `${selector} paints a surface the drawing does not have`).not.toMatch(
         /background(-color)?:\s*(?!transparent|none)/,

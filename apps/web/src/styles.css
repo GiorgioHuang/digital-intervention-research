@@ -2026,59 +2026,6 @@ a[role='button']:hover { background-color: var(--color-action-secondary-bg-hover
  * `.story-screen` therefore carries no rule of its own. It is a name for
  * the region, and the absence is the point.
  */
-[data-workspace='participant'] .story-entry {
-  border-block-start: var(--border-hairline) solid var(--cl-divider);
-  padding-block: var(--space-4);
-}
-[data-workspace='participant'] .story-entry__heading {
-  /* The drawing's 21px, carried by the heading that wraps the control. */
-  font-size: 1.167rem;
-  margin: 0;
-}
-/*
- * The row. A whole memory folded to three lines, opened by pressing it.
- *
- * It is a real button so that a keyboard reaches it and a screen reader
- * is told it expands, and it is stripped back to a row because the
- * default action button would put an accent box round every memory —
- * which is the thing the last two changes to this screen removed.
- */
-[data-workspace='participant'] .story-entry__open {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--space-2);
-  inline-size: 100%;
-  padding: 2px;
-  border: 0;
-  border-radius: 0;
-  background-color: transparent;
-  text-align: start;
-  color: inherit;
-  font: inherit;
-}
-[data-workspace='participant'] .story-entry__open:hover {
-  background-color: color-mix(in srgb, var(--cl-text) 4%, transparent);
-}
-[data-workspace='participant'] .story-entry__title {
-  font-family: var(--cl-family-display);
-  font-weight: var(--type-weight-semibold);
-  line-height: 1.25;
-}
-/*
- * The first words of the memory, on the row.
- *
- * At the reading size, not the drawing's 16px: this is the participant's
- * own writing, and it is the one line on a folded entry that tells them
- * which memory this is (X-31).
- */
-[data-workspace='participant'] .story-entry__excerpt {
-  font-family: var(--cl-family-body);
-  font-size: var(--type-size-1);
-  font-weight: var(--type-weight-regular);
-  line-height: 1.5;
-  color: var(--cl-text-3);
-}
 [data-workspace='participant'] .story-entry__meta {
   display: flex;
   flex-wrap: wrap;
@@ -2091,13 +2038,13 @@ a[role='button']:hover { background-color: var(--color-action-secondary-bg-hover
   font-variant-numeric: tabular-nums;
 }
 /*
- * The provenance marker, on a folded row.
+ * The provenance marker, at the head of a post.
  *
  * `.state--ai` is a block with a tint behind it, which is right in the
- * notes and far too heavy on a quiet three-line row — it made the row
- * half as tall again as its neighbours and became the loudest thing in
- * the list. Compact here, and still a marked label rather than plain
- * text: the distinction has to survive a glance (Doc 19 §10).
+ * notes and far too heavy on the quiet line under a title — it made that
+ * line half as tall again as everything around it and became the loudest
+ * thing on the post. Compact here, and still a marked label rather than
+ * plain text: the distinction has to survive a glance (Doc 19 §10).
  */
 [data-workspace='participant'] .story-entry__meta .state--ai {
   margin: 0;
@@ -2114,23 +2061,7 @@ a[role='button']:hover { background-color: var(--color-action-secondary-bg-hover
   gap: var(--space-4);
   margin-block-start: var(--space-4);
 }
-/*
- * The memory itself — the subject of the screen, and set as it.
- *
- * Larger and darker than everything around it. The hierarchy is made by
- * raising these words rather than by shrinking the platform's sentences
- * below them: the notes are somebody's privacy and provenance, and this
- * workspace does not have a size below its reading size to put them at.
- */
-[data-workspace='participant'] .story-entry__words {
-  margin: 0;
-  padding-inline-start: var(--space-4);
-  border-inline-start: var(--border-emphasis) solid var(--cl-accent);
-  font-family: var(--cl-family-body);
-  font-size: var(--type-size-2);
-  line-height: 1.6;
-  color: var(--cl-text);
-}
+/* The memory's own words are set by `.post-words__text`, further down. */
 /*
  * What the platform knows about the memory, kept apart from it. Quieter
  * by weight and colour, and last — never smaller than the workspace
@@ -2160,11 +2091,6 @@ a[role='button']:hover { background-color: var(--color-action-secondary-bg-hover
   inline-size: 100%;
   block-size: auto;
   border-radius: var(--radius-2);
-}
-/* The photograph and the one thing that can be done to it. */
-[data-workspace='participant'] .story-photograph__frame {
-  position: relative;
-  display: block;
 }
 /*
  * Taking a photograph off, at its corner.
@@ -3998,6 +3924,210 @@ main[data-workspace='staff'] .scroll-x {
 }
 .modal__panel > :first-child { margin-block-start: 0; }
 .modal__panel > :last-child { margin-block-end: 0; }
+
+/* ---------- A post ------------------------------------------------------
+ * The shape the owner asked for (2026-09-07), on the story and in the
+ * community: the words, folded if they are long; the photographs; what
+ * can be done, at the corner; when it was written, at the foot.
+ *
+ * The memory keeps the page ground and the hairline between one and the
+ * next — no card, no fill, no box. That has been reported twice and is
+ * held by a test, not by this comment.
+ */
+[data-workspace='participant'] .post {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-block: var(--space-5);
+  border-block-start: var(--border-hairline) solid var(--cl-divider);
+}
+[data-workspace='participant'] .post__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+[data-workspace='participant'] .post__title {
+  margin: 0;
+  font-family: var(--cl-family-display);
+  font-size: var(--type-size-2);
+  font-weight: var(--type-weight-semibold);
+  line-height: 1.25;
+}
+/* The one control at the corner. Quiet — it is not what the post is for
+   — and still a full target, because it holds everything that can be
+   done and a missed press is a person poking at their own memory. */
+[data-workspace='participant'] .post-menu {
+  position: relative;
+  flex: 0 0 auto;
+}
+[data-workspace='participant'] .post-menu__open {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--target-min);
+  min-inline-size: var(--target-min);
+  block-size: var(--target-min);
+  min-block-size: var(--target-min);
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background-color: transparent;
+  font-size: var(--type-size-2);
+  line-height: 1;
+  color: var(--cl-text-4);
+}
+[data-workspace='participant'] .post-menu__open:hover {
+  background-color: color-mix(in srgb, var(--cl-text) 6%, transparent);
+  color: var(--cl-text);
+}
+/* What is behind it: a panel over the post, wide enough for the actions
+   to be full sentences rather than the two-word labels a row of buttons
+   forces. */
+[data-workspace='participant'] .post-menu__items {
+  position: absolute;
+  inset-block-start: calc(var(--target-min) + var(--space-1));
+  inset-inline-end: 0;
+  z-index: var(--layer-dialog);
+  display: flex;
+  flex-direction: column;
+  min-inline-size: 15rem;
+  padding: var(--space-2);
+  border: var(--border-hairline) solid var(--cl-divider);
+  border-radius: var(--radius-2);
+  background-color: var(--cl-neutral-100);
+  box-shadow: var(--elevation-2);
+}
+[data-workspace='participant'] .post-menu__item {
+  justify-content: flex-start;
+  inline-size: 100%;
+  min-block-size: var(--target-min);
+  padding: var(--space-2) var(--space-3);
+  border: 0;
+  border-radius: var(--radius-1);
+  background-color: transparent;
+  font-family: var(--cl-family-body);
+  font-size: var(--type-size-1);
+  font-weight: var(--type-weight-regular);
+  color: var(--cl-text);
+  text-align: start;
+}
+[data-workspace='participant'] .post-menu__item:hover:not(:disabled) {
+  background-color: color-mix(in srgb, var(--cl-text) 6%, transparent);
+}
+/* The words. */
+[data-workspace='participant'] .post-words {
+  display: flex;
+  flex-direction: column;
+}
+/*
+ * The memory itself — the subject of the screen, and set as it.
+ *
+ * Larger and darker than everything around it. The hierarchy is made by
+ * raising these words rather than by shrinking the platform's sentences
+ * below them: the notes are somebody's privacy and provenance, and this
+ * workspace does not have a size below its reading size to put them at.
+ */
+[data-workspace='participant'] .post-words__text {
+  margin: 0;
+  padding-inline-start: var(--space-4);
+  border-inline-start: var(--border-emphasis) solid var(--cl-accent);
+  font-family: var(--cl-family-body);
+  font-size: var(--type-size-2);
+  line-height: 1.7;
+  color: var(--cl-text);
+  white-space: pre-wrap;
+}
+/* The way to the rest of it. A link in appearance and a button in fact:
+   it goes nowhere, it opens what is already on the page. */
+[data-workspace='participant'] .post-words__more {
+  align-self: flex-start;
+  min-block-size: var(--target-min);
+  margin-block-start: var(--space-1);
+  padding: var(--space-1) var(--space-1);
+  border: 0;
+  background-color: transparent;
+  font-family: var(--cl-family-body);
+  font-size: var(--type-size-1);
+  font-weight: var(--type-weight-regular);
+  color: var(--cl-accent-700);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+/* One photograph fills the width. Several go side by side and are
+   scrolled: stacked, four of them put the post's own words a screen
+   away. Snapping so a swipe lands on a photograph and not between two. */
+[data-workspace='participant'] .post-pictures {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+[data-workspace='participant'] .post-pictures--many {
+  flex-direction: row;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+}
+[data-workspace='participant'] .post-pictures--many > .post-pictures__item {
+  flex: 0 0 82%;
+  scroll-snap-align: center;
+}
+/* Relative, because the story screen puts a bin at the corner of its
+   own photographs. */
+[data-workspace='participant'] .post-pictures__item {
+  position: relative;
+}
+[data-workspace='participant'] .post-pictures__open {
+  display: block;
+  inline-size: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-2);
+  background-color: transparent;
+  overflow: hidden;
+}
+[data-workspace='participant'] .post-pictures__image {
+  display: block;
+  inline-size: 100%;
+  block-size: auto;
+  max-block-size: 22rem;
+  object-fit: cover;
+  border-radius: var(--radius-2);
+}
+/* Opened to be looked at: as much room as the window has, and never
+   cropped — the point of opening it is to see the whole of it. */
+.modal__panel--wide {
+  max-inline-size: min(96vw, 60rem);
+  padding: var(--space-3);
+}
+.post-pictures__large {
+  display: block;
+  inline-size: 100%;
+  block-size: auto;
+  max-block-size: 76dvh;
+  object-fit: contain;
+  border-radius: var(--radius-2);
+}
+.post-pictures__close {
+  margin: var(--space-3) 0 0;
+  text-align: center;
+}
+/* When it was written. Quiet, and at the foot, where the owner asked for
+   it — with room beside it for the counts that do not exist yet (B-37). */
+[data-workspace='participant'] .post-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin: 0;
+  font-family: var(--cl-family-body);
+  font-size: var(--type-size-0);
+  color: var(--cl-text-4);
+  font-variant-numeric: tabular-nums;
+}
 
 /* ---------- 13. Motion and reduced-motion (§A.6) ---------- */
 /* The user has explicitly chosen "reduce motion" — the same effect as the

@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react';
 import { api, type AttachedFile, type SharedStoryItem, type Session, type SupportedPerson } from '../api.js';
 import { presentError, type PresentedError } from '../errors.js';
 import { EmptyState, ErrorState, LoadingState } from './StateBlock.js';
-import { entryDate, excerptOf } from '../story-entry.js';
+import { entryDate } from '../story-entry.js';
 import { usePhotographs } from '../photographs.js';
+import { PostFooter, PostPhotographs, PostWords } from './Post.js';
 
 /**
  * The stories people have shared with you.
@@ -37,16 +38,6 @@ export function StoriesSharedWithMe({ session }: { session: Session }) {
   const [reading, setReading] = useState<SupportedPerson | null>(null);
   const [items, setItems] = useState<SharedStoryItem[] | null>(null);
   const [error, setError] = useState<PresentedError | null>(null);
-  /**
-   * Which memories are open, the same idiom as the participant's own
-   * story: a row that opens, so a story of forty pieces is a list
-   * somebody can read rather than forty columns to scroll past.
-   *
-   * It is also what keeps the photograph requests proportional. A screen
-   * that fetched every picture on arrival would spend one request per
-   * memory before anybody had decided to read one.
-   */
-  const [open, setOpen] = useState<ReadonlySet<string>>(new Set());
   const [files, setFiles] = useState<Record<string, AttachedFile[]>>({});
   const { pictures, settled, load: loadPictures, canShow } = usePhotographs(session);
 
@@ -64,8 +55,16 @@ export function StoriesSharedWithMe({ session }: { session: Session }) {
     setReading(person);
     setItems(null);
     try {
-      setItems((await api.sharedLifeStory(session, person.participantId)).data.map((d) => d.attributes));
+      const shared = (await api.sharedLifeStory(session, person.participantId)).data.map((d) => d.attributes);
+      setItems(shared);
       setError(null);
+      /*
+       * And their photographs, with them. There is no fold any more —
+       * a memory is a post and its words are simply there (owner,
+       * 2026-09-07) — so nothing is left to hang the fetch on. One
+       * request per memory, as on the participant's own story (B-38).
+       */
+      await Promise.all(shared.map((memory) => loadFiles(person.participantId, memory.itemId)));
     } catch (err) {
       setError(presentError(err));
     }
@@ -74,23 +73,12 @@ export function StoriesSharedWithMe({ session }: { session: Session }) {
   const name = (p: SupportedPerson) => p.participantDisplayName ?? 'Somebody you support';
 
   /**
-   * Opening a memory brings its photographs with it.
+   * A memory's photographs.
    *
    * A photograph follows the memory it is on, so the server returns these
    * only if this memory was shared with the person asking — nothing here
    * decides that, and nothing here needs to.
    */
-  const toggle = (itemId: string) => {
-    const opening = !open.has(itemId);
-    setOpen((was) => {
-      const next = new Set(was);
-      if (opening) next.add(itemId);
-      else next.delete(itemId);
-      return next;
-    });
-    if (opening && files[itemId] === undefined && reading !== null) void loadFiles(reading.participantId, itemId);
-  };
-
   const loadFiles = async (ownerParticipantId: string, itemId: string) => {
     try {
       const attached = (await api.listItemFilesOwnedBy(session, ownerParticipantId, itemId)).data.map(
@@ -133,96 +121,101 @@ export function StoriesSharedWithMe({ session }: { session: Session }) {
           />
         )}
         {(items ?? []).map((memory) => {
-          const isOpen = open.has(memory.itemId);
-          const body = `shared-${memory.itemId}`;
           const shown = files[memory.itemId] ?? [];
+          /*
+           * The ones there is a picture for, and the rest. A photograph
+           * this page cannot draw is described rather than shown as a
+           * broken frame — but it is somebody's mother's photograph, so
+           * nothing is said about it at all until its fetch has finished.
+           */
+          const viewable = shown.filter((f) => {
+            const held = pictures[f.objectId];
+            return held !== undefined && canShow(held.type);
+          });
+          const described = shown.filter((f) => !viewable.includes(f));
           return (
-            <article key={memory.itemId} className="story-entry" aria-label={memory.title}>
-              <h2 className="story-entry__heading">
-                <button
-                  className="story-entry__open"
-                  aria-expanded={isOpen}
-                  aria-controls={body}
-                  onClick={() => toggle(memory.itemId)}
-                >
-                  <span className="story-entry__title">{memory.title}</span>
-                  {!isOpen && excerptOf(memory.contentText) !== '' && (
-                    <span className="story-entry__excerpt">{excerptOf(memory.contentText)}</span>
-                  )}
-                  <span className="story-entry__meta">
-                    {entryDate(memory.updatedAt)}
-                    {/*
-                      Marked on the row, not only inside. A reader
-                      scanning a list would otherwise see a model's draft
-                      and their mother's own writing as the same thing
-                      (ADR-024, Doc 19 §10).
-                    */}
-                    {memory.sourceType === 'AIDraft' && (
+            /*
+             * A post, the same shape as the community feed and the
+             * participant's own story (owner, 2026-09-07). It used to
+             * fold to a row that had to be pressed before a word could
+             * be read — which is the wrong idiom here for the same
+             * reason it was wrong there: this is somebody's daughter
+             * opening what her mother chose to show her, and a list of
+             * titles gives her nothing to read.
+             */
+            <article key={memory.itemId} className="post" aria-label={memory.title}>
+              <div className="post__head">
+                <div>
+                  <h2 className="post__title">{memory.title}</h2>
+                  {/*
+                    Marked at the head, where it is read before the
+                    words are. A reader who cannot tell a model's draft
+                    from their mother's own writing has been told
+                    something false about their mother (ADR-024, Doc 19
+                    §10).
+                  */}
+                  {memory.sourceType === 'AIDraft' && (
+                    <p className="story-entry__meta">
                       <span className="state state--ai">A drafting tool wrote this</span>
-                    )}
-                  </span>
-                </button>
-              </h2>
-              {isOpen && (
-                <div id={body} className="story-entry__body">
-                  {memory.contentText !== null && (
-                    <blockquote className="story-entry__words">{memory.contentText}</blockquote>
-                  )}
-                  {shown.length > 0 && (
-                    <ul className="story-photographs list-plain">
-                      {shown.map((f) => {
-                        const picture = pictures[f.objectId];
-                        return (
-                          <li key={f.objectId} className="story-photograph">
-                            {picture !== undefined && canShow(picture.type) ? (
-                              <img
-                                className="story-photograph__image"
-                                src={picture.url}
-                                alt={`A photograph on ${memory.title}. Nothing here describes what is in it.`}
-                              />
-                            ) : !settled.has(f.objectId) ? (
-                              /*
-                                Still arriving. A quiet frame the size the
-                                photograph will fill, and no words: this
-                                said "This photograph has not loaded",
-                                which is a failure reported before there
-                                has been one — and it said it over
-                                somebody's own photograph every single
-                                time one was opened (owner, 2026-09-07).
-                                The sentence is for a screen reader, which
-                                has nothing to look at.
-                              */
-                              <div className="story-photograph__loading" role="status">
-                                <span className="visually-hidden">The photograph is loading.</span>
-                              </div>
-                            ) : (
-                              <p className="story-photograph__unshown">
-                                {picture === undefined
-                                  ? 'This photograph has not loaded.'
-                                  : 'This file is not a photograph this page can show.'}
-                              </p>
-                            )}
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  )}
-                  <div className="story-entry__notes">
-                    {/*
-                      Provenance travels with the memory. A reader who
-                      cannot tell a drafting tool's words from their
-                      mother's has been told something false about their
-                      mother (ADR-024).
-                    */}
-                    <p className={memory.sourceType === 'AIDraft' ? 'state state--ai' : undefined}>
-                      {SOURCE_WORDING[memory.sourceType ?? ''] ?? 'Where these words came from is not recorded.'}
                     </p>
-                    {memory.testimonyState === 'ParticipantTestimony' && (
-                      <p>They have confirmed these are their own words.</p>
-                    )}
-                  </div>
+                  )}
                 </div>
+              </div>
+
+              {memory.contentText !== null && <PostWords text={memory.contentText} label={memory.title} />}
+
+              <PostPhotographs
+                pictures={viewable.map((f) => ({
+                  key: f.objectId,
+                  url: pictures[f.objectId]!.url,
+                  alt: `A photograph on ${memory.title}. Nothing here describes what is in it.`,
+                }))}
+              />
+
+              {described.length > 0 && (
+                <ul className="story-photographs list-plain">
+                  {described.map((f) => (
+                    <li key={f.objectId} className="story-photograph">
+                      {!settled.has(f.objectId) ? (
+                        /*
+                          Still arriving. A quiet frame the size the
+                          photograph will fill, and no words: this said
+                          "This photograph has not loaded", which is a
+                          failure reported before there has been one —
+                          and it said it over somebody's own photograph
+                          every single time one was opened (owner,
+                          2026-09-07). The sentence is for a screen
+                          reader, which has nothing to look at.
+                        */
+                        <div className="story-photograph__loading" role="status">
+                          <span className="visually-hidden">The photograph is loading.</span>
+                        </div>
+                      ) : (
+                        <p className="story-photograph__unshown">
+                          {pictures[f.objectId] === undefined
+                            ? 'This photograph has not loaded.'
+                            : 'This file is not a photograph this page can show.'}
+                        </p>
+                      )}
+                    </li>
+                  ))}
+                </ul>
               )}
+
+              <div className="story-entry__notes">
+                {/*
+                  Provenance travels with the memory, in full sentences
+                  as well as the mark above (ADR-024).
+                */}
+                <p className={memory.sourceType === 'AIDraft' ? 'state state--ai' : undefined}>
+                  {SOURCE_WORDING[memory.sourceType ?? ''] ?? 'Where these words came from is not recorded.'}
+                </p>
+                {memory.testimonyState === 'ParticipantTestimony' && (
+                  <p>They have confirmed these are their own words.</p>
+                )}
+              </div>
+
+              <PostFooter when={entryDate(memory.updatedAt)} />
             </article>
           );
         })}
