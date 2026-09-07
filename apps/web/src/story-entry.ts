@@ -26,6 +26,47 @@ export function excerptOf(text: string | null, max = 110): string {
 }
 
 /**
+ * What to call a memory that has no name.
+ *
+ * Memories carry no title at all now (owner, 2026-09-07) — a life story
+ * is somebody saying what happened, and being made to name it first is a
+ * form to fill in before they can begin. But the screens still have to
+ * refer to one: a menu has to say which memory it belongs to, a window
+ * has to say which one it is about, and every post needs a name a screen
+ * reader can navigate the page by.
+ *
+ * The first few words of the memory itself, then. They are the
+ * participant's own — nothing here writes a name for somebody's life —
+ * and they are what a person would say if you asked them which memory
+ * they meant.
+ *
+ * The fallback names nothing. A memory whose words have not arrived yet
+ * cannot be identified by them, and "Untitled" or "Memory 3" would be
+ * this platform naming a piece of somebody's life after nothing at all.
+ */
+export function openingWords(contentText: string | null, max = 60): string {
+  const opening = excerptOf(contentText, max);
+  return opening === '' ? 'this memory' : opening;
+}
+
+/**
+ * The same, for the middle of a sentence.
+ *
+ * A window has to say which memory it is about — "Take … out of your
+ * story?" — and quoting the participant's own opening words is the only
+ * honest way to point at a memory that has no name. Shorter than the
+ * name a screen reader is given, because this one has to fit inside a
+ * heading beside other words.
+ *
+ * When there are no words yet, it says "this memory" and does not put
+ * quotation marks around a phrase nobody wrote.
+ */
+export function quotedOpening(contentText: string | null, max = 40): string {
+  const opening = excerptOf(contentText, max);
+  return opening === '' ? 'this memory' : `“${opening}”`;
+}
+
+/**
  * Who can see it, in the two or three words a row has space for.
  *
  * The full sentences stay on the opened entry. This is the same fact said

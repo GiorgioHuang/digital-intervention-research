@@ -16,7 +16,7 @@ import { presentError, type PresentedError } from '../errors.js';
 import { EmptyState, ErrorState, LoadingState } from './StateBlock.js';
 import { TabIcon } from './elder/TabIcon.js';
 import { piecesSoFar, whoCanSee } from '../story-summary.js';
-import { entryDate, isShowableImage, metaLine } from '../story-entry.js';
+import { entryDate, isShowableImage, metaLine, openingWords, quotedOpening } from '../story-entry.js';
 import { VISIBILITY_CHOICES, visibilityLabel } from '../visibility.js';
 
 /**
@@ -120,7 +120,19 @@ export function MyLifeStory({ session }: { session: Session }) {
   const [writing, setWriting] = useState(false);
   /** Whether the six questions are showing. They are copy, not stored. */
   const [prompting, setPrompting] = useState(false);
-  const [draft, setDraft] = useState({ title: '', text: '' });
+  /**
+   * What is being written. Words, and nothing else.
+   *
+   * There was a title field above them, required, so nobody could save a
+   * memory until they had named it — a form to fill in before somebody
+   * could begin saying what happened to them. Taken out on the owner's
+   * instruction (2026-09-07); the question a person chose to answer is
+   * still shown above the box while they write, and is not stored,
+   * because it is this platform's question and not their words.
+   */
+  const [draft, setDraft] = useState({ text: '' });
+  /** The question being answered, if one was chosen. Never stored. */
+  const [answering, setAnswering] = useState<string | null>(null);
   const [confirming, setConfirming] = useState<MyLifeStoryItem | null>(null);
   /**
    * Changing an entry you already wrote.
@@ -533,18 +545,19 @@ export function MyLifeStory({ session }: { session: Session }) {
   };
 
   const save = async () => {
-    if (draft.title.trim() === '' || draft.text.trim() === '') {
-      setAnnouncement('Both a title and something to say are needed before this can be saved.');
+    if (draft.text.trim() === '') {
+      setAnnouncement('There is nothing written yet, so there is nothing to save.');
       return;
     }
     try {
       // The archive is created on first use rather than up front, so
       // someone who never writes anything never has an empty one.
       const id = archiveId ?? (await api.createLifeStoryArchive(session)).data.id;
-      await api.createLifeStoryItem(session, id, draft.title.trim(), draft.text.trim());
+      await api.createLifeStoryItem(session, id, draft.text.trim());
       setActionError(null);
       setWriting(false);
-      setDraft({ title: '', text: '' });
+      setDraft({ text: '' });
+      setAnswering(null);
       setAnnouncement('Saved. Only you can see it — nothing is shared until you choose to share it.');
       await load();
     } catch (err) {
@@ -699,13 +712,18 @@ export function MyLifeStory({ session }: { session: Session }) {
               <button
                 className="row-summary"
                 onClick={() => {
-                  // The question becomes the title, which is the only
-                  // record of it there is — nothing stores the prompt.
-                  // The text is left alone for the same reason as above:
-                  // choosing a question is not a request to throw away
-                  // whatever was already written.
+                  /*
+                    The question is shown above the box and stored
+                    nowhere. It is this platform's prompt, not the
+                    participant's words, and a memory that recorded it
+                    would have the platform's sentence sitting inside
+                    somebody's account of their own life.
+                    The text is left alone for the same reason as above:
+                    choosing a question is not a request to throw away
+                    whatever was already written.
+                  */
                   setPrompting(false);
-                  setDraft((d) => ({ ...d, title: q }));
+                  setAnswering(q);
                   setWriting(true);
                 }}
               >
@@ -736,11 +754,7 @@ export function MyLifeStory({ session }: { session: Session }) {
 
       {writing && (
         <div>
-          <h2>{draft.title === '' ? 'Write a memory' : draft.title}</h2>
-          <p>
-            <label htmlFor="ls-title">What is it about?</label>{' '}
-            <input id="ls-title" value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} />
-          </p>
+          <h2>{answering ?? 'Write a memory'}</h2>
           <p>
             <label htmlFor="ls-text">In your own words</label>
             <br />
@@ -786,16 +800,15 @@ export function MyLifeStory({ session }: { session: Session }) {
         const viewable = shown.filter(isViewable);
         const described = shown.filter((f) => !isViewable(f));
         const canChange = item.itemState !== 'Withdrawn' && revising === null;
+        /*
+          What to call it, now that a memory has no title (owner,
+          2026-09-07): its own opening words. Used for the name a screen
+          reader navigates by, for the menu at its corner, and for every
+          window that has to say which memory it is about.
+        */
+        const name = openingWords(item.contentText);
         return (
-          <article key={item.itemId} className="post" aria-label={item.title}>
-            {/*
-              The row. A button rather than a clickable div, so that it is
-              reachable by keyboard, announced as expandable, and opened
-              by Enter and Space without any of that being reimplemented.
-              The heading wraps the button rather than the other way round
-              — a heading inside a control is not a heading a screen
-              reader can navigate by.
-            */}
+          <article key={item.itemId} className="post" aria-label={name}>
             {/*
               The memory as a post (owner, 2026-09-07): its words on the
               screen, folded only if they are long, and everything that
@@ -803,10 +816,14 @@ export function MyLifeStory({ session }: { session: Session }) {
               a single row that opened, with five or six buttons under
               the words once it did — and those buttons crowded the one
               thing the screen is for, which is somebody's own writing.
+
+              And no title above them. There was one, and it was drawn
+              larger and darker than the writing it named — so the first
+              thing on a memory was a label the participant had been made
+              to invent before they could start.
             */}
             <div className="post__head">
               <div>
-                <h2 className="post__title">{item.title}</h2>
                 <p className="story-entry__meta">
                   {metaLine(item)}
                   {/*
@@ -826,7 +843,7 @@ export function MyLifeStory({ session }: { session: Session }) {
                 onto an empty list is a control that does nothing.
               */}
               {(canChange || item.itemState !== 'Withdrawn') && (
-                <PostMenu about={item.title}>
+                <PostMenu about={name}>
                   {canChange && item.contentText !== null && (
                     <PostMenuItem
                       onSelect={() =>
@@ -864,7 +881,7 @@ export function MyLifeStory({ session }: { session: Session }) {
                 about somebody's words, which is a different kind of
                 text and is set as one.
               */}
-              {item.contentText !== null && <PostWords text={item.contentText} label={item.title} />}
+              {item.contentText !== null && <PostWords text={item.contentText} label={name} />}
 
               {/*
                 Photographs, shown rather than described, and shown on
@@ -893,10 +910,10 @@ export function MyLifeStory({ session }: { session: Session }) {
                 pictures={viewable.map((f) => ({
                   key: f.objectId,
                   url: pictures[f.objectId]!.url,
-                  alt: `A photograph on ${item.title}. Nothing here describes what is in it.`,
+                  alt: `A photograph on this memory. Nothing here describes what is in it.`,
                   corner: (
                     <PictureCorner
-                      label={`Remove this photograph from ${item.title}`}
+                      label={`Remove this photograph from ${name}`}
                       onSelect={() =>
                         setRemoving({
                           itemId: item.itemId,
@@ -929,7 +946,7 @@ export function MyLifeStory({ session }: { session: Session }) {
                         <img
                           className="story-photograph__image"
                           src={pictures[f.objectId]!.url}
-                          alt={`A photograph on ${item.title}. Nothing here describes what is in it.`}
+                          alt="A photograph on this memory. Nothing here describes what is in it."
                           onError={() => setUnpreviewable((was) => new Set(was).add(f.objectId))}
                         />
                       ) : !settled.has(f.objectId) && f.objectState === 'Available' ? (
@@ -1067,7 +1084,7 @@ export function MyLifeStory({ session }: { session: Session }) {
 
               {choosingScope === item.itemId && (
                 <div className="story-scope">
-                  <h3>Who can see &ldquo;{item.title}&rdquo;?</h3>
+                  <h3>Who can see {quotedOpening(item.contentText)}?</h3>
                   <p className="story-note">
                     It is <strong>{visibilityLabel(item.visibility)}</strong> at the moment. Changing this changes who
                     can open it from now on; it does not tell anybody, and you can change it again whenever you like.
@@ -1103,7 +1120,8 @@ export function MyLifeStory({ session }: { session: Session }) {
               {confirmingScope?.item.itemId === item.itemId && (
                 <Modal labelledBy={`scope-${item.itemId}`} onClose={() => setConfirmingScope(null)}>
                   <h3 id={`scope-${item.itemId}`}>
-                    Let {visibilityLabel(confirmingScope.visibility).toLowerCase()} read &ldquo;{item.title}&rdquo;?
+                    Let {visibilityLabel(confirmingScope.visibility).toLowerCase()} read{' '}
+                    {quotedOpening(confirmingScope.item.contentText)}?
                   </h3>
                   <p>
                     They will be able to open it, and the photographs on it, from their own account. You can change this
@@ -1200,7 +1218,7 @@ export function MyLifeStory({ session }: { session: Session }) {
 
               {withdrawing?.itemId === item.itemId && (
                 <Modal labelledBy={`withdraw-${item.itemId}`} onClose={() => setWithdrawing(null)}>
-                  <h3 id={`withdraw-${item.itemId}`}>Take &ldquo;{item.title}&rdquo; out of your story?</h3>
+                  <h3 id={`withdraw-${item.itemId}`}>Take {quotedOpening(item.contentText)} out of your story?</h3>
                   {/*
                     What it does and, just as importantly, what it does
                     not. "Withdraw" reads to many people as "delete",

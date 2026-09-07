@@ -3941,18 +3941,23 @@ main[data-workspace='staff'] .scroll-x {
   padding-block: var(--space-5);
   border-block-start: var(--border-hairline) solid var(--cl-divider);
 }
+/* Who wrote it, when, and what may be done with it — and no title. A
+   memory is what somebody wrote (owner, 2026-09-07); it used to carry a
+   name above the words, set larger and darker than the writing it named,
+   which a participant had been made to invent before they could begin.
+   The head is now a quiet line with the corner control beside it, so the
+   first thing on a post is the writing. */
 [data-workspace='participant'] .post__head {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: var(--space-3);
+  /* The menu is the tall half; without this the meta line beside it sits
+     against the top of a 44px target and reads as unaligned. */
+  min-block-size: var(--target-min);
 }
-[data-workspace='participant'] .post__title {
-  margin: 0;
-  font-family: var(--cl-family-display);
-  font-size: var(--type-size-2);
-  font-weight: var(--type-weight-semibold);
-  line-height: 1.25;
+[data-workspace='participant'] .post__head > :first-child {
+  align-self: center;
 }
 /* The one control at the corner. Quiet — it is not what the post is for
    — and still a full target, because it holds everything that can be

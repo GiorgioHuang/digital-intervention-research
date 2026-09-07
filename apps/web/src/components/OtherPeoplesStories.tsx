@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { api, type AttachedFile, type SharedStoryPiece, type Session } from '../api.js';
 import { presentError, type PresentedError } from '../errors.js';
 import { EmptyState, ErrorState, LoadingState } from './StateBlock.js';
-import { entryDate } from '../story-entry.js';
+import { entryDate, openingWords } from '../story-entry.js';
 import { usePhotographs } from '../photographs.js';
 import { PostMenu, PostMenuItem, PostPhotographs, PostWords, PostFooter } from './Post.js';
 import { ReportPerson } from './ReportPerson.js';
@@ -127,7 +127,7 @@ export function OtherPeoplesStories({
           detail="When somebody in your community shares a piece of their story, it will be here."
         />
       ) : (
-        pieces.map((piece) => (
+        pieces.map((piece) => {
           /*
            * A post, in the shape the owner asked for (2026-09-07): the
            * words folded with a way to read the rest, photographs shown,
@@ -139,12 +139,18 @@ export function OtherPeoplesStories({
            * for a particular one among many; it is wrong for a feed of
            * other people's, where nobody knows what they are looking for
            * and a row of titles gives them no reason to open any of it.
+           *
+           * And no title on it: a piece of somebody's story is their
+           * words (owner, 2026-09-07). What names it here — for the menu
+           * at its corner, and for a screen reader moving between posts
+           * — is the opening of the words themselves.
            */
-          <article key={piece.itemId} className="post" aria-label={piece.title}>
+          const name = openingWords(piece.contentText);
+          return (
+            <article key={piece.itemId} className="post" aria-label={name}>
             <div className="post__head">
               <div>
                 <p className="story-entry__who">{whoLine(piece)}</p>
-                <h2 className="post__title">{piece.title}</h2>
               </div>
               {/*
                 Only on somebody else's piece. A menu on your own with
@@ -154,13 +160,13 @@ export function OtherPeoplesStories({
                 the reporter.
               */}
               {!piece.mine && (
-                <PostMenu about={piece.title}>
+                <PostMenu about={name}>
                   <PostMenuItem onSelect={() => setReporting(piece)}>Report this</PostMenuItem>
                 </PostMenu>
               )}
             </div>
 
-            {piece.contentText !== null && <PostWords text={piece.contentText} label={piece.title} />}
+            {piece.contentText !== null && <PostWords text={piece.contentText} label={name} />}
 
             <PostPhotographs
               pictures={(files[piece.itemId] ?? [])
@@ -171,7 +177,7 @@ export function OtherPeoplesStories({
                 .map((f) => ({
                   key: f.objectId,
                   url: pictures[f.objectId]!.url,
-                  alt: `A photograph on ${piece.title}. Nothing here describes what is in it.`,
+                  alt: `A photograph on this memory. Nothing here describes what is in it.`,
                 }))}
             />
 
@@ -191,8 +197,9 @@ export function OtherPeoplesStories({
             </div>
 
             <PostFooter when={entryDate(piece.updatedAt)} />
-          </article>
-        ))
+            </article>
+          );
+        })
       )}
 
       <hr />

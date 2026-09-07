@@ -112,7 +112,6 @@ describe.skipIf(!dbAvailable)('M17 Life Story (integration)', () => {
     ({ archiveId } = await createArchive(m17, ctx(participantAccountId), { participantId }));
     ({ itemId, versionId: aiDraftVersionId } = await createItem(m17, ctx(participantAccountId), {
       archiveId,
-      title: 'My garden years',
       contentText: 'AI-suggested draft about gardening memories.',
       sourceType: 'AIDraft',
     }));
@@ -308,7 +307,6 @@ describe.skipIf(!dbAvailable)('M17 Life Story (integration)', () => {
     // decision and not the supporter's.
     const { itemId: chosen } = await createItem(m17, ctx(participantAccountId), {
       archiveId,
-      title: 'Where I want this to go',
       contentText: 'A part of my story I wrote myself.',
       sourceType: 'ParticipantAuthored',
     });
@@ -342,7 +340,6 @@ describe.skipIf(!dbAvailable)('M17 Life Story (integration)', () => {
     const { archiveId: otherArchive } = await createArchive(m17, ctx(otherAccount), { participantId: otherPid });
     const { itemId: otherItem } = await createItem(m17, ctx(otherAccount), {
       archiveId: otherArchive,
-      title: 'Their own story',
       contentText: 'Written by the other participant.',
       sourceType: 'ParticipantAuthored',
     });
@@ -482,9 +479,9 @@ describe.skipIf(!dbAvailable)('M17 Life Story (integration)', () => {
         viewerParticipantId,
       });
 
-    const shareable = async (title: string, visibility: string) => {
+    const shareable = async (words: string, visibility: string) => {
       const { itemId: id, versionId } = await createItem(m17, ctx(participantAccountId), {
-        archiveId, title, contentText: `The words of ${title}.`, sourceType: 'ParticipantAuthored',
+        archiveId, contentText: `The words of ${words}.`, sourceType: 'ParticipantAuthored',
       });
       await confirmTestimony(m17, ctx(participantAccountId), { itemId: id, versionId, confirmed: true });
       if (visibility !== 'Private') {
@@ -621,7 +618,7 @@ describe.skipIf(!dbAvailable)('M17 Life Story (integration)', () => {
      */
     it('carries no draft and nothing withdrawn, whatever scope they were given', async () => {
       const draft = await createItem(m17, ctx(participantAccountId), {
-        archiveId, title: 'Half a thought', contentText: 'Not finished.', sourceType: 'ParticipantAuthored',
+        archiveId, contentText: 'Not finished.', sourceType: 'ParticipantAuthored',
       });
       await changeVisibility(m17, ctx(participantAccountId), {
         itemId: draft.itemId, visibility: 'Community' as never, confirmed: true,
@@ -676,11 +673,10 @@ describe.skipIf(!dbAvailable)('M17 Life Story (integration)', () => {
   describe('what a supporter can read', () => {
     let forSupporters: string, forCommunity: string, stillPrivate: string, notConfirmed: string;
 
-    const shareable = async (title: string, visibility: string) => {
+    const shareable = async (words: string, visibility: string) => {
       const { itemId: id, versionId } = await createItem(m17, ctx(participantAccountId), {
         archiveId,
-        title,
-        contentText: `The words of ${title}.`,
+        contentText: `The words of ${words}.`,
         sourceType: 'ParticipantAuthored',
       });
       // Confirming is what makes an item Active, and only an Active item
@@ -705,7 +701,7 @@ describe.skipIf(!dbAvailable)('M17 Life Story (integration)', () => {
       forCommunity = await shareable('For the community', 'Community');
       stillPrivate = await shareable('Just for me', 'Private');
       const draft = await createItem(m17, ctx(participantAccountId), {
-        archiveId, title: 'Not finished', contentText: 'Half a thought.', sourceType: 'ParticipantAuthored',
+        archiveId, contentText: 'Half a thought.', sourceType: 'ParticipantAuthored',
       });
       notConfirmed = draft.itemId;
       await changeVisibility(m17, ctx(participantAccountId), {
@@ -925,7 +921,7 @@ describe.skipIf(!dbAvailable)('M17 Life Story (integration)', () => {
       const any = story.items[0];
       expect(any, 'no memory came back to check the shape of').toBeDefined();
       expect(Object.keys(any!).sort()).toEqual(
-        ['contentText', 'itemId', 'sourceType', 'testimonyState', 'title', 'updatedAt'].sort(),
+        ['contentText', 'itemId', 'sourceType', 'testimonyState', 'updatedAt'].sort(),
       );
     });
   });

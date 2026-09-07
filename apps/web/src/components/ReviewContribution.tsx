@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api, type ContributionAwaitingReview, type MyLifeStoryItem, type Session } from '../api.js';
+import { quotedOpening } from '../story-entry.js';
 import { presentError, type PresentedError } from '../errors.js';
 import { ErrorState, LoadingState } from './StateBlock.js';
 import { nameOrGap } from '../names.js';
@@ -181,7 +182,15 @@ export function ReviewContribution({
               )}
               {(parts ?? []).map((p) => (
                 <p key={p.itemId}>
-                  <button onClick={() => void decide('Accepted', p.itemId)}>Add it to “{p.title}”</button>
+                  {/*
+                    Named by its own opening words: a memory has no title
+                    to be listed under any more (owner, 2026-09-07), and
+                    this list is somebody choosing which of their memories
+                    a contribution belongs to.
+                  */}
+                  <button onClick={() => void decide('Accepted', p.itemId)}>
+                    Add it to {quotedOpening(p.contentText)}
+                  </button>
                 </p>
               ))}
               <p>

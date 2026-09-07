@@ -80,7 +80,6 @@ export async function findArchiveForContribution(
 
 export interface MyLifeStoryItem {
   itemId: string;
-  title: string;
   itemState: string;
   visibility: string;
   /** The version currently shown as the item, if the item has any content. */
@@ -144,7 +143,6 @@ export async function getMyLifeStory(
 
   const res = await deps.pool.query(
     `SELECT i.id,
-            i.title,
             i.item_state,
             i.visibility,
             i.current_version_id,
@@ -167,7 +165,6 @@ export async function getMyLifeStory(
     archiveId,
     items: res.rows.map((r) => ({
       itemId: r.id as string,
-      title: r.title as string,
       itemState: r.item_state as string,
       visibility: r.visibility as string,
       currentVersionId: (r.current_version_id as string | null) ?? null,
@@ -279,7 +276,6 @@ export async function listContributionsAwaitingReview(
  */
 export interface SharedLifeStoryItem {
   itemId: string;
-  title: string;
   contentText: string | null;
   sourceType: string | null;
   testimonyState: string | null;
@@ -331,7 +327,7 @@ export async function getSharedLifeStory(
   });
 
   const res = await deps.pool.query(
-    `SELECT i.id, i.title, i.item_state, i.visibility, i.updated_at,
+    `SELECT i.id, i.item_state, i.visibility, i.updated_at,
             v.content_text, v.source_type, v.testimony_state
        FROM life_story.items i
        JOIN life_story.archives a ON a.id = i.archive_id
@@ -351,7 +347,6 @@ export async function getSharedLifeStory(
     .filter((r) => sharedWithOthers(r.item_state as string, r.visibility as string, standing))
     .map((r) => ({
       itemId: r.id as string,
-      title: r.title as string,
       contentText: (r.content_text as string | null) ?? null,
       sourceType: (r.source_type as string | null) ?? null,
       testimonyState: (r.testimony_state as string | null) ?? null,
@@ -429,7 +424,7 @@ export async function listStoriesSharedWithMe(
    * participant did not say that.
    */
   const res = await deps.pool.query(
-    `SELECT i.id, i.title, i.visibility, i.updated_at, a.participant_id,
+    `SELECT i.id, i.visibility, i.updated_at, a.participant_id,
             v.content_text, v.source_type, v.testimony_state
        FROM life_story.items i
        JOIN life_story.archives a ON a.id = i.archive_id
@@ -457,7 +452,6 @@ export async function listStoriesSharedWithMe(
   const names = await deps.participantNames.findPublicNames(res.rows.map((r) => r.participant_id as string));
   return res.rows.map((r) => ({
     itemId: r.id as string,
-    title: r.title as string,
     contentText: (r.content_text as string | null) ?? null,
     sourceType: (r.source_type as string | null) ?? null,
     testimonyState: (r.testimony_state as string | null) ?? null,

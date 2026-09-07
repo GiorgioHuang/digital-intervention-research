@@ -126,7 +126,7 @@ export async function createArchive(
 export async function createItem(
   deps: M17Deps,
   ctx: RequestContext,
-  input: { archiveId: string; title: string; contentText: string; sourceType: LifeStorySourceType },
+  input: { archiveId: string; contentText: string; sourceType: LifeStorySourceType },
 ): Promise<{ itemId: string; versionId: string }> {
   const archive = await deps.pool.query(`SELECT participant_id FROM life_story.archives WHERE id = $1`, [
     input.archiveId,
@@ -150,11 +150,13 @@ export async function createItem(
   const now = deps.clock.now();
   let versionId = '';
   await withTransaction(deps.pool, async (client) => {
-    await client.query(`INSERT INTO life_story.items (id, archive_id, title) VALUES ($1, $2, $3)`, [
-      itemId,
-      input.archiveId,
-      input.title,
-    ]);
+    /*
+     * No title. A memory is what somebody wrote, and nothing asks them
+     * to name it first (owner, 2026-09-07) — the column is left NULL,
+     * which says a title was never given rather than that a blank one
+     * was.
+     */
+    await client.query(`INSERT INTO life_story.items (id, archive_id) VALUES ($1, $2)`, [itemId, input.archiveId]);
     versionId = await insertVersion(client, {
       itemId,
       contentText: input.contentText,

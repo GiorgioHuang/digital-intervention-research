@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { api, type AttachedFile, type SharedStoryItem, type Session, type SupportedPerson } from '../api.js';
 import { presentError, type PresentedError } from '../errors.js';
 import { EmptyState, ErrorState, LoadingState } from './StateBlock.js';
-import { entryDate } from '../story-entry.js';
+import { entryDate, openingWords } from '../story-entry.js';
 import { usePhotographs } from '../photographs.js';
 import { PostFooter, PostPhotographs, PostWords } from './Post.js';
 
@@ -123,6 +123,13 @@ export function StoriesSharedWithMe({ session }: { session: Session }) {
         {(items ?? []).map((memory) => {
           const shown = files[memory.itemId] ?? [];
           /*
+            A memory carries no title (owner, 2026-09-07), so what names
+            it on this screen is the opening of its own words — for a
+            screen reader moving between posts, and for anything that has
+            to say which memory it means.
+          */
+          const name = openingWords(memory.contentText);
+          /*
            * The ones there is a picture for, and the rest. A photograph
            * this page cannot draw is described rather than shown as a
            * broken frame — but it is somebody's mother's photograph, so
@@ -143,11 +150,10 @@ export function StoriesSharedWithMe({ session }: { session: Session }) {
              * opening what her mother chose to show her, and a list of
              * titles gives her nothing to read.
              */
-            <article key={memory.itemId} className="post" aria-label={memory.title}>
+            <article key={memory.itemId} className="post" aria-label={name}>
               <div className="post__head">
                 <div>
-                  <h2 className="post__title">{memory.title}</h2>
-                  {/*
+                                    {/*
                     Marked at the head, where it is read before the
                     words are. A reader who cannot tell a model's draft
                     from their mother's own writing has been told
@@ -162,13 +168,13 @@ export function StoriesSharedWithMe({ session }: { session: Session }) {
                 </div>
               </div>
 
-              {memory.contentText !== null && <PostWords text={memory.contentText} label={memory.title} />}
+              {memory.contentText !== null && <PostWords text={memory.contentText} label={name} />}
 
               <PostPhotographs
                 pictures={viewable.map((f) => ({
                   key: f.objectId,
                   url: pictures[f.objectId]!.url,
-                  alt: `A photograph on ${memory.title}. Nothing here describes what is in it.`,
+                  alt: `A photograph on this memory. Nothing here describes what is in it.`,
                 }))}
               />
 

@@ -1055,12 +1055,11 @@ export class CommandController {
   async createItem(
     @Req() req: Request,
     @Param('archiveId') archiveId: string,
-    @Body() body: { title: string; contentText: string; sourceType: LifeStorySourceType },
+    @Body() body: { contentText: string; sourceType: LifeStorySourceType },
   ) {
     const ctx = requireActor(req);
     const result = await createItem(this.deps.m17, ctx, {
       archiveId,
-      title: body.title,
       contentText: body.contentText,
       sourceType: body.sourceType,
     });

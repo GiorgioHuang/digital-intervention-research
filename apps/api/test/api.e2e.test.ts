@@ -996,12 +996,12 @@ describe.skipIf(!dbAvailable)('HTTP API (e2e)', () => {
 
     // A stranger probing the archive learns nothing.
     const outsider = await call(`/v1/life-story/archives/${archiveId}/items`, strangerAcc, {
-      title: 'x', contentText: 'x', sourceType: 'ParticipantAuthored',
+      contentText: 'x', sourceType: 'ParticipantAuthored',
     });
     expect(outsider.status).toBe(404);
 
     const item = await call(`/v1/life-story/archives/${archiveId}/items`, patAcc, {
-      title: 'The summer of the garden', contentText: 'That summer we planted roses.', sourceType: 'ParticipantAuthored',
+      contentText: 'That summer we planted roses.', sourceType: 'ParticipantAuthored',
     });
     expect(item.status).toBe(201);
     const itemBody = (await item.json()) as { data: { id: string; meta: { versionId: string } } };
@@ -1085,7 +1085,7 @@ describe.skipIf(!dbAvailable)('HTTP API (e2e)', () => {
   it('supporter contribution over HTTP needs consent; acceptance never becomes testimony', async () => {
     // One archive per participant — reuses the archive from the previous test.
     const item = await call(`/v1/life-story/archives/${archiveId}/items`, patAcc, {
-      title: 'An old photograph', contentText: 'First draft.', sourceType: 'ParticipantAuthored',
+      contentText: 'First draft.', sourceType: 'ParticipantAuthored',
     });
     const itemId = ((await item.json()) as { data: { id: string } }).data.id;
 

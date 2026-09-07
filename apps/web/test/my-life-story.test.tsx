@@ -9,7 +9,6 @@ const item = (over: Record<string, unknown> = {}) => ({
   id: 'li_1',
   attributes: {
     itemId: 'li_1',
-    title: 'My garden years',
     itemState: 'Active',
     visibility: 'Private',
     currentVersionId: 'lv_2',
@@ -125,10 +124,17 @@ function stubWithFiles(files: unknown[], only?: unknown, objectState?: string) {
  * error here, and the absence assertions still hold against a screen
  * where the menu is open.
  */
-async function openMemory(title = 'My garden years') {
+/**
+ * Open the menu at a memory's corner.
+ *
+ * Named by its own opening words, because a memory has no title any more
+ * (owner, 2026-09-07) — which is also what a person sees on the control:
+ * "What you can do with “I grew roses along the whole south wall.”".
+ */
+async function openMemory(words = 'I grew roses') {
   const menu = screen
     .queryAllByRole('button', { name: /What you can do with/ })
-    .find((b) => (b.getAttribute('aria-label') ?? '').includes(title));
+    .find((b) => (b.getAttribute('aria-label') ?? '').includes(words));
   if (menu === undefined) return;
   await act(async () => {
     fireEvent.click(menu);
@@ -171,13 +177,13 @@ describe('a participant reading their own life story', () => {
 
   it("names a supporter's contribution as their account, not the participant's words", async () => {
     stubFetch({
-      data: [item({ sourceType: 'SupporterContribution', title: 'The soup' })],
+      data: [item({ sourceType: 'SupporterContribution' })],
       meta: { archiveId: 'ar_1' },
     });
     await act(async () => {
       render(<MyLifeStory session={session} />);
     });
-    await openMemory('The soup');
+    await openMemory();
     expect(screen.getByText(/offered it\. It is their account/)).toBeTruthy();
   });
 
@@ -218,8 +224,10 @@ describe('a participant reading their own life story', () => {
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Write a memory' }));
     });
+    /* Words, and nothing else. There is no title to give (owner,
+       2026-09-07), and nothing else the box asks for. */
+    expect(screen.queryByLabelText('What is it about?'), 'a memory is still asked to name itself').toBeNull();
     await act(async () => {
-      fireEvent.change(screen.getByLabelText('What is it about?'), { target: { value: 'Sunday walks' } });
       fireEvent.change(screen.getByLabelText('In your own words'), { target: { value: 'We went every week.' } });
     });
     await act(async () => {
@@ -231,6 +239,8 @@ describe('a participant reading their own life story', () => {
     // Recorded as written by the participant, because it was — this screen
     // has no drafting assistant, so any other provenance would be false.
     expect(posts[1]?.body['sourceType']).toBe('ParticipantAuthored');
+    expect(posts[1]?.body['contentText']).toBe('We went every week.');
+    expect(Object.keys(posts[1]?.body ?? {}), 'a title was sent for a memory nobody titled').not.toContain('title');
   });
 
   /**
@@ -399,12 +409,16 @@ describe('a participant reading their own life story', () => {
   });
 
   /**
-   * Choosing a question writes it into the title, which is the only record
-   * of the question there is — nothing stores which prompt was answered.
-   * It must not throw away words already typed, for the same reason
-   * closing without saving must not.
+   * Choosing a question shows it above the box while somebody answers it,
+   * and stores it nowhere.
+   *
+   * It used to become the memory's title, which is how the platform's own
+   * sentence ended up sitting inside somebody's account of their own life
+   * — and there are no titles at all now (owner, 2026-09-07). It must not
+   * throw away words already typed, for the same reason closing without
+   * saving must not.
    */
-  it('opens the writing box with the question as its title, keeping anything written', async () => {
+  it('shows the chosen question above the box, keeps anything written, and stores no title', async () => {
     stubFetch({ data: [], meta: { archiveId: 'ar_1' } });
     await act(async () => {
       render(<MyLifeStory session={session} />);
@@ -421,13 +435,26 @@ describe('a participant reading their own life story', () => {
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'What did you cook for people?' }));
     });
-    expect((screen.getByLabelText('What is it about?') as HTMLInputElement).value).toBe(
-      'What did you cook for people?',
-    );
+    expect(
+      screen.getByRole('heading', { name: 'What did you cook for people?' }),
+      'the question somebody chose to answer is not in front of them while they answer it',
+    ).toBeTruthy();
     expect(
       (screen.getByLabelText('In your own words') as HTMLTextAreaElement).value,
       'choosing a question threw away what was already written',
     ).toBe('Already typed.');
+
+    /* And it is the platform's question, not the participant's words, so
+       nothing about it is saved with the memory. */
+    const calls = stubFetch({ data: [], meta: { archiveId: 'ar_1' } });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Save to my story' }));
+    });
+    const written = calls.find((c) => c.method === 'POST');
+    expect(written?.body['contentText'], 'the question was saved as part of the memory').toBe('Already typed.');
+    expect(JSON.stringify(written?.body ?? {}), 'the question was stored with the memory').not.toMatch(
+      /What did you cook/,
+    );
   });
 
   it('closing the writing area without saving does not throw the words away', async () => {
@@ -464,7 +491,7 @@ describe('a participant reading their own life story', () => {
     await act(async () => {
       render(<MyLifeStory session={session} />);
     });
-    await openMemory();
+    await openMemory('I grew up by the sea');
     await act(async () => {
       fireEvent.click(screen.getByRole('menuitem', { name: 'Change what this says' }));
     });
@@ -499,7 +526,7 @@ describe('a participant reading their own life story', () => {
     await act(async () => {
       render(<MyLifeStory session={session} />);
     });
-    await openMemory();
+    await openMemory('My words.');
     await act(async () => {
       fireEvent.click(screen.getByRole('menuitem', { name: 'Change what this says' }));
     });
@@ -1663,7 +1690,7 @@ describe('a participant reading their own life story', () => {
     expect(container.querySelector('section.story-screen')).not.toBeNull();
     expect(container.querySelector('.zone-story'), 'the panel is back around the whole screen').toBeNull();
 
-    const entry = screen.getByRole('article', { name: 'My garden years' });
+    const entry = screen.getByRole('article', { name: 'I grew roses along the whole south wall.' });
     expect(entry.className.split(/\s+/), 'the entry is a card again').not.toContain('card');
     expect(entry.className.split(/\s+/)).toContain('post');
 

@@ -129,9 +129,39 @@ async function main() {
     // Behavioural probe: append-only audit must still be enforced in the
     // RESTORED database — a backup that restores data but loses guarantees
     // is a failed backup.
+    //
+    // The probe writes its own row first, INTO THE DRILL COPY, which is
+    // dropped at the end of this run and never touched by anything else.
+    // Without it the probe answers a different question than it asks: an
+    // UPDATE over an empty table matches nothing, no trigger fires,
+    // nothing is raised, and the drill reports that the restored database
+    // has lost its append-only guarantee. Which is what it did — a
+    // reset-then-drill in a clean environment failed here with the audit
+    // table empty and the trigger perfectly intact (2026-09-07).
     let appendOnlyHolds = false;
+    let probeRow = null;
     try {
-      await drill.query(`UPDATE governance_audit.audit_events SET action = 'tampered'`);
+      probeRow = (
+        await drill.query(
+          `INSERT INTO governance_audit.audit_events
+             (id, actor_type, actor_id, action, target_type, target_id, occurred_at, result, source)
+           VALUES (gen_random_uuid(), 'system', 'backup-drill', 'backup.drill-probe',
+                   'BackupDrill', 'probe', now(), 'Succeeded', 'backup-restore-drill')
+           RETURNING id`,
+        )
+      ).rows[0].id;
+    } catch (err) {
+      failure ??= `could not write the append-only probe row: ${String(err)}`;
+    }
+    try {
+      const attempt = await drill.query(`UPDATE governance_audit.audit_events SET action = 'tampered' WHERE id = $1`, [
+        probeRow,
+      ]);
+      // No error AND nothing updated is not a pass: it means the probe
+      // never reached a row, so nothing about the trigger was tested.
+      if (attempt.rowCount === 0 && failure === null) {
+        failure = 'the append-only probe matched no row, so the trigger was never exercised';
+      }
     } catch (err) {
       appendOnlyHolds = /append-only/.test(String(err));
     }

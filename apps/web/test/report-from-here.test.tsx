@@ -45,8 +45,7 @@ function calls() {
 
 const PIECE: SharedStoryPiece = {
   itemId: 'lsi_1',
-  title: 'The winter we moved',
-  contentText: 'The lorry could not get up the hill.',
+  contentText: 'The winter we moved, the lorry could not get up the hill.',
   sourceType: 'ParticipantAuthored',
   testimonyState: 'ParticipantTestimony',
   updatedAt: '2026-06-02T00:00:00Z',

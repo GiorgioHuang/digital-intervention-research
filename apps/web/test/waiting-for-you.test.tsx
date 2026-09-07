@@ -54,16 +54,18 @@ function stubFetch(body: unknown, parts: unknown[] = []) {
   return calls;
 }
 
-const storyPart = (itemId: string, title: string) => ({
+/* A memory has no title (owner, 2026-09-07); it is known by its own
+   opening words, which is what this list of "where should this go?" is
+   made of. */
+const storyPart = (itemId: string, words: string) => ({
   id: itemId,
   attributes: {
     itemId,
-    title,
     itemState: 'Active',
     visibility: 'Private',
     currentVersionId: 'lv_1',
     versionNumber: 1,
-    contentText: 'x',
+    contentText: words,
     sourceType: 'ParticipantAuthored',
     testimonyState: 'NotTestimony',
     supersedesConfirmedVersion: false,
@@ -163,7 +165,7 @@ describe('what is waiting for the participant', () => {
   });
 
   it('accepting it asks where it should go, and the participant chooses', async () => {
-    const calls = stubFetch(unattached, [storyPart('li_9', 'My garden years')]);
+    const calls = stubFetch(unattached, [storyPart('li_9', 'I grew roses along the whole south wall.')]);
     await act(async () => {
       render(review('con_2'));
     });
@@ -174,7 +176,9 @@ describe('what is waiting for the participant', () => {
     expect(calls.some((c) => c.method === 'POST')).toBe(false);
     expect(screen.getByRole('heading', { name: 'Where should this go?' })).toBeTruthy();
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Add it to \u201cMy garden years\u201d' }));
+      fireEvent.click(
+        screen.getByRole('button', { name: 'Add it to \u201cI grew roses along the whole south wall.\u201d' }),
+      );
     });
     const post = calls.find((c) => c.method === 'POST');
     expect(post?.body['decision']).toBe('Accepted');

@@ -431,7 +431,6 @@ export interface SupportedPerson {
  */
 export interface SharedStoryItem {
   itemId: string;
-  title: string;
   contentText: string | null;
   sourceType: string | null;
   testimonyState: string | null;
@@ -449,7 +448,6 @@ export interface AttachedFile {
 
 export interface MyLifeStoryItem {
   itemId: string;
-  title: string;
   itemState: string;
   visibility: string;
   currentVersionId: string | null;
@@ -544,9 +542,8 @@ export const api = {
     ),
   createLifeStoryArchive: (s: Session) =>
     post<{ data: { id: string } }>(s, `/v1/life-story/archives`, { participantId: s.participantId }),
-  createLifeStoryItem: (s: Session, archiveId: string, title: string, contentText: string) =>
+  createLifeStoryItem: (s: Session, archiveId: string, contentText: string) =>
     post(s, `/v1/life-story/archives/${archiveId}/items`, {
-      title,
       contentText,
       // Written by the participant in their own words. Never AIDraft here:
       // this screen has no drafting assistant (D-14), so claiming one wrote
