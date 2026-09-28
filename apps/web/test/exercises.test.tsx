@@ -18,12 +18,14 @@ describe('exercises', () => {
   });
   afterEach(cleanup);
 
-  it('offers four, and says there is no score before anybody starts', () => {
-    render(<Exercises onHome={() => undefined} onTapping={() => undefined} />);
-    for (const name of ['Tapping', 'Drawing a spiral', 'Naming what you see', 'Steady hold']) {
+  it('offers four and the puzzle, and says there is no score before anybody starts', () => {
+    render(<Exercises onHome={() => undefined} onTapping={() => undefined} onPuzzle={() => undefined} />);
+    for (const name of ['Tapping', 'Drawing a spiral', 'Naming what you see', 'Steady hold', 'Flame puzzle']) {
       expect(screen.getByText(name), `${name} is missing`).toBeTruthy();
     }
-    expect(screen.getByText(/There is no score and nothing is counted against you/)).toBeTruthy();
+    expect(screen.getByText(/The exercises keep no score and nothing is counted against you/)).toBeTruthy();
+    // The puzzle does keep a tally, and the page says where it stays.
+    expect(screen.getByText(/The puzzle keeps your level on this device only/)).toBeTruthy();
     // "exercises", never "games" — the word choice is the copy voice's own
     // ruling and the reason the framing works at all.
     expect(document.body.textContent, 'these are being called games').not.toMatch(/\bgames?\b/i);
@@ -37,12 +39,13 @@ describe('exercises', () => {
    */
   it('only opens the one that opens', () => {
     const opened: number[] = [];
-    render(<Exercises onHome={() => undefined} onTapping={() => opened.push(1)} />);
+    render(<Exercises onHome={() => undefined} onTapping={() => opened.push(1)} onPuzzle={() => opened.push(2)} />);
     const buttons = screen.getAllByRole('button');
-    // Back, plus Tapping. Nothing else is pressable.
-    expect(buttons.length, 'a door that does not open is being offered').toBe(2);
+    // Back, Tapping and the puzzle. Nothing else is pressable.
+    expect(buttons.length, 'a door that does not open is being offered').toBe(3);
     fireEvent.click(screen.getByText('Tapping').closest('button')!);
-    expect(opened).toEqual([1]);
+    fireEvent.click(screen.getByText('Flame puzzle').closest('button')!);
+    expect(opened).toEqual([1, 2]);
     expect(screen.getAllByText('Not ready yet.').length).toBe(3);
   });
 });

@@ -5,6 +5,7 @@ import { SupporterApp } from './SupporterApp.js';
 import { AccessTokenGate } from './components/AccessTokenGate.js';
 import { HelperScreen } from './components/elder/HelperScreen.js';
 import { Exercises, Tapping } from './components/elder/Exercises.js';
+import { FlamePuzzle } from './components/elder/FlamePuzzle.js';
 import { WhatOthersCallMe } from './components/elder/WhatOthersCallMe.js';
 import { SiteFooter } from './components/elder/SiteFooter.js';
 import { AboutScreen } from './components/elder/AboutScreen.js';
@@ -1135,7 +1136,17 @@ export function App() {
           />
         )}
         {screen === 'exercises' && (
-          <Exercises onHome={() => setScreen('home')} onTapping={() => setScreen('tapping')} />
+          <Exercises
+            onHome={() => setScreen('home')}
+            onTapping={() => setScreen('tapping')}
+            onPuzzle={() => setScreen('flame-puzzle')}
+          />
+        )}
+        {screen === 'flame-puzzle' && (
+          <FlamePuzzle
+            onDone={() => setScreen('exercises')}
+            shareUrl={`${window.location.origin}${pathForScreen('flame-puzzle', null)}`}
+          />
         )}
         {screen === 'tapping' && (
           <Tapping
