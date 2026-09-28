@@ -24,162 +24,100 @@ import {
  *
  * Asked for by the owner (2026-09-28) with every feature of the first
  * version kept: levels, the flame count, three hearts, hints, "find a
- * flame", pencil marks, a level list, sound and a Chinese/English switch,
- * plus a way to share it. Drawn in the Classical palette of this workspace
- * rather than the red-and-gold palace of the original.
+ * flame", pencil marks, a level list and sound, plus a way to share it.
+ * The Chinese version was dropped at the owner's request the same day.
+ * Drawn in the Classical palette of this workspace rather than the
+ * red-and-gold palace of the original.
  *
  * What is remembered — the furthest level, stars and hints left — goes to
  * `preferenceStore()`, so on a shared device it is gone when the tab
  * closes, like every other preference. Nothing from it reaches the study.
+ *
+ * **Without signing in** (`guest`), which is how a shared link opens: the
+ * puzzle plays in full, and nothing is written anywhere until the person
+ * asks to keep their progress. Then the play so far is handed across the
+ * sign-in in `sessionStorage` (the redirect to Google reloads the page)
+ * and folded into the signed-in record on the other side.
  */
 
-type Lang = 'en' | 'zh';
-
 const WORDS = {
-  en: {
-    back: '‹ All exercises',
-    title: 'Flame puzzle',
-    level: (n: number, size: number) => `Level ${n} · ${size} × ${size}`,
-    flames: (found: number, size: number) => `${found} of ${size} flames lit`,
-    hearts: (h: number) => `${h} of ${HEARTS} hearts left`,
-    rules: [
-      'One flame in each colour.',
-      'One flame in each row and each column.',
-      'No two flames touch, not even at the corners.',
-    ],
-    mark: 'Mark squares',
-    markOn: 'Marking: on',
-    hint: (n: number) => `Hint (${n} left)`,
-    find: (n: number) => `Find a flame (${n} left)`,
-    levels: 'Levels',
-    howTo: 'How to play',
-    share: 'Share',
-    soundOn: 'Sound: on',
-    soundOff: 'Sound: off',
-    otherLang: '中文',
-    square: (r: number, c: number, what: string) => `Row ${r}, column ${c}: ${what}`,
-    squareIs: { '': 'empty', flame: 'flame', 'ruled-out': 'crossed out', wrong: 'no flame here', mark: 'your mark' } as Record<Square, string>,
-    say: {
-      start: 'Tap a square to place a flame.',
-      flame: 'A flame. The squares it rules out are crossed out.',
-      wrong: 'No flame there. That cost a heart.',
-      marked: 'Marked. Tap it again to erase it.',
-      unmarked: 'Mark erased.',
-      protected: 'You marked this square. Turn on marking to erase it first.',
-      markOn: 'Marking is on: tapping a square pencils a cross.',
-      markOff: 'Marking is off: tapping a square places a flame.',
-      'only-in-region': 'This colour has only this square left. The flame goes here.',
-      'only-in-row': 'This row has only this square left. The flame goes here.',
-      'only-in-column': 'This column has only this square left. The flame goes here.',
-      'would-block': 'A flame here would leave another group with nowhere to go, so it is crossed out.',
-      'ruled-out': 'This square can be crossed out.',
-      noHints: 'No hints left. You get one for each level you finish.',
-      found: 'Here is a flame.',
-    },
-    quotes: [
-      'Still water runs deep.',
-      'A journey of a thousand miles begins with one step.',
-      'Know the ground before you move.',
-      'More haste, less speed.',
-      'Calm the mind and the way appears.',
-    ],
-    solvedTitle: 'Every flame is lit',
-    solvedText: (size: number, hearts: number, stars: number) =>
-      `All ${size} flames, with ${hearts} of ${HEARTS} hearts left: ${stars} of 3 stars. You also get one more hint.`,
-    next: 'Next level',
-    again: 'Play this level again',
-    failedTitle: 'No hearts left',
-    failedText: 'All three hearts are used. The level starts again from the beginning.',
-    retry: 'Start the level again',
-    levelsTitle: 'Choose a level',
-    levelButton: (n: number, stars: number, open: boolean) =>
-      open ? `Level ${n}, ${stars} of 3 stars` : `Level ${n}, not open yet`,
-    close: 'Close',
-    howToTitle: 'How to play',
-    howTo2: [
-      'A correct flame crosses out every square it rules out.',
-      'A wrong square costs a heart. With all three gone, the level starts again.',
-      'Mark squares lets you pencil your own crosses while you think.',
-      'A hint shows one step of reasoning. You start with three and get one for each level you finish.',
-      'Find a flame lights one flame for you, once a level.',
-    ],
-    shareTitle: 'Share the flame puzzle',
-    shareWhat: (n: number) =>
-      `This sends a link to the flame puzzle and says you reached level ${n}. It does not include your name or anything else about you.`,
-    shareWho: 'Whoever opens the link will need to sign in to this study first.',
-    shareText: (n: number) => `I reached level ${n} of the flame puzzle. Try it:`,
-    shareSend: 'Share the link',
-    shareCopy: 'Copy the link',
-    copied: 'The link is copied. Paste it wherever you like.',
-    copyFailed: 'The link could not be copied. Select it below and copy it yourself.',
-    shared: 'The share window opened. Whether it was sent is up to you there.',
+  back: '‹ All exercises',
+  title: 'Flame puzzle',
+  level: (n: number, size: number) => `Level ${n} · ${size} × ${size}`,
+  flames: (found: number, size: number) => `${found} of ${size} flames lit`,
+  hearts: (h: number) => `${h} of ${HEARTS} hearts left`,
+  rules: [
+    'One flame in each colour.',
+    'One flame in each row and each column.',
+    'No two flames touch, not even at the corners.',
+  ],
+  mark: 'Mark squares',
+  markOn: 'Marking: on',
+  hint: (n: number) => `Hint (${n} left)`,
+  find: (n: number) => `Find a flame (${n} left)`,
+  levels: 'Levels',
+  howTo: 'How to play',
+  share: 'Share',
+  soundOn: 'Sound: on',
+  soundOff: 'Sound: off',
+  square: (r: number, c: number, what: string) => `Row ${r}, column ${c}: ${what}`,
+  squareIs: { '': 'empty', flame: 'flame', 'ruled-out': 'crossed out', wrong: 'no flame here', mark: 'your mark' } as Record<Square, string>,
+  say: {
+    start: 'Tap a square to place a flame.',
+    flame: 'A flame. The squares it rules out are crossed out.',
+    wrong: 'No flame there. That cost a heart.',
+    marked: 'Marked. Tap it again to erase it.',
+    unmarked: 'Mark erased.',
+    protected: 'You marked this square. Turn on marking to erase it first.',
+    markOn: 'Marking is on: tapping a square pencils a cross.',
+    markOff: 'Marking is off: tapping a square places a flame.',
+    'only-in-region': 'This colour has only this square left. The flame goes here.',
+    'only-in-row': 'This row has only this square left. The flame goes here.',
+    'only-in-column': 'This column has only this square left. The flame goes here.',
+    'would-block': 'A flame here would leave another group with nowhere to go, so it is crossed out.',
+    'ruled-out': 'This square can be crossed out.',
+    noHints: 'No hints left. You get one for each level you finish.',
+    found: 'Here is a flame.',
   },
-  zh: {
-    back: '‹ 全部练习',
-    title: '火苗谜题',
-    level: (n: number, size: number) => `关卡 ${n} · ${size} × ${size}`,
-    flames: (found: number, size: number) => `已点亮 ${found}/${size} 个火苗`,
-    hearts: (h: number) => `剩余 ${h}/${HEARTS} 颗心`,
-    rules: ['每种颜色一个火苗。', '每行、每列各一个火苗。', '火苗互不相邻，斜着也不行。'],
-    mark: '标记格子',
-    markOn: '标记：开',
-    hint: (n: number) => `提示（剩 ${n} 次）`,
-    find: (n: number) => `找出火苗（剩 ${n} 次）`,
-    levels: '关卡',
-    howTo: '玩法',
-    share: '分享',
-    soundOn: '声音：开',
-    soundOff: '声音：关',
-    otherLang: 'English',
-    square: (r: number, c: number, what: string) => `第 ${r} 行第 ${c} 列：${what}`,
-    squareIs: { '': '空', flame: '火苗', 'ruled-out': '已排除', wrong: '没有火苗', mark: '你的标记' } as Record<Square, string>,
-    say: {
-      start: '点一个格子放火苗。',
-      flame: '火苗在此！它排除的格子已打叉。',
-      wrong: '此处没有火苗，扣一颗心。',
-      marked: '已标记，再点一次可擦掉。',
-      unmarked: '标记已擦掉。',
-      protected: '这格你标记过，先打开标记再擦掉。',
-      markOn: '标记已打开：点格子画个叉。',
-      markOff: '标记已关闭：点格子放火苗。',
-      'only-in-region': '这个颜色只剩这一格，火苗就在这里。',
-      'only-in-row': '这一行只剩这一格，火苗就在这里。',
-      'only-in-column': '这一列只剩这一格，火苗就在这里。',
-      'would-block': '若火苗放这里，会让另一组无处可放，所以排除。',
-      'ruled-out': '这一格可以排除。',
-      noHints: '提示用完了，每过一关再得一次。',
-      found: '找到一个火苗。',
-    },
-    quotes: ['淡泊明志，宁静致远。', '千里之行，始于足下。', '知己知彼，百战不殆。', '欲速则不达。', '静以修身，俭以养德。'],
-    solvedTitle: '火苗全部点亮',
-    solvedText: (size: number, hearts: number, stars: number) =>
-      `${size} 个火苗全部点亮，剩余 ${hearts}/${HEARTS} 颗心，获得 ${stars}/3 颗星，并多得一次提示。`,
-    next: '下一关',
-    again: '再玩一次',
-    failedTitle: '心用完了',
-    failedText: '三颗心都用完了，本关从头开始。',
-    retry: '重新开始本关',
-    levelsTitle: '选择关卡',
-    levelButton: (n: number, stars: number, open: boolean) => (open ? `关卡 ${n}，${stars}/3 颗星` : `关卡 ${n}，尚未开放`),
-    close: '关闭',
-    howToTitle: '玩法',
-    howTo2: [
-      '放对火苗后，它排除的格子会自动打叉。',
-      '点错一格扣一颗心，三颗心用完本关重来。',
-      '标记格子可以自己画叉，帮助推理。',
-      '提示会给出一步推理。开始有三次，每过一关再得一次。',
-      '找出火苗每关可用一次，直接点亮一个火苗。',
-    ],
-    shareTitle: '分享火苗谜题',
-    shareWhat: (n: number) => `会发送火苗谜题的链接，并说明你到了第 ${n} 关。不包含你的名字或其他任何个人信息。`,
-    shareWho: '打开链接的人需要先登录这个研究平台。',
-    shareText: (n: number) => `我玩到了火苗谜题第 ${n} 关，你也来试试：`,
-    shareSend: '分享链接',
-    shareCopy: '复制链接',
-    copied: '链接已复制，可以粘贴到任何地方。',
-    copyFailed: '无法自动复制，请选中下面的链接自行复制。',
-    shared: '分享窗口已打开，是否发送由你决定。',
-  },
+  quotes: [
+    'Still water runs deep.',
+    'A journey of a thousand miles begins with one step.',
+    'Know the ground before you move.',
+    'More haste, less speed.',
+    'Calm the mind and the way appears.',
+  ],
+  solvedTitle: 'Every flame is lit',
+  solvedText: (size: number, hearts: number, stars: number) =>
+    `All ${size} flames, with ${hearts} of ${HEARTS} hearts left: ${stars} of 3 stars. You also get one more hint.`,
+  next: 'Next level',
+  again: 'Play this level again',
+  failedTitle: 'No hearts left',
+  failedText: 'All three hearts are used. The level starts again from the beginning.',
+  retry: 'Start the level again',
+  levelsTitle: 'Choose a level',
+  levelButton: (n: number, stars: number, open: boolean) =>
+    open ? `Level ${n}, ${stars} of 3 stars` : `Level ${n}, not open yet`,
+  close: 'Close',
+  howToTitle: 'How to play',
+  howTo2: [
+    'A correct flame crosses out every square it rules out.',
+    'A wrong square costs a heart. With all three gone, the level starts again.',
+    'Mark squares lets you pencil your own crosses while you think.',
+    'A hint shows one step of reasoning. You start with three and get one for each level you finish.',
+    'Find a flame lights one flame for you, once a level.',
+  ],
+  shareTitle: 'Share the flame puzzle',
+  shareWhat: (n: number) =>
+    `This sends a link to the flame puzzle and says you reached level ${n}. It does not include your name or anything else about you.`,
+  shareWho: 'Whoever opens the link can play straight away, without signing in. They sign in only to keep their progress or to open the rest of the study.',
+  guestNote: 'You are playing without signing in, so your level is kept only while this page is open.',
+  keep: 'Sign in to keep your progress',
+  shareText: (n: number) => `I reached level ${n} of the flame puzzle. Try it:`,
+  shareSend: 'Share the link',
+  shareCopy: 'Copy the link',
+  copied: 'The link is copied. Paste it wherever you like.',
+  copyFailed: 'The link could not be copied. Select it below and copy it yourself.',
+  shared: 'The share window opened. Whether it was sent is up to you there.',
 };
 
 const STORE_KEY = 'flame-puzzle';
@@ -188,19 +126,43 @@ interface Saved {
   unlocked: number;
   stars: Record<number, number>;
   hints: number;
-  lang: Lang;
   sound: boolean;
   current: Play | null;
 }
 
-function load(): Saved {
-  const fresh: Saved = { unlocked: 1, stars: {}, hints: STARTING_HINTS, lang: 'en', sound: false, current: null };
+const CARRY_KEY = 'flame-puzzle-carry';
+const fresh = (): Saved => ({ unlocked: 1, stars: {}, hints: STARTING_HINTS, sound: false, current: null });
+
+function load(guest: boolean): Saved {
+  if (guest) return fresh();
+  let saved = fresh();
   try {
     const raw = preferenceStore()?.getItem(STORE_KEY);
-    return raw ? { ...fresh, ...(JSON.parse(raw) as Partial<Saved>) } : fresh;
+    if (raw) saved = { ...saved, ...(JSON.parse(raw) as Partial<Saved>) };
   } catch {
-    return fresh;
+    /* start afresh */
   }
+  // Play carried across a sign-in: the better of the two records wins.
+  try {
+    const raw = window.sessionStorage.getItem(CARRY_KEY);
+    window.sessionStorage.removeItem(CARRY_KEY);
+    if (raw) {
+      const carried = JSON.parse(raw) as Saved;
+      const stars = { ...saved.stars };
+      for (const [n, got] of Object.entries(carried.stars)) stars[+n] = Math.max(stars[+n] ?? 0, got);
+      saved = {
+        ...saved,
+        unlocked: Math.max(saved.unlocked, carried.unlocked),
+        stars,
+        hints: Math.max(saved.hints, carried.hints),
+        current: carried.current ?? saved.current,
+      };
+      save(saved);
+    }
+  } catch {
+    /* nothing carried */
+  }
+  return saved;
 }
 
 function save(s: Saved) {
@@ -250,29 +212,49 @@ const HeartIcon = ({ kept }: { kept: boolean }) => (
   </svg>
 );
 
-export function FlamePuzzle({ onDone, shareUrl }: { onDone: () => void; shareUrl: string }) {
-  const [saved, setSaved] = useState<Saved>(load);
-  const [play, setPlay] = useState<Play>(() => {
-    const s = load();
-    return s.current ?? newPlay(generateLevel(Math.max(1, s.unlocked)));
-  });
+export function FlamePuzzle({
+  onDone,
+  shareUrl,
+  guest = false,
+  onSignIn,
+}: {
+  onDone: () => void;
+  shareUrl: string;
+  /** Opened without signing in: plays in full, keeps nothing. */
+  guest?: boolean;
+  /** Where "Sign in to keep your progress" goes, when `guest`. */
+  onSignIn?: () => void;
+}) {
+  const [first] = useState(() => load(guest));
+  const [saved, setSaved] = useState<Saved>(first);
+  const [play, setPlay] = useState<Play>(() => first.current ?? newPlay(generateLevel(Math.max(1, first.unlocked))));
   const [marking, setMarking] = useState(false);
   const [say, setSay] = useState<string>('');
   const [pointed, setPointed] = useState<number | null>(null);
   const [window_, setWindow] = useState<null | 'solved' | 'failed' | 'levels' | 'how' | 'share'>(() =>
-    load().unlocked === 1 && load().current === null ? 'how' : null,
+    first.unlocked === 1 && first.current === null ? 'how' : null,
   );
   const [shareNote, setShareNote] = useState('');
   const linkField = useRef<HTMLInputElement | null>(null);
 
-  const w = WORDS[saved.lang];
+  const w = WORDS;
   const level = useMemo(() => generateLevel(play.n), [play.n]);
   const { size } = level;
 
   const persist = (next: Partial<Saved>, p: Play | null = play) => {
     const merged = { ...saved, ...next, current: p && !solved(level, p) && !failed(p) ? p : null };
     setSaved(merged);
-    save(merged);
+    if (!guest) save(merged);
+  };
+
+  /** Hands the play so far across the sign-in, then goes to it. */
+  const keep = () => {
+    try {
+      window.sessionStorage.setItem(CARRY_KEY, JSON.stringify({ ...saved, current: solved(level, play) || failed(play) ? null : play }));
+    } catch {
+      /* the sign-in still happens; the play is not carried */
+    }
+    onSignIn?.();
   };
 
   const start = (n: number) => {
@@ -281,7 +263,7 @@ export function FlamePuzzle({ onDone, shareUrl }: { onDone: () => void; shareUrl
     setPointed(null);
     setMarking(false);
     setWindow(null);
-    setSay(WORDS[saved.lang].quotes[(n - 1) % WORDS[saved.lang].quotes.length]!);
+    setSay(WORDS.quotes[(n - 1) % WORDS.quotes.length]!);
     persist({}, p);
   };
 
@@ -383,7 +365,7 @@ export function FlamePuzzle({ onDone, shareUrl }: { onDone: () => void; shareUrl
   const canShare = typeof navigator !== 'undefined' && typeof navigator.share === 'function';
 
   return (
-    <section aria-labelledby="puzzle-heading" className="puzzle" lang={saved.lang === 'zh' ? 'zh-CN' : 'en'}>
+    <section aria-labelledby="puzzle-heading" className="puzzle">
       <p>
         <button className="back-link" onClick={onDone}>
           {w.back}
@@ -391,6 +373,14 @@ export function FlamePuzzle({ onDone, shareUrl }: { onDone: () => void; shareUrl
       </p>
       <h1 id="puzzle-heading">{w.title}</h1>
       <p className="puzzle__level">{w.level(play.n, size)}</p>
+      {guest && (
+        <div className="puzzle__guest">
+          <p>{w.guestNote}</p>
+          <p>
+            <button onClick={keep}>{w.keep}</button>
+          </p>
+        </div>
+      )}
 
       <div className="puzzle__standing">
         <p className="puzzle__flames">
@@ -467,6 +457,9 @@ export function FlamePuzzle({ onDone, shareUrl }: { onDone: () => void; shareUrl
       <div className="puzzle__more">
         <button onClick={() => setWindow('levels')}>{w.levels}</button>
         <button onClick={() => setWindow('how')}>{w.howTo}</button>
+        <button aria-pressed={saved.sound} onClick={() => persist({ sound: !saved.sound })}>
+          {saved.sound ? w.soundOn : w.soundOff}
+        </button>
         <button
           onClick={() => {
             setShareNote('');
@@ -474,12 +467,6 @@ export function FlamePuzzle({ onDone, shareUrl }: { onDone: () => void; shareUrl
           }}
         >
           {w.share}
-        </button>
-        <button aria-pressed={saved.sound} onClick={() => persist({ sound: !saved.sound })}>
-          {saved.sound ? w.soundOn : w.soundOff}
-        </button>
-        <button lang={saved.lang === 'en' ? 'zh-CN' : 'en'} onClick={() => persist({ lang: saved.lang === 'en' ? 'zh' : 'en' })}>
-          {w.otherLang}
         </button>
       </div>
 
@@ -506,6 +493,7 @@ export function FlamePuzzle({ onDone, shareUrl }: { onDone: () => void; shareUrl
             >
               {w.share}
             </button>
+            {guest && <button onClick={keep}>{w.keep}</button>}
           </p>
         </Modal>
       )}

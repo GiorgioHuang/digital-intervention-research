@@ -92,6 +92,7 @@ describe('flame puzzle screen', () => {
   beforeEach(() => {
     (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
     window.localStorage.clear();
+    window.sessionStorage.clear();
   });
   afterEach(cleanup);
 
@@ -118,12 +119,35 @@ describe('flame puzzle screen', () => {
     );
   });
 
-  it('switches to Chinese and back', () => {
+  it('plays without signing in and keeps nothing until asked', () => {
+    const signIn: number[] = [];
+    render(
+      <FlamePuzzle guest onSignIn={() => signIn.push(1)} onDone={() => undefined} shareUrl="https://example.test/x" />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+    const level = generateLevel(1);
+    const squares = screen.getAllByRole('gridcell');
+    fireEvent.click(squares[level.solution[0]!]!);
+    expect(screen.getByText(`1 of ${level.size} flames lit`)).toBeTruthy();
+    expect(window.localStorage.getItem('flame-puzzle'), 'a guest was written to storage').toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Sign in to keep your progress' }));
+    expect(signIn).toEqual([1]);
+    cleanup();
+
+    // Signed in on the other side: the flame placed as a guest is still lit.
+    render(<FlamePuzzle onDone={() => undefined} shareUrl="https://example.test/x" />);
+    expect(screen.getByText(`1 of ${level.size} flames lit`)).toBeTruthy();
+    expect(window.sessionStorage.getItem('flame-puzzle-carry')).toBeNull();
+    expect(window.localStorage.getItem('flame-puzzle')).not.toBeNull();
+  });
+
+  it('has no Chinese on it, and Share where the language switch was', () => {
     render(<FlamePuzzle onDone={() => undefined} shareUrl="https://example.test/x" />);
     fireEvent.click(screen.getByRole('button', { name: 'Close' }));
-    fireEvent.click(screen.getByRole('button', { name: '中文' }));
-    expect(screen.getByRole('heading', { name: '火苗谜题' })).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'English' }));
-    expect(screen.getByRole('heading', { name: 'Flame puzzle' })).toBeTruthy();
+    expect(document.body.textContent).not.toMatch(/[\u4e00-\u9fff]/);
+    const row = screen.getByRole('button', { name: 'Levels' }).parentElement!;
+    const last = [...row.querySelectorAll('button')].pop()!;
+    expect(last.textContent).toBe('Share');
   });
 });
