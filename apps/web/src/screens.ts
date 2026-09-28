@@ -21,6 +21,7 @@ export type Screen =
   | 'information'
   | 'exercises'
   | 'tapping'
+  | 'flame-puzzle'
   | 'helper'
   | 'name'
   | 'safety-concern'

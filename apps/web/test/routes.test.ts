@@ -19,6 +19,7 @@ const ROUTABLE: Screen[] = [
   'matching',
   'exercises',
   'tapping',
+  'flame-puzzle',
   'helper',
   'about',
   'help',

@@ -20,10 +20,18 @@ const EXERCISES: {
   key: string;
   name: string;
   meta: string;
-  icon: 'pointer' | 'spiral' | 'eye' | 'hand';
+  icon: 'pointer' | 'spiral' | 'eye' | 'hand' | 'flame';
   available: boolean;
 }[] = [
   { key: 'tapping', name: 'Tapping', meta: 'About 3 minutes · for your hands', icon: 'pointer', available: true },
+  /*
+   * The flame puzzle (owner, 2026-09-28). A logic puzzle rather than a
+   * measure: nothing from it goes to the study, and its level and stars
+   * stay on the device. It is the one entry here that keeps a tally, and
+   * the page's opening lines say so rather than letting "no score" stand
+   * over it.
+   */
+  { key: 'puzzle', name: 'Flame puzzle', meta: 'A few minutes a level · for your thinking', icon: 'flame', available: true },
   { key: 'spiral', name: 'Drawing a spiral', meta: 'About 2 minutes · for your hands', icon: 'spiral', available: false },
   { key: 'naming', name: 'Naming what you see', meta: 'About 4 minutes · for your memory', icon: 'eye', available: false },
   { key: 'hold', name: 'Steady hold', meta: 'About 1 minute · for your hands', icon: 'hand', available: false },
@@ -46,6 +54,9 @@ const ICONS: Record<string, JSX.Element> = {
       <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z" />
       <circle cx="12" cy="12" r="3" />
     </>
+  ),
+  flame: (
+    <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z" />
   ),
   hand: (
     <>
@@ -74,7 +85,16 @@ const Icon = ({ name }: { name: string }) => (
   </svg>
 );
 
-export function Exercises({ onHome, onTapping }: { onHome: () => void; onTapping: () => void }) {
+export function Exercises({
+  onHome,
+  onTapping,
+  onPuzzle,
+}: {
+  onHome: () => void;
+  onTapping: () => void;
+  onPuzzle: () => void;
+}) {
+  const open: Record<string, () => void> = { tapping: onTapping, puzzle: onPuzzle };
   return (
     <section aria-labelledby="exercises-heading">
       <p>
@@ -84,21 +104,22 @@ export function Exercises({ onHome, onTapping }: { onHome: () => void; onTapping
       </p>
       <h1 id="exercises-heading">Exercises you can try</h1>
       <p>
-        Four short exercises for your hands, your eyes and your memory. Choose whichever you like, whenever you like.
-        There is no score and nothing is counted against you.
+        Four short exercises for your hands, your eyes and your memory, and a puzzle for your thinking. Choose whichever
+        you like, whenever you like. The exercises keep no score and nothing is counted against you. The puzzle keeps
+        your level on this device only.
       </p>
       <ul className="exercise-list">
         {EXERCISES.map((e) => (
           <li key={e.key}>
             {/*
-              Only Tapping opens. The other three are drawn because the
+              Only Tapping and the puzzle open. The other three are drawn because the
               design draws them and because a person choosing "whichever
               you like" should see what the four are — but they are not
               buttons, so nothing here offers a door that does not open
               (D-2, D-5, D-21, D-34, D-75). What they are is said in words.
             */}
             {e.available ? (
-              <button className="exercise exercise--open" onClick={onTapping}>
+              <button className="exercise exercise--open" onClick={open[e.key]}>
                 <span className="exercise__tile exercise__tile--open">
                   <Icon name={e.icon} />
                 </span>

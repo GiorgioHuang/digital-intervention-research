@@ -92,6 +92,20 @@
   /* High contrast is pure black on pure white, by the handoff. */
   --cl-hc-bg: #ffffff;
   --cl-hc-text: #000000;
+  /* The flame puzzle: nine region fills, muted for the Classical ground,
+     and the two reds for a kept heart and a wrong square. */
+  --cl-puzzle-region-0: #dccbe9;
+  --cl-puzzle-region-1: #f1dc9f;
+  --cl-puzzle-region-2: #ebb9b0;
+  --cl-puzzle-region-3: #b9d3ea;
+  --cl-puzzle-region-4: #c8ddb2;
+  --cl-puzzle-region-5: #f2c59b;
+  --cl-puzzle-region-6: #afd8d1;
+  --cl-puzzle-region-7: #d9c3ae;
+  --cl-puzzle-region-8: #eec6dc;
+  --cl-puzzle-heart: #b23a2e;
+  --cl-puzzle-heart-edge: #7a2119;
+  --cl-puzzle-wrong: #a3261b;
 
   --type-size-0: 0.833rem;
   --type-size-1: 1rem;
@@ -2523,6 +2537,151 @@ a[role='button']:hover { background-color: var(--color-action-secondary-bg-hover
   color: var(--cl-text-4);
   text-align: center;
 }
+
+/* ---------- The flame puzzle --------------------------------------------
+ * The exercises' Classical dress rather than the palace of the first
+ * version: the page ground, hairline dividers, 4px corners, Cormorant for
+ * figures and Lora for words, and the gold accent for the flame itself.
+ *
+ * Regions are told apart twice, by a muted fill and by a heavy border
+ * where one region meets the next, so colour is never the only way to see
+ * them. Every square also names its state in words to a screen reader.
+ *
+ * The squares are the one place below the 44px target floor: a 9 × 9
+ * board on a 390px phone leaves about 38px a square, and a board that
+ * scrolls sideways is worse than a slightly smaller target. They sit edge
+ * to edge, so no two targets overlap.
+ */
+.puzzle__level {
+  margin-block: 0 var(--space-3);
+  font-family: var(--cl-family-display);
+  font-size: 19px;
+  color: var(--cl-text-4);
+}
+.puzzle__standing {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-5);
+  margin-block-end: var(--space-3);
+}
+.puzzle__standing > p {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+.puzzle__heart-row { display: inline-flex; gap: 2px; }
+.heart { fill: var(--cl-neutral-300); stroke: var(--cl-text-5); stroke-width: 1.5; }
+.heart--kept { fill: var(--cl-puzzle-heart); stroke: var(--cl-puzzle-heart-edge); }
+.flame-icon { fill: var(--cl-accent-300); stroke: var(--cl-accent-800); stroke-width: 1.6; stroke-linejoin: round; }
+.puzzle__rules {
+  margin-block: 0 var(--space-4);
+  padding-inline-start: var(--space-5);
+  font-size: 15px;
+  color: var(--cl-text-3);
+}
+.puzzle__board {
+  display: grid;
+  inline-size: 100%;
+  max-inline-size: 30rem;
+  margin-inline: auto;
+  border: 2px solid var(--cl-text);
+  border-radius: var(--radius-1);
+  overflow: hidden;
+  touch-action: manipulation;
+}
+.puzzle__square {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 1;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  border-style: solid;
+  border-color: var(--cl-text);
+  border-radius: 0;
+  color: var(--cl-text-4);
+}
+.puzzle__board--5 { grid-template-columns: repeat(5, 1fr); }
+.puzzle__board--6 { grid-template-columns: repeat(6, 1fr); }
+.puzzle__board--7 { grid-template-columns: repeat(7, 1fr); }
+.puzzle__board--8 { grid-template-columns: repeat(8, 1fr); }
+.puzzle__board--9 { grid-template-columns: repeat(9, 1fr); }
+.puzzle__square--r0 { background-color: var(--cl-puzzle-region-0); }
+.puzzle__square--r1 { background-color: var(--cl-puzzle-region-1); }
+.puzzle__square--r2 { background-color: var(--cl-puzzle-region-2); }
+.puzzle__square--r3 { background-color: var(--cl-puzzle-region-3); }
+.puzzle__square--r4 { background-color: var(--cl-puzzle-region-4); }
+.puzzle__square--r5 { background-color: var(--cl-puzzle-region-5); }
+.puzzle__square--r6 { background-color: var(--cl-puzzle-region-6); }
+.puzzle__square--r7 { background-color: var(--cl-puzzle-region-7); }
+.puzzle__square--r8 { background-color: var(--cl-puzzle-region-8); }
+/* A heavy edge where one region meets the next. */
+.puzzle__square { border-width: 1px; }
+.puzzle__square--edge-t { border-block-start-width: 3px; }
+.puzzle__square--edge-b { border-block-end-width: 3px; }
+.puzzle__square--edge-l { border-inline-start-width: 3px; }
+.puzzle__square--edge-r { border-inline-end-width: 3px; }
+.puzzle__square:hover { filter: brightness(0.96); }
+.puzzle__square:focus-visible { outline: 3px solid var(--color-focus-ring); outline-offset: -5px; }
+.puzzle__square svg { inline-size: 62%; block-size: 62%; }
+.puzzle__square svg path { fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; }
+.puzzle__square--flame svg { inline-size: 76%; block-size: 76%; }
+.puzzle__square--flame svg path { fill: var(--cl-accent-300); stroke: var(--cl-accent-800); stroke-width: 1.6; }
+.puzzle__square--ruled-out { color: var(--cl-text-5); }
+.puzzle__square--mark svg { opacity: 0.45; }
+.puzzle__square--wrong { color: var(--cl-puzzle-wrong); }
+.puzzle__square--wrong svg path { stroke-width: 3.4; }
+.puzzle__square--pointed { box-shadow: inset 0 0 0 4px var(--cl-accent-700); }
+@media (prefers-reduced-motion: no-preference) {
+  .puzzle__square--flame svg { animation: puzzle-light var(--motion-duration-slow) var(--motion-ease-enter); }
+}
+@keyframes puzzle-light { from { transform: scale(0.4); opacity: 0; } }
+.puzzle__say {
+  min-block-size: 3em;
+  margin-block: var(--space-4);
+  font-family: var(--cl-family-body);
+  font-style: italic;
+  color: var(--cl-text-2);
+  text-align: center;
+}
+.puzzle__tools,
+.puzzle__more,
+.puzzle__window-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--target-gap);
+}
+.puzzle__tools { margin-block-end: var(--space-3); }
+.puzzle__tools > button { flex: 1 1 9rem; justify-content: center; }
+.puzzle__tool--on { background-color: var(--cl-accent-200); }
+.puzzle__more > button { font-size: 15px; }
+.puzzle__stars { margin: 0; font-size: 34px; color: var(--cl-accent); letter-spacing: 4px; }
+.puzzle__stars-off { color: var(--cl-neutral-300); }
+.puzzle__level-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(3.25rem, 1fr));
+  gap: var(--target-gap);
+  margin: 0 0 var(--space-4);
+  padding: 0;
+  list-style: none;
+}
+.puzzle__level-list > li { max-width: none; }
+.puzzle__level-button {
+  flex-direction: column;
+  justify-content: center;
+  gap: 0;
+  inline-size: 100%;
+  padding: var(--space-1);
+  font-family: var(--cl-family-display);
+  font-size: 19px;
+  font-variant-numeric: tabular-nums;
+}
+.puzzle__level-button--current { background-color: var(--cl-accent-100); }
+.puzzle__level-stars { font-size: 11px; color: var(--cl-accent-700); min-block-size: 1em; }
+.puzzle__share-label input { inline-size: 100%; margin-block-end: var(--space-3); }
 
 /* ---------- The toast ---------------------------------------------------
  * "A single non-dismissing confirmation block at the bottom of the content

@@ -47,7 +47,11 @@ const BUDGETS: Record<string, { words: number; controls: number; note?: string }
    * than discovered later.
    */
   information: { words: 520, controls: 22, note: 'consent, plus where you stand and the way out' },
-  exercises: { words: 120, controls: 3 },
+  /*
+   * One more control for the flame puzzle (owner, 2026-09-28): a fifth
+   * row in the list, and a sentence saying the puzzle keeps a level.
+   */
+  exercises: { words: 140, controls: 4, note: 'four exercises and the flame puzzle' },
   consent: {
     words: 400,
     controls: 16,

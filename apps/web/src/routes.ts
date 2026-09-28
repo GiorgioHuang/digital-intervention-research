@@ -37,6 +37,7 @@ const PATHS: Readonly<Record<Exclude<Screen, 'review' | 'caption'>, string>> = {
   matching: '/meet-people',
   exercises: '/exercises',
   tapping: '/exercises/tapping',
+  'flame-puzzle': '/exercises/flame-puzzle',
   helper: '/someone-is-helping-me',
   name: '/what-other-people-call-me',
   'safety-concern': '/a-safety-concern',

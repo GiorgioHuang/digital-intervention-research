@@ -5,6 +5,7 @@ import { SupporterApp } from './SupporterApp.js';
 import { AccessTokenGate } from './components/AccessTokenGate.js';
 import { HelperScreen } from './components/elder/HelperScreen.js';
 import { Exercises, Tapping } from './components/elder/Exercises.js';
+import { FlamePuzzle } from './components/elder/FlamePuzzle.js';
 import { WhatOthersCallMe } from './components/elder/WhatOthersCallMe.js';
 import { SiteFooter } from './components/elder/SiteFooter.js';
 import { AboutScreen } from './components/elder/AboutScreen.js';
@@ -158,6 +159,14 @@ export function App() {
    */
   const [reviewing, setReviewing] = useState<string | null>(landed.reviewing);
   /*
+   * The flame puzzle opened without signing in — which is how a shared
+   * link arrives (owner, 2026-09-28: whoever receives it plays at once,
+   * and is asked to sign in only to keep their progress or to go anywhere
+   * else). True while the signed-out screen should be the puzzle rather
+   * than the way in; any step away from the puzzle clears it.
+   */
+  const [guestPuzzle, setGuestPuzzle] = useState(landed.screen === 'flame-puzzle');
+  /*
    * What to call this person. Null until it is known, and null is also the
    * settled answer where there is no profile — so Home greets without a
    * name rather than flashing a nameless greeting and then adding one.
@@ -295,6 +304,14 @@ export function App() {
         if (redirect?.error !== undefined) setSignInProblem(redirect.error);
         const found = redirect?.session ?? (await currentSession().catch(() => undefined));
         if (cancelled || found === undefined) return;
+        // Back from Google on `/`, the redirect address. The place sign-in
+        // was started from is carried in `returnTo`; going back there is
+        // what makes "sign in to keep your progress" land on the puzzle.
+        if (redirect?.session !== undefined) {
+          const at = screenForPath(redirect.returnTo.split(/[?#]/)[0] ?? '/');
+          setScreen(at.screen);
+          setReviewing(at.reviewing);
+        }
         // A staff account with no participant record is not a participant,
         // and giving it an empty participant identifier would send every
         // screen looking for a person who does not exist.
@@ -506,7 +523,10 @@ export function App() {
             somebody who cannot get in that a control goes "Home" would be
             the wrong word at the worst moment.
           */
-          onHome={() => setAboutBeforeSignIn(false)}
+          onHome={() => {
+            setAboutBeforeSignIn(false);
+            setGuestPuzzle(false);
+          }}
           homeLabel="Sign in"
         />
         <main
@@ -589,7 +609,10 @@ export function App() {
             somebody who cannot get in that a control goes "Home" would be
             the wrong word at the worst moment.
           */
-          onHome={() => setAboutBeforeSignIn(false)}
+          onHome={() => {
+            setAboutBeforeSignIn(false);
+            setGuestPuzzle(false);
+          }}
           homeLabel="Sign in"
         />
         <main
@@ -604,6 +627,22 @@ export function App() {
                 onBack={() => setAboutBeforeSignIn(false)}
                 backLabel="Back to sign in"
                 contactConfigured={contactConfigured}
+              />
+              <SiteFooter year={copyrightYear(new Date())} onAbout={() => setAboutBeforeSignIn(true)} />
+            </>
+          ) : guestPuzzle && screen === 'flame-puzzle' ? (
+            <>
+              <FlamePuzzle
+                guest
+                onDone={() => {
+                  // Anywhere else in the study needs signing in: the way
+                  // back goes to the sign-in screen, and from there to the
+                  // exercises.
+                  setGuestPuzzle(false);
+                  setScreen('exercises');
+                }}
+                onSignIn={() => setGuestPuzzle(false)}
+                shareUrl={`${window.location.origin}${pathForScreen('flame-puzzle', null)}`}
               />
               <SiteFooter year={copyrightYear(new Date())} onAbout={() => setAboutBeforeSignIn(true)} />
             </>
@@ -1135,7 +1174,17 @@ export function App() {
           />
         )}
         {screen === 'exercises' && (
-          <Exercises onHome={() => setScreen('home')} onTapping={() => setScreen('tapping')} />
+          <Exercises
+            onHome={() => setScreen('home')}
+            onTapping={() => setScreen('tapping')}
+            onPuzzle={() => setScreen('flame-puzzle')}
+          />
+        )}
+        {screen === 'flame-puzzle' && (
+          <FlamePuzzle
+            onDone={() => setScreen('exercises')}
+            shareUrl={`${window.location.origin}${pathForScreen('flame-puzzle', null)}`}
+          />
         )}
         {screen === 'tapping' && (
           <Tapping
